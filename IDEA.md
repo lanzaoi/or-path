@@ -97,7 +97,8 @@ LangGraph（老板：阶段 + 重试 + checkpoint）
 ### 实现时检查清单
 
 - [x] T1 骨架：`.pi/agents/or-*` + fixtures + solve/gates + LG `orpath/run_t1.py` + `scripts/t1_gate.py`  
-- [x] T1 **真多 Agent**：Pi CLI `or-researcher`+`or-modeler` + `.pi-subagents/artifacts/*_transcript.jsonl`（见 `docs/t1-evidence.md`）  
+- [x] T1 **真多 Agent**：Pi CLI researcher/modeler/writer/verifier + `.pi-subagents` transcripts（本地；见 `docs/t1-evidence.md`）  
+- [x] T1 三天加厚：负例 `t1_negatives`、docs、README、git 基线（`docs/t1-day2-day3.md`）  
 - [ ] T2：solve/validate 契约加固；无 solver 不得输出最优  
 - [x] LG 为阶段老板（T1 deterministic nodes；live 子 Agent 在 Pi）  
 - [x] run state 字段在 `orpath/state.py`  
