@@ -199,13 +199,13 @@ def test_m2_paper_live_glue() -> None:
     assert "Child reviewer" in merged and "Automated gate appendix" in merged, merged[:200]
     print("OK merge_review_if_child_wrote")
 
-    # nodes import
-    from orpath import nodes_t2 as n
+    # nodes import (ADR-0001: authoritative orpath.nodes)
+    from orpath import nodes as n
 
     assert hasattr(n, "node_cite_pack") and hasattr(n, "node_review_pack")
     src = Path(n.__file__).read_text(encoding="utf-8")
     assert "run_cite_subagent_lead" in src and "run_review_subagent_lead" in src
-    print("OK nodes_t2 wired")
+    print("OK nodes cite/review wired")
 
 
 def test_m3_graph_live_glue() -> None:
@@ -247,11 +247,11 @@ def test_m3_graph_live_glue() -> None:
     assert m.get("skipped") is True
     print("OK research/model skip when live off")
 
-    from orpath import nodes_t2 as n
+    from orpath import nodes as n
 
     src = Path(n.__file__).read_text(encoding="utf-8")
     assert "run_research_subagent_lead" in src and "run_model_subagent_lead" in src
-    print("OK nodes_t2 M3 wired")
+    print("OK nodes M3 wired")
 
     # run_orpath CLI flags
     rpath = ROOT / "orpath" / "run_orpath.py"

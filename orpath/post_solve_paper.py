@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from orpath.nodes_t2 import (
+from orpath.nodes import (
     node_cite_pack,
     node_draft_paper,
     node_provenance,

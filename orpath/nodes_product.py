@@ -1,11 +1,11 @@
-"""Product pipeline node bodies (T3): nodes_t2 + bridge + NodeContext hooks."""
+"""Product pipeline node bodies (T3): orpath.nodes + bridge + NodeContext hooks."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
 from typing import Any
 
-from orpath import nodes_t2 as n2
+from orpath import nodes as n2
 from orpath.node_context import wrap_node
 from orpath.pi_bridge import bridge_smoke, maybe_annotate_live
 from orpath.state import ORPathState

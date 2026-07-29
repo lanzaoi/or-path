@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 from langgraph.graph import END, START, StateGraph
 
-from orpath import nodes_t2 as nodes
+from orpath import nodes
 from orpath.state import ORPathState
 
 

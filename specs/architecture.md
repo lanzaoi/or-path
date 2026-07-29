@@ -70,6 +70,8 @@ CI 默认可不开 live Pi，但 **T2 closeout 不能没有 bridge 成功证据*
 | 路径 | 职责 |
 |------|------|
 | `orpath/` | LG 状态机、节点、runner、pi_bridge |
+| `orpath/nodes.py` | **阶段节点权威实现**（ADR-0001）；`nodes_t2` 仅 re-export |
+| `orpath/nodes_product.py` | 产品图包装：bridge + NodeContext |
 | `tools/` | solve_*、validate、R1/R2、schema gate |
 | `contracts/` | JSON Schema 导出（由 pydantic 生成可） |
 | `knowledge/` / `knowledge_svc/` | 语料、种子图、摄取与检索 |
