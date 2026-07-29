@@ -1,0 +1,12 @@
+{
+  "urls": [
+    "notes://b-tube-cut-geometry",
+    "notes://b-tube-cut-cocut",
+    "notes://b-tube-cut-ocr-brief"
+  ],
+  "notes": [
+    "notes/b-tube-cut-2026-OCR-BRIEF.md",
+    "notes/b-tube-cut-cocut-model.md",
+    "notes/b-tube-cut-2026-research.md"
+  ]
+}

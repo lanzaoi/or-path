@@ -21,6 +21,7 @@ def fail(msg: str) -> None:
 
 def child_env() -> dict[str, str]:
     env = dict(os.environ)
+    env.setdefault('ORPATH_LIVE_SUBAGENT', '0')
     env["PYTHONNOUSERSITE"] = "1"
     env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
     env.pop("PYTHONPATH", None)

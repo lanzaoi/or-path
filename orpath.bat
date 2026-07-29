@@ -52,6 +52,11 @@ if /i "%CMD%"=="gate-paper" goto :paper_gate
 if /i "%CMD%"=="paper-1.0-gate" goto :paper_10_gate
 if /i "%CMD%"=="paper-1_0-gate" goto :paper_10_gate
 if /i "%CMD%"=="gate-paper-1.0" goto :paper_10_gate
+if /i "%CMD%"=="paper-tube" goto :paper_tube
+if /i "%CMD%"=="tube-paper" goto :paper_tube
+if /i "%CMD%"=="paper-protocol" goto :paper_protocol
+if /i "%CMD%"=="subagent-gate" goto :subagent_gate
+if /i "%CMD%"=="gate-subagent" goto :subagent_gate
 
 echo [ERROR] unknown command: %CMD%
 goto :help
@@ -71,9 +76,12 @@ echo    orpath.bat run [args...]
 echo    orpath.bat status --thread-id ID
 echo    orpath.bat resume --thread-id ID [args...]
 echo    orpath.bat list
-echo    orpath.bat paper template^|review^|gate-research^|plan-log ...
+echo    orpath.bat paper template^|review^|gate-research^|plan-log^|protocol ...
 echo    orpath.bat paper-gate
 echo    orpath.bat paper-1.0-gate
+echo    orpath.bat paper-tube
+echo    orpath.bat paper-protocol --slug ... --solution ...
+echo    orpath.bat subagent-gate
 echo    orpath.bat t2 [args...]
 echo    orpath.bat pi [args...]
 echo    orpath.bat openpi
@@ -116,6 +124,19 @@ exit /b %ERRORLEVEL%
 
 :paper_10_gate
 "%PY%" "!ORPATH_HOME!\scripts\paper_1_0_gate.py"
+exit /b %ERRORLEVEL%
+
+:paper_tube
+"%PY%" "!ORPATH_HOME!\scripts\run_tube_cut_paper.py"
+exit /b %ERRORLEVEL%
+
+:paper_protocol
+shift
+"%PY%" "!ORPATH_HOME!\scripts\orpath_paper.py" protocol %*
+exit /b %ERRORLEVEL%
+
+:subagent_gate
+"%PY%" "!ORPATH_HOME!\scripts\subagent_gate.py"
 exit /b %ERRORLEVEL%
 
 :t2

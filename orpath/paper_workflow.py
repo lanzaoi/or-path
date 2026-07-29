@@ -138,6 +138,24 @@ def render_or_paper(
     sources = source_lines or []
     src_block = "\n".join(f"- {s}" for s in sources) if sources else "- (none)"
 
+    metrics = solution.get("metrics") or {}
+    questions = solution.get("questions") or {}
+    extra_metrics = ""
+    if metrics or questions:
+        lines_m = ["", "### Declared metrics (from solution.json)", ""]
+        if questions:
+            for qk, qv in questions.items():
+                if isinstance(qv, dict):
+                    parts = ", ".join(f"{kk}={vv}" for kk, vv in qv.items())
+                    lines_m.append(f"- Claim: `{qk}` → {parts}")
+                else:
+                    lines_m.append(f"- Claim: `{qk}` = `{qv}`")
+        else:
+            for kk, vv in list(metrics.items())[:20]:
+                if isinstance(vv, (int, float, str)):
+                    lines_m.append(f"- Claim: metrics.{kk} = `{vv}`")
+        extra_metrics = "\n".join(lines_m) + "\n"
+
     if template == "mcm":
         title = f"数模风写稿（OR 绑定）: {slug}"
         abstract_extra = "本稿数字仅绑定求解器 JSON，禁止启发式冒充全局最优。"
@@ -177,7 +195,7 @@ From `{solution_path}` only:
 - meta.exact: `{exact}`
 - meta.proven_optimal: `{proven}`
 - meta.method_class: `{meta.get("method_class")}`
-
+{extra_metrics}
 Claim: objective equals `{solution.get("objective")}` from solution.json (solver-owned).
 Claim: solution status is `{solution.get("status")}` under declared solve_mode.
 Finding: exactness flags are exact=`{exact}` proven_optimal=`{proven}`.

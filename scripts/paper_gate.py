@@ -14,6 +14,8 @@ def env() -> dict:
     e = dict(os.environ)
     e["PYTHONNOUSERSITE"] = "1"
     e["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    # Deterministic paper_gate: do not burn tokens on live Pi subagents (M2)
+    e["ORPATH_LIVE_SUBAGENT"] = "0"
     e.pop("PYTHONPATH", None)
     return e
 

@@ -38,8 +38,10 @@ class ORPathState(TypedDict):
     gate_r2_ok: bool
     review_fatal: int
     live_pi: bool
-    # P0 paper / T3 product
+    # P0 paper / T3 product / M2 subagent
     gate_claim_ok: NotRequired[bool]
+    gate_subagent_ok: NotRequired[bool | None]
+    live_subagent: NotRequired[bool]
     cited_path: NotRequired[str]
     thread_id: NotRequired[str]
     bridge_attachment: NotRequired[Literal["before_research", "before_retrieve"]]

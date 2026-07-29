@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import uuid
 from pathlib import Path
@@ -21,6 +22,22 @@ from orpath.graph_product import (  # noqa: E402
 )
 from orpath.node_context import dirty_artifacts, thread_dir  # noqa: E402
 
+_PREDECESSORS = {
+    "retrieve": "orchestrate",
+    "bridge_pi": "retrieve",
+    "research": "bridge_pi",
+    "model": "research",
+    "gate_schema": "model",
+    "solve": "gate_schema",
+    "gate_validate": "solve",
+    "explain": "gate_validate",
+    "draft_paper": "explain",
+    "cite_pack": "draft_paper",
+    "review_pack": "cite_pack",
+    "revise_or_done": "review_pack",
+    "provenance": "revise_or_done",
+}
+
 
 def _default_initial(
     *,
@@ -31,6 +48,7 @@ def _default_initial(
     solve_mode: str,
     knowledge_mode: str,
     live_pi: bool,
+    live_subagent: bool | None,
     thread_id: str,
     bridge_attachment: str,
 ) -> dict[str, Any]:
@@ -67,8 +85,10 @@ def _default_initial(
         "gate_validate_ok": False,
         "gate_r1_ok": False,
         "gate_r2_ok": False,
+        "gate_subagent_ok": None,
         "review_fatal": 0,
         "live_pi": bool(live_pi),
+        "live_subagent": live_subagent,
         "thread_id": thread_id,
         "bridge_attachment": bridge_attachment,
         "bridge_path": "",
@@ -130,16 +150,17 @@ def cmd_status(root: Path, thread_id: str) -> int:
         out["latest"] = json.loads(latest.read_text(encoding="utf-8"))
     if man.is_file():
         out["manifest"] = json.loads(man.read_text(encoding="utf-8"))
-    # checkpoint peek
     try:
         saver, conn = open_sqlite_checkpointer(_db_path(root))
         cfg = _config(thread_id)
         tup = saver.get_tuple(cfg)
         if tup:
-            out["orpath_checkpoint_id"] = getattr(tup.checkpoint, "id", None) or tup.checkpoint.get(
-                "id"
+            out["orpath_checkpoint_id"] = getattr(tup.checkpoint, "id", None) or (
+                tup.checkpoint.get("id") if isinstance(tup.checkpoint, dict) else None
             )
-            out["checkpoint_ts"] = tup.checkpoint.get("ts") if isinstance(tup.checkpoint, dict) else None
+            out["checkpoint_ts"] = (
+                tup.checkpoint.get("ts") if isinstance(tup.checkpoint, dict) else None
+            )
         conn.close()
     except Exception as exc:  # noqa: BLE001
         out["checkpoint_error"] = str(exc)
@@ -155,6 +176,17 @@ def _load_state_from_checkpoint(app: Any, thread_id: str) -> dict[str, Any] | No
     return dict(snap.values)
 
 
+def _resolve_live_subagent(args: argparse.Namespace) -> bool | None:
+    """CLI > env. None = defer to ORPATH_LIVE_SUBAGENT / check_env default."""
+    if getattr(args, "no_live_subagent", False):
+        os.environ["ORPATH_LIVE_SUBAGENT"] = "0"
+        return False
+    if getattr(args, "live_subagent", False) or bool(getattr(args, "live_pi", False)):
+        os.environ.setdefault("ORPATH_LIVE_SUBAGENT", "1")
+        return True
+    return None
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     root = args.root.resolve()
     write_stage_map_files(root)
@@ -165,14 +197,12 @@ def cmd_run(args: argparse.Namespace) -> int:
     app = build_graph_product(checkpointer=saver)
     cfg = _config(thread_id)
 
-    # Dirty detection on resume paths
     if args.resume or args.from_stage:
         probe = {
             "root": str(root),
             "thread_id": thread_id,
             "slug": slug,
         }
-        # merge path keys from latest snapshot if present
         latest = root / "runs" / thread_id / "latest_snapshot.json"
         if latest.is_file():
             meta = json.loads(latest.read_text(encoding="utf-8"))
@@ -195,6 +225,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             return 3
 
     if args.fresh or not args.resume:
+        live_sa = _resolve_live_subagent(args)
         initial = _default_initial(
             root=root,
             slug=slug,
@@ -203,46 +234,29 @@ def cmd_run(args: argparse.Namespace) -> int:
             solve_mode=args.solve_mode,
             knowledge_mode=args.knowledge_mode,
             live_pi=bool(args.live_pi),
+            live_subagent=live_sa,
             thread_id=thread_id,
             bridge_attachment=args.bridge_attachment,
         )
         if args.from_stage and not args.fresh:
-            # require existing state
             existing = _load_state_from_checkpoint(app, thread_id)
             if existing is None:
                 print(
-                    json.dumps({"error": "no_checkpoint_for_from_stage", "thread_id": thread_id}),
+                    json.dumps(
+                        {"error": "no_checkpoint_for_from_stage", "thread_id": thread_id}
+                    ),
                     file=sys.stderr,
                 )
                 conn.close()
                 return 1
-            # update state as if we finished the predecessor of from_stage
             existing["stage"] = args.from_stage
             existing["thread_id"] = thread_id
-            as_node = args.from_stage
-            # Map: jump by setting values after named node
-            # Use as_node = previous logical node when possible
-            predecessors = {
-                "retrieve": "orchestrate",
-                "bridge_pi": "retrieve",
-                "research": "bridge_pi",
-                "model": "research",
-                "gate_schema": "model",
-                "solve": "gate_schema",
-                "gate_validate": "solve",
-                "explain": "gate_validate",
-                "draft_paper": "explain",
-                "review_pack": "draft_paper",
-                "revise_or_done": "review_pack",
-                "provenance": "revise_or_done",
-            }
-            as_node = predecessors.get(args.from_stage, "orchestrate")
+            as_node = _PREDECESSORS.get(args.from_stage, "orchestrate")
             app.update_state(cfg, existing, as_node=as_node)
             final = app.invoke(None, cfg)
         else:
             final = app.invoke(initial, cfg)
     else:
-        # resume
         existing = _load_state_from_checkpoint(app, thread_id)
         if existing is None:
             print(
@@ -253,25 +267,10 @@ def cmd_run(args: argparse.Namespace) -> int:
             return 1
         if args.from_stage:
             existing["stage"] = args.from_stage
-            predecessors = {
-                "retrieve": "orchestrate",
-                "bridge_pi": "retrieve",
-                "research": "bridge_pi",
-                "model": "research",
-                "gate_schema": "model",
-                "solve": "gate_schema",
-                "gate_validate": "solve",
-                "explain": "gate_validate",
-                "draft_paper": "explain",
-                "review_pack": "draft_paper",
-                "revise_or_done": "review_pack",
-                "provenance": "revise_or_done",
-            }
-            as_node = predecessors.get(args.from_stage, "orchestrate")
+            as_node = _PREDECESSORS.get(args.from_stage, "orchestrate")
             app.update_state(cfg, existing, as_node=as_node)
         final = app.invoke(None, cfg)
 
-    # annotate checkpoint id into thread folder
     try:
         tup = saver.get_tuple(cfg)
         cp_id = None
@@ -281,7 +280,6 @@ def cmd_run(args: argparse.Namespace) -> int:
         if cp_id:
             td = thread_dir({"root": str(root), "thread_id": thread_id, "slug": slug})  # type: ignore[arg-type]
             (td / "checkpoint_id.txt").write_text(str(cp_id) + "\n", encoding="utf-8")
-            # patch provenance if present
             prov = final.get("provenance_path")
             if prov and Path(prov).is_file():
                 with Path(prov).open("a", encoding="utf-8") as f:
@@ -299,6 +297,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         "gate_validate_ok": final.get("gate_validate_ok"),
         "gate_r1_ok": final.get("gate_r1_ok"),
         "gate_r2_ok": final.get("gate_r2_ok"),
+        "gate_subagent_ok": final.get("gate_subagent_ok"),
+        "live_subagent": final.get("live_subagent"),
         "solution_path": final.get("solution_path"),
         "validate_path": final.get("validate_path"),
         "paper_path": final.get("paper_path"),
@@ -335,12 +335,24 @@ def main() -> int:
         sp.add_argument("--problem-class", default="")
         sp.add_argument("--slug", default="")
         sp.add_argument(
-            "--solve-mode", choices=("mock", "networkx", "ortools", "cpsat", "highs"), default="mock"
+            "--solve-mode",
+            choices=("mock", "networkx", "ortools", "cpsat", "highs"),
+            default="mock",
         )
         sp.add_argument(
             "--knowledge-mode", choices=("off", "seed", "hybrid"), default="seed"
         )
         sp.add_argument("--live-pi", action="store_true")
+        sp.add_argument(
+            "--live-subagent",
+            action="store_true",
+            help="force Pi subagent live for research/model/cite/review",
+        )
+        sp.add_argument(
+            "--no-live-subagent",
+            action="store_true",
+            help="force deterministic path (no Pi subagent spawn)",
+        )
         sp.add_argument(
             "--bridge-attachment",
             choices=("before_research", "before_retrieve"),
@@ -368,6 +380,8 @@ def main() -> int:
     p.add_argument("--solve-mode", default=None)
     p.add_argument("--knowledge-mode", default=None)
     p.add_argument("--live-pi", action="store_true")
+    p.add_argument("--live-subagent", action="store_true")
+    p.add_argument("--no-live-subagent", action="store_true")
     p.add_argument("--root", type=Path, default=ROOT)
     p.add_argument("--thread-id", default="")
     p.add_argument("--bridge-attachment", default="before_research")
@@ -383,7 +397,6 @@ def main() -> int:
     if args.cmd == "status":
         return cmd_status(args.root.resolve(), args.thread_id)
     if args.cmd == "run" or args.cmd is None:
-        # normalize bare invocation to run
         if args.cmd is None:
             if args.problem_id is None:
                 args.problem_id = "shortest_path"

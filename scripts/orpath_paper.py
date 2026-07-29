@@ -93,6 +93,44 @@ def cmd_plan_log(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_protocol(args: argparse.Namespace) -> int:
+    """Full draft→cite→review→revise→provenance from existing solution.json."""
+    from orpath.post_solve_paper import run_post_solve_paper
+
+    root = Path(args.root)
+    result = run_post_solve_paper(
+        root=root,
+        slug=args.slug,
+        problem_id=args.problem_id or args.slug,
+        problem_class=args.problem_class or "unknown",
+        solution_path=Path(args.solution),
+        research_path=Path(args.research) if args.research else None,
+        retrieval_path=Path(args.retrieval) if args.retrieval else None,
+        validate_path=Path(args.validate) if args.validate else None,
+        explain_path=Path(args.explain) if args.explain else None,
+        schema_path=Path(args.schema) if args.schema else None,
+        inject_bad_claim=bool(args.inject_bad_claim),
+        max_revise=int(args.max_revise),
+    )
+    st = result["state"]
+    print(result["manifest_path"])
+    print(
+        "r1",
+        st.get("gate_r1_ok"),
+        "r2",
+        st.get("gate_r2_ok"),
+        "claim",
+        st.get("gate_claim_ok"),
+        "fatal",
+        st.get("review_fatal"),
+    )
+    if st.get("human_required"):
+        return 2
+    if not (st.get("gate_r1_ok") and st.get("gate_r2_ok") and st.get("gate_claim_ok", True)):
+        return 1
+    return 0
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description="OR-Path P1 paper helpers")
     p.add_argument("--root", default=str(ROOT))
@@ -128,6 +166,23 @@ def main() -> int:
     pl.add_argument("--status", required=True)
     pl.add_argument("--detail", default="")
     pl.set_defaults(func=cmd_plan_log)
+
+    pr = sub.add_parser(
+        "protocol",
+        help="full paper protocol from existing solution (draft→cite→review→revise→provenance)",
+    )
+    pr.add_argument("--slug", required=True)
+    pr.add_argument("--solution", required=True)
+    pr.add_argument("--problem-id", default="")
+    pr.add_argument("--problem-class", default="unknown")
+    pr.add_argument("--research", default="")
+    pr.add_argument("--retrieval", default="")
+    pr.add_argument("--validate", default="")
+    pr.add_argument("--explain", default="")
+    pr.add_argument("--schema", default="")
+    pr.add_argument("--inject-bad-claim", action="store_true", default=False)
+    pr.add_argument("--max-revise", type=int, default=2)
+    pr.set_defaults(func=cmd_protocol)
 
     args = p.parse_args()
     return int(args.func(args))

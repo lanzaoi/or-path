@@ -1,0 +1,10 @@
+{
+  "problem_id": "tube_cut_b2026",
+  "problem_class": "cutting_stock",
+  "notes": "schema has no optima; numbers only from solution.json",
+  "decision_vars": [
+    "stock_assignment",
+    "sequence",
+    "end_orientation"
+  ]
+}

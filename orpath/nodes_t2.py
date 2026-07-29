@@ -16,6 +16,13 @@ from orpath.claim_ledger import (
     write_verification_md,
 )
 from orpath.lab_continuity import append_lab_changelog, write_solution_figure
+from orpath.paper_live_subagent import (
+    live_subagent_enabled,
+    merge_review_if_child_wrote,
+    run_cite_subagent_lead,
+    run_review_subagent_lead,
+)
+from orpath.graph_live_subagent import run_model_subagent_lead, run_research_subagent_lead
 from orpath.paper_workflow import (
     append_plan_log,
     apply_revise_fixes,
@@ -182,26 +189,62 @@ def node_research(state: ORPathState) -> dict:
     pc = state.get("problem_class") or "shortest_path"
     mode = state.get("knowledge_mode") or "off"
     fb = _fixture_base(root, pid)
-    problem = (fb / "problem.md").read_text(encoding="utf-8")
+    path = root / "notes" / f"{slug}-research.md"
     rp = state.get("retrieval_path")
     retrieval = load_retrieval(rp)
-    hits = retrieval.get("hits") or []
-    seed_facts = retrieval.get("seed_facts") or []
-    cite_rows = []
-    for i, h in enumerate(hits[:5], 1):
-        cite_rows.append(
-            f"| {i} | chunk | {h.get('chunk_id')} | {str(h.get('snippet', ''))[:80]} | retrieval | med |"
+
+    # M3: live research fan-out via or-researcher subagent(s)
+    sub_meta: dict = {"skipped": True, "gate_subagent_ok": None}
+    try:
+        sub_meta = run_research_subagent_lead(
+            root,
+            dict(state),
+            research_path=path,
+            retrieval_path=Path(rp) if rp else None,
+            fixture_dir=fb,
         )
-    if not cite_rows:
-        cite_rows.append(
-            f"| 1 | Problem | {fb.as_posix()}/problem.md | fixture primary | primary | high |"
-        )
-    for j, s in enumerate(seed_facts[:3], len(cite_rows) + 1):
-        cite_rows.append(
-            f"| {j} | seed | {s.get('id')} | {s.get('label', s.get('name', ''))} | seed | high |"
-        )
-    path = root / "notes" / f"{slug}-research.md"
-    body = f"""# Research: {slug}
+    except Exception as exc:  # noqa: BLE001
+        sub_meta = {
+            "skipped": False,
+            "gate_subagent_ok": False,
+            "error": f"research subagent failed: {exc}",
+        }
+        if live_subagent_enabled(dict(state)) and mode in {"seed", "hybrid"}:
+            append_plan_log(
+                root,
+                slug,
+                stage="research",
+                status="fail",
+                detail=str(exc)[:300],
+                plan_file=state.get("plan_path"),
+            )
+            return {
+                "stage": "human_stop",
+                "human_required": True,
+                "research_path": str(path) if path.is_file() else "",
+                "gate_subagent_ok": False,
+                "last_error": str(exc),
+            }
+
+    # Deterministic scaffold if no live research file yet
+    if not path.is_file() or path.stat().st_size < 40:
+        problem = (fb / "problem.md").read_text(encoding="utf-8")
+        hits = retrieval.get("hits") or []
+        seed_facts = retrieval.get("seed_facts") or []
+        cite_rows = []
+        for i, h in enumerate(hits[:5], 1):
+            cite_rows.append(
+                f"| {i} | chunk | {h.get('chunk_id')} | {str(h.get('snippet', ''))[:80]} | retrieval | med |"
+            )
+        if not cite_rows:
+            cite_rows.append(
+                f"| 1 | Problem | {fb.as_posix()}/problem.md | fixture primary | primary | high |"
+            )
+        for j, s in enumerate(seed_facts[:3], len(cite_rows) + 1):
+            cite_rows.append(
+                f"| {j} | seed | {s.get('id')} | {s.get('label', s.get('name', ''))} | seed | high |"
+            )
+        body = f"""# Research: {slug}
 
 ## Summary
 Research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode', mode)}.
@@ -229,27 +272,48 @@ Research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode', m
 ## Problem excerpt
 {problem[:800]}
 """
-    body = ensure_research_coverage_section(body, retrieval or {"knowledge_mode": mode})
-    path.write_text(body, encoding="utf-8")
+        body = ensure_research_coverage_section(body, retrieval or {"knowledge_mode": mode})
+        path.write_text(body, encoding="utf-8")
+
+    body = path.read_text(encoding="utf-8")
+    # ensure coverage section even for live merges
+    body2 = ensure_research_coverage_section(body, retrieval or {"knowledge_mode": mode})
+    if body2 != body:
+        path.write_text(body2, encoding="utf-8")
+        body = body2
 
     ok, errs = gate_research_text(body, knowledge_mode=mode, retrieval=retrieval)
+    sub_ok = sub_meta.get("gate_subagent_ok")
+    live_req = live_subagent_enabled(dict(state)) and mode in {"seed", "hybrid"}
+    if live_req and sub_ok is False:
+        ok = False
+        errs = list(errs) + [f"subagent={sub_meta.get('error') or 'failed'}"]
+
     append_plan_log(
         root,
         slug,
         stage="research",
         status="pass" if ok else "fail",
-        detail="; ".join(errs) if errs else "evidence+coverage ok",
+        detail=(
+            ("; ".join(errs) if errs else "evidence+coverage ok")
+            + f" subagent={sub_ok} scale={sub_meta.get('scale')}"
+        ),
         plan_file=state.get("plan_path"),
     )
     if not ok and mode in {"seed", "hybrid"}:
-        # hard fail research consumption for non-off modes
         return {
             "stage": "human_stop",
             "human_required": True,
             "research_path": str(path),
+            "gate_subagent_ok": sub_ok,
             "last_error": "research_gate: " + "; ".join(errs),
         }
-    return {"stage": "model", "research_path": str(path), "last_error": ""}
+    return {
+        "stage": "model",
+        "research_path": str(path),
+        "gate_subagent_ok": sub_ok,
+        "last_error": "",
+    }
 
 
 def node_model(state: ORPathState) -> dict:
@@ -258,48 +322,105 @@ def node_model(state: ORPathState) -> dict:
     pid = state["problem_id"]
     pc = state.get("problem_class") or "shortest_path"
     fb = _fixture_base(root, pid)
-    schema: dict
-    if pc == "shortest_path":
-        graph = json.loads((fb / "graph.json").read_text(encoding="utf-8"))
-        schema = {
-            "slug": slug,
-            "problem_class": "shortest_path",
-            "problem_id": pid,
-            "nodes": graph.get("nodes", []),
-            "edges_ref": str(fb.relative_to(root) / "graph.json").replace("\\", "/"),
-            "source": graph["nodes"][0],
-            "target": graph["nodes"][-1],
-            "weight_key": "w",
-            "constraints": [],
-            "notes": "T2 deterministic modeler",
-        }
-    elif pc == "tsp":
-        coords = json.loads((fb / "coords.json").read_text(encoding="utf-8"))
-        schema = {
-            "slug": slug,
-            "problem_class": "tsp",
-            "problem_id": pid,
-            "coords": coords.get("coords", coords),
-            "constraints": [],
-            "notes": "T2 TSP modeler",
-        }
-    else:
-        loc = json.loads((fb / "locations.json").read_text(encoding="utf-8"))
-        schema = {
-            "slug": slug,
-            "problem_class": "vrp",
-            "problem_id": pid,
-            "depot": loc.get("depot"),
-            "locations": loc.get("locations"),
-            "demands": loc.get("demands"),
-            "vehicle_count": loc.get("vehicle_count"),
-            "capacities": loc.get("capacities"),
-            "constraints": ["capacity"],
-            "notes": "T2 multi-vehicle VRP modeler",
-        }
     sp = root / "outputs" / f"{slug}-schema.json"
-    sp.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
-    return {"stage": "gate_schema", "schema_path": str(sp), "last_error": ""}
+
+    # M3: live or-modeler subagent
+    sub_meta: dict = {"skipped": True, "gate_subagent_ok": None}
+    try:
+        sub_meta = run_model_subagent_lead(
+            root,
+            dict(state),
+            schema_path=sp,
+            research_path=Path(state["research_path"]) if state.get("research_path") else None,
+            fixture_dir=fb,
+        )
+    except Exception as exc:  # noqa: BLE001
+        sub_meta = {
+            "skipped": False,
+            "gate_subagent_ok": False,
+            "error": f"model subagent failed: {exc}",
+        }
+
+    live_req = live_subagent_enabled(dict(state))
+    sub_ok = sub_meta.get("gate_subagent_ok")
+
+    # Deterministic modeler if live skipped or child failed (only when live off)
+    need_det = sub_meta.get("skipped") or (not live_req)
+    if live_req and sub_ok is False:
+        append_plan_log(
+            root,
+            slug,
+            stage="model",
+            status="fail",
+            detail=str(sub_meta.get("error") or "model subagent failed")[:300],
+            plan_file=state.get("plan_path"),
+        )
+        return {
+            "stage": "gate_schema",
+            "schema_path": str(sp) if sp.is_file() else "",
+            "gate_subagent_ok": False,
+            "last_error": str(sub_meta.get("error") or "model subagent failed"),
+        }
+
+    if need_det or not sp.is_file():
+        schema: dict
+        if pc == "shortest_path":
+            graph = json.loads((fb / "graph.json").read_text(encoding="utf-8"))
+            schema = {
+                "slug": slug,
+                "problem_class": "shortest_path",
+                "problem_id": pid,
+                "nodes": graph.get("nodes", []),
+                "edges_ref": str(fb.relative_to(root) / "graph.json").replace("\\", "/"),
+                "source": graph["nodes"][0],
+                "target": graph["nodes"][-1],
+                "weight_key": "w",
+                "preferred_solve_mode": "networkx",
+                "constraints": [],
+                "notes": "T2/T3 deterministic modeler",
+            }
+        elif pc == "tsp":
+            coords = json.loads((fb / "coords.json").read_text(encoding="utf-8"))
+            schema = {
+                "slug": slug,
+                "problem_class": "tsp",
+                "problem_id": pid,
+                "coords": coords.get("coords", coords),
+                "preferred_solve_mode": "cpsat",
+                "constraints": [],
+                "notes": "T2/T3 TSP modeler",
+            }
+        else:
+            loc = json.loads((fb / "locations.json").read_text(encoding="utf-8"))
+            schema = {
+                "slug": slug,
+                "problem_class": "vrp",
+                "problem_id": pid,
+                "depot": loc.get("depot"),
+                "locations": loc.get("locations"),
+                "demands": loc.get("demands"),
+                "vehicle_count": loc.get("vehicle_count"),
+                "capacities": loc.get("capacities"),
+                "preferred_solve_mode": "ortools",
+                "constraints": ["capacity"],
+                "notes": "T2 multi-vehicle VRP modeler (not proven global opt)",
+            }
+        sp.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
+
+    append_plan_log(
+        root,
+        slug,
+        stage="model",
+        status="pass",
+        detail=f"schema={sp.name} subagent={sub_ok}",
+        plan_file=state.get("plan_path"),
+    )
+    return {
+        "stage": "gate_schema",
+        "schema_path": str(sp),
+        "gate_subagent_ok": sub_ok if sub_ok is not None else state.get("gate_subagent_ok"),
+        "last_error": "",
+    }
 
 
 def node_gate_schema(state: ORPathState) -> dict:
@@ -515,7 +636,7 @@ def node_draft_paper(state: ORPathState) -> dict:
 
 
 def node_cite_pack(state: ORPathState) -> dict:
-    """P0-1/P0-2: cite layer — R1 whitelist + claim map → cited draft."""
+    """P0-1/P0-2: cite layer — optional live or-verifier subagent + R1/claim → cited."""
     root = _root(state)
     slug = state["slug"]
     paths = draft_paths(root, slug)
@@ -526,6 +647,53 @@ def node_cite_pack(state: ORPathState) -> dict:
     wl = fb / "whitelist_refs.json"
     sol = Path(state["solution_path"])
     claim_out = root / "outputs" / ".drafts" / f"{slug}-claim-map.json"
+
+    # M2: live short lead → subagent or-verifier (skipped when ORPATH_LIVE_SUBAGENT=0)
+    sub_meta: dict = {"skipped": True, "gate_subagent_ok": None}
+    try:
+        sub_meta = run_cite_subagent_lead(
+            root,
+            dict(state),
+            paper=paper,
+            cited=paths["cited"],
+            solution=sol,
+            whitelist=wl if wl.is_file() else None,
+            research=Path(state["research_path"]) if state.get("research_path") else None,
+            claim_map=claim_out,
+        )
+    except Exception as exc:  # noqa: BLE001
+        sub_meta = {
+            "skipped": False,
+            "gate_subagent_ok": False,
+            "error": f"cite subagent spawn failed: {exc}",
+        }
+        if live_subagent_enabled(dict(state)):
+            append_plan_log(
+                root,
+                slug,
+                stage="cite",
+                status="fail",
+                detail=str(exc)[:300],
+                plan_file=state.get("plan_path"),
+            )
+            return {
+                "stage": "review_pack",
+                "paper_path": str(paper),
+                "cited_path": str(paths["cited"]) if paths["cited"].is_file() else "",
+                "gate_r1_ok": False,
+                "gate_claim_ok": False,
+                "gate_subagent_ok": False,
+                "last_error": str(exc),
+            }
+
+    # If child wrote cited, prefer it as working paper body for subsequent gates
+    if paths["cited"].is_file() and paths["cited"].stat().st_size > 50 and not sub_meta.get("skipped"):
+        try:
+            child = paths["cited"].read_text(encoding="utf-8")
+            # strip prior claim-map footers if re-run
+            paper.write_text(child, encoding="utf-8")
+        except OSError:
+            pass
 
     r1_ok, r1_msg = gate_r1(root, paper, wl)
     claim_ok, claim_msg = gate_claim_map(
@@ -554,16 +722,25 @@ def node_cite_pack(state: ORPathState) -> dict:
         f"- claim_map_ok: {claim_ok}",
         f"- claim_map_path: `{claim_out}`",
         f"- claims_recorded: {len(cmap.get('claims') or [])}",
+        f"- subagent_live: {not sub_meta.get('skipped')}",
+        f"- gate_subagent_ok: {sub_meta.get('gate_subagent_ok')}",
     ]
+    if sub_meta.get("log_path"):
+        footer.append(f"- subagent_lead_log: `{sub_meta.get('log_path')}`")
     if not claim_ok:
         footer.append(f"- claim_errors: {claim_msg[:500]}")
     cited_body = body.rstrip() + "\n" + "\n".join(footer) + "\n"
     paths["cited"].write_text(cited_body, encoding="utf-8")
-    # paper stays content body without footer for R2 cleanliness — keep main paper as body
-    # but review uses paper_path; keep paper as body, store cited separately
     paper.write_text(body, encoding="utf-8")
 
-    ok = r1_ok and claim_ok
+    sub_ok = sub_meta.get("gate_subagent_ok")
+    # When live was requested, subagent failure is hard fail (Q11)
+    live_req = live_subagent_enabled(dict(state))
+    if live_req and sub_ok is False:
+        ok = False
+    else:
+        ok = r1_ok and claim_ok
+
     # Deep Feynman-style claim ledger + verification.md
     research_text = ""
     if state.get("research_path") and Path(state["research_path"]).is_file():
@@ -586,7 +763,11 @@ def node_cite_pack(state: ORPathState) -> dict:
     write_verification_md(
         paths["verification"],
         ledger,
-        extra=f"cite_pack r1={r1_ok} claim_map={claim_ok}\n{claim_msg[:400] if not claim_ok else ''}",
+        extra=(
+            f"cite_pack r1={r1_ok} claim_map={claim_ok} subagent={sub_ok}\n"
+            f"{claim_msg[:400] if not claim_ok else ''}\n"
+            f"{sub_meta.get('error') or ''}"
+        ),
     )
 
     append_plan_log(
@@ -594,17 +775,27 @@ def node_cite_pack(state: ORPathState) -> dict:
         slug,
         stage="cite",
         status="pass" if ok else "fail",
-        detail=f"r1={r1_ok} claim={claim_ok} ledger_claims={ledger.get('claimCount')} vstate={ledger.get('verificationState')}",
+        detail=(
+            f"r1={r1_ok} claim={claim_ok} subagent={sub_ok} "
+            f"ledger_claims={ledger.get('claimCount')} vstate={ledger.get('verificationState')}"
+        ),
         plan_file=state.get("plan_path"),
     )
+    err_parts = []
+    if not ok:
+        if live_req and sub_ok is False:
+            err_parts.append(f"subagent={sub_meta.get('error') or 'failed'}")
+        if not r1_ok or not claim_ok:
+            err_parts.append(f"cite: r1={r1_msg}; claim={claim_msg}")
     return {
         "stage": "review_pack",
         "paper_path": str(paper),
         "cited_path": str(paths["cited"]),
         "gate_r1_ok": r1_ok,
         "gate_claim_ok": claim_ok,
+        "gate_subagent_ok": sub_ok,
         "verification_state": ledger.get("verificationState"),
-        "last_error": "" if ok else f"cite: r1={r1_msg}; claim={claim_msg}",
+        "last_error": "" if ok else "; ".join(err_parts),
     }
 
 
@@ -620,6 +811,26 @@ def node_review_pack(state: ORPathState) -> dict:
     fb = _fixture_base(root, state["problem_id"])
     wl = fb / "whitelist_refs.json"
     paper_text = paper.read_text(encoding="utf-8") if paper.is_file() else ""
+    review = root / "outputs" / f"{slug}-review.md"
+
+    # M2: live short lead → subagent or-reviewer (serial after cite)
+    sub_meta: dict = {"skipped": True, "gate_subagent_ok": None}
+    try:
+        sub_meta = run_review_subagent_lead(
+            root,
+            dict(state),
+            paper=paper,
+            review=review,
+            solution=sol,
+            whitelist=wl if wl.is_file() else None,
+        )
+    except Exception as exc:  # noqa: BLE001
+        sub_meta = {
+            "skipped": False,
+            "gate_subagent_ok": False,
+            "error": f"review subagent spawn failed: {exc}",
+        }
+
     r2_ok, r2_msg = gate_r2(root, paper, sol)
     r1_ok, r1_msg = gate_r1(root, paper, wl)
     claim_out = root / "outputs" / ".drafts" / f"{slug}-claim-map.json"
@@ -664,7 +875,10 @@ def node_review_pack(state: ORPathState) -> dict:
         body += f"\n### Claim map FATAL\n- **FATAL:** {claim_msg}\n"
         fatal_n = len(re.findall(r"\*\*FATAL:\*\*", body))
 
-    review = root / "outputs" / f"{slug}-review.md"
+    # Merge child reviewer prose when live subagent wrote a review
+    body = merge_review_if_child_wrote(automated_body=body, child_review=review)
+    fatal_n = len(re.findall(r"\*\*FATAL:\*\*", body))
+
     review.write_text(body, encoding="utf-8")
     # P2 annotations-lite from review
     ann_path = root / "outputs" / ".drafts" / f"{slug}-annotations.json"
@@ -674,10 +888,16 @@ def node_review_pack(state: ORPathState) -> dict:
     vn.write_text(
         f"# Verify notes {slug}\n\n- r1={r1_ok} ({r1_msg})\n- r2={r2_ok} ({r2_msg})\n"
         f"- claim_map={claim_ok} ({claim_msg[:300]})\n"
-        f"- research_gate={research_ok} ({research_msg})\n- fatals={fatal_n}\n",
+        f"- research_gate={research_ok} ({research_msg})\n- fatals={fatal_n}\n"
+        f"- subagent_live={not sub_meta.get('skipped')} gate_subagent_ok={sub_meta.get('gate_subagent_ok')}\n"
+        f"- subagent_log={sub_meta.get('log_path') or 'n/a'}\n",
         encoding="utf-8",
     )
     fatals = []
+    live_req = live_subagent_enabled(dict(state))
+    sub_ok = sub_meta.get("gate_subagent_ok")
+    if live_req and sub_ok is False:
+        fatals.append(f"subagent failed: {sub_meta.get('error') or 'no subagent call'}")
     if not r2_ok:
         fatals.append(f"R2 failed: {r2_msg}")
     if not r1_ok:
@@ -689,15 +909,18 @@ def node_review_pack(state: ORPathState) -> dict:
         slug,
         stage="review",
         status="pass" if not fatals else "fail",
-        detail="; ".join(fatals) if fatals else "r1/r2/claim green",
+        detail="; ".join(fatals) if fatals else f"r1/r2/claim green subagent={sub_ok}",
         plan_file=state.get("plan_path"),
     )
+    # preserve cite subagent flag if review skipped
+    gate_sub = sub_ok if sub_ok is not None else state.get("gate_subagent_ok")
     return {
         "stage": "revise_or_done",
         "review_path": str(review),
         "gate_r1_ok": r1_ok,
         "gate_r2_ok": r2_ok,
         "gate_claim_ok": claim_ok,
+        "gate_subagent_ok": gate_sub,
         "review_fatal": fatal_n,
         "last_error": "; ".join(fatals),
     }

@@ -67,3 +67,6 @@ runtime/node_modules/
 
 # Keep launchers and runtime package manifests
 # (runtime/package.json is tracked; node_modules is not)
+
+# contest bulk attachments (local only)
+fixtures/t3/tube_cut_b2026/raw/
