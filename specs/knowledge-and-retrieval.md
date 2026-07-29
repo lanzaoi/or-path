@@ -60,6 +60,7 @@ corpus (PDF gitignore + curated md)
 1. 必须读取 `notes/<slug>-retrieval.json`（或 state 中路径）  
 2. 笔记中的引用应能映射到 `chunk_id` 或 seed 节点 id  
 3. R1 本地轨：whitelist ∪ retrieval 中的 source/chunk 标识  
+4. **P1：** `tools/gate_research.py` 校验 Evidence table + Coverage Status；seed/hybrid 下 id 未引用则 research 节点 **HUMAN_REQUIRED**  
 
 ## Cognee Cloud
 

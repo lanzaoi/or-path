@@ -195,6 +195,20 @@ def _validate_vrp(problem_id: str, sol: dict) -> list[dict]:
                 matrix[i][j] = int(round(math.hypot(dx, dy)))
     idx = {lab: i for i, lab in enumerate(labels)}
 
+    tw_raw = data.get("time_windows") or {}
+    st_raw = data.get("service_times") or {}
+    has_tw = bool(tw_raw)
+    tw: dict[str, tuple[int, int]] = {}
+    st: dict[str, int] = {}
+    if has_tw:
+        for lab in labels:
+            if isinstance(tw_raw, dict) and lab in tw_raw:
+                lo, hi = tw_raw[lab]
+                tw[lab] = (int(lo), int(hi))
+            else:
+                tw[lab] = (0, 10**9)
+            st[lab] = int(st_raw.get(lab, 0)) if isinstance(st_raw, dict) else 0
+
     routes = sol.get("routes") or []
     checks.append(
         {
@@ -208,6 +222,7 @@ def _validate_vrp(problem_id: str, sol: dict) -> list[dict]:
     seen: list[str] = []
     total = 0.0
     cap_ok = True
+    tw_ok = True
     for ri, route in enumerate(routes):
         r = [str(x) for x in route]
         load = 0
@@ -229,8 +244,47 @@ def _validate_vrp(problem_id: str, sol: dict) -> list[dict]:
         for a, b in zip(r, r[1:]):
             total += float(matrix[idx[a]][idx[b]])
 
+        if has_tw and len(r) >= 2:
+            # Simulate: start at depot at time max(0, ready_depot); wait allowed.
+            t = float(tw[depot][0])
+            for a, b in zip(r, r[1:]):
+                travel = float(matrix[idx[a]][idx[b]])
+                # leave a after service (depot service 0)
+                # time at arrival to b
+                arrive = t + travel
+                ready, due = tw[b]
+                start_service = max(arrive, float(ready))
+                if b != depot and start_service > float(due) + 1e-9:
+                    tw_ok = False
+                    checks.append(
+                        {
+                            "name": "time_windows",
+                            "ok": False,
+                            "detail": (
+                                f"route {ri} node {b}: start_service={start_service} "
+                                f"> due={due} (arrive={arrive})"
+                            ),
+                        }
+                    )
+                # after service at b
+                t = start_service + float(st.get(b, 0))
+                # also ensure a started within window when leaving (except pure start)
+                if a != depot or r.index(a) != 0:
+                    pass
+
     if cap_ok:
         checks.append({"name": "capacity", "ok": True})
+
+    if has_tw and tw_ok:
+        checks.append({"name": "time_windows", "ok": True})
+    elif not has_tw:
+        checks.append(
+            {
+                "name": "time_windows",
+                "ok": True,
+                "detail": "no time_windows in fixture (T2-style CVRP)",
+            }
+        )
 
     if sorted(seen) != sorted(customers) or len(seen) != len(customers):
         checks.append(

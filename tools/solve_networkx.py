@@ -60,7 +60,12 @@ def shortest_path_solution(
         "routes": None,
         "solver": "networkx-dijkstra",
         "source": rel,
-        "meta": {},
+        "meta": {
+            "exact": True,
+            "proven_optimal": True,
+            "method_class": "exact",
+            "algorithm": "dijkstra",
+        },
     }
 
 

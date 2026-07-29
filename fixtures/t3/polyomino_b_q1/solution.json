@@ -1,0 +1,143 @@
+{
+  "problem_id": "polyomino_b_q1",
+  "problem_class": "polyomino_cover",
+  "status": "OPTIMAL",
+  "objective": 6,
+  "solver": "ortools-cpsat-polyomino",
+  "source": "tools/solve_polyomino.py",
+  "placements": [
+    {
+      "piece": "D",
+      "cells": [
+        [
+          0,
+          0
+        ],
+        [
+          0,
+          1
+        ]
+      ],
+      "size": 2
+    },
+    {
+      "piece": "D",
+      "cells": [
+        [
+          1,
+          3
+        ],
+        [
+          2,
+          3
+        ]
+      ],
+      "size": 2
+    },
+    {
+      "piece": "L3",
+      "cells": [
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      "size": 3
+    },
+    {
+      "piece": "L3",
+      "cells": [
+        [
+          1,
+          0
+        ],
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "size": 3
+    },
+    {
+      "piece": "L3",
+      "cells": [
+        [
+          2,
+          0
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          3,
+          1
+        ]
+      ],
+      "size": 3
+    },
+    {
+      "piece": "L3",
+      "cells": [
+        [
+          2,
+          2
+        ],
+        [
+          3,
+          2
+        ],
+        [
+          3,
+          3
+        ]
+      ],
+      "size": 3
+    }
+  ],
+  "piece_count": 6,
+  "piece_counts": {
+    "D": 2,
+    "L3": 4
+  },
+  "path": null,
+  "tour": null,
+  "routes": null,
+  "meta": {
+    "exact": true,
+    "proven_optimal": true,
+    "method_class": "exact",
+    "time_limit_s": 60.0,
+    "cp_status": 4,
+    "n_cells": 16,
+    "n_placements": 76,
+    "pieces_allowed": [
+      "M",
+      "D",
+      "L3"
+    ],
+    "lower_bound_by_max_piece": 6,
+    "max_piece_size": 3,
+    "rows": 4,
+    "cols": 4,
+    "removed": [],
+    "board_grid": [
+      "AACC",
+      "DDCB",
+      "EDFB",
+      "EEFF"
+    ]
+  }
+}

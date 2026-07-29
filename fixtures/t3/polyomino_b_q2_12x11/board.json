@@ -1,0 +1,34 @@
+{
+  "rows": 12,
+  "cols": 11,
+  "cells": 132,
+  "removed": [],
+  "allow_rotate": true,
+  "allow_reflect": true,
+  "must_cover_all": true,
+  "max_uncovered": 0,
+  "objective": "minimize_piece_count",
+  "pieces": [
+    {"id": "M", "name": "monomino", "size": 1, "max": 18},
+    {"id": "D", "name": "domino", "size": 2, "max": 15},
+    {"id": "L3", "name": "L-tromino", "size": 3, "max": 12},
+    {"id": "I3", "name": "I-tromino", "size": 3, "max": 12},
+    {"id": "S", "name": "square-tetromino", "size": 4, "max": 9},
+    {"id": "I4", "name": "I-tetromino", "size": 4, "max": 9},
+    {"id": "T4", "name": "T-tetromino", "size": 4, "max": 9},
+    {"id": "L4", "name": "L-tetromino", "size": 4, "max": 9},
+    {"id": "Z4", "name": "Z-tetromino", "size": 4, "max": 9}
+  ],
+  "max_counts": {
+    "M": 18,
+    "D": 15,
+    "L3": 12,
+    "I3": 12,
+    "S": 9,
+    "I4": 9,
+    "T4": 9,
+    "L4": 9,
+    "Z4": 9
+  },
+  "note": "OCR caps: monomino≤18, domino≤15, each tromino≤12, each tetromino type≤9 (四格若赛方解释为合计9需改 caps)"
+}

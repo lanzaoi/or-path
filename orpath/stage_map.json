@@ -1,0 +1,118 @@
+{
+  "name": "orpath_product",
+  "nodes": [
+    "orchestrate",
+    "retrieve",
+    "bridge_pi",
+    "research",
+    "model",
+    "gate_schema",
+    "solve",
+    "gate_validate",
+    "human_stop",
+    "explain",
+    "draft_paper",
+    "cite_pack",
+    "review_pack",
+    "revise_or_done",
+    "provenance"
+  ],
+  "edges": [
+    {
+      "from": "START",
+      "to": "orchestrate"
+    },
+    {
+      "from": "orchestrate",
+      "to": [
+        "bridge_pi",
+        "retrieve"
+      ],
+      "cond": "bridge_attachment"
+    },
+    {
+      "from": "bridge_pi",
+      "to": [
+        "retrieve",
+        "research"
+      ],
+      "cond": "bridge_attachment"
+    },
+    {
+      "from": "retrieve",
+      "to": [
+        "bridge_pi",
+        "research"
+      ],
+      "cond": "bridge_attachment"
+    },
+    {
+      "from": "research",
+      "to": "model"
+    },
+    {
+      "from": "model",
+      "to": "gate_schema"
+    },
+    {
+      "from": "gate_schema",
+      "to": [
+        "solve",
+        "model",
+        "human_stop"
+      ],
+      "cond": "schema_gate"
+    },
+    {
+      "from": "solve",
+      "to": "gate_validate"
+    },
+    {
+      "from": "gate_validate",
+      "to": [
+        "explain",
+        "solve",
+        "model",
+        "human_stop"
+      ],
+      "cond": "validate_gate"
+    },
+    {
+      "from": "human_stop",
+      "to": "provenance"
+    },
+    {
+      "from": "explain",
+      "to": "draft_paper"
+    },
+    {
+      "from": "draft_paper",
+      "to": "cite_pack"
+    },
+    {
+      "from": "cite_pack",
+      "to": "review_pack"
+    },
+    {
+      "from": "review_pack",
+      "to": "revise_or_done"
+    },
+    {
+      "from": "revise_or_done",
+      "to": [
+        "draft_paper",
+        "cite_pack",
+        "provenance",
+        "human_stop"
+      ],
+      "cond": "revise"
+    },
+    {
+      "from": "provenance",
+      "to": "END"
+    }
+  ],
+  "checkpointer": "sqlite:runs/orpath.sqlite",
+  "bridge_default_attachment": "before_research",
+  "paper_pipeline": "draft\u2192cite\u2192review\u2192revise(re-cite)\u2192provenance"
+}

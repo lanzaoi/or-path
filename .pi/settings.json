@@ -4,7 +4,7 @@
     "npm:@samfp/pi-memory"
   ],
   "subagents": {
-    "defaultModel": "deepseek-v4-flash"
+    "defaultModel": "deepseek-v4-pro"
   },
   "memory": {
     "enabled": true,

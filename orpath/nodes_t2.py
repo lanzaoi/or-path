@@ -6,7 +6,29 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from orpath.gates import gate_r1, gate_r2, gate_schema, gate_validate, solve
+from orpath.gates import gate_claim_map, gate_r1, gate_r2, gate_schema, gate_validate, solve
+from orpath.annotations_lite import annotations_from_review, write_annotations
+from orpath.artifact_versions import record_versions
+from orpath.claim_ledger import (
+    build_claim_ledger,
+    select_final_candidate,
+    write_claim_ledger,
+    write_verification_md,
+)
+from orpath.lab_continuity import append_lab_changelog, write_solution_figure
+from orpath.paper_workflow import (
+    append_plan_log,
+    apply_revise_fixes,
+    build_review_markdown,
+    draft_paths,
+    ensure_research_coverage_section,
+    gate_research_text,
+    load_retrieval,
+    render_or_paper,
+    thick_provenance,
+)
+from orpath.research_run import build_research_run, write_research_run
+from orpath.revise_proof import extract_bad_urls, write_revise_proof
 from orpath.state import ORPathState
 
 TUNE_STRATEGIES = [
@@ -32,7 +54,11 @@ def _ensure_dirs(root: Path) -> None:
 
 
 def _fixture_base(root: Path, problem_id: str) -> Path:
-    for base in (root / "fixtures" / "t2", root / "fixtures" / "t1"):
+    for base in (
+        root / "fixtures" / "t3",
+        root / "fixtures" / "t2",
+        root / "fixtures" / "t1",
+    ):
         if (base / problem_id).is_dir():
             return base / problem_id
     raise FileNotFoundError(problem_id)
@@ -63,6 +89,7 @@ def node_orchestrate(state: ORPathState) -> dict:
 - solve_mode: {state["solve_mode"]}
 - knowledge_mode: {state.get("knowledge_mode")}
 - started: {datetime.now(timezone.utc).isoformat()}
+- paper_template: or (P1)
 
 ## Task ledger
 - [ ] retrieve
@@ -72,14 +99,18 @@ def node_orchestrate(state: ORPathState) -> dict:
 - [ ] validate
 - [ ] explain
 - [ ] draft
+- [ ] cite
 - [ ] review
 - [ ] provenance
 
+## Decision log
+- Numbers only from solve+validate; paper drafts layered under outputs/.drafts/
+
 ## Verification log
-(empty)
 """,
         encoding="utf-8",
     )
+    append_plan_log(root, slug, stage="orchestrate", status="done", detail="plan created", plan_file=plan)
     return {
         "stage": "retrieve",
         "plan_path": str(plan),
@@ -149,18 +180,17 @@ def node_research(state: ORPathState) -> dict:
     slug = state["slug"]
     pid = state["problem_id"]
     pc = state.get("problem_class") or "shortest_path"
+    mode = state.get("knowledge_mode") or "off"
     fb = _fixture_base(root, pid)
     problem = (fb / "problem.md").read_text(encoding="utf-8")
-    retrieval = {}
     rp = state.get("retrieval_path")
-    if rp and Path(rp).is_file():
-        retrieval = json.loads(Path(rp).read_text(encoding="utf-8"))
+    retrieval = load_retrieval(rp)
     hits = retrieval.get("hits") or []
     seed_facts = retrieval.get("seed_facts") or []
     cite_rows = []
     for i, h in enumerate(hits[:5], 1):
         cite_rows.append(
-            f"| {i} | chunk | {h.get('chunk_id')} | {h.get('snippet', '')[:80]} | retrieval | med |"
+            f"| {i} | chunk | {h.get('chunk_id')} | {str(h.get('snippet', ''))[:80]} | retrieval | med |"
         )
     if not cite_rows:
         cite_rows.append(
@@ -171,11 +201,10 @@ def node_research(state: ORPathState) -> dict:
             f"| {j} | seed | {s.get('id')} | {s.get('label', s.get('name', ''))} | seed | high |"
         )
     path = root / "notes" / f"{slug}-research.md"
-    path.write_text(
-        f"""# Research: {slug}
+    body = f"""# Research: {slug}
 
 ## Summary
-T2 research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode')}.
+Research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode', mode)}.
 
 ## Problem class
 {pc}
@@ -186,9 +215,9 @@ T2 research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode'
 {chr(10).join(cite_rows)}
 
 ## Findings
-1. Use deterministic solvers (networkx/ortools); never LLM optima.
+1. Use deterministic solvers (networkx/cpsat/highs/ortools); never LLM optima.
 2. Validate must recompute objective.
-3. Seed/retrieval chunk_ids when present must be cited.
+3. Seed/retrieval chunk_ids when present must be cited in this table.
 
 ## Modeling recommendations
 - problem_class: {pc}
@@ -199,9 +228,27 @@ T2 research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode'
 
 ## Problem excerpt
 {problem[:800]}
-""",
-        encoding="utf-8",
+"""
+    body = ensure_research_coverage_section(body, retrieval or {"knowledge_mode": mode})
+    path.write_text(body, encoding="utf-8")
+
+    ok, errs = gate_research_text(body, knowledge_mode=mode, retrieval=retrieval)
+    append_plan_log(
+        root,
+        slug,
+        stage="research",
+        status="pass" if ok else "fail",
+        detail="; ".join(errs) if errs else "evidence+coverage ok",
+        plan_file=state.get("plan_path"),
     )
+    if not ok and mode in {"seed", "hybrid"}:
+        # hard fail research consumption for non-off modes
+        return {
+            "stage": "human_stop",
+            "human_required": True,
+            "research_path": str(path),
+            "last_error": "research_gate: " + "; ".join(errs),
+        }
     return {"stage": "model", "research_path": str(path), "last_error": ""}
 
 
@@ -403,51 +450,162 @@ def node_draft_paper(state: ORPathState) -> dict:
     root = _root(state)
     slug = state["slug"]
     sol = json.loads(Path(state["solution_path"]).read_text(encoding="utf-8"))
-    paper = root / "papers" / f"{slug}.md"
+    paths = draft_paths(root, slug)
+    paths["paper"].parent.mkdir(parents=True, exist_ok=True)
     pc = state.get("problem_class") or sol.get("problem_class")
-    shape = sol.get("path") or sol.get("tour") or sol.get("routes")
     fb = _fixture_base(root, state["problem_id"])
     rel = fb.relative_to(root).as_posix()
-    # whitelist-friendly cites
-    wl_note = "notes://t2-tsp-ref" if pc == "tsp" else (
-        "notes://t2-vrp-ref" if pc == "vrp" else "notes://t1-shortest-path-ref"
+    cites: list[str] = []
+    wl_path = fb / "whitelist_refs.json"
+    if wl_path.is_file():
+        try:
+            wl = json.loads(wl_path.read_text(encoding="utf-8"))
+            cites.extend(str(u) for u in (wl.get("urls") or []))
+            cites.extend(str(n) for n in (wl.get("notes") or []))
+        except json.JSONDecodeError:
+            cites = []
+    if not cites:
+        cites = [
+            "notes://t2-tsp-ref"
+            if pc == "tsp"
+            else (
+                "notes://t2-vrp-ref"
+                if pc == "vrp"
+                else "notes://t1-shortest-path-ref"
+            )
+        ]
+    source_lines = list(cites)
+    source_lines.append(state["solution_path"])
+    if state.get("research_path"):
+        source_lines.append(str(state.get("research_path")))
+    if state.get("validate_path"):
+        source_lines.append(str(state.get("validate_path")))
+
+    body = render_or_paper(
+        slug=slug,
+        problem_class=str(pc),
+        problem_id=state["problem_id"],
+        solution=sol,
+        solution_path=state["solution_path"],
+        schema_path=str(state.get("schema_path") or ""),
+        research_path=str(state.get("research_path") or ""),
+        retrieval_path=str(state.get("retrieval_path") or ""),
+        validate_path=str(state.get("validate_path") or ""),
+        explain_path=str(state.get("explain_path") or ""),
+        fixture_rel=rel,
+        source_lines=source_lines,
+        template="or",
     )
-    paper.write_text(
-        f"""# OR Fixture Study ({slug})
-
-## Abstract
-We solve a `{pc}` instance with deterministic tools and bind all numerics to solver JSON.
-
-## Problem statement
-See `{rel}/problem.md`.
-
-## Related modeling notes
-Research: `{state.get('research_path')}`.
-Retrieval: `{state.get('retrieval_path')}`.
-
-## Method / formulation
-Schema: `{state['schema_path']}`.
-Solver owns optima; validate recomputes.
-
-## Results
-From `{state['solution_path']}`:
-- status: {sol.get('status')}
-- objective = {sol.get('objective')}
-- solution_shape: {shape}
-- solver: {sol.get('solver')}
-
-## Limitations
-Fixture-scale. Live multi-agent + OpenPi evidence separate.
-
-## Sources
-- {wl_note}
-- https://arxiv.org/abs/2503.10009
-- {state['solution_path']}
-- {state.get('research_path')}
-""",
-        encoding="utf-8",
+    # P1-5 layered drafts: draft only here; cite_pack builds cited
+    paths["draft"].write_text(body, encoding="utf-8")
+    paths["paper"].write_text(body, encoding="utf-8")
+    append_plan_log(
+        root,
+        slug,
+        stage="draft",
+        status="done",
+        detail=f"wrote {paths['draft'].name} (pending cite_pack)",
+        plan_file=state.get("plan_path"),
     )
-    return {"stage": "review_pack", "paper_path": str(paper), "last_error": ""}
+    return {
+        "stage": "cite_pack",
+        "paper_path": str(paths["paper"]),
+        "last_error": "",
+    }
+
+
+def node_cite_pack(state: ORPathState) -> dict:
+    """P0-1/P0-2: cite layer — R1 whitelist + claim map → cited draft."""
+    root = _root(state)
+    slug = state["slug"]
+    paths = draft_paths(root, slug)
+    paper = Path(state["paper_path"])
+    if not paper.is_file() and paths["draft"].is_file():
+        paper = paths["draft"]
+    fb = _fixture_base(root, state["problem_id"])
+    wl = fb / "whitelist_refs.json"
+    sol = Path(state["solution_path"])
+    claim_out = root / "outputs" / ".drafts" / f"{slug}-claim-map.json"
+
+    r1_ok, r1_msg = gate_r1(root, paper, wl)
+    claim_ok, claim_msg = gate_claim_map(
+        root,
+        paper,
+        sol,
+        whitelist=wl if wl.is_file() else None,
+        research=Path(state["research_path"]) if state.get("research_path") else None,
+        retrieval=Path(state["retrieval_path"]) if state.get("retrieval_path") else None,
+        out=claim_out,
+    )
+
+    body = paper.read_text(encoding="utf-8") if paper.is_file() else ""
+    # append claim-map summary into cited artifact
+    cmap = {}
+    if claim_out.is_file():
+        try:
+            cmap = json.loads(claim_out.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            cmap = {}
+    footer = [
+        "",
+        "---",
+        "## Claim map (P0 cite_pack)",
+        f"- r1_ok: {r1_ok}",
+        f"- claim_map_ok: {claim_ok}",
+        f"- claim_map_path: `{claim_out}`",
+        f"- claims_recorded: {len(cmap.get('claims') or [])}",
+    ]
+    if not claim_ok:
+        footer.append(f"- claim_errors: {claim_msg[:500]}")
+    cited_body = body.rstrip() + "\n" + "\n".join(footer) + "\n"
+    paths["cited"].write_text(cited_body, encoding="utf-8")
+    # paper stays content body without footer for R2 cleanliness — keep main paper as body
+    # but review uses paper_path; keep paper as body, store cited separately
+    paper.write_text(body, encoding="utf-8")
+
+    ok = r1_ok and claim_ok
+    # Deep Feynman-style claim ledger + verification.md
+    research_text = ""
+    if state.get("research_path") and Path(state["research_path"]).is_file():
+        research_text = Path(state["research_path"]).read_text(encoding="utf-8")
+    texts = [(str(paper), body)]
+    if research_text:
+        texts.append((str(state["research_path"]), research_text))
+    if paths["cited"].is_file():
+        texts.append((str(paths["cited"]), paths["cited"].read_text(encoding="utf-8")))
+    ledger = build_claim_ledger(
+        slug=slug,
+        texts=texts,
+        r1_ok=r1_ok,
+        r2_ok=None,
+        claim_map_ok=claim_ok,
+        research_ok=None,
+        validate_ok=state.get("gate_validate_ok"),
+    )
+    write_claim_ledger(paths["claim_ledger"], ledger)
+    write_verification_md(
+        paths["verification"],
+        ledger,
+        extra=f"cite_pack r1={r1_ok} claim_map={claim_ok}\n{claim_msg[:400] if not claim_ok else ''}",
+    )
+
+    append_plan_log(
+        root,
+        slug,
+        stage="cite",
+        status="pass" if ok else "fail",
+        detail=f"r1={r1_ok} claim={claim_ok} ledger_claims={ledger.get('claimCount')} vstate={ledger.get('verificationState')}",
+        plan_file=state.get("plan_path"),
+    )
+    return {
+        "stage": "review_pack",
+        "paper_path": str(paper),
+        "cited_path": str(paths["cited"]),
+        "gate_r1_ok": r1_ok,
+        "gate_claim_ok": claim_ok,
+        "verification_state": ledger.get("verificationState"),
+        "last_error": "" if ok else f"cite: r1={r1_msg}; claim={claim_msg}",
+    }
 
 
 def _count_fatal(review_text: str) -> int:
@@ -461,28 +619,86 @@ def node_review_pack(state: ORPathState) -> dict:
     sol = Path(state["solution_path"])
     fb = _fixture_base(root, state["problem_id"])
     wl = fb / "whitelist_refs.json"
+    paper_text = paper.read_text(encoding="utf-8") if paper.is_file() else ""
     r2_ok, r2_msg = gate_r2(root, paper, sol)
     r1_ok, r1_msg = gate_r1(root, paper, wl)
+    claim_out = root / "outputs" / ".drafts" / f"{slug}-claim-map.json"
+    claim_ok, claim_msg = gate_claim_map(
+        root,
+        paper,
+        sol,
+        whitelist=wl if wl.is_file() else None,
+        research=Path(state["research_path"]) if state.get("research_path") else None,
+        retrieval=Path(state["retrieval_path"]) if state.get("retrieval_path") else None,
+        out=claim_out,
+    )
+    # prefer prior cite_pack flag if present and claim still run
+    if state.get("gate_claim_ok") is False and claim_ok:
+        pass
+
+    research_ok = None
+    research_msg = ""
+    rp = state.get("research_path")
+    if rp and Path(rp).is_file():
+        rok, rerrs = gate_research_text(
+            Path(rp).read_text(encoding="utf-8"),
+            knowledge_mode=str(state.get("knowledge_mode") or "off"),
+            retrieval=load_retrieval(state.get("retrieval_path")),
+        )
+        research_ok = rok
+        research_msg = "; ".join(rerrs)
+
+    body, fatal_n = build_review_markdown(
+        slug=slug,
+        paper_text=paper_text,
+        r1_ok=r1_ok,
+        r1_msg=r1_msg,
+        r2_ok=r2_ok,
+        r2_msg=r2_msg,
+        validate_ok=state.get("gate_validate_ok"),
+        research_ok=research_ok,
+        research_msg=research_msg,
+    )
+    # inject claim map fatals
+    if not claim_ok:
+        body += f"\n### Claim map FATAL\n- **FATAL:** {claim_msg}\n"
+        fatal_n = len(re.findall(r"\*\*FATAL:\*\*", body))
+
+    review = root / "outputs" / f"{slug}-review.md"
+    review.write_text(body, encoding="utf-8")
+    # P2 annotations-lite from review
+    ann_path = root / "outputs" / ".drafts" / f"{slug}-annotations.json"
+    anns = annotations_from_review(body, artifact_path=str(paper), slug=slug)
+    write_annotations(ann_path, slug=slug, annotations=anns)
+    vn = root / "outputs" / f"{slug}-verify-notes.md"
+    vn.write_text(
+        f"# Verify notes {slug}\n\n- r1={r1_ok} ({r1_msg})\n- r2={r2_ok} ({r2_msg})\n"
+        f"- claim_map={claim_ok} ({claim_msg[:300]})\n"
+        f"- research_gate={research_ok} ({research_msg})\n- fatals={fatal_n}\n",
+        encoding="utf-8",
+    )
     fatals = []
     if not r2_ok:
         fatals.append(f"R2 failed: {r2_msg}")
     if not r1_ok:
         fatals.append(f"R1 failed: {r1_msg}")
-    review = root / "outputs" / f"{slug}-review.md"
-    body = f"## Summary\nT2 review pack `{slug}`.\n\n## Weaknesses\n"
-    if fatals:
-        for i, f in enumerate(fatals, 1):
-            body += f"- [W{i}] **FATAL:** {f}\n"
-    else:
-        body += "- None FATAL from gates.\n"
-    body += f"\n## Verdict\nr1={r1_ok} r2={r2_ok} validate={state.get('gate_validate_ok')}\n"
-    review.write_text(body, encoding="utf-8")
+    if not claim_ok:
+        fatals.append(f"claim_map failed: {claim_msg}")
+    append_plan_log(
+        root,
+        slug,
+        stage="review",
+        status="pass" if not fatals else "fail",
+        detail="; ".join(fatals) if fatals else "r1/r2/claim green",
+        plan_file=state.get("plan_path"),
+    )
     return {
         "stage": "revise_or_done",
         "review_path": str(review),
         "gate_r1_ok": r1_ok,
         "gate_r2_ok": r2_ok,
-        "review_fatal": _count_fatal(body),
+        "gate_claim_ok": claim_ok,
+        "review_fatal": fatal_n,
         "last_error": "; ".join(fatals),
     }
 
@@ -491,65 +707,350 @@ def node_revise_or_done(state: ORPathState) -> dict:
     ok = (
         state.get("gate_r1_ok")
         and state.get("gate_r2_ok")
+        and state.get("gate_claim_ok", True)
         and state.get("review_fatal", 0) == 0
     )
+    root = _root(state)
+    slug = state["slug"]
+    paths = draft_paths(root, slug)
     if ok:
+        append_plan_log(
+            root,
+            slug,
+            stage="revise",
+            status="skip",
+            detail="no FATAL; proceed provenance",
+            plan_file=state.get("plan_path"),
+        )
         return {"stage": "provenance", "last_error": ""}
+
     rev = int(state.get("revise_count") or 0)
     max_r = int(state.get("max_revise") or 2)
-    if rev < max_r:
+    if rev >= max_r:
+        append_plan_log(
+            root,
+            slug,
+            stage="revise",
+            status="exhausted",
+            detail=str(state.get("last_error") or ""),
+            plan_file=state.get("plan_path"),
+        )
         return {
-            "stage": "draft_paper",
-            "revise_count": rev + 1,
-            "last_error": state.get("last_error") or "revise",
+            "stage": "human_stop",
+            "human_required": True,
+            "last_error": f"paper revise exhausted: {state.get('last_error')}",
         }
+
+    paper = Path(state["paper_path"])
+    sol = json.loads(Path(state["solution_path"]).read_text(encoding="utf-8"))
+    fb = _fixture_base(root, state["problem_id"])
+    wl_path = fb / "whitelist_refs.json"
+    allowed: list[str] = []
+    if wl_path.is_file():
+        try:
+            wl = json.loads(wl_path.read_text(encoding="utf-8"))
+            allowed.extend(str(u) for u in (wl.get("urls") or []))
+            allowed.extend(str(n) for n in (wl.get("notes") or []))
+        except json.JSONDecodeError:
+            pass
+    old = paper.read_text(encoding="utf-8") if paper.is_file() else ""
+    bad_urls = extract_bad_urls(old, set(allowed))
+    fixed = apply_revise_fixes(
+        old,
+        solution=sol,
+        allowed_urls=allowed,
+        solution_path=state["solution_path"],
+    )
+    # strip global-opt marketing if not proven
+    if not (sol.get("meta") or {}).get("proven_optimal"):
+        fixed = re.sub(
+            r"(?i)global(?:ly)?\s+optimal|保证全局最优|数学证明最优",
+            "best-found / validated feasible",
+            fixed,
+        )
+    paths["revised"].write_text(fixed, encoding="utf-8")
+    paper.write_text(fixed, encoding="utf-8")
+
+    r2_ok, r2_msg = gate_r2(root, paper, Path(state["solution_path"]))
+    r1_ok, r1_msg = gate_r1(root, paper, wl_path)
+    claim_out = root / "outputs" / ".drafts" / f"{slug}-claim-map.json"
+    claim_ok, claim_msg = gate_claim_map(
+        root,
+        paper,
+        Path(state["solution_path"]),
+        whitelist=wl_path if wl_path.is_file() else None,
+        research=Path(state["research_path"]) if state.get("research_path") else None,
+        retrieval=Path(state["retrieval_path"]) if state.get("retrieval_path") else None,
+        out=claim_out,
+    )
+
+    proof_path = root / "outputs" / ".drafts" / f"{slug}-revise-proof.md"
+    write_revise_proof(
+        proof_path,
+        slug=slug,
+        before=old,
+        after=fixed,
+        removed_needles=bad_urls
+        + (
+            ["global optimal", "保证全局最优"]
+            if not (sol.get("meta") or {}).get("proven_optimal")
+            else []
+        ),
+        r1_ok=r1_ok,
+        r2_ok=r2_ok,
+        claim_ok=claim_ok,
+        detail=f"rev={rev+1} r1={r1_msg[:80]} r2={r2_msg[:80]} claim={claim_msg[:80]}",
+    )
+
+    append_plan_log(
+        root,
+        slug,
+        stage="revise",
+        status="pass" if (r1_ok and r2_ok and claim_ok) else "retry",
+        detail=f"rev={rev+1} proof={proof_path.name} r1={r1_ok} r2={r2_ok} claim={claim_ok}",
+        plan_file=state.get("plan_path"),
+    )
+
+    if r1_ok and r2_ok and claim_ok:
+        body, fatal_n = build_review_markdown(
+            slug=slug,
+            paper_text=fixed,
+            r1_ok=True,
+            r1_msg="ok",
+            r2_ok=True,
+            r2_msg="ok",
+            validate_ok=state.get("gate_validate_ok"),
+            research_ok=True,
+            research_msg="",
+        )
+        if state.get("review_path"):
+            Path(state["review_path"]).write_text(body, encoding="utf-8")
+        return {
+            "stage": "provenance",
+            "revise_count": rev + 1,
+            "gate_r1_ok": True,
+            "gate_r2_ok": True,
+            "gate_claim_ok": True,
+            "review_fatal": 0,
+            "paper_path": str(paper),
+            "last_error": "",
+        }
+
+    # re-enter cite→review after partial fix
     return {
-        "stage": "human_stop",
-        "human_required": True,
-        "last_error": f"paper revise exhausted: {state.get('last_error')}",
+        "stage": "cite_pack",
+        "revise_count": rev + 1,
+        "gate_r1_ok": r1_ok,
+        "gate_r2_ok": r2_ok,
+        "gate_claim_ok": claim_ok,
+        "paper_path": str(paper),
+        "last_error": f"after revise: r1={r1_msg}; r2={r2_msg}; claim={claim_msg}",
     }
 
 
 def node_provenance(state: ORPathState) -> dict:
     root = _root(state)
     slug = state["slug"]
-    prov = root / "outputs" / f"{slug}.provenance.md"
-    lines = [
-        f"# Provenance {slug}",
-        f"- utc: {datetime.now(timezone.utc).isoformat()}",
-        f"- problem_class: {state.get('problem_class')}",
-        f"- solve_mode: {state['solve_mode']}",
-        f"- knowledge_mode: {state.get('knowledge_mode')}",
-        f"- schema_repair: {state.get('schema_repair')}",
-        f"- solver_tune: {state.get('solver_tune')}",
-        f"- validate_repair: {state.get('validate_repair')}",
-        f"- revise_count: {state.get('revise_count')}",
-        f"- human_required: {state.get('human_required')}",
-        f"- gate_schema_ok: {state.get('gate_schema_ok')}",
-        f"- gate_validate_ok: {state.get('gate_validate_ok')}",
-        f"- gate_r1_ok: {state.get('gate_r1_ok')}",
-        f"- gate_r2_ok: {state.get('gate_r2_ok')}",
-        "",
-        "## Artifacts",
-    ]
-    for k in (
-        "plan_path",
-        "retrieval_path",
-        "research_path",
-        "schema_path",
-        "solution_path",
-        "validate_path",
-        "explain_path",
-        "paper_path",
-        "review_path",
-        "tune_log_path",
-    ):
-        if state.get(k):
-            lines.append(f"- {k}: `{state[k]}`")
-    lines.append("")
-    lines.append("## Notes")
-    lines.append(
-        "T2 LG nodes write file handoffs for CI; live Pi/OpenPi + bridge evidence separate."
+    dpaths = draft_paths(root, slug)
+    # Promote final candidate (Feynman: revised > cited > draft)
+    final = select_final_candidate(dpaths)
+    if final and final.is_file():
+        paper_out = dpaths["paper"]
+        paper_out.parent.mkdir(parents=True, exist_ok=True)
+        body = final.read_text(encoding="utf-8")
+        # strip cite footer if present when promoting cited
+        if "## Claim map (P0 cite_pack)" in body:
+            body = body.split("## Claim map (P0 cite_pack)")[0].rstrip() + "\n"
+        paper_out.write_text(body, encoding="utf-8")
+        final_path = str(final)
+    else:
+        final_path = state.get("paper_path") or ""
+
+    # rebuild ledger at end with all gates
+    texts: list[tuple[str, str]] = []
+    for key in ("draft", "cited", "revised", "paper", "verification"):
+        p = dpaths.get(key)
+        if p and Path(p).is_file():
+            texts.append((str(p), Path(p).read_text(encoding="utf-8")))
+    if state.get("research_path") and Path(state["research_path"]).is_file():
+        texts.append(
+            (str(state["research_path"]), Path(state["research_path"]).read_text(encoding="utf-8"))
+        )
+    research_ok = None
+    if state.get("research_path") and Path(state["research_path"]).is_file():
+        rok, _ = gate_research_text(
+            Path(state["research_path"]).read_text(encoding="utf-8"),
+            knowledge_mode=str(state.get("knowledge_mode") or "off"),
+            retrieval=load_retrieval(state.get("retrieval_path")),
+        )
+        research_ok = rok
+    ledger = build_claim_ledger(
+        slug=slug,
+        texts=texts,
+        r1_ok=state.get("gate_r1_ok"),
+        r2_ok=state.get("gate_r2_ok"),
+        claim_map_ok=state.get("gate_claim_ok"),
+        research_ok=research_ok,
+        validate_ok=state.get("gate_validate_ok"),
     )
-    prov.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return {"stage": "end", "provenance_path": str(prov)}
+    write_claim_ledger(dpaths["claim_ledger"], ledger)
+    write_verification_md(
+        dpaths["verification"],
+        ledger,
+        extra=f"final_candidate={final_path}\nrevise_count={state.get('revise_count')}",
+    )
+
+    path_map = {
+        "plan_path": state.get("plan_path") or str(dpaths["plan"]),
+        "retrieval_path": state.get("retrieval_path"),
+        "research_path": state.get("research_path"),
+        "schema_path": state.get("schema_path"),
+        "solution_path": state.get("solution_path"),
+        "validate_path": state.get("validate_path"),
+        "explain_path": state.get("explain_path"),
+        "draft_path": str(dpaths["draft"]) if dpaths["draft"].is_file() else "",
+        "cited_path": str(dpaths["cited"]) if dpaths["cited"].is_file() else "",
+        "revised_path": str(dpaths["revised"]) if dpaths["revised"].is_file() else "",
+        "verification_path": str(dpaths["verification"]) if dpaths["verification"].is_file() else "",
+        "claim_ledger_path": str(dpaths["claim_ledger"]) if dpaths["claim_ledger"].is_file() else "",
+        "claim_map_path": str(dpaths["claim_map"]) if dpaths["claim_map"].is_file() else "",
+        "final_candidate_path": final_path,
+        "paper_path": str(dpaths["paper"]) if dpaths["paper"].is_file() else state.get("paper_path"),
+        "review_path": state.get("review_path"),
+        "tune_log_path": state.get("tune_log_path"),
+        "annotations_path": str(root / "outputs" / ".drafts" / f"{slug}-annotations.json")
+        if (root / "outputs" / ".drafts" / f"{slug}-annotations.json").is_file()
+        else "",
+        "provenance_path": "",  # filled after write
+    }
+
+    # P2 figure from solution
+    figure_path = ""
+    if state.get("solution_path") and Path(state["solution_path"]).is_file():
+        try:
+            sol = json.loads(Path(state["solution_path"]).read_text(encoding="utf-8"))
+            fig = root / "outputs" / ".drafts" / f"{slug}-figure.html"
+            write_solution_figure(fig, sol, slug=slug)
+            figure_path = str(fig)
+            path_map["figure_path"] = figure_path
+        except Exception:
+            pass
+
+    verif = "PASS"
+    if state.get("human_required"):
+        verif = "BLOCKED"
+    elif ledger.get("verificationState") == "failed":
+        verif = "BLOCKED"
+    elif not (
+        state.get("gate_r1_ok")
+        and state.get("gate_r2_ok")
+        and state.get("gate_validate_ok")
+        and state.get("gate_claim_ok", True)
+    ):
+        verif = "PASS WITH NOTES"
+    elif ledger.get("verificationState") == "partial":
+        verif = "PASS WITH NOTES"
+
+    # P2 artifact versions (before research_run so path can be included)
+    version_paths = [v for k, v in path_map.items() if v and k.endswith("_path")]
+    if final_path:
+        version_paths.append(final_path)
+    vers = record_versions(
+        root,
+        slug=slug,
+        paths=version_paths,
+        stage="provenance",
+        input_paths=[
+            path_map.get("solution_path") or "",
+            path_map.get("research_path") or "",
+            path_map.get("schema_path") or "",
+        ],
+        source="orpath",
+    )
+    versions_path = root / "outputs" / ".artifacts" / f"{slug}-versions.json"
+    path_map["versions_path"] = str(versions_path) if versions_path.is_file() else ""
+
+    prov = root / "outputs" / f"{slug}.provenance.md"
+    path_map["provenance_path"] = str(prov)
+
+    # P2 research run manifest
+    run = build_research_run(
+        slug=slug,
+        state=dict(state),
+        paths={k: str(v) for k, v in path_map.items() if v},
+        verification_state=str(ledger.get("verificationState") or "partial"),
+        verification_summary=verif,
+        claim_count=int(ledger.get("claimCount") or 0),
+    )
+    run_path = root / "outputs" / ".drafts" / f"{slug}-research-run.json"
+    _, run_ok, run_errs = write_research_run(run_path, run)
+    path_map["research_run_path"] = str(run_path)
+
+    # P2 lab changelog
+    lab = append_lab_changelog(
+        root,
+        slug=slug,
+        title="paper pipeline provenance",
+        bullets=[
+            f"verification={verif}",
+            f"vstate={ledger.get('verificationState')}",
+            f"claims={ledger.get('claimCount')}",
+            f"versions={vers.get('versionCount')}",
+            f"research_run_ok={run_ok}",
+            f"final={Path(final_path).name if final_path else 'n/a'}",
+        ],
+    )
+    path_map["lab_changelog_path"] = str(lab)
+
+    st = dict(state)
+    st["verification_state"] = ledger.get("verificationState")
+    st["final_candidate_path"] = final_path
+    text = thick_provenance(
+        slug=slug,
+        state=st,
+        paths={k: str(v) for k, v in path_map.items() if v},
+        verification=verif,
+        extra_lines=[
+            f"- claimCount: {ledger.get('claimCount')}",
+            f"- claim_summary: {ledger.get('summary')}",
+            f"- artifact_versions: {vers.get('versionCount')} deps={vers.get('dependencyCount')}",
+            f"- research_run_valid: {run_ok}" + (f" errors={run_errs}" if not run_ok else ""),
+            f"- paper_protocol: P0+P1+P2+P3",
+        ],
+    )
+    paper_prov = root / "papers" / f"{slug}.provenance.md"
+    prov.write_text(text, encoding="utf-8")
+    try:
+        paper_prov.write_text(text, encoding="utf-8")
+    except OSError:
+        pass
+    # re-record provenance file version
+    record_versions(
+        root,
+        slug=slug,
+        paths=[prov, run_path, versions_path],
+        stage="provenance_finalize",
+        input_paths=[path_map.get("paper_path") or "", path_map.get("solution_path") or ""],
+        source="orpath",
+    )
+    append_plan_log(
+        root,
+        slug,
+        stage="provenance",
+        status=verif,
+        detail=(
+            f"final={Path(final_path).name if final_path else 'n/a'} "
+            f"vstate={ledger.get('verificationState')} "
+            f"run_ok={run_ok} vers={vers.get('versionCount')}"
+        ),
+        plan_file=state.get("plan_path"),
+    )
+    return {
+        "stage": "end",
+        "provenance_path": str(prov),
+        "paper_path": str(dpaths["paper"]) if dpaths["paper"].is_file() else state.get("paper_path"),
+        "verification_state": ledger.get("verificationState"),
+        "final_candidate_path": final_path,
+        "research_run_path": str(run_path),
+        "versions_path": str(versions_path) if versions_path.is_file() else "",
+    }

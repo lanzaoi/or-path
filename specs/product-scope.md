@@ -19,7 +19,7 @@
 1. **多问题类：** `shortest_path`、`tsp`、`vrp`（T2：TSP n=8；VRP ≥2 车 + 容量）  
 2. **真多智能体：** `pi-subagents` 角色隔离 + 可检 transcript  
 3. **控制面：** LangGraph 阶段机 + checkpointer  
-4. **数字真相：** NetworkX / OR-Tools / mock 工具输出；LLM 禁止心算最优  
+4. **数字真相：** 精确轨（NetworkX / CP-SAT / HiGHS）与实用轨（OR-Tools Routing）+ mock；**一律 validate 重算**；LLM 禁止心算最优；**禁止**把启发式宣传成全局最优  
 5. **校验：** `validate_solution` 重算可行性与 objective  
 6. **知识竖切：** 种子图 + MinerU Cloud + LightRAG + BM25/FTS + RRF + Cognee Cloud smoke  
 7. **论文环：** draft + R1（含在线轨）+ R2 + 有界 revise  
@@ -48,15 +48,20 @@
 
 - 带验证关卡的 Supervisor–Worker 流水线  
 - 多 Agent 隔离轨迹可检  
-- 最优值来自求解器并经 validate 重算  
+- 最短路 / 小 TSP 等用 **精确算法/CP-SAT/MIP** 并 **validate 重算**  
+- 较大 VRP 用路由搜索作扩展，**明确非证明最优**，仍经 validate  
 - 云优先知识预处理 + 混合检索供 Researcher  
 
 **不可以说：**
 
-- 「保证全局最优 / 替代 OR 专家」  
+- 「保证全局最优 / 替代 OR 专家」（超出现有精确轨规模时）  
+- 「OR-Tools Routing = 数学证明最优」  
+- 「启发式引擎是产品核心卖点」  
 - 「Pi/LG 保证最优」  
 - 「已达 OR-LLM-Agent 85%」等无本仓评测支撑的数字  
 - 「FTS/LightRAG 主搜索引擎已生产级」若仅 smoke  
+
+求解器组合权威：`docs/solver-stack.md` · `specs/solvers-and-validate.md`。
 
 ## 里程碑关系
 
@@ -64,7 +69,7 @@
 |--------|-------------|
 | **T1** | CLOSED/PASS — 薄全链 + 多 Agent 证明；不重开 DoD |
 | **T2** | 数字真相加厚 + 知识竖切 + bridge + 云分轨 + OpenPi 截图 — 见 `gates-and-dod.md` |
-| **T3+** | 更强 modeling/IR、评测、部署等 — 未冻 |
+| **T3** | **LG 产品骨架** — 见 `t3-lg-skeleton.md`（DoD E）；T3-mini CVRPTW 为矩阵叶 |
 
 ## 工作区法
 

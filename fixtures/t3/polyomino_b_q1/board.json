@@ -1,0 +1,15 @@
+{
+  "rows": 4,
+  "cols": 4,
+  "cells": 16,
+  "removed": [],
+  "pieces": [
+    {"id": "M", "name": "monomino", "size": 1},
+    {"id": "D", "name": "domino", "size": 2},
+    {"id": "L3", "name": "L-tromino", "size": 3}
+  ],
+  "objective": "minimize_piece_count",
+  "allow_rotate": true,
+  "allow_reflect": false,
+  "must_cover_all": true
+}

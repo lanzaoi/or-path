@@ -4,10 +4,20 @@
 
 | Runner | 用途 |
 |--------|------|
-| `orpath/run_t1.py` | T1 兼容；不得因 T2 破坏 `t1_gate` |
-| `orpath/run_t2.py` | T2 主入口（知识模式、题型、solve 模式、bridge 开关） |
+| `orpath/run_t1.py` | T1 兼容标本；打 `graph.py`；不得因 T3 破坏 `t1_gate` |
+| `orpath/run_t2.py` | T2 薄委托 → 产品图 `run_orpath` / `graph_product` |
+| `orpath/run_orpath.py` | **T3 主入口**：checkpointer、resume、from-stage、status/list |
 
-## T2 目标阶段图
+## T3 产品图（权威阶段）
+
+完整法条见 `t3-lg-skeleton.md`。相对 T2 目标图增量：
+
+- Sqlite checkpointer + `runs/<thread>/` snapshots + artifact manifest  
+- 图内 `bridge_pi`（默认 retrieve→research 之间；可配置 before_retrieve）  
+- NodeContext 横切（snapshot / hash / owner assert）  
+- CLI：`run | status | resume | list`  
+
+T2 目标阶段图仍有效；实现以 **product graph** 为准。
 
 ```text
 START

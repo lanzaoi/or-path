@@ -1,0 +1,37 @@
+{
+  "problem_id": "vrp_tw",
+  "problem_class": "vrp",
+  "status": "OPTIMAL",
+  "objective": 58,
+  "solver": "ortools-routing-cvrptw",
+  "source": "tools/solve_ortools.py",
+  "path": null,
+  "tour": null,
+  "routes": [
+    [
+      "D",
+      "C",
+      "B",
+      "D"
+    ],
+    [
+      "D",
+      "E",
+      "F",
+      "A",
+      "D"
+    ]
+  ],
+  "meta": {
+    "time_limit_ms": 8000,
+    "first_solution": "PATH_CHEAPEST_ARC",
+    "metaheuristic": "GUIDED_LOCAL_SEARCH",
+    "random_seed": 1,
+    "vehicle_count": 2,
+    "capacities": [
+      10,
+      10
+    ],
+    "has_time_windows": true
+  }
+}

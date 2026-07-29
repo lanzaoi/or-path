@@ -36,6 +36,29 @@ def gate_r1(root: Path, draft: Path, whitelist: Path) -> tuple[bool, str]:
     return code == 0, (out + err).strip()
 
 
+def gate_claim_map(
+    root: Path,
+    draft: Path,
+    solution: Path,
+    *,
+    whitelist: Path | None = None,
+    research: Path | None = None,
+    retrieval: Path | None = None,
+    out: Path | None = None,
+) -> tuple[bool, str]:
+    args = ["--draft", str(draft), "--solution", str(solution)]
+    if whitelist:
+        args.extend(["--whitelist", str(whitelist)])
+    if research:
+        args.extend(["--research", str(research)])
+    if retrieval:
+        args.extend(["--retrieval", str(retrieval)])
+    if out:
+        args.extend(["--out", str(out)])
+    code, stdout, err = run_py(root / "tools" / "r1_claim_map.py", args, root)
+    return code == 0, (stdout + err).strip()
+
+
 def gate_validate(
     root: Path, problem_id: str, solution: Path, out: Path
 ) -> tuple[bool, dict[str, Any], str]:
@@ -72,6 +95,16 @@ def solve(
     elif mode == "networkx":
         script = "solve_networkx.py"
         args = [problem_id]
+    elif mode == "cpsat":
+        script = "solve_cpsat.py"
+        args = [problem_id]
+        if extra_args:
+            args.extend(extra_args)
+    elif mode == "highs":
+        script = "solve_highs.py"
+        args = [problem_id]
+        if extra_args:
+            args.extend(extra_args)
     else:
         script = "solve_ortools.py"
         args = [problem_id]

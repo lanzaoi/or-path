@@ -43,7 +43,32 @@ def test_solve_ortools_tsp():
     data = json.loads(r.stdout)
     assert data["problem_class"] == "tsp"
     assert data.get("tour")
+    assert data["status"] in {"OPTIMAL", "FEASIBLE"}
+    assert data.get("meta", {}).get("exact") is False
+    assert data.get("meta", {}).get("proven_optimal") is False
+
+
+def test_solve_cpsat_tsp_exact():
+    r = run([PY, str(TOOLS / "solve_cpsat.py"), "tsp_n8"])
+    if r.returncode == 2:
+        pytest.skip("ortools cpsat missing")
+    assert r.returncode == 0, r.stderr
+    data = json.loads(r.stdout)
     assert data["status"] == "OPTIMAL"
+    assert data["objective"] == 45
+    assert data.get("meta", {}).get("exact") is True
+    assert data.get("meta", {}).get("proven_optimal") is True
+
+
+def test_solve_highs_tsp_exact():
+    r = run([PY, str(TOOLS / "solve_highs.py"), "tsp_n8"])
+    if r.returncode == 2:
+        pytest.skip("highspy missing")
+    assert r.returncode == 0, r.stderr + r.stdout
+    data = json.loads(r.stdout)
+    assert data["status"] in {"OPTIMAL", "FEASIBLE"}
+    assert data["objective"] == 45
+    assert data.get("meta", {}).get("exact") is True
 
 
 def test_validate_tsp_gold():
@@ -74,6 +99,48 @@ def test_validate_vrp_gold():
         ]
     )
     assert r.returncode == 0, r.stderr + r.stdout
+
+
+def test_solve_ortools_vrp_tw():
+    r = run(
+        [
+            PY,
+            str(TOOLS / "solve_ortools.py"),
+            "vrp_tw",
+            "--class",
+            "vrp",
+            "--time-limit-ms",
+            "8000",
+        ]
+    )
+    if r.returncode == 2:
+        pytest.skip("ortools missing")
+    assert r.returncode == 0, r.stderr
+    data = json.loads(r.stdout)
+    assert data["problem_class"] == "vrp"
+    assert data.get("routes")
+    assert data["status"] in {"OPTIMAL", "FEASIBLE"}
+    assert data.get("meta", {}).get("has_time_windows") is True
+    assert data["objective"] == 58
+    assert data.get("meta", {}).get("exact") is False
+
+
+def test_validate_vrp_tw_gold():
+    sol = ROOT / "fixtures" / "t3" / "vrp_tw" / "solution.json"
+    r = run(
+        [
+            PY,
+            str(TOOLS / "validate_solution.py"),
+            "--problem-id",
+            "vrp_tw",
+            "--solution",
+            str(sol),
+        ]
+    )
+    assert r.returncode == 0, r.stderr + r.stdout
+    report = json.loads(r.stdout)
+    tw = [c for c in report["checks"] if c["name"] == "time_windows"]
+    assert tw and tw[0]["ok"]
 
 
 def test_gate_schema_forbids_path_key():

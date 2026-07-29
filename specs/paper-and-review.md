@@ -30,13 +30,16 @@
 ## 默认顺序
 
 ```text
-writer draft
-  → R1 本地 ∥ R2          # 本地硬
-  →（cloud 轨）R1 在线
-  → R0/R3 可选
-  → FATAL → revise ≤ 2
-  → 重跑硬门；仍红 → HUMAN_REQUIRED
+writer draft  (outputs/.drafts/<slug>-draft.md)
+  → cite_pack   (R1 whitelist + claim_map → .drafts/<slug>-cited.md + claim-map.json)
+  → review_pack (R1∥R2∥claim + inline annotations)
+  → revise_or_done
+       ├─ fix → revise-proof.md → re-cite (cite_pack) → review
+       └─ done → provenance (PASS|BLOCKED)
+  → FATAL ceiling → HUMAN_REQUIRED
 ```
+
+P0 硬门：`tools/r1_claim_map.py`（数字/URL/全局最优话术/面积结构映射到 solution 或 research）。
 
 ## R2 规则要点
 
@@ -58,8 +61,20 @@ writer draft
 ## 文稿路径
 
 - `papers/<slug>.md`  
-- review：`outputs/<slug>-review.md`  
+- 分层草稿（P1）：`outputs/.drafts/<slug>-{draft,cited,revised}.md`  
+- review：`outputs/<slug>-review.md`（含 **Inline Annotations**）  
 - verify notes：`outputs/<slug>-verify-notes.md`  
+- plan ledger：`outputs/.plans/<slug>.md`（每阶段 append Verification log）  
+- 模板：`templates/paper/or-portfolio.md` · `or-mcm.md`  
+
+## P1 入口
+
+```bat
+orpath.bat paper-gate
+orpath.bat paper template --slug X --solution path.json
+orpath.bat paper review --slug X --paper papers/X.md --solution ... --whitelist ...
+python tools/gate_research.py --research notes/X-research.md --retrieval notes/X-retrieval.json --knowledge-mode seed
+```
 
 ## 话术
 

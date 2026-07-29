@@ -112,7 +112,7 @@ def solve_tsp(
     return {
         "problem_id": problem_id,
         "problem_class": "tsp",
-        "status": "OPTIMAL",
+        "status": "FEASIBLE",
         "objective": obj,
         "solver": "ortools-routing",
         "source": "tools/solve_ortools.py",
@@ -125,6 +125,10 @@ def solve_tsp(
             "metaheuristic": metaheuristic,
             "random_seed": random_seed,
             "n": n,
+            "exact": False,
+            "proven_optimal": False,
+            "method_class": "metaheuristic",
+            "claim": "routing search — not MIP/CP proven optimal; use cpsat/highs for exact TSP",
         },
     }
 
@@ -159,6 +163,22 @@ def solve_vrp(
         coords = [{"x": loc["x"], "y": loc["y"]} for loc in locations]
         matrix = _dist_matrix_from_coords(coords)
 
+    tw_raw = data.get("time_windows") or {}
+    st_raw = data.get("service_times") or {}
+    has_tw = bool(tw_raw)
+    time_windows: list[tuple[int, int]] = []
+    service_times: list[int] = []
+    for lab in labels:
+        if isinstance(tw_raw, dict) and lab in tw_raw:
+            lo, hi = tw_raw[lab]
+            time_windows.append((int(lo), int(hi)))
+        else:
+            time_windows.append((0, 10**9))
+        if isinstance(st_raw, dict):
+            service_times.append(int(st_raw.get(lab, 0)))
+        else:
+            service_times.append(0)
+
     n = len(labels)
     manager = pywrapcp.RoutingIndexManager(n, vehicle_count, depot_index)
     routing = pywrapcp.RoutingModel(manager)
@@ -183,6 +203,41 @@ def solve_vrp(
         "Capacity",
     )
 
+    if has_tw:
+        # Transit = travel + service at from-node; waiting via slack on Time dimension.
+        def time_cb(from_index: int, to_index: int) -> int:
+            a = manager.IndexToNode(from_index)
+            b = manager.IndexToNode(to_index)
+            return int(matrix[a][b]) + int(service_times[a])
+
+        time_idx = routing.RegisterTransitCallback(time_cb)
+        horizon = max(hi for _, hi in time_windows)
+        horizon = max(horizon, sum(max(row) for row in matrix) + sum(service_times))
+        routing.AddDimension(
+            time_idx,
+            horizon,  # slack: allow waiting until ready
+            horizon,
+            False,  # don't force start cumul to zero for all vehicles via fix_start
+            "Time",
+        )
+        time_dim = routing.GetDimensionOrDie("Time")
+        for node, (lo, hi) in enumerate(time_windows):
+            index = manager.NodeToIndex(node)
+            if node == depot_index:
+                continue
+            # NodeToIndex can be negative for multiple vehicles? depot handled separately
+            if index < 0:
+                continue
+            time_dim.CumulVar(index).SetRange(int(lo), int(hi))
+        depot_lo, depot_hi = time_windows[depot_index]
+        for v in range(vehicle_count):
+            start = routing.Start(v)
+            end = routing.End(v)
+            time_dim.CumulVar(start).SetRange(int(depot_lo), int(depot_hi))
+            time_dim.CumulVar(end).SetRange(int(depot_lo), int(depot_hi))
+            routing.AddVariableMinimizedByFinalizer(time_dim.CumulVar(start))
+            routing.AddVariableMinimizedByFinalizer(time_dim.CumulVar(end))
+
     params = pywrapcp.DefaultRoutingSearchParameters()
     params.time_limit.FromMilliseconds(int(time_limit_ms))
     fs = getattr(enums.FirstSolutionStrategy, first_solution, None)
@@ -193,18 +248,23 @@ def solve_vrp(
         params.local_search_metaheuristic = mh
 
     solution = routing.SolveWithParameters(params)
+    solver_name = "ortools-routing-cvrptw" if has_tw else "ortools-routing"
     if solution is None:
         return {
             "problem_id": problem_id,
             "problem_class": "vrp",
             "status": "INFEASIBLE",
             "objective": -1,
-            "solver": "ortools-routing",
+            "solver": solver_name,
             "source": "tools/solve_ortools.py",
             "path": None,
             "tour": None,
             "routes": None,
-            "meta": {"vehicle_count": vehicle_count, "random_seed": random_seed},
+            "meta": {
+                "vehicle_count": vehicle_count,
+                "random_seed": random_seed,
+                "has_time_windows": has_tw,
+            },
         }
 
     routes: list[list[str]] = []
@@ -215,19 +275,15 @@ def solve_vrp(
             route.append(labels[manager.IndexToNode(index)])
             index = solution.Value(routing.NextVar(index))
         route.append(labels[manager.IndexToNode(index)])
-        # keep even empty depot-depot for audit; filter pure empty optional
-        if len(route) > 2 or (len(route) == 2 and route[0] == route[1]):
-            routes.append(route)
-        else:
-            routes.append(route)
+        routes.append(route)
 
     obj = int(solution.ObjectiveValue())
     return {
         "problem_id": problem_id,
         "problem_class": "vrp",
-        "status": "OPTIMAL",
+        "status": "FEASIBLE",
         "objective": obj,
-        "solver": "ortools-routing",
+        "solver": solver_name,
         "source": "tools/solve_ortools.py",
         "path": None,
         "tour": None,
@@ -239,6 +295,11 @@ def solve_vrp(
             "random_seed": random_seed,
             "vehicle_count": vehicle_count,
             "capacities": capacities,
+            "has_time_windows": has_tw,
+            "exact": False,
+            "proven_optimal": False,
+            "method_class": "metaheuristic",
+            "claim": "routing search — not proven global optimal; validate recomputes feasibility",
         },
     }
 

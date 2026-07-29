@@ -26,7 +26,11 @@ ROOT = root()
 
 def fixture_dir(problem_id: str) -> Path:
     base_root = root()
-    for base in (base_root / "fixtures" / "t2", base_root / "fixtures" / "t1"):
+    for base in (
+        base_root / "fixtures" / "t3",
+        base_root / "fixtures" / "t2",
+        base_root / "fixtures" / "t1",
+    ):
         p = base / problem_id
         if p.is_dir():
             return p

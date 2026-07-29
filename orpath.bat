@@ -2,7 +2,6 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM OR-Path product launcher (relocatable).
-REM Install root = directory containing this bat (or ORPATH_HOME if already set).
 
 if not defined ORPATH_HOME (
   set "ORPATH_HOME=%~dp0"
@@ -37,11 +36,22 @@ if "%CMD%"=="" set "CMD=help"
 if /i "%CMD%"=="help" goto :help
 if /i "%CMD%"=="doctor" goto :doctor
 if /i "%CMD%"=="gate" goto :gate
+if /i "%CMD%"=="gate-t3" goto :gate_t3
 if /i "%CMD%"=="isolation" goto :isolation
 if /i "%CMD%"=="pi" goto :pi
 if /i "%CMD%"=="openpi" goto :openpi
 if /i "%CMD%"=="t2" goto :t2
+if /i "%CMD%"=="run" goto :run
+if /i "%CMD%"=="status" goto :status
+if /i "%CMD%"=="resume" goto :resume
+if /i "%CMD%"=="list" goto :list
 if /i "%CMD%"=="env" goto :envshow
+if /i "%CMD%"=="paper" goto :paper
+if /i "%CMD%"=="paper-gate" goto :paper_gate
+if /i "%CMD%"=="gate-paper" goto :paper_gate
+if /i "%CMD%"=="paper-1.0-gate" goto :paper_10_gate
+if /i "%CMD%"=="paper-1_0-gate" goto :paper_10_gate
+if /i "%CMD%"=="gate-paper-1.0" goto :paper_10_gate
 
 echo [ERROR] unknown command: %CMD%
 goto :help
@@ -56,14 +66,18 @@ echo  Usage:
 echo    orpath.bat doctor
 echo    orpath.bat isolation
 echo    orpath.bat gate
+echo    orpath.bat gate-t3
+echo    orpath.bat run [args...]
+echo    orpath.bat status --thread-id ID
+echo    orpath.bat resume --thread-id ID [args...]
+echo    orpath.bat list
+echo    orpath.bat paper template^|review^|gate-research^|plan-log ...
+echo    orpath.bat paper-gate
+echo    orpath.bat paper-1.0-gate
 echo    orpath.bat t2 [args...]
 echo    orpath.bat pi [args...]
 echo    orpath.bat openpi
 echo    orpath.bat env
-echo.
-echo  Optional:
-echo    set ORPATH_HOME=D:\apps\orpath
-echo    set ORPATH_WORKDIR=E:\cases\demo
 echo.
 exit /b 0
 
@@ -85,9 +99,48 @@ exit /b %ERRORLEVEL%
 "%PY%" "!ORPATH_HOME!\scripts\t2_gate.py"
 exit /b %ERRORLEVEL%
 
+:gate_t3
+"%PY%" "!ORPATH_HOME!\scripts\t3_lg_gate.py"
+if errorlevel 1 exit /b %ERRORLEVEL%
+"%PY%" "!ORPATH_HOME!\scripts\t3_gate.py"
+exit /b %ERRORLEVEL%
+
+:paper
+shift
+"%PY%" "!ORPATH_HOME!\scripts\orpath_paper.py" %*
+exit /b %ERRORLEVEL%
+
+:paper_gate
+"%PY%" "!ORPATH_HOME!\scripts\paper_gate.py"
+exit /b %ERRORLEVEL%
+
+:paper_10_gate
+"%PY%" "!ORPATH_HOME!\scripts\paper_1_0_gate.py"
+exit /b %ERRORLEVEL%
+
 :t2
 shift
 "%PY%" "!ORPATH_HOME!\orpath\run_t2.py" %*
+exit /b %ERRORLEVEL%
+
+:run
+shift
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run %*
+exit /b %ERRORLEVEL%
+
+:status
+shift
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" status %*
+exit /b %ERRORLEVEL%
+
+:resume
+shift
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run --resume %*
+exit /b %ERRORLEVEL%
+
+:list
+shift
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" list %*
 exit /b %ERRORLEVEL%
 
 :pi

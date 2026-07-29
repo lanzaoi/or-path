@@ -1,10 +1,11 @@
-# OR-Path Python deps (T1 + T2)
+# OR-Path Python deps (T1 + T2 + exact solvers)
 langgraph>=0.2
 pytest>=8
 pydantic>=2
 httpx>=0.27
 networkx>=3
 ortools>=9.10
+highspy>=1.7
 rank-bm25>=0.2.2
 # LightRAG often installed as lightrag-hku; keep flexible
 pi-py-sdk>=0.2

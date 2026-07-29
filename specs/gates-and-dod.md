@@ -87,3 +87,27 @@ set T2_REQUIRE_CLOUD=1
 
 - 任一门禁非 0 → 不得宣称 T2 PASS  
 - `HUMAN_REQUIRED` 是 **预期可证** 路径，不是静默成功  
+
+## T3 LG Skeleton Grill Freeze（2026-07-29）
+
+权威全表：`specs/t3-lg-skeleton.md`。
+
+| ID | 锁 |
+|----|-----|
+| 主轴 | LG 产品骨架完整 |
+| Q1 | DoD **E** |
+| Q2 | `graph_product` + `run_orpath` **B** |
+| Q3–Q16 | 见 `t3-lg-skeleton.md` |
+
+### T3 门禁
+
+| 脚本 | 内容 |
+|------|------|
+| `scripts/t3_lg_gate.py` | 拓扑/checkpointer/resume/脏检/owner |
+| `scripts/t3_gate.py` | 业务矩阵（含 vrp_tw） |
+| `scripts/t3_gate_live.py` | live bridge 分轨（可选） |
+
+### T3-mini CVRPTW 叶
+
+- Spec: `specs/t3-vrp-tw.md`；fixture gold objective **58**  
+- 挂在 T3 矩阵，不单独当 T3 标题  
