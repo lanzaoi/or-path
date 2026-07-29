@@ -37,4 +37,6 @@ Operator: Hermes Agent (Q8=A)
 
 **T1-core: PASS**  
 **T1 three-day thicken (minus optional GUI shot): PASS**  
-Next product work: T2 solver contracts / knowledge stack — not re-opening T1 DoD.
+**T1 CLOSED** — see `docs/t1-closeout.md`.  
+
+Next product work: **T2** solver contracts / knowledge stack — do not reopen T1 DoD unless `t1_gate` regresses.

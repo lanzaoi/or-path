@@ -24,13 +24,14 @@ set PYTHONNOUSERSITE=1
 
 | Slice | Command / path |
 |-------|----------------|
+| **Closeout (CLOSED/PASS)** | `docs/t1-closeout.md` |
 | Core evidence | `docs/t1-evidence.md` |
 | Day 2–3 thicken | `docs/t1-day2-day3.md` |
 | Smoke prompt | `docs/t1-smoke.md` |
 | Portfolio talk | `docs/t1-portfolio-talk.md` |
 | LG pipeline | `orpath/run_t1.py` |
 | Pi agents | `.pi/agents/or-*.md` |
-| Live subagent proof | `.pi-subagents/artifacts/*_transcript.jsonl` |
+| Live subagent proof | `.pi-subagents/artifacts/*_transcript.jsonl` (local) |
 
 ## Layout
 

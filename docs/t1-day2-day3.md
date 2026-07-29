@@ -70,3 +70,5 @@ pi.bat -p --provider deepseek --model deepseek-v4-flash --no-session "..."
 - [x] Day2 live writer + negatives
 - [x] Day3 docs + git baseline
 - [ ] Human optional: OpenPi screenshot (not blocking)
+
+**Closeout:** `docs/t1-closeout.md` — T1 **CLOSED / PASS**.
