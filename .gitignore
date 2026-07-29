@@ -21,6 +21,13 @@ chroma_db/
 *.db
 *.db-shm
 *.db-wal
+knowledge/mineru_out/
+knowledge/lightrag_ws/
+knowledge/bm25/
+knowledge/fts/
+knowledge/corpus/*.pdf
+knowledge/chunks/*.jsonl
+!knowledge/chunks/.gitkeep
 
 # IDE / OS
 .vscode/
@@ -43,8 +50,14 @@ vendor/
 outputs/
 notes/
 papers/
+# Heavy / generated
+.pi/npm/
 .pi/memory/
 .pi-subagents/
+nul
+*.png
+!docs/t2-live-evidence-board.png
+!docs/t2-openpi-screenshot.png
 
 # Heavy nested trees — keep package.json lockfiles only via selective add if needed
 pi-main/

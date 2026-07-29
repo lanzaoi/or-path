@@ -1,55 +1,57 @@
 #!/usr/bin/env python3
-"""Schema gate: modeler JSON must not contain optima; must describe the problem."""
-
+"""Schema gate: modeler JSON must not contain optima; class-specific shape."""
 from __future__ import annotations
 
 import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any
 
-# Keys that imply the modeler invented or leaked solver results
-FORBIDDEN_KEYS = {
-    "objective",
-    "optimal",
-    "objective_value",
-    "optima",
-    "optimal_value",
-    "optimal_cost",
-}
-
-
-def _walk_keys(obj: Any, found: set[str] | None = None) -> set[str]:
-    if found is None:
-        found = set()
-    if isinstance(obj, dict):
-        for k, v in obj.items():
-            found.add(str(k).lower())
-            _walk_keys(v, found)
-    elif isinstance(obj, list):
-        for item in obj:
-            _walk_keys(item, found)
-    return found
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from schema_models import FORBIDDEN_SCHEMA_KEYS, walk_forbidden_keys  # noqa: E402
 
 
 def check_schema(data: dict) -> list[str]:
-    """Return list of error messages (empty = pass)."""
     errors: list[str] = []
-    keys = _walk_keys(data)
-    for bad in FORBIDDEN_KEYS:
-        if bad in keys:
-            errors.append(f"forbidden key present: {bad}")
-    # Require problem_class or nodes (graph structure / class marker)
+    bad = walk_forbidden_keys(data)
+    for k in sorted(bad):
+        if k in FORBIDDEN_SCHEMA_KEYS:
+            errors.append(f"forbidden key present: {k}")
+
     top = {str(k).lower() for k in data.keys()}
-    if "problem_class" not in top and "nodes" not in top:
-        errors.append("require problem_class or nodes")
+    pc = str(data.get("problem_class") or "").lower()
+    if not pc:
+        if "nodes" in top or "edges" in top or "edges_ref" in top:
+            pc = "shortest_path"
+        else:
+            errors.append("require problem_class")
+            return errors
+
+    if pc == "shortest_path":
+        if "nodes" not in top and "edges_ref" not in top and "edges" not in top:
+            errors.append("shortest_path requires nodes/edges/edges_ref")
+    elif pc == "tsp":
+        if "distance_matrix" not in top and "coords" not in top:
+            errors.append("tsp requires distance_matrix or coords")
+    elif pc == "vrp":
+        vc = data.get("vehicle_count")
+        if vc is None or int(vc) < 2:
+            errors.append("vrp requires vehicle_count >= 2")
+        if "capacities" not in top:
+            errors.append("vrp requires capacities")
+        if "demands" not in top:
+            errors.append("vrp requires demands")
+    else:
+        errors.append(f"unknown problem_class: {pc}")
+
+    if "problem_id" not in top:
+        errors.append("require problem_id")
     return errors
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="OR-Path modeler schema gate")
-    parser.add_argument("schema_path", type=Path, help="Path to modeler schema JSON")
+    parser.add_argument("schema_path", type=Path)
     args = parser.parse_args(argv)
     path: Path = args.schema_path
     if not path.is_file():

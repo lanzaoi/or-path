@@ -1,0 +1,47 @@
+{
+  "properties": {
+    "chunk_id": {
+      "title": "Chunk Id",
+      "type": "string"
+    },
+    "score": {
+      "title": "Score",
+      "type": "number"
+    },
+    "backend": {
+      "enum": [
+        "lightrag",
+        "bm25",
+        "fts",
+        "seed",
+        "rrf"
+      ],
+      "title": "Backend",
+      "type": "string"
+    },
+    "snippet": {
+      "title": "Snippet",
+      "type": "string"
+    },
+    "source_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Path"
+    }
+  },
+  "required": [
+    "chunk_id",
+    "score",
+    "backend",
+    "snippet"
+  ],
+  "title": "RetrievalHit",
+  "type": "object"
+}

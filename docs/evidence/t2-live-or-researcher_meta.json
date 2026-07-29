@@ -1,0 +1,122 @@
+{
+  "runId": "c8ef47e5",
+  "agent": "or-researcher",
+  "task": "Research TSP n=8 problem for OR-Path T2 smoke test.\n\nProblem fixture: fixtures/t2/tsp_n8/problem.md and fixtures/t2/tsp_n8/coords.json\nExisting notes directory: notes/\nRetrieval output (just written by parent): notes/t2-live-tsp-retrieval.json\n\nRead the fixture files, then write a research brief to notes/t2-live-tsp-research.md covering:\n1. Problem class TSP, Euclidean coordinates, n=8\n2. Solvers: mock, networkx, OR-Tools routing\n3. Key algorithms: PATH_CHEAPEST_ARC, GUIDED_LOCAL_SEARCH\n4. Citation: https://arxiv.org/abs/2503.10009 (OR-Tools TSP), https://developers.google.com/optimization/routing/tsp\n5. Do NOT invent objective/tour values.\n\nAlso read any useful existing notes under notes/ that mention tsp_n8 or t2-tsp for context.",
+  "exitCode": 0,
+  "usage": {
+    "input": 26276,
+    "output": 4313,
+    "cacheRead": 141696,
+    "cacheWrite": 0,
+    "cost": 0.005283028800000001,
+    "turns": 10
+  },
+  "model": "deepseek/deepseek-v4-flash",
+  "attemptedModels": [
+    "deepseek/deepseek-v4-flash"
+  ],
+  "modelAttempts": [
+    {
+      "model": "deepseek/deepseek-v4-flash",
+      "success": true,
+      "exitCode": 0,
+      "usage": {
+        "input": 26276,
+        "output": 4313,
+        "cacheRead": 141696,
+        "cacheWrite": 0,
+        "cost": 0.005283028800000001,
+        "turns": 10
+      }
+    }
+  ],
+  "durationMs": 58217,
+  "toolCount": 26,
+  "launchContractDigest": "89456c5c620859dfbff3f6eb46166d5b9e1a0a98fb9d3be92facddc413ab8119",
+  "acceptance": {
+    "status": "attested",
+    "evidenceStatus": "attested",
+    "explicit": false,
+    "effectiveAcceptance": {
+      "level": "attested",
+      "explicit": false,
+      "inferredReason": [
+        "read-only/reviewer-style agent"
+      ],
+      "criteria": [
+        {
+          "id": "criterion-1",
+          "must": "Return concrete findings with file paths and severity when applicable",
+          "evidence": [
+            "review-findings",
+            "residual-risks"
+          ],
+          "severity": "required"
+        }
+      ],
+      "evidence": [
+        "review-findings",
+        "residual-risks"
+      ],
+      "verify": [],
+      "stopRules": []
+    },
+    "inferredReason": [
+      "read-only/reviewer-style agent"
+    ],
+    "criteria": [
+      {
+        "id": "criterion-1",
+        "must": "Return concrete findings with file paths and severity when applicable",
+        "evidence": [
+          "review-findings",
+          "residual-risks"
+        ],
+        "severity": "required"
+      }
+    ],
+    "runtimeChecks": [],
+    "verifyRuns": [],
+    "childReport": {
+      "criteriaSatisfied": [
+        {
+          "id": "criterion-1",
+          "status": "satisfied",
+          "evidence": "Research brief at notes/t2-live-tsp-research.md contains 11 evidence rows (fixtures, tools, seed graph, corpus, citations, prior notes) each with concrete file paths or URLs. 9 numbered findings include direct file-path references — e.g. Finding 2 cites tools/solve_ortools.py lines 42–46 and tools/validate_solution.py lines 107–115. Finding 8 confirms absence of solution.json at fixtures/t2/tsp_n8/. All findings are non-optimal in content."
+        }
+      ],
+      "changedFiles": [
+        "notes/t2-live-tsp-research.md"
+      ],
+      "testsAddedOrUpdated": [],
+      "commandsRun": [],
+      "validationOutput": [
+        "notes/t2-live-tsp-research.md written (6630 bytes, 11 evidence rows, 9 findings, 3 open questions)"
+      ],
+      "residualRisks": [
+        "OR-Tools GUIDED_LOCAL_SEARCH may not guarantee optimality for n=8 — see Open Question 1",
+        "No gold solution.json in fixture — solve_mock will fail and gold-gap validation requires one — see Open Question 3",
+        "No distance_matrix.json precomputed — solver builds from coords each run — see Open Question 2"
+      ],
+      "noStagedFiles": true,
+      "diffSummary": "New research brief for t2-live-tsp covering problem class, solver backends, distance metric, constraints, seed graph, citations, and open questions",
+      "reviewFindings": [
+        "ok: Evidence table includes all 11 sources with Path/URL, Type, and Confidence columns",
+        "ok: All 9 findings reference evidence rows [n] and avoid objective/tour values",
+        "ok: Modeling recommendations list schema fields and exclude any solution-shaped keys",
+        "info: Prior note notes/t2-gate-tsp_n8-research.md also exists — cross-checked and consistent",
+        "info: Prior note notes/t2-live-bridge-tsp-research.md also exists — cross-checked and consistent"
+      ],
+      "manualNotes": "The retrieval artifact notes/t2-live-tsp-retrieval.json was referenced in task description but does not yet exist on disk. The research was written from primary source reading (fixture files, tool code, seed graph, corpus) and prior notes. If a retrieval JSON is later created, evidence can be augmented."
+    }
+  },
+  "effects": {
+    "fileMutation": {
+      "status": "not-applicable",
+      "expected": false,
+      "attempted": true
+    }
+  },
+  "transcriptPath": "C:\\Users\\Lanzao\\Desktop\\agent\\.pi-subagents\\artifacts\\c8ef47e5_or-researcher_0_transcript.jsonl",
+  "timestamp": 1785298811868
+}

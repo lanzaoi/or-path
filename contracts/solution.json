@@ -1,0 +1,133 @@
+{
+  "$defs": {
+    "ProblemClass": {
+      "enum": [
+        "shortest_path",
+        "tsp",
+        "vrp"
+      ],
+      "title": "ProblemClass",
+      "type": "string"
+    },
+    "SolutionStatus": {
+      "enum": [
+        "OPTIMAL",
+        "FEASIBLE",
+        "INFEASIBLE",
+        "ERROR"
+      ],
+      "title": "SolutionStatus",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "problem_id": {
+      "title": "Problem Id",
+      "type": "string"
+    },
+    "problem_class": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ProblemClass"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "default": "shortest_path",
+      "title": "Problem Class"
+    },
+    "status": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SolutionStatus"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "title": "Status"
+    },
+    "objective": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "integer"
+        }
+      ],
+      "title": "Objective"
+    },
+    "solver": {
+      "title": "Solver",
+      "type": "string"
+    },
+    "source": {
+      "title": "Source",
+      "type": "string"
+    },
+    "path": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Path"
+    },
+    "tour": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tour"
+    },
+    "routes": {
+      "anyOf": [
+        {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Routes"
+    },
+    "meta": {
+      "additionalProperties": true,
+      "title": "Meta",
+      "type": "object"
+    }
+  },
+  "required": [
+    "problem_id",
+    "status",
+    "objective",
+    "solver",
+    "source"
+  ],
+  "title": "Solution",
+  "type": "object"
+}

@@ -1,0 +1,20 @@
+OR-Path T2 live multi-agent smoke (TSP).
+
+Workspace root: C:\Users\Lanzao\Desktop\agent
+Problem: fixtures/t2/tsp_n8/problem.md + coords.json
+Slug: t2-live-tsp
+
+Hard rules (project law / specs):
+1. Use REAL pi-subagents: or-researcher, then or-modeler (do not cosplay roles in one thread).
+2. Researcher: read fixtures/t2/tsp_n8 and notes if any; may run:
+   .venv-314\Scripts\python.exe -m knowledge_svc.retrieve --query "TSP OR-Tools routing" --mode seed --topk 5 --out notes/t2-live-tsp-retrieval.json
+   Write notes/t2-live-tsp-research.md. Never invent objective/tour.
+3. Modeler: write outputs/t2-live-tsp-schema.json with problem_class=tsp, problem_id=tsp_n8, coords from fixture. FORBIDDEN keys: objective, tour, path, routes, optimal*.
+4. Parent/orchestrator then MUST run tools only:
+   .venv-314\Scripts\python.exe tools\solve_ortools.py tsp_n8 --class tsp
+   save stdout to outputs/t2-live-tsp-solution.json
+   .venv-314\Scripts\python.exe tools\validate_solution.py --problem-id tsp_n8 --solution outputs/t2-live-tsp-solution.json --out outputs/t2-live-tsp-validate.json
+5. Optionally or-writer: papers/t2-live-tsp.md binding ONLY numbers from solution JSON; cite https://arxiv.org/abs/2503.10009 and whitelist notes://t2-tsp-ref.
+6. Return a short summary with absolute paths of research, schema, solution, validate, and any subagent transcript hints.
+
+Do not invent the optimal tour length. Objective comes only from solve tool JSON.

@@ -1,6 +1,14 @@
 {
-  "packages": ["npm:pi-subagents@0.37.2"],
+  "packages": [
+    "npm:pi-subagents@0.37.2",
+    "npm:@samfp/pi-memory"
+  ],
   "subagents": {
     "defaultModel": "deepseek-v4-flash"
+  },
+  "memory": {
+    "enabled": true,
+    "localPath": ".pi/memory",
+    "notes": "prefs/lessons only — never authoritative objective/tour/routes (specs/memory.md)"
   }
 }

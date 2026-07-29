@@ -4,6 +4,21 @@
       "id": 1,
       "title": "Fixture OR note",
       "url": "notes://t1-shortest-path-ref"
+    },
+    {
+      "id": 2,
+      "title": "OR-LLM-Agent",
+      "url": "https://arxiv.org/abs/2503.10009"
+    },
+    {
+      "id": 3,
+      "title": "graph fixture",
+      "url": "fixtures/t1/shortest_path/graph.json"
     }
+  ],
+  "urls": [
+    "https://arxiv.org/abs/2503.10009",
+    "notes://t1-shortest-path-ref",
+    "fixtures/t1/shortest_path/graph.json"
   ]
 }

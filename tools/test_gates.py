@@ -27,12 +27,70 @@ def test_solve_mock():
 
 
 def test_solve_networkx_optional():
-    r = run([PY, str(TOOLS / "solve_ortools.py"), "shortest_path"])
+    r = run([PY, str(TOOLS / "solve_networkx.py"), "shortest_path"])
     if r.returncode == 2:
         pytest.skip("networkx missing")
     assert r.returncode == 0, r.stderr
     data = json.loads(r.stdout)
     assert data["objective"] == 42
+
+
+def test_solve_ortools_tsp():
+    r = run([PY, str(TOOLS / "solve_ortools.py"), "tsp_n8", "--class", "tsp"])
+    if r.returncode == 2:
+        pytest.skip("ortools missing")
+    assert r.returncode == 0, r.stderr
+    data = json.loads(r.stdout)
+    assert data["problem_class"] == "tsp"
+    assert data.get("tour")
+    assert data["status"] == "OPTIMAL"
+
+
+def test_validate_tsp_gold():
+    sol = ROOT / "fixtures" / "t2" / "tsp_n8" / "solution.json"
+    r = run(
+        [
+            PY,
+            str(TOOLS / "validate_solution.py"),
+            "--problem-id",
+            "tsp_n8",
+            "--solution",
+            str(sol),
+        ]
+    )
+    assert r.returncode == 0, r.stderr + r.stdout
+
+
+def test_validate_vrp_gold():
+    sol = ROOT / "fixtures" / "t2" / "vrp_multi" / "solution.json"
+    r = run(
+        [
+            PY,
+            str(TOOLS / "validate_solution.py"),
+            "--problem-id",
+            "vrp_multi",
+            "--solution",
+            str(sol),
+        ]
+    )
+    assert r.returncode == 0, r.stderr + r.stdout
+
+
+def test_gate_schema_forbids_path_key():
+    p = TD / "schema_with_path.json"
+    p.write_text(
+        json.dumps(
+            {
+                "problem_id": "shortest_path",
+                "problem_class": "shortest_path",
+                "nodes": ["S", "T"],
+                "path": ["S", "T"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    r = run([PY, str(TOOLS / "gate_schema.py"), str(p)])
+    assert r.returncode == 1
 
 
 def test_gate_schema_good():

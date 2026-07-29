@@ -1,62 +1,53 @@
 # OR-Path Multi-Agent / Graph-OR Agent
 
-Local-first workbench for operations-research agents: **Pi + pi-subagents + LangGraph + solver tools**.
+Local-first workbench: **Pi + pi-subagents + LangGraph + solver tools + knowledge vertical**.
 
 Primary UI: **OpenPi** (`openpi.bat`). Secondary: Pi TUI (`pi.bat`).  
-Not Feynman-primary. Not Hermes runtime (Hermes may only navigate/code).
+Law: **`specs/`** (SDD). Plans: `.hermes/plans/`. Not Feynman-primary. Not Hermes runtime.
 
 ## Quick start (Windows)
 
 ```bat
 cd /d C:\Users\Lanzao\Desktop\agent
-:: Python 3.14 venv already at .venv-314 — recreate if needed:
-:: py -3.14 -m venv .venv-314
-.venv-314\Scripts\python.exe -m pip install -r requirements.txt
-
+:: or any install copy — set ORPATH_HOME if needed
+orpath.bat doctor
+orpath.bat isolation
 set PYTHONNOUSERSITE=1
-.venv-314\Scripts\python.exe scripts\t1_gate.py
-.venv-314\Scripts\python.exe scripts\t1_negatives.py
+.venv-314\Scripts\python.exe -m pip install -r requirements.txt
+orpath.bat gate
 ```
 
-**Important:** set `PYTHONNOUSERSITE=1` so a broken user-site `pydantic` does not shadow the venv (seen on this machine).
+Relocatable install: `docs/t2-relocatable.md` (`ORPATH_HOME` / `ORPATH_WORKDIR`).
 
-## T1 status
+## Status
 
-| Slice | Command / path |
-|-------|----------------|
-| **Closeout (CLOSED/PASS)** | `docs/t1-closeout.md` |
-| Core evidence | `docs/t1-evidence.md` |
-| Day 2–3 thicken | `docs/t1-day2-day3.md` |
-| Smoke prompt | `docs/t1-smoke.md` |
-| Portfolio talk | `docs/t1-portfolio-talk.md` |
-| LG pipeline | `orpath/run_t1.py` |
-| Pi agents | `.pi/agents/or-*.md` |
-| Live subagent proof | `.pi-subagents/artifacts/*_transcript.jsonl` (local) |
+| Milestone | Doc |
+|-----------|------|
+| **T1 CLOSED/PASS** | `docs/t1-closeout.md` |
+| **T2 gates PASS** (screenshot pending human) | `docs/t2-closeout.md` |
+| Specs | `specs/README.md` |
+| T2 smoke | `docs/t2-smoke.md` |
 
 ## Layout
 
 ```text
-.pi/agents/          Pi subagent definitions (or-*)
-fixtures/t1/         Smoke cases
-tools/               solve_* + gates + pytest
-orpath/              LangGraph stage machine
-scripts/t1_gate.py   Semi-auto DoD
-scripts/t1_negatives.py
-docs/                Smoke, evidence, day2-3, talk track
-openpi/              Electron UI (git submodule-like tree)
-runtime/             npm Pi CLI
+specs/               SDD living law
+fixtures/t1|t2/      Gold cases (SP, TSP n=8, multi-vehicle VRP)
+tools/               solve_* validate R1/R2 schema
+orpath/              LG T1 + T2 runners, pi_bridge
+knowledge_svc/       MinerU, hybrid retrieve, Cognee, seed graph
+knowledge/           corpus, seed_graph, indexes (caches gitignored)
+scripts/t*_gate.py   Semi-auto DoD
+.pi/agents/or-*.md   Pi subagents
 ```
 
 ## Dual path
 
 - **CI / gate:** deterministic LG nodes + tools  
-- **Live multi-agent:** Pi/OpenPi + `pi-subagents`  
+- **Live multi-agent:** Pi/OpenPi + pi-subagents  
+- **Bridge:** `ORPATH_LIVE_PI=1` evidence via `orpath/pi_bridge.py`
 
-Both are intentional; see `docs/t1-day2-day3.md`.
+## Stack locks
 
-## Stack locks (summary)
-
-Pi harness · pi-subagents · LangGraph · OR-Tools/NetworkX numbers · DeepSeek · OpenPi UI ·  
-LightRAG/MinerU/Cognee later · Agent Teams / message bus out of main path.
-
-Details: `IDEA.md`, skill `or-path-multi-agent`.
+Pi harness · pi-subagents · LangGraph · OR-Tools/NetworkX numbers + validate · DeepSeek · OpenPi ·  
+MinerU/LightRAG+BM25/FTS/RRF/Cognee · Agent Teams/bus out · specs-first SDD

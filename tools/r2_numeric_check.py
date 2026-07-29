@@ -10,13 +10,14 @@ from pathlib import Path
 from typing import Any
 
 YEAR_RE = re.compile(r"\b(20\d{2})\b")
+ARXIV_ID_RE = re.compile(r"\b(\d{4}\.\d{4,5})(v\d+)?\b")
+DOI_NUM_RE = re.compile(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b", re.I)
 OBJECTIVE_CLAIM_RE = re.compile(
     r"(?i)(?:objective|optimal(?:\s+cost)?|total\s+cost|shortest\s+(?:path\s+)?cost|"
     r"最短路(?:径)?(?:代价|费用|长度|成本)?|目标值|最优(?:值|代价|费用)?)"
     r"\s*[:=是为]?\s*"
     r"([+-]?(?:\d+\.\d+|\d+))"
 )
-# Result-sized numbers outside tiny counters / table indices
 BIG_NUM_RE = re.compile(r"(?<![A-Za-z0-9_/])([+-]?(?:\d+\.\d+|\d{2,}))(?![A-Za-z0-9_])")
 
 
@@ -55,12 +56,14 @@ def _allowed_float(allowed: set[str], f: float) -> bool:
 def check_draft(draft: str, solution: dict) -> list[str]:
     allowed: set[str] = set()
     _collect_solution_tokens(solution, allowed)
-    # path letters already; tiny counters 0-20 always ok for markdown lists/tables
     for i in range(0, 21):
         allowed.add(str(i))
     errors: list[str] = []
 
-    for m in OBJECTIVE_CLAIM_RE.finditer(draft):
+    masked = ARXIV_ID_RE.sub(" ARXIV ", draft)
+    masked = DOI_NUM_RE.sub(" DOI ", masked)
+
+    for m in OBJECTIVE_CLAIM_RE.finditer(masked):
         claim = m.group(1).lstrip("+")
         try:
             f = float(claim)
@@ -70,8 +73,8 @@ def check_draft(draft: str, solution: dict) -> list[str]:
         if claim not in allowed and not _allowed_float(allowed, f):
             errors.append(f"objective-like claim not in solution: {claim}")
 
-    years = set(YEAR_RE.findall(draft))
-    for m in BIG_NUM_RE.finditer(draft):
+    years = set(YEAR_RE.findall(masked))
+    for m in BIG_NUM_RE.finditer(masked):
         token = m.group(1).lstrip("+")
         if token in years:
             continue
@@ -85,7 +88,6 @@ def check_draft(draft: str, solution: dict) -> list[str]:
             continue
         if _allowed_float(allowed, f):
             continue
-        # ignore pure path drive noise like nothing; flag result-scale extras
         errors.append(f"numeric claim not in solution: {token}")
 
     return sorted(set(errors))
