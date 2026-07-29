@@ -1,8 +1,8 @@
 """OR-Path product stage nodes (authoritative).
 
-ADR-0001: single deep module for pipeline stages. Live vs deterministic
-behavior is selected inside nodes (ORPATH_LIVE_SUBAGENT / adapters).
-T2-era name nodes_t2 re-exports this module for compatibility.
+ADR-0001: single deep module for pipeline stages.
+Core stage bodies + product facade (bridge_pi, NodeContext wrap).
+Live vs deterministic selected inside bodies (ORPATH_LIVE_SUBAGENT).
 """
 from __future__ import annotations
 
@@ -1282,3 +1282,124 @@ def node_provenance(state: ORPathState) -> dict:
         "research_run_path": str(run_path),
         "versions_path": str(versions_path) if versions_path.is_file() else "",
     }
+
+
+# ---------------------------------------------------------------------------
+# Product graph facade (merged from nodes_product — ADR-0001 closeout)
+# Core bodies above stay callable as _core_*; public node_* are wrapped.
+# ---------------------------------------------------------------------------
+from typing import Any  # noqa: E402
+
+from orpath.node_context import wrap_node  # noqa: E402
+from orpath.pi_bridge import bridge_smoke, maybe_annotate_live  # noqa: E402
+
+_core_orchestrate = node_orchestrate
+_core_retrieve = node_retrieve
+_core_research = node_research
+_core_model = node_model
+_core_gate_schema = node_gate_schema
+_core_solve = node_solve
+_core_gate_validate = node_gate_validate
+_core_human_stop = node_human_stop
+_core_explain = node_explain
+_core_draft_paper = node_draft_paper
+_core_cite_pack = node_cite_pack
+_core_review_pack = node_review_pack
+_core_revise_or_done = node_revise_or_done
+_core_provenance = node_provenance
+
+
+def node_bridge_pi(state: ORPathState) -> dict[str, Any]:
+    """In-graph Pi bridge. Hard-fail when live_pi and bridge fails."""
+    root = Path(state["root"])
+    slug = state["slug"]
+    live = bool(state.get("live_pi"))
+    if not live:
+        return {
+            "stage": "research"
+            if (state.get("bridge_attachment") or "before_research") == "before_research"
+            else "retrieve",
+            "bridge_skipped": True,
+            "bridge_ok": True,
+            "bridge_path": "",
+            "last_error": "",
+        }
+
+    try:
+        info = bridge_smoke(root, slug)
+        maybe_annotate_live(root, slug)
+    except Exception as exc:  # noqa: BLE001
+        raise RuntimeError(f"bridge_pi hard fail: {exc}") from exc
+
+    if not info.get("ok", True) and info.get("ok") is False:
+        raise RuntimeError(f"bridge_pi hard fail: {info}")
+
+    out_path = root / "outputs" / f"{slug}-bridge.json"
+    out_path.write_text(json.dumps(info, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    att = state.get("bridge_attachment") or "before_research"
+    next_stage = "research" if att == "before_research" else "retrieve"
+    return {
+        "stage": next_stage,
+        "bridge_skipped": False,
+        "bridge_ok": True,
+        "bridge_path": str(out_path),
+        "last_error": "",
+    }
+
+
+def _after_orchestrate_stage(state: ORPathState) -> dict[str, Any]:
+    out = _core_orchestrate(state)
+    att = state.get("bridge_attachment") or "before_research"
+    if att == "before_retrieve":
+        out = {**out, "stage": "bridge_pi"}
+    return out
+
+
+def _after_retrieve_stage(state: ORPathState) -> dict[str, Any]:
+    out = _core_retrieve(state)
+    att = state.get("bridge_attachment") or "before_research"
+    if att == "before_research":
+        out = {**out, "stage": "bridge_pi"}
+    else:
+        out = {**out, "stage": "research"}
+    return out
+
+
+def _provenance_thick(state: ORPathState) -> dict[str, Any]:
+    out = _core_provenance(state)
+    prov = Path(out["provenance_path"])
+    extra = [
+        "",
+        "## T3 skeleton",
+        f"- thread_id: {state.get('thread_id')}",
+        f"- bridge_attachment: {state.get('bridge_attachment')}",
+        f"- bridge_path: {state.get('bridge_path')}",
+        f"- bridge_ok: {state.get('bridge_ok')}",
+        f"- bridge_skipped: {state.get('bridge_skipped')}",
+        f"- runs_dir: {state.get('runs_dir')}",
+        f"- artifact_manifest_path: {state.get('artifact_manifest_path')}",
+        f"- last_snapshot_path: {state.get('last_snapshot_path')}",
+        f"- orpath_checkpoint_id: {state.get('orpath_checkpoint_id')}",
+        f"- pipeline: product",
+    ]
+    with prov.open("a", encoding="utf-8") as f:
+        f.write("\n".join(extra) + "\n")
+    return out
+
+
+# Public names for product graph (NodeContext snapshot + owner)
+node_orchestrate = wrap_node("orchestrate", _after_orchestrate_stage)
+node_retrieve = wrap_node("retrieve", _after_retrieve_stage)
+node_bridge = wrap_node("bridge_pi", node_bridge_pi)
+node_research = wrap_node("research", _core_research)
+node_model = wrap_node("model", _core_model)
+node_gate_schema = wrap_node("gate_schema", _core_gate_schema)
+node_solve = wrap_node("solve", _core_solve)
+node_gate_validate = wrap_node("gate_validate", _core_gate_validate)
+node_human_stop = wrap_node("human_stop", _core_human_stop)
+node_explain = wrap_node("explain", _core_explain)
+node_draft_paper = wrap_node("draft_paper", _core_draft_paper)
+node_cite_pack = wrap_node("cite_pack", _core_cite_pack)
+node_review_pack = wrap_node("review_pack", _core_review_pack)
+node_revise_or_done = wrap_node("revise_or_done", _core_revise_or_done)
+node_provenance = wrap_node("provenance", _provenance_thick)

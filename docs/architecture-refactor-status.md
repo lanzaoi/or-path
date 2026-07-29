@@ -1,16 +1,11 @@
-# 架构整理进度（2026-07-29）
+# 架构整理进度
 
 ## 已完成
-- [x] 安装 Matt Skills（全局）
-- [x] `improve-codebase-architecture` 扫描 + 中文 HTML 报告
-- [x] 候选 #1 grilling 决策
-- [x] ADR-0001 + 工单
-- [x] **#1 代码落地**：`orpath/nodes.py` 权威；T1 产品图；门禁全绿
+- [x] Matt Skills 全局
+- [x] 架构评审 + 中文报告
+- [x] 候选 #1 grilling + ADR-0001
+- [x] #1 首轮：nodes 权威、T1 产品图
+- [x] **#1 closeout：** product facade 并入 nodes；删 nodes_t2；graph_t2 委托；t1_gate 加强；文档同步
 
-## 冻结（#1 阶段节点）
-1. 权威模块 = `orpath/nodes.py`
-2. T1 → 产品图；`t1_gate` 绿
-3. `nodes_t2` = re-export；`nodes_product` = bridge/wrap
-
-## 下次（候选 #2）
-- [ ] Deepen Solve/Validate 接缝（`tools/solve_*` + `scripts/b_tube_*`）
+## 下次
+- [ ] 候选 #2：Solve/Validate 接缝（tools + b_tube）

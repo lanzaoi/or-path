@@ -7,7 +7,7 @@
 | Piece | Role |
 |-------|------|
 | `orpath/paper_live_subagent.py` | cite/review short-lead spawn + merge helpers |
-| `orpath/nodes_t2.py` | `node_cite_pack` / `node_review_pack` call live leads |
+| `orpath/nodes.py` | stage nodes + product wrap + live leads |
 | `orpath/state.py` | `gate_subagent_ok`, `live_subagent` |
 | `scripts/paper_gate.py` / `paper_1_0_gate.py` | force `ORPATH_LIVE_SUBAGENT=0` (deterministic) |
 | `scripts/subagent_gate.py` | `M2_PAPER_LIVE_GLUE_PASS` |

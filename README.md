@@ -97,11 +97,12 @@ specs/                 【硬法】读这里，不要只信聊天
 orpath/                【大脑-流程】LangGraph
   graph_product.py     ★ T3 产品图（主）
   run_orpath.py        ★ 主 runner：run/status/resume/list
-  nodes_product.py     产品节点 + 横切钩子
+  nodes.py             ★ 阶段节点权威（含 bridge + NodeContext wrap）
+  nodes_product.py     兼容 shim → nodes
   node_context.py      snapshot / hash / owner 断言
   stage_map.json       阶段图导出（门禁 diff）
-  graph.py + run_t1.py T1 旧图标本（t1_gate 专用）
-  graph_t2.py          T2 旧图（兼容残留）
+  graph.py + run_t1.py 委托产品图（t1_gate）
+  graph_t2.py          委托产品图（兼容）
   run_t2.py            薄委托 → 产品图
   pi_bridge.py         LG↔Pi 桥
   state.py             窄共享状态字段
@@ -237,10 +238,8 @@ set PYTHONNOUSERSITE=1
 
 ## 常见懵点
 
-1. **为什么有三张图？**  
-   - `graph.py` = T1 标本（t1_gate）  
-   - `graph_t2.py` = T2 时代图（兼容）  
-   - **`graph_product.py` = 现在主图（T3）**；`run_t2` 已委托它  
+1. **为什么还有 graph.py / graph_t2？**  
+   历史入口名；**都委托 `graph_product`**（ADR-0001）。真逻辑只在产品图 + `orpath/nodes.py`。
 
 2. **outputs 一堆 t3-mat- / t3-lg- 是什么？**  
    门禁和实验跑出来的制品，可清，也可留作证据；**权威金标在 `fixtures/`**。

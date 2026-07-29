@@ -22,15 +22,16 @@
 | Q12 OUT | **D** — codegen 沙箱、Teams/bus、Graphiti、Compose/K8s 硬、新题类、OpenPi 大改、重开 T1/T2 |
 | Q13 启动 | **C** — `orpath.bat run\|status\|resume\|list\|gate-t3` |
 | Q14 Owner | **D** — specs + TypedDict + 运行时 assert + 单测 |
-| Q15 节点 | **D** — `nodes_product` + NodeContext 钩子；t2 re-export |
-| Q16 旧 gate | **C** — t1 打旧图；t2 委托产品图 |
+| Q15 节点 | **D′** — **`orpath/nodes.py` 权威**（含 NodeContext wrap + bridge）；`nodes_product` 仅 shim（ADR-0001） |
+| Q16 旧 gate | **C′** — t1/t2 **均走产品图**；`t1_gate` 断言 `pipeline=product` |
+
 
 ## 产品入口
 
 | 组件 | 路径 |
 |------|------|
 | 图 | `orpath/graph_product.py` |
-| 节点 | `orpath/nodes_product.py`（NodeContext 横切） |
+| 节点 | **`orpath/nodes.py`**（阶段权威 + NodeContext 横切 + bridge）；`nodes_product` = 兼容 shim |
 | Runner/CLI | `orpath/run_orpath.py` |
 | Stage map 导出 | `orpath/stage_map.json` + `docs/t3-stage-map.mmd` |
 | Checkpointer | `runs/orpath.sqlite`（gitignore） |

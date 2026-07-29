@@ -87,11 +87,21 @@ def main() -> int:
         fail("no provenance")
     if summary.get("human_required"):
         fail("human_required set")
+    # ADR-0001: T1 must run product graph
+    if summary.get("pipeline") != "product":
+        fail(f"expected pipeline=product, got {summary.get('pipeline')!r}")
+    if summary.get("gate_validate_ok") is not True:
+        fail(f"gate_validate_ok not true: {summary.get('gate_validate_ok')!r}")
     paper = Path(summary["paper_path"])
     text = paper.read_text(encoding="utf-8")
     if "objective = 42" not in text and "objective: 42" not in text:
         if "42" not in text:
             fail("paper missing objective 42")
+    prov = Path(summary["provenance_path"]).read_text(encoding="utf-8")
+    if "pipeline: product" not in prov and "pipeline: product" not in text:
+        # provenance thick section should mark product
+        if "T3 skeleton" not in prov and "pipeline: product" not in prov:
+            fail("provenance missing product/T3 skeleton markers")
     print("PASS: t1_gate")
     return 0
 
