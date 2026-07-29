@@ -1,0 +1,6 @@
+{
+  "packages": ["npm:pi-subagents@0.37.2"],
+  "subagents": {
+    "defaultModel": "deepseek-v4-flash"
+  }
+}

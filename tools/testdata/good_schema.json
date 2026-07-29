@@ -1,0 +1,12 @@
+{
+  "slug": "t1-shortest-path",
+  "problem_class": "shortest_path",
+  "problem_id": "shortest_path",
+  "nodes": ["S", "A", "T"],
+  "edges_ref": "fixtures/t1/shortest_path/graph.json",
+  "source": "S",
+  "target": "T",
+  "weight_key": "w",
+  "constraints": [],
+  "notes": "demo schema"
+}

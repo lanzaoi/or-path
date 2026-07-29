@@ -1,0 +1,9 @@
+{
+  "refs": [
+    {
+      "id": 1,
+      "title": "Fixture OR note",
+      "url": "notes://t1-shortest-path-ref"
+    }
+  ]
+}

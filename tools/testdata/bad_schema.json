@@ -1,0 +1,6 @@
+{
+  "slug": "t1-shortest-path",
+  "problem_class": "shortest_path",
+  "objective": 42,
+  "nodes": ["S", "A", "T"]
+}

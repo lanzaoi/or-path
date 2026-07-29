@@ -1,0 +1,56 @@
+# OR-Path — .gitignore
+
+# Python
+.venv-314/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+.pytest_cache/
+
+# Secrets
+.env
+backend.env
+*.env.local
+
+# Local data / indexes
+data/
+runs/
+lightrag_data/
+chroma_db/
+*.db
+*.db-shm
+*.db-wal
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+
+# Docker
+docker-compose.override.yml
+
+# Models
+models/
+mineru_models/
+
+# Upstream mirrors
+vendor/
+
+# Generated T1 artifacts (regenerate via gates / Pi)
+outputs/
+notes/
+papers/
+.pi/memory/
+.pi-subagents/
+
+# Heavy nested trees — keep package.json lockfiles only via selective add if needed
+pi-main/
+openpi/
+runtime/node_modules/
+**/node_modules/
+
+# Keep launchers and runtime package manifests
+# (runtime/package.json is tracked; node_modules is not)
