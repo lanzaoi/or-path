@@ -108,9 +108,12 @@ orpath/                【大脑-流程】LangGraph
   state.py             窄共享状态字段
 
 tools/                 【计算器】数字唯一真相
+  solve_dispatch.py    ★ 统一调度（ADR-0002）
+  solve_envelope.py    ★ solution 接口契约
   solve_mock.py
   solve_networkx.py
   solve_ortools.py     含 TSP / VRP / CVRPTW
+  solve_tube_cut_b2026.py  圆管 BFD 适配器
   validate_solution.py
   r1_*.py  r2_*.py
   gate_schema.py

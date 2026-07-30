@@ -1,17 +1,33 @@
 # Solvers and Validate — 求解与校验
 
+## 统一接缝（ADR-0002）
+
+| 模块 | 职责 |
+|------|------|
+| `tools/solve_envelope.py` | solution **接口**：status / objective / source / shape / meta |
+| `tools/solve_dispatch.py` | **唯一调度**：`solve()` / `validate()` + adapter 表 |
+| `orpath/gates.py` | LG 节点只调 dispatch，不直写脚本名 |
+| `tools/solve_*.py` | **适配器**（实现） |
+| `scripts/b_tube_*.py` | **薄 CLI / 遗留**；圆管权威 = `solve_tube_cut_b2026.py` |
+
+```text
+python tools/solve_dispatch.py <problem_id> --mode mock|networkx|cpsat|highs|ortools|tube
+python tools/validate_solution.py --problem-id <id> --solution path.json
+```
+
 ## 命名诚实
 
 | 工具 | 含义 |
 |------|------|
 | `tools/solve_mock.py` | 读冻结 `fixtures/**/solution.json` |
 | `tools/solve_networkx.py` | **NetworkX Dijkstra** — **精确**最短路 |
-| `tools/solve_cpsat.py` | **OR-Tools CP-SAT circuit** — **精确**小 TSP（可证最优） |
+| `tools/solve_cpsat.py` | **OR-Tools CP-SAT circuit** — **精确**小 TSP |
 | `tools/solve_highs.py` | **HiGHS MTZ MIP** — **精确**小 TSP 对照 |
-| `tools/solve_ortools.py` | **OR-Tools Routing** — TSP/VRP/**实用搜索轨**（**非**证明最优） |
+| `tools/solve_ortools.py` | **OR-Tools Routing** — 实用搜索轨（**非**证明最优） |
+| `tools/solve_tube_cut_b2026.py` | 圆管 BFD/启发式 — **FEASIBLE only** |
 | `tools/validate_solution.py` | 重算与可行性；写 ValidateReport |
 
-禁止再把 NetworkX 标成 ortools；禁止把 Routing 启发式宣传成「保证全局最优」。
+禁止再把 NetworkX 标成 ortools；禁止把 Routing/BFD 宣传成 proven optimal。
 
 权威组合与 claim ladder：`docs/solver-stack.md`。
 
@@ -32,6 +48,7 @@
 | `cpsat` | **TSP 默认宣传轨** | ✅ |
 | `highs` | TSP 精确对照 | ✅ |
 | `ortools` | VRP/TW 与规模扩展；TSP 扩展对照 | ❌ metaheuristic |
+| `tube` / `tube_bfd` | 圆管下料 BFD | ❌ heuristic |
 
 ## 问题类默认策略
 
@@ -66,9 +83,12 @@ T3+ TW：有 `time_windows` 时必须检查服务开始时间窗。
 ## CLI
 
 ```text
-python tools/solve_networkx.py <id>
+python tools/solve_dispatch.py <id> --mode mock|networkx|cpsat|highs|ortools|tube
+python tools/solve_networkx.py <id>          # adapter direct
 python tools/solve_cpsat.py <id>
 python tools/solve_highs.py <id>
 python tools/solve_ortools.py <id> [--class tsp|vrp|shortest_path]
+python tools/solve_tube_cut_b2026.py         # tube adapter (writes outputs/b-tube-cut)
+python scripts/b_tube_solve.py               # thin → tube adapter + envelope
 python tools/validate_solution.py --problem-id <id> --solution path.json
 ```

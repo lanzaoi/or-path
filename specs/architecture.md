@@ -72,7 +72,7 @@ CI 默认可不开 live Pi，但 **T2 closeout 不能没有 bridge 成功证据*
 | `orpath/` | LG 状态机、节点、runner、pi_bridge |
 | `orpath/nodes.py` | **阶段节点权威**（核心 + bridge + NodeContext wrap，ADR-0001） |
 | `orpath/nodes_product.py` | 兼容 shim → `nodes` |
-| `tools/` | solve_*、validate、R1/R2、schema gate |
+| `tools/` | solve_* 适配器、**solve_dispatch / solve_envelope**、validate、R1/R2、schema gate |
 | `contracts/` | JSON Schema 导出（由 pydantic 生成可） |
 | `knowledge/` / `knowledge_svc/` | 语料、种子图、摄取与检索 |
 | `fixtures/t1|t2/` | 金标与冒烟题 |

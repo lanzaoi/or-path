@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-"""B题异形圆管下料 — 几何分析 + 端部特征（Hermes 修 Pi bug）
+"""LEGACY geometry script — prefer tools/solve_tube_cut_b2026.py (ADR-0002).
 
-Bugfix:
-- 原: axial = Z_max - Z_min（把截面直径当轴长，~40mm）
-- 现: PCA 第一主轴跨度 = 管轴线占用长度
-- 共切: 沿真轴端部包络 + 旋转搜索 nest，不再用 |r| 乱差
+Kept for offline inspection only; product solve path is tools/solve_dispatch mode=tube.
 """
 import csv
 import json

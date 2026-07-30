@@ -210,3 +210,40 @@ def test_r1_good():
         ]
     )
     assert r.returncode == 0, r.stderr
+
+
+def test_solve_dispatch_mock_envelope():
+    r = run([PY, str(TOOLS / "solve_dispatch.py"), "shortest_path", "--mode", "mock"])
+    assert r.returncode == 0, r.stderr
+    data = json.loads(r.stdout)
+    assert data["objective"] == 42
+    assert data["status"] == "OPTIMAL"
+    assert data.get("meta", {}).get("method_class") == "fixture"
+    assert "source" in data
+
+
+def test_solve_envelope_unit():
+    sys.path.insert(0, str(TOOLS))
+    from solve_envelope import normalize_solution, validate_envelope
+
+    ok, errs = validate_envelope({"status": "OPTIMAL", "objective": 1, "source": "x", "path": ["A"]})
+    assert ok, errs
+    bad = {"status": "OPTIMAL", "objective": 1, "source": "x", "meta": {"proven_optimal": True, "exact": False}}
+    ok2, errs2 = validate_envelope(bad)
+    assert not ok2
+    n = normalize_solution(
+        {"status": "FEASIBLE", "objective": 3, "source": "tools/solve_ortools.py", "tour": [0, 1]},
+        mode="ortools",
+    )
+    assert n["meta"]["exact"] is False
+    assert n["meta"]["proven_optimal"] is False
+
+
+def test_gates_solve_dispatch_wiring():
+    sys.path.insert(0, str(ROOT))
+    from orpath.gates import solve
+
+    ok, data, _raw = solve(ROOT, "shortest_path", "mock")
+    assert ok
+    assert data["objective"] == 42
+    assert data.get("meta")

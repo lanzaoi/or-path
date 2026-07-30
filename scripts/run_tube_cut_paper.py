@@ -57,8 +57,8 @@ def build_solution() -> dict:
         "problem_class": "cutting_stock",
         "status": "FEASIBLE",
         "objective": obj,
-        "solver": "b_tube_solve.py+b_tube_q4.py (BFD heuristic)",
-        "source": "outputs/b-tube-cut/q*-solution.json",
+        "solver": "tools/solve_tube_cut_b2026.py (BFD heuristic via solve_dispatch)",
+        "source": "tools/solve_tube_cut_b2026.py → outputs/b-tube-cut/q*-solution.json",
         "metrics": metrics,
         "questions": {
             "q1": {"total_stock_length": metrics["q1_total_stock_mm"], "switches": metrics["q1_total_switch"]},
