@@ -1,6 +1,6 @@
-"""M3: research fan-out + modeler live subagent (Feynman-aligned).
+"""M3 research fan-out + modeler live subagent (implementation).
 
-Complements paper_live_subagent (M2 cite/review).
+Product code should import from orpath.subagent_dispatch (ADR-0005).
 """
 from __future__ import annotations
 

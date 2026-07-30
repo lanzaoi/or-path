@@ -21,13 +21,14 @@ from orpath.claim_ledger import (
     write_verification_md,
 )
 from orpath.lab_continuity import append_lab_changelog, write_solution_figure
-from orpath.paper_live_subagent import (
+from orpath.subagent_dispatch import (
     live_subagent_enabled,
     merge_review_if_child_wrote,
     run_cite_subagent_lead,
+    run_model_subagent_lead,
+    run_research_subagent_lead,
     run_review_subagent_lead,
 )
-from orpath.graph_live_subagent import run_model_subagent_lead, run_research_subagent_lead
 from orpath.paper_workflow import (
     append_plan_log,
     apply_revise_fixes,

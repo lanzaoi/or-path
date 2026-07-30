@@ -97,13 +97,17 @@ specs/                 【硬法】读这里，不要只信聊天
 orpath/                【大脑-流程】LangGraph
   control_plane.py     ★ 控制面：build / seed / invoke_once（ADR-0003）
   paper_protocol.py    ★ 论文环：run_from_solution（ADR-0004）
+  subagent_dispatch.py ★ 子智能体策略：live/leads/harness（ADR-0005）
   graph_product.py     ★ 产品图拓扑（边/路由）
   run_orpath.py        ★ CLI：run/status/resume/list → ControlPlane
   nodes.py             ★ 阶段节点权威（含 bridge + NodeContext wrap）
   nodes_product.py     兼容 shim → nodes
   post_solve_paper.py  兼容 shim → paper_protocol
   paper_workflow.py    论文渲染/review 实现
-  paper_live_subagent.py  cite/review live 适配器
+  paper_live_subagent.py  cite/review live 实现（经 dispatch）
+  graph_live_subagent.py  research/model live 实现（经 dispatch）
+  subagent_runtime.py  spawn/detect 实现
+  subagent_harness.py  anti-cosplay 实现
   node_context.py      snapshot / hash / owner 断言
   stage_map.json       阶段图导出（门禁 diff）
   graph.py + run_t1.py 委托 ControlPlane（t1_gate）

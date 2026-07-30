@@ -70,6 +70,7 @@ CI 默认可不开 live Pi，但 **T2 closeout 不能没有 bridge 成功证据*
 | 路径 | 职责 |
 |------|------|
 | `orpath/` | LG 状态机、节点、runner、pi_bridge |
+| `orpath/subagent_dispatch.py` | **子智能体策略权威**（ADR-0005） |
 | `orpath/paper_protocol.py` | **论文环权威** `run_from_solution`（ADR-0004） |
 | `orpath/control_plane.py` | **控制面权威** build/seed/invoke（ADR-0003） |
 | `orpath/nodes.py` | **阶段节点权威**（核心 + bridge + NodeContext wrap，ADR-0001） |

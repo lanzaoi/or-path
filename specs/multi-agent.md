@@ -1,5 +1,19 @@
 # Multi-Agent — 多智能体法
 
+## 统一接缝（ADR-0005）
+
+产品代码只 import **`orpath.subagent_dispatch`**：
+
+| API | 用途 |
+|-----|------|
+| `live_subagent_enabled` | 是否真 spawn |
+| `run_*_subagent_lead` | research/model/cite/review |
+| `run_forced_subagent_stage` | anti-cosplay harness |
+| `STAGE_AGENTS` / `policy_snapshot()` | 阶段→角色策略表 |
+| `detect_subagent_calls` / `spawn_lead` | 验收与底层 spawn |
+
+实现分层：`subagent_runtime` · `subagent_harness` · `paper_live_subagent` · `graph_live_subagent`。
+
 ## 硬要求
 
 演示与 closeout 必须能展示：

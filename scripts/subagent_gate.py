@@ -21,17 +21,30 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from orpath.subagent_runtime import (  # noqa: E402
+from orpath.subagent_dispatch import (  # noqa: E402
     FORCED_SUBAGENT_STAGES,
     LEAD_OWNED_STAGES,
+    LEAD_TOOLS_NO_WRITE,
+    ANTI_COSPLAY_SYSTEM,
+    STAGE_AGENTS,
     SUBAGENT_TOOL_NAME,
     build_lead_prompt,
     build_pi_command,
     check_env,
     detect_subagent_calls,
     list_project_agents,
+    live_subagent_enabled,
+    merge_review_if_child_wrote,
+    policy_snapshot,
     project_root,
+    research_scale,
+    run_cite_subagent_lead,
+    run_forced_subagent_stage,
+    run_model_subagent_lead,
+    run_research_subagent_lead,
+    run_review_subagent_lead,
     spawn_lead,
+    stage_agent,
     stage_requires_subagent,
     sync_agents_to_user_dir,
     write_task_brief,
@@ -149,15 +162,9 @@ def test_dry_spawn() -> None:
 
 
 def test_m2_paper_live_glue() -> None:
-    """M2: paper_live_subagent respects ORPATH_LIVE_SUBAGENT=0 and wires modules."""
+    """M2: paper live leads via subagent_dispatch; ORPATH_LIVE_SUBAGENT=0 skips."""
     root = project_root(ROOT)
     os.environ["ORPATH_LIVE_SUBAGENT"] = "0"
-    from orpath.paper_live_subagent import (
-        live_subagent_enabled,
-        merge_review_if_child_wrote,
-        run_cite_subagent_lead,
-        run_review_subagent_lead,
-    )
 
     assert live_subagent_enabled({}) is False
     print("OK live disabled by env")
@@ -205,19 +212,14 @@ def test_m2_paper_live_glue() -> None:
     assert hasattr(n, "node_cite_pack") and hasattr(n, "node_review_pack")
     src = Path(n.__file__).read_text(encoding="utf-8")
     assert "run_cite_subagent_lead" in src and "run_review_subagent_lead" in src
-    print("OK nodes cite/review wired")
+    assert "subagent_dispatch" in src
+    print("OK nodes cite/review wired via subagent_dispatch")
 
 
 def test_m3_graph_live_glue() -> None:
-    """M3: research scale + model/research skip when live off; nodes wired."""
+    """M3: research/model via subagent_dispatch; skip when live off; nodes wired."""
     root = project_root(ROOT)
     os.environ["ORPATH_LIVE_SUBAGENT"] = "0"
-    from orpath.graph_live_subagent import (
-        research_scale,
-        run_model_subagent_lead,
-        run_research_subagent_lead,
-    )
-    from orpath.subagent_harness import LEAD_TOOLS_NO_WRITE, ANTI_COSPLAY_SYSTEM
 
     assert "write" not in LEAD_TOOLS_NO_WRITE and "edit" not in LEAD_TOOLS_NO_WRITE
     assert "subagent" in LEAD_TOOLS_NO_WRITE
@@ -251,7 +253,8 @@ def test_m3_graph_live_glue() -> None:
 
     src = Path(n.__file__).read_text(encoding="utf-8")
     assert "run_research_subagent_lead" in src and "run_model_subagent_lead" in src
-    print("OK nodes M3 wired")
+    assert "subagent_dispatch" in src
+    print("OK nodes M3 wired via subagent_dispatch")
 
     # run_orpath CLI flags + ControlPlane
     rpath = ROOT / "orpath" / "run_orpath.py"
@@ -279,9 +282,16 @@ def test_m3_graph_live_glue() -> None:
     assert run_from_solution is run_post_solve_paper
     print("OK paper_protocol API")
 
-    # dry harness
-    from orpath.subagent_harness import run_forced_subagent_stage
+    # ADR-0005 SubagentDispatch
+    snap = policy_snapshot()
+    assert snap["anti_cosplay"] is True
+    assert stage_agent("cite") == "or-verifier"
+    assert stage_agent("review_pack") == "or-reviewer"
+    assert STAGE_AGENTS["model"] == "or-modeler"
+    assert callable(run_forced_subagent_stage)
+    print("OK subagent_dispatch API", sorted(STAGE_AGENTS))
 
+    # dry harness (already imported from subagent_dispatch)
     d = run_forced_subagent_stage(
         root,
         slug="harness-dry",
@@ -307,6 +317,7 @@ def main() -> int:
     print("M1_SUBAGENT_GATE_PASS")
     print("M2_PAPER_LIVE_GLUE_PASS")
     print("M3_GRAPH_LIVE_GLUE_PASS")
+    print("M5_SUBAGENT_DISPATCH_PASS")
     return 0
 
 

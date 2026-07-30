@@ -6,7 +6,7 @@ Interface (what callers learn):
   IN_GRAPH_STAGES         — LG node names that implement the same loop
 
 Implementation helpers stay in paper_workflow / claim_ledger / revise_proof.
-Live cite/review adapters stay in paper_live_subagent (used by nodes).
+Live cite/review adapters: orpath.subagent_dispatch (ADR-0005); impl paper_live_subagent.
 """
 from __future__ import annotations
 

@@ -1,10 +1,6 @@
-"""M2: paper-loop live subagent glue for cite_pack / review_pack.
+"""M2 paper-loop live subagent glue (implementation).
 
-Lead draft remains lead-owned (scripted render_or_paper).
-Cite → harness → subagent or-verifier (lead has NO write tools).
-Review → harness → subagent or-reviewer (lead has NO write tools).
-
-Deterministic gates set ORPATH_LIVE_SUBAGENT=0.
+Product code should import from orpath.subagent_dispatch (ADR-0005).
 """
 from __future__ import annotations
 
