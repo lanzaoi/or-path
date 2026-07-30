@@ -4,10 +4,13 @@
 
 | Runner | 用途 |
 |--------|------|
-| `orpath/run_t1.py` | T1 标本；**走产品图** `graph_product`（ADR-0001）；`t1_gate` 必绿 |
-| `orpath/run_t2.py` | T2 薄委托 → 产品图 `run_orpath` / `graph_product` |
-| `orpath/run_orpath.py` | **T3 主入口**：checkpointer、resume、from-stage、status/list |
-| `orpath/nodes.py` | **阶段节点权威**（含 product wrap）；`nodes_product` shim |
+| **`orpath/control_plane.py`** | **控制面权威**（ADR-0003）：build_graph / default_initial / invoke_once |
+| `orpath/run_orpath.py` | CLI：checkpointer、resume、from-stage、status/list → ControlPlane |
+| `orpath/run_t1.py` | T1 标本；`invoke_once`；`t1_gate` 必绿 |
+| `orpath/run_t2.py` | 薄委托 → `run_orpath.cmd_run` |
+| `orpath/graph_product.py` | 产品图**拓扑**（边/路由） |
+| `orpath/graph.py` / `graph_t2.py` | 兼容 shim → `control_plane.build_graph` |
+| `orpath/nodes.py` | 阶段节点权威（含 product wrap） |
 
 ## T3 产品图（权威阶段）
 

@@ -1,4 +1,8 @@
-"""Product LangGraph (T3): full control-plane + bridge + checkpointer compile helper."""
+"""Product LangGraph topology (T3).
+
+Build via ControlPlane: ``orpath.control_plane.build_graph`` (ADR-0003).
+This module owns edges/routing only; runners must not duplicate state seeds.
+"""
 from __future__ import annotations
 
 import json

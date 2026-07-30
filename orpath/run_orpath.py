@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""OR-Path product runner (T3): checkpointer, resume, from-stage, status/list."""
+"""OR-Path product runner (T3): CLI over ControlPlane (ADR-0003).
+
+checkpointer, resume, from-stage, status/list. State seed & graph build via
+orpath.control_plane.
+"""
 from __future__ import annotations
 
 import argparse
@@ -14,100 +18,17 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from orpath.graph_product import (  # noqa: E402
+from orpath.control_plane import (  # noqa: E402
+    PREDECESSORS as _PREDECESSORS,
     PRODUCT_NODES,
-    build_graph_product,
+    build_graph,
+    db_path as _db_path,
+    default_initial as _default_initial,
     open_sqlite_checkpointer,
+    thread_config as _config,
     write_stage_map_files,
 )
 from orpath.node_context import dirty_artifacts, thread_dir  # noqa: E402
-
-_PREDECESSORS = {
-    "retrieve": "orchestrate",
-    "bridge_pi": "retrieve",
-    "research": "bridge_pi",
-    "model": "research",
-    "gate_schema": "model",
-    "solve": "gate_schema",
-    "gate_validate": "solve",
-    "explain": "gate_validate",
-    "draft_paper": "explain",
-    "cite_pack": "draft_paper",
-    "review_pack": "cite_pack",
-    "revise_or_done": "review_pack",
-    "provenance": "revise_or_done",
-}
-
-
-def _default_initial(
-    *,
-    root: Path,
-    slug: str,
-    problem_id: str,
-    problem_class: str,
-    solve_mode: str,
-    knowledge_mode: str,
-    live_pi: bool,
-    live_subagent: bool | None,
-    thread_id: str,
-    bridge_attachment: str,
-) -> dict[str, Any]:
-    return {
-        "slug": slug,
-        "problem_id": problem_id,
-        "problem_class": problem_class,
-        "solve_mode": solve_mode,
-        "knowledge_mode": knowledge_mode,
-        "root": str(root),
-        "stage": "start",
-        "revise_count": 0,
-        "max_revise": 2,
-        "schema_repair": 0,
-        "max_schema_repair": 2,
-        "validate_repair": 0,
-        "max_validate_repair": 2,
-        "solver_tune": 0,
-        "max_solver_tune": 3,
-        "human_required": False,
-        "schema_path": "",
-        "solution_path": "",
-        "validate_path": "",
-        "research_path": "",
-        "retrieval_path": "",
-        "explain_path": "",
-        "paper_path": "",
-        "review_path": "",
-        "provenance_path": "",
-        "plan_path": "",
-        "cited_path": "",
-        "last_error": "",
-        "gate_schema_ok": False,
-        "gate_validate_ok": False,
-        "gate_r1_ok": False,
-        "gate_r2_ok": False,
-        "gate_subagent_ok": None,
-        "review_fatal": 0,
-        "live_pi": bool(live_pi),
-        "live_subagent": live_subagent,
-        "thread_id": thread_id,
-        "bridge_attachment": bridge_attachment,
-        "bridge_path": "",
-        "bridge_ok": False,
-        "bridge_skipped": True,
-        "orpath_checkpoint_id": "",
-        "runs_dir": str(root / "runs" / thread_id),
-        "artifact_manifest_path": "",
-        "last_snapshot_path": "",
-        "pipeline": "product",
-    }
-
-
-def _db_path(root: Path) -> Path:
-    return root / "runs" / "orpath.sqlite"
-
-
-def _config(thread_id: str) -> dict[str, Any]:
-    return {"configurable": {"thread_id": thread_id}}
 
 
 def cmd_list(root: Path) -> int:
@@ -119,7 +40,7 @@ def cmd_list(root: Path) -> int:
     for p in sorted(runs.iterdir()):
         if p.is_dir() and p.name != "__pycache__":
             latest = p / "latest_snapshot.json"
-            meta = {}
+            meta: dict[str, Any] = {}
             if latest.is_file():
                 try:
                     meta = json.loads(latest.read_text(encoding="utf-8"))
@@ -194,11 +115,11 @@ def cmd_run(args: argparse.Namespace) -> int:
     slug = args.slug or f"orpath-{args.problem_id}"
 
     saver, conn = open_sqlite_checkpointer(_db_path(root))
-    app = build_graph_product(checkpointer=saver)
+    app = build_graph(checkpointer=saver)
     cfg = _config(thread_id)
 
     if args.resume or args.from_stage:
-        probe = {
+        probe: dict[str, Any] = {
             "root": str(root),
             "thread_id": thread_id,
             "slug": slug,
@@ -276,9 +197,13 @@ def cmd_run(args: argparse.Namespace) -> int:
         cp_id = None
         if tup:
             cp = tup.checkpoint
-            cp_id = getattr(cp, "id", None) or (cp.get("id") if isinstance(cp, dict) else None)
+            cp_id = getattr(cp, "id", None) or (
+                cp.get("id") if isinstance(cp, dict) else None
+            )
         if cp_id:
-            td = thread_dir({"root": str(root), "thread_id": thread_id, "slug": slug})  # type: ignore[arg-type]
+            td = thread_dir(
+                {"root": str(root), "thread_id": thread_id, "slug": slug}
+            )  # type: ignore[arg-type]
             (td / "checkpoint_id.txt").write_text(str(cp_id) + "\n", encoding="utf-8")
             prov = final.get("provenance_path")
             if prov and Path(prov).is_file():
@@ -312,6 +237,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         "last_error": final.get("last_error"),
         "solver_tune": final.get("solver_tune"),
         "product_nodes": PRODUCT_NODES,
+        "pipeline": final.get("pipeline") or "product",
     }
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     conn.close()

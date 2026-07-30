@@ -30,9 +30,9 @@
 
 | 组件 | 路径 |
 |------|------|
-| 图 | `orpath/graph_product.py` |
+| 图 | `orpath/graph_product.py`（拓扑）+ **`orpath/control_plane.py`（编译/种子/invoke）** |
 | 节点 | **`orpath/nodes.py`**（阶段权威 + NodeContext 横切 + bridge）；`nodes_product` = 兼容 shim |
-| Runner/CLI | `orpath/run_orpath.py` |
+| Runner/CLI | `orpath/run_orpath.py` → ControlPlane |
 | Stage map 导出 | `orpath/stage_map.json` + `docs/t3-stage-map.mmd` |
 | Checkpointer | `runs/orpath.sqlite`（gitignore） |
 | Thread 快照 | `runs/<thread_id>/stages/*.json` + `artifact_hashes.json` |

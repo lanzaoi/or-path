@@ -253,12 +253,19 @@ def test_m3_graph_live_glue() -> None:
     assert "run_research_subagent_lead" in src and "run_model_subagent_lead" in src
     print("OK nodes M3 wired")
 
-    # run_orpath CLI flags
+    # run_orpath CLI flags + ControlPlane
     rpath = ROOT / "orpath" / "run_orpath.py"
     rt = rpath.read_text(encoding="utf-8")
     assert "--live-subagent" in rt and "--no-live-subagent" in rt
     assert "live_subagent" in rt
+    assert "control_plane" in rt
     print("OK run_orpath flags")
+
+    from orpath.control_plane import PRODUCT_NODES, build_graph, default_initial, invoke_once
+
+    assert "orchestrate" in PRODUCT_NODES and "solve" in PRODUCT_NODES
+    assert callable(build_graph) and callable(default_initial) and callable(invoke_once)
+    print("OK control_plane API")
 
     # dry harness
     from orpath.subagent_harness import run_forced_subagent_stage

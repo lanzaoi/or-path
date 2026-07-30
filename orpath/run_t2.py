@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""T2 runner — thin delegate to product graph (T3 Q16-C)."""
+"""T2 runner — thin delegate to ControlPlane CLI (ADR-0003)."""
 from __future__ import annotations
 
 import argparse
@@ -14,17 +14,17 @@ from orpath.run_orpath import cmd_run  # noqa: E402
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="OR-Path T2 runner (delegates to product graph)")
+    p = argparse.ArgumentParser(description="OR-Path T2 runner → ControlPlane/run_orpath")
     p.add_argument("--problem-id", default="shortest_path")
     p.add_argument("--problem-class", default="")
     p.add_argument("--slug", default="")
     p.add_argument(
         "--solve-mode", choices=("mock", "networkx", "ortools", "cpsat", "highs"), default="mock"
     )
-    p.add_argument(
-        "--knowledge-mode", choices=("off", "seed", "hybrid"), default="seed"
-    )
+    p.add_argument("--knowledge-mode", choices=("off", "seed", "hybrid"), default="seed")
     p.add_argument("--live-pi", action="store_true")
+    p.add_argument("--live-subagent", action="store_true")
+    p.add_argument("--no-live-subagent", action="store_true")
     p.add_argument("--root", type=Path, default=ROOT)
     p.add_argument("--thread-id", default="")
     p.add_argument(
@@ -37,7 +37,6 @@ def main() -> int:
     p.add_argument("--force", action="store_true")
     p.add_argument("--from-stage", default="")
     args = p.parse_args()
-    # T2 gate expects fresh one-shot runs by default
     if not args.resume:
         args.fresh = True
     if not args.slug:
