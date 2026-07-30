@@ -39,7 +39,7 @@ Hermes `MEMORY.md` **不是**产品法，不得覆盖本目录。
 |----|------|------|
 | **Specs** | `specs/` | 稳定约束、非目标、验收定义 |
 | **Plans** | `.hermes/plans/` | 本次任务切片与顺序 |
-| **Docs** | `docs/` | smoke 提示词、evidence、portfolio 话术 |
+| **Docs** | `docs/` | 活：smoke / ADR / 1.0-closeout；历史：`docs/archive/`；导航：`docs/README.md` |
 | **Code** | `orpath/`, `tools/`, `knowledge_svc/` | 实现 |
 | **Harness** | 不建 `.agents/`（T2 锁 B） | Gemini 通道未启用 |
 

@@ -22,7 +22,15 @@ This is **not** OpenPi single-thread role-play. Evidence is separate pi-subagent
 | `0f28b9a7` | `or-researcher` | `deepseek/deepseek-v4-flash` | `0f28b9a7_or-researcher_0_transcript.jsonl` |
 | `c8ef47e5` | `or-researcher` | `deepseek/deepseek-v4-flash` | `c8ef47e5_or-researcher_0_transcript.jsonl` |
 | `d31502fe` | `or-researcher` | `deepseek/deepseek-v4-flash` | `d31502fe_or-researcher_0_transcript.jsonl` |
+| `552ad08d` | `or-reviewer` | `deepseek/deepseek-v4-pro` | `552ad08d_or-reviewer_0_transcript.jsonl` |
+| `d48a452e` | `or-reviewer` | `deepseek/deepseek-v4-pro` | `d48a452e_or-reviewer_0_transcript.jsonl` |
 | `41742aef` | `or-verifier` | `deepseek/deepseek-v4-flash` | `41742aef_or-verifier_0_transcript.jsonl` |
+| `54a642e8` | `or-verifier` | `deepseek/deepseek-v4-pro` | `54a642e8_or-verifier_0_transcript.jsonl` |
+| `a4c402ec` | `or-verifier` | `deepseek/deepseek-v4-pro` | `a4c402ec_or-verifier_0_transcript.jsonl` |
+| `b9c3e8e9` | `or-verifier` | `deepseek/deepseek-v4-pro` | `b9c3e8e9_or-verifier_0_transcript.jsonl` |
+| `de7d5b6a` | `or-verifier` | `deepseek/deepseek-v4-pro` | `de7d5b6a_or-verifier_0_transcript.jsonl` |
+| `f6002b57` | `or-verifier` | `deepseek/deepseek-v4-pro` | `f6002b57_or-verifier_0_transcript.jsonl` |
+| `1608226f` | `or-writer` | `deepseek/deepseek-v4-pro` | `1608226f_or-writer_0_transcript.jsonl` |
 | `79afa49f` | `or-writer` | `deepseek/deepseek-v4-flash` | `79afa49f_or-writer_0_transcript.jsonl` |
 | `a92616cb` | `or-writer` | `deepseek/deepseek-v4-flash` | `a92616cb_or-writer_0_transcript.jsonl` |
 | `e23acda5` | `or-writer` | `deepseek/deepseek-v4-flash` | `e23acda5_or-writer_0_transcript.jsonl` |

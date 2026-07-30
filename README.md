@@ -22,10 +22,10 @@
 | 1 | **`orpath.bat`** | 一切入口（doctor / gate / run / openpi） |
 | 2 | **`specs/README.md`** | 规范索引；T3 主法 `specs/t3-lg-skeleton.md` |
 | 3 | **`orpath/`** | LangGraph 产品骨架与 runner（核心代码） |
-| 4 | **`tools/`** | solve / validate / R1 / R2（数字真相） |
-| 5 | **`docs/*-closeout.md`** · **`docs/solver-stack.md`** | 关单结论 + **求解器组合/话术** |
+| 4 | **`tools/`** | solve_dispatch / validate / R1 / R2（数字真相） |
+| 5 | **`docs/README.md`** · **`docs/1.0-closeout.md`** · **`docs/solver-stack.md`** | 文档导航 + 1.0 关单 + 求解话术 |
 
-其余大文件夹多半是：**依赖、缓存、证据、上游源码**——见下文「目录地图」。
+历史关单/证据/口播 → **`docs/archive/`**。带外大树 → **`docs/OUT_OF_BAND.md`**（vendor/openpi/pi-main）。
 
 ---
 
@@ -33,10 +33,11 @@
 
 | 阶段 | 状态 | 关单文档 | 你要记住的一句话 |
 |------|------|----------|------------------|
-| **T1** | CLOSED/PASS | `docs/t1-closeout.md` | 薄全链 + 真多 Agent 证明 |
-| **T2** | CLOSED/PASS | `docs/t2-closeout.md` | 求解加厚 + 知识竖切 + 隔离门禁 + 可搬迁安装 |
-| **T3** | **工程 PASS** | `docs/t3-lg-closeout.md` | **LG 产品骨架完整**（checkpointer/resume/图内 bridge） |
-| T3-mini | 叶 | `docs/t3-mini-closeout.md` | 时间窗 VRP 竖切，**不是** T3 标题 |
+| **T1** | CLOSED/PASS | `docs/archive/closeouts/t1-closeout.md` | 薄全链 + 真多 Agent 证明 |
+| **T2** | CLOSED/PASS | `docs/archive/closeouts/t2-closeout.md` | 求解加厚 + 知识竖切 + 隔离门禁 + 可搬迁安装 |
+| **T3** | **工程 PASS** | `docs/archive/closeouts/t3-lg-closeout.md` | **LG 产品骨架完整**（checkpointer/resume/图内 bridge） |
+| T3-mini | 叶 | `docs/archive/closeouts/t3-mini-closeout.md` | 时间窗 VRP 竖切，**不是** T3 标题 |
+| **1.0** | PASS | `docs/1.0-closeout.md` | 论文协议 + 多智能体 harness + 架构 ADR-0001…0006 |
 | 规范 | 活文档 | `specs/` | 实现前先读 |
 
 **T3 人侧还欠（可选）：** OpenPi 截图、resume 双帧拼图（工程门禁已绿）。
@@ -77,7 +78,7 @@ set PYTHONNOUSERSITE=1
 :: 用安装根下的 .venv-314，避免混到 Hermes 全局包
 ```
 
-可搬迁说明：`docs/t2-relocatable.md`（`ORPATH_HOME` / `ORPATH_WORKDIR`）。
+可搬迁说明：`docs/archive/ops/t2-relocatable.md`（`ORPATH_HOME` / `ORPATH_WORKDIR`）。
 
 ---
 
@@ -236,14 +237,17 @@ set PYTHONNOUSERSITE=1
 
 | 需求 | 文件 |
 |------|------|
-| T3 关单 / 诚实边界 | `docs/t3-lg-closeout.md` |
-| T3 口播 | `docs/t3-portfolio-talk.md` |
-| T2 关单 / 可搬迁 / 隔离 | `docs/t2-closeout.md` · `t2-relocatable.md` · `t2-multiagent-isolation.md` |
+| **文档导航** | **`docs/README.md`** |
+| 1.0 总关单 | `docs/1.0-closeout.md` |
+| 架构 ADR | `docs/adr/` |
+| T1–T3 历史关单 | `docs/archive/closeouts/` |
+| 口播 / 证据 | `docs/archive/portfolio/` · `docs/archive/evidence/` |
 | 冒烟操作 | `docs/t1-smoke.md` · `docs/t2-smoke.md` |
+| 带外大树 | `docs/OUT_OF_BAND.md` |
 | 规范总索引 | `specs/README.md` |
 | 产品故事长文 | `IDEA.md` |
 
-`docs/` 里 t1/t2/t3 前缀很多，**关单看 `*-closeout.md`，操作看 `*-smoke.md`，吹牛看 `*-portfolio-talk.md`。**
+**关单/证据已归档：** 见 `docs/archive/README.md`。默认只读活文档面。
 
 ---
 
@@ -278,18 +282,17 @@ set PYTHONNOUSERSITE=1
 
 ---
 
-## 给自己的维护建议（文件夹变整齐一点）
-
-不必立刻大挪移。习惯即可：
+## 给自己的维护建议（文件夹）
 
 | 做 | 不做 |
 |----|------|
 | 入口永远 `orpath.bat` | 不要记十个 py 路径 |
-| 改行为先改 `specs/` | 不要只改聊天结论 |
-| 证据丢 `outputs/` / `docs/` | 不要往 `runtime/` `openpi/` 塞业务 |
-| 金标只动 `fixtures/` | 不要手改 solution 当真相（T3 会脏检拦截 resume） |
+| 改行为先改 `specs/` + `docs/adr/` | 不要只改聊天结论 |
+| 活文档只加 `docs/` 顶层；历史进 `docs/archive/` | 不要在顶层堆 closeout |
+| 证据丢 `outputs/`；长期证据归档 `docs/archive/evidence/` | 不要往 `runtime/` `openpi/` 塞业务 |
+| 金标只动 `fixtures/` | 不要手改 solution 当真相 |
 
-若以后要物理整理，建议单独开任务：**docs 按 t1/t2/t3 分子目录**、**outputs 定期归档**，与功能开发拆开。
+带外树说明：`docs/OUT_OF_BAND.md`（ADR-0006）。
 
 ---
 

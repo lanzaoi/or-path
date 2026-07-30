@@ -82,7 +82,7 @@ CI 默认可不开 live Pi，但 **T2 closeout 不能没有 bridge 成功证据*
 | `fixtures/t1|t2/` | 金标与冒烟题 |
 | `.pi/agents/or-*.md` | 子 Agent 定义 |
 | `specs/` | 本法 |
-| `docs/` | smoke / evidence |
+| `docs/` | 活文档导航 `docs/README.md`；历史 `docs/archive/`；带外见 `docs/OUT_OF_BAND.md` |
 
 ## 失败模式（设计时必须防）
 

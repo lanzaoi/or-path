@@ -6,10 +6,10 @@ Durable project law for Pi / OpenPi sessions. Product runtime is **this repo + P
 
 **硬法目录：`specs/`。** 实现与评审前先读 `specs/README.md`。
 
-冲突优先级：`门禁真实输出` > `specs/**` > 本文件 > `.hermes/plans/*` > `docs/**` > chat。
+冲突优先级：`门禁真实输出` > `specs/**` > 本文件 > `.hermes/plans/*` > `docs/**`（活文档优先 `docs/README.md`；历史在 `docs/archive/`） > chat。
 
 T2 grill 冻结表：`specs/gates-and-dod.md`。  
-T2 施工单：`.hermes/plans/2026-07-29_105620-t2-thick-full-stack.md`（与 specs 冲突时以 specs 为准）。
+架构决策：`docs/adr/`（ADR-0001…0006）。
 
 **不建** `.agents/`（T2）；Gemini 通道未启用。
 
@@ -22,23 +22,25 @@ T2 施工单：`.hermes/plans/2026-07-29_105620-t2-thick-full-stack.md`（与 sp
 
 ## Ground Rules
 
-1. **Numbers truth:** `objective` / path / tour / routes come **only** from solve tools (`solve_mock` / `solve_networkx` / `solve_ortools`) plus **validate** recompute. Never invent optima in prose or memory.
-2. **Multi-agent:** Real `pi-subagents` roles `or-orchestrator`, `or-researcher`, `or-modeler`, `or-writer`, `or-verifier`, `or-reviewer`. No persona cosplay.
-3. **Control plane:** **LangGraph** owns stage `now→next` and gates. **Pi** is the **in-node** foreman (包工头), not the global boss. Subagents return **file paths**.
+1. **Numbers truth:** `objective` / path / tour / routes come **only** from solve tools (`solve_dispatch` / `solve_*`) plus **validate** recompute. Never invent optima in prose or memory.
+2. **Multi-agent:** Real `pi-subagents` via **`orpath.subagent_dispatch`**. Roles `or-orchestrator`, `or-researcher`, `or-modeler`, `or-writer`, `or-verifier`, `or-reviewer`. No persona cosplay.
+3. **Control plane:** **LangGraph** via **`orpath.control_plane`**. **Pi** is the **in-node** foreman (包工头), not the global boss. Subagents return **file paths**.
 4. **File handoffs:** `notes/`, `outputs/`, `papers/`. Prefer paths over huge blobs in parent context.
 5. **Memory:** L0 disk + L1 LG checkpointer. pi-memory + Cognee = prefs/lessons/graph smoke — **never** authoritative objectives.
 6. **Hard gates:** schema (no optima) → solve → validate → R1/R2. Paper online R1 lives on **cloud track**.
+7. **Docs surface:** living docs under `docs/` top-level; history in `docs/archive/`; out-of-band trees in `docs/OUT_OF_BAND.md`.
 
 ## Artifact layout
 
 | Path | Use |
 |------|-----|
 | `specs/` | Living law (SDD) |
+| `docs/README.md` | Docs navigation |
+| `docs/adr/` | Architecture decisions |
+| `docs/archive/` | Historical closeouts/evidence (do not bulk-load) |
 | `fixtures/t1/` | T1 golden/smoke |
-| `fixtures/t2/` | T2 TSP/VRP (when added) |
+| `fixtures/t2/` | T2 TSP/VRP |
 | `outputs/.plans/<slug>.md` | Task ledger |
-| `outputs/<slug>-*.md` | Reviews, briefs |
-| `outputs/<slug>.provenance.md` | Provenance |
 | `papers/<slug>.md` | Paper draft |
 | `notes/` | Research / explain / retrieval |
 | `runs/` | LG checkpointer (gitignored) |
@@ -61,12 +63,14 @@ T2 施工单：`.hermes/plans/2026-07-29_105620-t2-thick-full-stack.md`（与 sp
 ## Smoke
 
 - T1: `docs/t1-smoke.md` — `fixtures/t1/shortest_path/`
-- T2: `docs/t2-smoke.md` (when written)
+- T2: `docs/t2-smoke.md`
 
 ## Status
 
 - Topology locked 2026-07-29 (Supervisor–Worker pipeline + gates; Teams/bus out)
-- T1 CLOSED/PASS — `docs/t1-closeout.md`
-- T2 **CLOSED/PASS** — `docs/t2-closeout.md` (gates + live Pi multi-agent TSP); OpenPi GUI screenshot optional polish
+- T1 CLOSED/PASS — `docs/archive/closeouts/t1-closeout.md`
+- T2 CLOSED/PASS — `docs/archive/closeouts/t2-closeout.md`
+- 1.0 PASS — `docs/1.0-closeout.md`
+- Architecture ADR-0001…0006 closed — `docs/architecture-refactor-status.md`
 - Specs first: `specs/README.md`
-- Live board: `docs/t2-live-evidence-board.png`
+- Live board (archived): `docs/archive/evidence/t2-live-evidence-board.png`

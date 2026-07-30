@@ -62,10 +62,10 @@ set T2_REQUIRE_CLOUD=1
 - [ ] pi-memory smoke  
 - [ ] **Bridge** 一次成功（`ORPATH_LIVE_PI=1`）证据  
 - [ ] Live multi-agent transcripts 路径记录  
-- [ ] **OpenPi GUI 截图** 入 `docs/t2-evidence.md`（或约定目录）  
+- [ ] **OpenPi GUI 截图** 入 `docs/archive/evidence/`（或约定目录）  
 - [ ] 三类 R2 路径  
 - [ ] 在线 R1 绿  
-- [ ] `docs/t2-closeout.md` 写明 PASS  
+- [ ] `docs/archive/closeouts/t2-closeout.md` 写明 PASS  
 - [ ] 无密钥进 git  
 - [ ] claim ladder 诚实  
 
@@ -79,9 +79,9 @@ set T2_REQUIRE_CLOUD=1
 ## Evidence 文档
 
 - `docs/t2-smoke.md` — 操作  
-- `docs/t2-evidence.md` — 命令输出摘要、截图路径、transcript 指针  
-- `docs/t2-portfolio-talk.md` — 口播  
-- `docs/t2-closeout.md` — 关单  
+- `docs/archive/evidence/t2-evidence.md` — 命令输出摘要、截图路径、transcript 指针  
+- `docs/archive/portfolio/t2-portfolio-talk.md` — 口播  
+- `docs/archive/closeouts/t2-closeout.md` — 关单  
 
 ## 失败语义
 

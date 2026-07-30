@@ -56,8 +56,8 @@ papers/
 .pi-subagents/
 nul
 *.png
-!docs/t2-live-evidence-board.png
-!docs/t2-openpi-screenshot.png
+!docs/archive/evidence/t2-live-evidence-board.png
+!docs/archive/evidence/t2-openpi-screenshot.png
 
 # Heavy nested trees — keep package.json lockfiles only via selective add if needed
 pi-main/
