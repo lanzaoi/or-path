@@ -10,13 +10,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from orpath.paper_workflow import (  # noqa: E402
+from orpath.paper_protocol import (  # noqa: E402
     append_plan_log,
     build_review_markdown,
     draft_paths,
     gate_research_text,
     load_retrieval,
     render_or_paper,
+    run_from_solution,
+    summarize_paper_result,
 )
 
 
@@ -95,10 +97,8 @@ def cmd_plan_log(args: argparse.Namespace) -> int:
 
 def cmd_protocol(args: argparse.Namespace) -> int:
     """Full draft→cite→review→revise→provenance from existing solution.json."""
-    from orpath.post_solve_paper import run_post_solve_paper
-
     root = Path(args.root)
-    result = run_post_solve_paper(
+    result = run_from_solution(
         root=root,
         slug=args.slug,
         problem_id=args.problem_id or args.slug,
@@ -113,7 +113,9 @@ def cmd_protocol(args: argparse.Namespace) -> int:
         max_revise=int(args.max_revise),
     )
     st = result["state"]
+    summary = summarize_paper_result(result)
     print(result["manifest_path"])
+    print("pipeline", summary.get("pipeline"))
     print(
         "r1",
         st.get("gate_r1_ok"),

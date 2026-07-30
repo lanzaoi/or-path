@@ -1,10 +1,28 @@
 # Paper and Review — 论文环与审稿门
 
+## 统一接缝（ADR-0004）
+
+| 模块 | 职责 |
+|------|------|
+| **`orpath/paper_protocol.py`** | **PaperProtocol 权威**：`run_from_solution` / 路径与模板 re-export |
+| `orpath/paper_workflow.py` | 渲染、review md、plan log 等实现细节 |
+| `orpath/paper_live_subagent.py` | cite/review live 适配器（nodes 内用） |
+| `orpath/post_solve_paper.py` | 兼容 shim → `paper_protocol` |
+| `scripts/orpath_paper.py` | 薄 CLI |
+| `scripts/run_tube_cut_paper.py` | 圆管 → `run_from_solution`（不重解） |
+| 图内 | `nodes` 的 `draft_paper`…`provenance` = 同环（`IN_GRAPH_STAGES`） |
+
+```text
+python scripts/orpath_paper.py protocol --slug S --solution path/to/solution.json
+# 或
+from orpath.paper_protocol import run_from_solution
+```
+
 ## 两环分离
 
 | 环 | 目标 | 数字权威 |
 |----|------|----------|
-| A Solve | 可行/最优解 | solution + validate |
+| A Solve | 可行/最优解 | solution + validate（ADR-0002 dispatch） |
 | B Paper | 文稿 | **必须绑定** solution/validate 制品 |
 
 禁止 writer 在无 solution 时编造 objective。

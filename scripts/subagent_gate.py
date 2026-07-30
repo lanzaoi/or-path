@@ -267,6 +267,18 @@ def test_m3_graph_live_glue() -> None:
     assert callable(build_graph) and callable(default_initial) and callable(invoke_once)
     print("OK control_plane API")
 
+    from orpath.paper_protocol import (
+        IN_GRAPH_STAGES,
+        PIPELINE,
+        run_from_solution,
+        run_post_solve_paper,
+    )
+
+    assert PIPELINE == "paper_protocol"
+    assert "draft_paper" in IN_GRAPH_STAGES and "provenance" in IN_GRAPH_STAGES
+    assert run_from_solution is run_post_solve_paper
+    print("OK paper_protocol API")
+
     # dry harness
     from orpath.subagent_harness import run_forced_subagent_stage
 

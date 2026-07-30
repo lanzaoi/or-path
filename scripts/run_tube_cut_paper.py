@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Wire 2026 tube-cut B results into OR-Path paper protocol (draft→…→provenance).
+"""Wire 2026 tube-cut B results into OR-Path PaperProtocol (ADR-0004).
 
 Does NOT re-solve. Reads outputs/b-tube-cut/q*-solution.json + axial_lengths.json,
 builds a gate-friendly solution.json + research/retrieval/whitelist fixture, then
-runs orpath.post_solve_paper.
+runs orpath.paper_protocol.run_from_solution.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from orpath.post_solve_paper import run_post_solve_paper  # noqa: E402
+from orpath.paper_protocol import draft_paths, run_from_solution  # noqa: E402
 
 SLUG = "b-tube-cut-2026"
 PID = "tube_cut_b2026"
@@ -222,7 +222,7 @@ def main() -> int:
     sol_path.write_text(json.dumps(sol, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     research_path, ret_path, schema_path, vpath = ensure_fixture_and_notes(sol)
 
-    result = run_post_solve_paper(
+    result = run_from_solution(
         root=ROOT,
         slug=SLUG,
         problem_id=PID,
@@ -250,10 +250,10 @@ def main() -> int:
         st.get("review_fatal"),
         "human=",
         st.get("human_required"),
+        "pipeline=",
+        st.get("pipeline"),
     )
     # list expected artifacts
-    from orpath.paper_workflow import draft_paths
-
     paths = draft_paths(ROOT, SLUG)
     missing = [k for k, p in paths.items() if k != "revised" and not Path(p).is_file()]
     # revised optional if skip; we still want revise_proof
