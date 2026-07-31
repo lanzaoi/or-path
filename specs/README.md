@@ -31,7 +31,8 @@ Hermes `MEMORY.md` **不是**产品法，不得覆盖本目录。
 10. `gates-and-dod.md` — T1/T2/T3/1.1 完成条  
 11. `t3-lg-skeleton.md` — **T3 主法：LG 产品骨架 freeze**  
 12. `t3-vrp-tw.md` — CVRPTW 叶（矩阵用）  
-13. **`problem-intake.md` — 1.1 题面 OCR + 自主审读（intake）**  
+13. **`problem-intake.md`
+- **`openpi-boot-ma-ocr.md` — host-agnostic MA+OCR + `orpath.bat menu` (D5 no OpenPi panel)` — 1.1 题面 OCR + 自主审读（intake）**  
 14. **`1.2-architecture-soak.md` — 1.2 架构 soak（C 题试跑 / 圆管回退；非交卷 PASS）**  
 15. `git-and-ai-hygiene.md` + `coding-conventions.md`  
 
@@ -71,3 +72,5 @@ Hermes `MEMORY.md` **不是**产品法，不得覆盖本目录。
 - 小行为变更：改对应单文件 + 本 README 索引若新增文件  
 - 大范围重冻：先 grill / 更新 freeze 表，再改 specs，最后改 plan  
 - 禁止在 skill 里复制大段产品法（易漂移）；skill 只指针到 `specs/`
+
+- **`openpi-boot-ma-ocr.md`** — 宿主无关默认 MA + OCR + `orpath.bat menu`（D5 不改 openpi 源码）
