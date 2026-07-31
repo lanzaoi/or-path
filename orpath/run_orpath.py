@@ -158,6 +158,11 @@ def cmd_run(args: argparse.Namespace) -> int:
             live_subagent=live_sa,
             thread_id=thread_id,
             bridge_attachment=args.bridge_attachment,
+            skip_intake=not bool(getattr(args, "intake_in", None)),
+            intake_sources=list(getattr(args, "intake_in", None) or []),
+            intake_assets_dir=str(getattr(args, "intake_assets", "") or ""),
+            human_confirm_intake=bool(getattr(args, "human_confirm_intake", False)),
+            intake_confirmed=bool(getattr(args, "intake_confirmed", False)),
         )
         if args.from_stage and not args.fresh:
             existing = _load_state_from_checkpoint(app, thread_id)
@@ -250,6 +255,25 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_intake(args: argparse.Namespace) -> int:
+    """Standalone 1.1 OCR + parse (no solve)."""
+    from orpath.intake_nodes import standalone_intake
+
+    root = args.root.resolve()
+    sources = [Path(p) for p in (args.intake_in or [])]
+    assets = Path(args.intake_assets) if getattr(args, "intake_assets", "") else None
+    if assets and not assets.is_absolute():
+        assets = root / assets
+    result = standalone_intake(
+        root=root,
+        slug=args.slug,
+        sources=sources,
+        assets_dir=assets if assets and str(assets) else None,
+    )
+    print(json.dumps(result, indent=2, ensure_ascii=False, default=str))
+    return 0 if result.get("ok") else 1
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description="OR-Path product runner (T3 LG skeleton)")
     sub = p.add_subparsers(dest="cmd")
@@ -288,6 +312,28 @@ def main() -> int:
         sp.add_argument("--fresh", action="store_true")
         sp.add_argument("--force", action="store_true", help="ignore dirty artifacts")
         sp.add_argument("--from-stage", default="", help="jump/replay from stage name")
+        sp.add_argument(
+            "--intake-in",
+            action="append",
+            default=[],
+            dest="intake_in",
+            help="problem surface file (repeatable); enables intake front-door",
+        )
+        sp.add_argument(
+            "--intake-assets",
+            default="",
+            help="optional unpacked assets directory for intake_parse",
+        )
+        sp.add_argument(
+            "--human-confirm-intake",
+            action="store_true",
+            help="stop after intake until --intake-confirmed on a later resume",
+        )
+        sp.add_argument(
+            "--intake-confirmed",
+            action="store_true",
+            help="mark intake brief accepted (with human_confirm_intake)",
+        )
 
     run_p = sub.add_parser("run", help="run or resume product graph")
     add_common(run_p)
@@ -298,6 +344,18 @@ def main() -> int:
 
     ls = sub.add_parser("list", help="list threads")
     ls.add_argument("--root", type=Path, default=ROOT)
+
+    inp = sub.add_parser("intake", help="1.1 OCR+parse only (no full graph solve)")
+    inp.add_argument("--root", type=Path, default=ROOT)
+    inp.add_argument("--slug", required=True)
+    inp.add_argument(
+        "--in",
+        dest="intake_in",
+        action="append",
+        required=True,
+        help="problem surface file (repeatable)",
+    )
+    inp.add_argument("--assets", default="", dest="intake_assets")
 
     # bare args = run (compat with thin wrappers)
     p.add_argument("--problem-id", default=None)
@@ -315,6 +373,10 @@ def main() -> int:
     p.add_argument("--fresh", action="store_true")
     p.add_argument("--force", action="store_true")
     p.add_argument("--from-stage", default="")
+    p.add_argument("--intake-in", action="append", default=[], dest="intake_in")
+    p.add_argument("--intake-assets", default="")
+    p.add_argument("--human-confirm-intake", action="store_true")
+    p.add_argument("--intake-confirmed", action="store_true")
 
     args = p.parse_args()
 
@@ -322,6 +384,8 @@ def main() -> int:
         return cmd_list(args.root.resolve())
     if args.cmd == "status":
         return cmd_status(args.root.resolve(), args.thread_id)
+    if args.cmd == "intake":
+        return cmd_intake(args)
     if args.cmd == "run" or args.cmd is None:
         if args.cmd is None:
             if args.problem_id is None:

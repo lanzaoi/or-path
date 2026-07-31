@@ -1,6 +1,8 @@
 {
   "name": "orpath_product",
   "nodes": [
+    "intake_ocr",
+    "intake_parse",
     "orchestrate",
     "retrieve",
     "bridge_pi",
@@ -20,7 +22,23 @@
   "edges": [
     {
       "from": "START",
-      "to": "orchestrate"
+      "to": "intake_ocr"
+    },
+    {
+      "from": "intake_ocr",
+      "to": [
+        "intake_parse",
+        "orchestrate"
+      ],
+      "cond": "skip_intake_or_sources"
+    },
+    {
+      "from": "intake_parse",
+      "to": [
+        "orchestrate",
+        "human_stop"
+      ],
+      "cond": "intake_gate_or_confirm"
     },
     {
       "from": "orchestrate",
@@ -114,5 +132,6 @@
   ],
   "checkpointer": "sqlite:runs/orpath.sqlite",
   "bridge_default_attachment": "before_research",
+  "intake_default": "skip_intake=true",
   "paper_pipeline": "draft\u2192cite\u2192review\u2192revise(re-cite)\u2192provenance"
 }

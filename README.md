@@ -20,10 +20,10 @@
 | 优先级 | 路径 | 干什么 |
 |--------|------|--------|
 | 1 | **`orpath.bat`** | 一切入口（doctor / gate / run / openpi） |
-| 2 | **`specs/README.md`** | 规范索引；T3 主法 `specs/t3-lg-skeleton.md` |
+| 2 | **`specs/README.md`** | 规范索引；T3 主法 `specs/t3-lg-skeleton.md`；1.1/1.2 法条 |
 | 3 | **`orpath/`** | LangGraph 产品骨架与 runner（核心代码） |
-| 4 | **`tools/`** | solve_dispatch / validate / R1 / R2（数字真相） |
-| 5 | **`docs/README.md`** · **`docs/1.0-closeout.md`** · **`docs/solver-stack.md`** | 文档导航 + 1.0 关单 + 求解话术 |
+| 4 | **`tools/`** | solve_dispatch / validate / R1 / R2 / intake（数字真相+题面） |
+| 5 | **`docs/README.md`** · **`docs/1.2-closeout.md`** · **`docs/solver-stack.md`** | 文档导航 + 最新关单 + 求解话术 |
 
 历史关单/证据/口播 → **`docs/archive/`**。带外大树 → **`docs/OUT_OF_BAND.md`**（vendor/openpi/pi-main）。
 
@@ -38,11 +38,15 @@
 | **T3** | **工程 PASS** | `docs/archive/closeouts/t3-lg-closeout.md` | **LG 产品骨架完整**（checkpointer/resume/图内 bridge） |
 | T3-mini | 叶 | `docs/archive/closeouts/t3-mini-closeout.md` | 时间窗 VRP 竖切，**不是** T3 标题 |
 | **1.0** | PASS | `docs/1.0-closeout.md` | 论文协议 + 多智能体 harness + 架构 ADR-0001…0006 |
-| 规范 | 活文档 | `specs/` | 实现前先读 |
+| **1.1** | CLOSED/PASS | `docs/1.1-closeout.md` | 题面 OCR + 自主审读 brief/intake.json（禁 objective） |
+| **1.2** | **工程 PASS** + residual R1–R4 | `docs/1.2-closeout.md` | 真题 intake→LG→live MA→solve 诚实 BLOCKED（非交卷求解） |
+| 规范 | 活文档 | `specs/`（含 `problem-intake.md` · `1.2-architecture-soak.md`） | 实现前先读 |
 
-**T3 人侧还欠（可选）：** OpenPi 截图、resume 双帧拼图（工程门禁已绿）。
+**T3 人侧还欠（可选）：** OpenPi 截图 polish、resume 双帧拼图（工程门禁已绿）。  
+**1.2 不宣称：** 服装 C 题 Q1–Q4 交卷数值；零售问题类产品化。
 
-金标数字（**只认求解器+validate**）：最短路 **42** · TSP n=8 **45** · VRP 多车 **58** · VRP 时间窗 **58**。
+金标数字（**只认求解器+validate**）：最短路 **42** · TSP n=8 **45** · VRP 多车 **58** · VRP 时间窗 **58**。  
+竞赛旁路样例（精确轨）：多联骨牌 B 全问见 `outputs/b-polyomino/` · 论文 `papers/b-polyomino-full.md`。
 
 ---
 

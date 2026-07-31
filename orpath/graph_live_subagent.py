@@ -77,10 +77,29 @@ def run_research_subagent_lead(
     pc = state.get("problem_class") or "unknown"
     pid = state.get("problem_id") or ""
     ret = str(retrieval_path or "n/a")
+    brief_path = str(state.get("brief_path") or "")
+    intake_path = str(state.get("intake_path") or "")
+    intake_on = bool(
+        (not state.get("skip_intake"))
+        and (brief_path or intake_path or (state.get("intake_sources") or []))
+    )
 
     # per-researcher briefs (Feynman: long text on disk)
     tasks_meta = []
-    if scale == "narrow":
+    if intake_on:
+        # 1.2 residual R2: true problem surface outranks borrowed SP/TSP shell fixture.
+        specs = [
+            (
+                "T1",
+                f"notes/{slug}-research-main.md",
+                "PRIMARY sources are intake brief + intake.json (contest surface). "
+                "Summarize ALL numbered subproblems, data assets, ambiguities. "
+                f"problem_id=`{pid}` fixture is SHELL ONLY — do NOT treat fixture gold "
+                "(e.g. objective 42/45/58, SP edges) as the contest answer. "
+                "Evidence table required. No optima / no invented forecasts.",
+            )
+        ]
+    elif scale == "narrow":
         specs = [
             (
                 "T1",
@@ -108,11 +127,20 @@ def run_research_subagent_lead(
     task_lines = []
     for tid, out_rel, focus in specs:
         tpath = plan_dir / f"{slug}-research-{tid}.md"
+        intake_block = ""
+        if intake_on:
+            intake_block = (
+                f"- intake_brief: `{brief_path or 'n/a'}`\n"
+                f"- intake_json: `{intake_path or 'n/a'}`\n"
+                f"- shell_fixture_only: `{fixture_dir}` (NOT the contest answer source)\n"
+            )
+        else:
+            intake_block = f"- fixture: `{fixture_dir}`\n"
         tpath.write_text(
             f"# Researcher {tid} for `{slug}`\n\n"
             f"- problem_id: `{pid}`\n"
             f"- problem_class: `{pc}`\n"
-            f"- fixture: `{fixture_dir}`\n"
+            f"{intake_block}"
             f"- retrieval: `{ret}`\n"
             f"- output: `{out_rel}`\n\n"
             f"## Focus\n{focus}\n\n"
@@ -130,6 +158,13 @@ def run_research_subagent_lead(
         )
 
     tasks_json = ",\n".join(task_lines)
+    intake_inputs = (
+        f"- intake_brief: `{brief_path or 'n/a'}`\n"
+        f"- intake_json: `{intake_path or 'n/a'}`\n"
+        f"- shell_fixture_only: `{fixture_dir}`\n"
+        if intake_on
+        else f"- fixture: `{fixture_dir}`\n"
+    )
     lead_brief = f"""# Research lead `{slug}` scale={scale}
 
 ## REQUIRED
@@ -153,11 +188,11 @@ Call the Pi tool **subagent** once with parallel tasks (failFast: false).
    - Solver recommendation
    - no optima
 3. Do not invent sources.
+{"4. Prefer intake brief/json over shell fixture narrative." if intake_on else ""}
 
 ## Inputs
 - retrieval: `{ret}`
-- fixture: `{fixture_dir}`
-"""
+{intake_inputs}"""
     brief = write_task_brief(
         root,
         slug,
@@ -165,13 +200,19 @@ Call the Pi tool **subagent** once with parallel tasks (failFast: false).
         body=lead_brief,
         outputs={"research": str(research_path), **{t["id"]: t["output"] for t in tasks_meta}},
     )
+    extra = f"scale={scale}. Use PARALLEL tasks JSON as in the brief. Merge into final research path."
+    if intake_on:
+        extra += (
+            " INTAKE PRIMARY: read brief_path/intake_path first; "
+            "fixture is shell_only — forbid treating SP/TSP gold as contest solution."
+        )
     prompt = build_lead_prompt(
         stage="research",
         slug=slug,
         brief_path=brief,
         required_agent="or-researcher",
         output_path=str(research_path),
-        extra_rules=f"scale={scale}. Use PARALLEL tasks JSON as in the brief. Merge into final research path.",
+        extra_rules=extra,
     )
 
     expected = [Path(t["output"]) for t in tasks_meta]
@@ -247,6 +288,26 @@ def run_model_subagent_lead(
     require_env(root)
     pc = state.get("problem_class") or "shortest_path"
     pid = state.get("problem_id") or ""
+    brief_path = str(state.get("brief_path") or "")
+    intake_path = str(state.get("intake_path") or "")
+    intake_on = bool(
+        (not state.get("skip_intake"))
+        and (brief_path or intake_path or (state.get("intake_sources") or []))
+    )
+    if intake_on:
+        surface = (
+            f"- intake_brief: `{brief_path or 'n/a'}`\n"
+            f"- intake_json: `{intake_path or 'n/a'}`\n"
+            f"- shell_fixture_only: `{fixture_dir}` (topology shell; NOT contest gold)\n"
+        )
+        mode_note = (
+            "Schema may note shell problem_id for pipeline binding, but describe "
+            "TRUE contest subproblems from intake. Do not copy fixture optima shapes "
+            "as if they solve the intake contest."
+        )
+    else:
+        surface = f"- fixture: `{fixture_dir}`\n"
+        mode_note = "Include preferred_solve_mode consistent with claim ladder."
     brief_body = f"""# Model brief `{slug}`
 
 ## Role
@@ -258,13 +319,15 @@ Lead has NO write/edit. Call `subagent` → `or-modeler`.
 ## Inputs
 - problem_id: `{pid}`
 - problem_class: `{pc}`
-- fixture: `{fixture_dir}`
-- research: `{research_path or "n/a"}`
+{surface}- research: `{research_path or "n/a"}`
 
 ## Hard forbid
 No objective/path/tour/routes solved values in schema.
-Include preferred_solve_mode consistent with claim ladder.
+{mode_note}
 """
+    extra = "Schema JSON only. No optima keys."
+    if intake_on:
+        extra += " Intake primary; shell fixture secondary."
     detail = run_forced_subagent_stage(
         root,
         slug=slug,
@@ -272,7 +335,7 @@ Include preferred_solve_mode consistent with claim ladder.
         required_agent="or-modeler",
         brief_body=brief_body,
         output_path=schema_path,
-        extra_rules="Schema JSON only. No optima keys.",
+        extra_rules=extra,
     )
     # schema shape check
     ok = bool(detail.get("gate_subagent_ok"))

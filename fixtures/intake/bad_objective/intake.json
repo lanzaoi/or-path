@@ -1,0 +1,32 @@
+{
+  "slug": "intake_bad_objective",
+  "schema_version": "1.1.0",
+  "status": "ok",
+  "sources": [
+    {
+      "path": "fixtures/intake/ok/source.txt",
+      "kind": "text"
+    }
+  ],
+  "subproblems": [
+    {
+      "id": "Q1",
+      "title": "SP",
+      "must_deliver": ["path"],
+      "data_refs": []
+    }
+  ],
+  "data_assets": [],
+  "constraints_text": "none",
+  "objectives_text": "minimize length",
+  "deliverables": ["solution"],
+  "ambiguities": [],
+  "brief_path": "fixtures/intake/ok/problem-brief.md",
+  "ocr_raw_path": "fixtures/intake/ok/ocr.raw.md",
+  "ocr_meta_path": "fixtures/intake/ok/ocr.meta.json",
+  "ocr_backend": "manual_stub",
+  "objective": 42,
+  "meta": {
+    "optimal": true
+  }
+}

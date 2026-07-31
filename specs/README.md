@@ -28,10 +28,12 @@ Hermes `MEMORY.md` **不是**产品法，不得覆盖本目录。
 7. `knowledge-and-retrieval.md` — 知识竖切与 claim ladder  
 8. `paper-and-review.md` — R1/R2/在线引用  
 9. `memory.md` — 记忆分层  
-10. `gates-and-dod.md` — T1/T2/T3 完成条  
+10. `gates-and-dod.md` — T1/T2/T3/1.1 完成条  
 11. `t3-lg-skeleton.md` — **T3 主法：LG 产品骨架 freeze**  
 12. `t3-vrp-tw.md` — CVRPTW 叶（矩阵用）  
-13. `git-and-ai-hygiene.md` + `coding-conventions.md`  
+13. **`problem-intake.md` — 1.1 题面 OCR + 自主审读（intake）**  
+14. **`1.2-architecture-soak.md` — 1.2 架构 soak（C 题试跑 / 圆管回退；非交卷 PASS）**  
+15. `git-and-ai-hygiene.md` + `coding-conventions.md`  
 
 ## 与其他层的分工
 

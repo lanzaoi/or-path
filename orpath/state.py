@@ -55,6 +55,18 @@ class ORPathState(TypedDict):
     pipeline: NotRequired[str]
     artifacts: NotRequired[list[str]]
     tune_log_path: NotRequired[str]
+    # 1.1 intake (optional front-door; default skip)
+    skip_intake: NotRequired[bool]
+    intake_skipped: NotRequired[bool]
+    intake_sources: NotRequired[list[str]]
+    intake_assets_dir: NotRequired[str]
+    ocr_raw_path: NotRequired[str]
+    ocr_meta_path: NotRequired[str]
+    intake_path: NotRequired[str]
+    brief_path: NotRequired[str]
+    gate_intake_ok: NotRequired[bool]
+    human_confirm_intake: NotRequired[bool]
+    intake_confirmed: NotRequired[bool]
 
 
 # Nodes allowed to create/overwrite solution.json content (numbers truth).
@@ -80,4 +92,8 @@ MANIFEST_PATH_KEYS = (
     "bridge_path",
     "tune_log_path",
     "cited_path",
+    "ocr_raw_path",
+    "ocr_meta_path",
+    "intake_path",
+    "brief_path",
 )

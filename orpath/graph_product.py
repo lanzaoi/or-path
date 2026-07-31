@@ -18,6 +18,8 @@ from orpath.state import ORPathState
 
 # Canonical node set for topology gates / export
 PRODUCT_NODES = [
+    "intake_ocr",
+    "intake_parse",
     "orchestrate",
     "retrieve",
     "bridge_pi",
@@ -34,6 +36,24 @@ PRODUCT_NODES = [
     "revise_or_done",
     "provenance",
 ]
+
+
+def _after_intake_ocr(
+    state: ORPathState,
+) -> Literal["intake_parse", "orchestrate"]:
+    st = state.get("stage") or ""
+    if st == "intake_parse":
+        return "intake_parse"
+    return "orchestrate"
+
+
+def _after_intake_parse(
+    state: ORPathState,
+) -> Literal["orchestrate", "human_stop"]:
+    st = state.get("stage") or ""
+    if st == "human_stop" or state.get("human_required"):
+        return "human_stop"
+    return "orchestrate"
 
 
 def _after_orchestrate(
@@ -100,6 +120,8 @@ def _after_revise(
 
 def build_graph_product(checkpointer: Any | None = None) -> Any:
     g: StateGraph = StateGraph(ORPathState)
+    g.add_node("intake_ocr", nodes.node_intake_ocr)
+    g.add_node("intake_parse", nodes.node_intake_parse)
     g.add_node("orchestrate", nodes.node_orchestrate)
     g.add_node("retrieve", nodes.node_retrieve)
     g.add_node("bridge_pi", nodes.node_bridge)
@@ -116,7 +138,17 @@ def build_graph_product(checkpointer: Any | None = None) -> Any:
     g.add_node("revise_or_done", nodes.node_revise_or_done)
     g.add_node("provenance", nodes.node_provenance)
 
-    g.add_edge(START, "orchestrate")
+    g.add_edge(START, "intake_ocr")
+    g.add_conditional_edges(
+        "intake_ocr",
+        _after_intake_ocr,
+        {"intake_parse": "intake_parse", "orchestrate": "orchestrate"},
+    )
+    g.add_conditional_edges(
+        "intake_parse",
+        _after_intake_parse,
+        {"orchestrate": "orchestrate", "human_stop": "human_stop"},
+    )
     g.add_conditional_edges(
         "orchestrate",
         _after_orchestrate,
@@ -188,7 +220,17 @@ def export_stage_map() -> dict[str, Any]:
         "name": "orpath_product",
         "nodes": list(PRODUCT_NODES),
         "edges": [
-            {"from": "START", "to": "orchestrate"},
+            {"from": "START", "to": "intake_ocr"},
+            {
+                "from": "intake_ocr",
+                "to": ["intake_parse", "orchestrate"],
+                "cond": "skip_intake_or_sources",
+            },
+            {
+                "from": "intake_parse",
+                "to": ["orchestrate", "human_stop"],
+                "cond": "intake_gate_or_confirm",
+            },
             {
                 "from": "orchestrate",
                 "to": ["bridge_pi", "retrieve"],
@@ -231,6 +273,7 @@ def export_stage_map() -> dict[str, Any]:
         ],
         "checkpointer": "sqlite:runs/orpath.sqlite",
         "bridge_default_attachment": "before_research",
+        "intake_default": "skip_intake=true",
         "paper_pipeline": "draft→cite→review→revise(re-cite)→provenance",
     }
 
@@ -242,7 +285,11 @@ def write_stage_map_files(root: Path) -> None:
     )
     mmd = [
         "flowchart TD",
-        "  START --> orchestrate",
+        "  START --> intake_ocr",
+        "  intake_ocr -->|skip or no sources| orchestrate",
+        "  intake_ocr -->|has sources| intake_parse",
+        "  intake_parse -->|ok| orchestrate",
+        "  intake_parse -->|needs_human or gate fail| human_stop",
         "  orchestrate -->|before_retrieve| bridge_pi",
         "  orchestrate -->|default| retrieve",
         "  bridge_pi -->|before_retrieve| retrieve",

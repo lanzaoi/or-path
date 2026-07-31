@@ -306,6 +306,42 @@ def test_m3_graph_live_glue() -> None:
     print("OK harness dry", d.get("harness"))
 
 
+def test_pi_launch_law() -> None:
+    """Bare pi -p must not validate as multi-agent."""
+    from orpath.pi_launch_law import (
+        build_multi_agent_lead_cmd,
+        build_single_lead_cmd,
+        is_harness_shaped_cmd,
+        validate_launch,
+    )
+
+    bare = [
+        "node",
+        "cli.js",
+        "-p",
+        "--provider",
+        "deepseek",
+        "--model",
+        "deepseek-v4-pro",
+        "--no-session",
+        "hi",
+    ]
+    v = validate_launch(bare, claim_multi_agent=True, label="gate-bare")
+    assert not v.ok, "bare multi claim must fail"
+    single = build_single_lead_cmd(ROOT, prompt="single")
+    assert not is_harness_shaped_cmd(single)
+    assert validate_launch(single, claim_multi_agent=False).ok
+    multi = build_multi_agent_lead_cmd(ROOT, prompt="multi")
+    assert is_harness_shaped_cmd(multi)
+    assert validate_launch(multi, claim_multi_agent=True).ok
+    # tube launchers honest
+    res = (ROOT / "outputs/b-tube-cut/logs/launch_pi_resolve.py").read_text(encoding="utf-8")
+    assert "SINGLE_LEAD" in res and "claim_multi_agent=False" in res
+    pap = (ROOT / "outputs/b-tube-cut/logs/launch_pi_paper_loop.py").read_text(encoding="utf-8")
+    assert "run_cite_subagent_lead" in pap and "run_review_subagent_lead" in pap
+    print("OK pi_launch_law + tube launchers")
+
+
 def main() -> int:
     print("=== M1/M2/M3 subagent_gate ===")
     test_detector()
@@ -314,10 +350,12 @@ def main() -> int:
     test_dry_spawn()
     test_m2_paper_live_glue()
     test_m3_graph_live_glue()
+    test_pi_launch_law()
     print("M1_SUBAGENT_GATE_PASS")
     print("M2_PAPER_LIVE_GLUE_PASS")
     print("M3_GRAPH_LIVE_GLUE_PASS")
     print("M5_SUBAGENT_DISPATCH_PASS")
+    print("PI_LAUNCH_LAW_PASS")
     return 0
 
 

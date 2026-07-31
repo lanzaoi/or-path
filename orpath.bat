@@ -45,6 +45,8 @@ if /i "%CMD%"=="run" goto :run
 if /i "%CMD%"=="status" goto :status
 if /i "%CMD%"=="resume" goto :resume
 if /i "%CMD%"=="list" goto :list
+if /i "%CMD%"=="intake" goto :intake
+if /i "%CMD%"=="gate-intake" goto :gate_intake
 if /i "%CMD%"=="env" goto :envshow
 if /i "%CMD%"=="paper" goto :paper
 if /i "%CMD%"=="paper-gate" goto :paper_gate
@@ -76,6 +78,8 @@ echo    orpath.bat run [args...]
 echo    orpath.bat status --thread-id ID
 echo    orpath.bat resume --thread-id ID [args...]
 echo    orpath.bat list
+echo    orpath.bat intake --slug SLUG --in FILE [--assets DIR]
+echo    orpath.bat gate-intake
 echo    orpath.bat paper template^|review^|gate-research^|plan-log^|protocol ...
 echo    orpath.bat paper-gate
 echo    orpath.bat paper-1.0-gate
@@ -162,6 +166,15 @@ exit /b %ERRORLEVEL%
 :list
 shift
 "%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" list %*
+exit /b %ERRORLEVEL%
+
+:intake
+shift
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" intake %*
+exit /b %ERRORLEVEL%
+
+:gate_intake
+"%PY%" "!ORPATH_HOME!\scripts\intake_gate.py"
 exit /b %ERRORLEVEL%
 
 :pi

@@ -1,0 +1,46 @@
+{
+  "slug": "b-tube-cut-1.1",
+  "problem": "2026数模校赛B题 异形圆管下料",
+  "utc": "2026-07-30T03:15:16.066490+00:00",
+  "intake_status": "ok",
+  "subproblems": [
+    "Q1",
+    "Q2",
+    "Q3",
+    "Q4"
+  ],
+  "data_assets_count": 27,
+  "ocr_backend": "manual_stub",
+  "gate_intake": "PASS",
+  "artifacts": {
+    "outputs/b-tube-cut-1.1-intake.json": {
+      "bytes": 11273,
+      "sha256": "71aafeb1d84dc148be76d87a3c3aad2a66667f10a7e0aaa26e4e2d004a696f81"
+    },
+    "notes/b-tube-cut-1.1-problem-brief.md": {
+      "bytes": 9345,
+      "sha256": "09db9a00d4bdb0679072da81412d72a2d0e6ce61de98cfee84020aa34c6140fe"
+    },
+    "notes/b-tube-cut-1.1-ocr.raw.md": {
+      "bytes": 3360,
+      "sha256": "a302e73763d91fae3a8499277fa84493a3cc2d20c73b7a0a5d628af234694926"
+    },
+    "notes/b-tube-cut-1.1-ocr.meta.json": {
+      "bytes": 518,
+      "sha256": "70557784bfb917283d1bdacb357deaae5625dc16b59fa48b4463bef630ed2777"
+    },
+    "fixtures/intake/tube_cut_b2026/problem-surface.md": {
+      "bytes": 3032,
+      "sha256": "5484cc1d1d541f18fb14336ae4de4b7e10777afc73c0a2d319a0f9d24a3d15ea"
+    },
+    "outputs/b-tube-cut-1.1-intake-cli.json": {
+      "bytes": 12220,
+      "sha256": "46d69fc18942410bb5b2f3068a1998bf92b3455155c5b631b732c9c51e013d4b"
+    }
+  },
+  "claims": {
+    "solved": false,
+    "objectives_invented": false,
+    "note": "intake only; numbers still only from solve+validate"
+  }
+}

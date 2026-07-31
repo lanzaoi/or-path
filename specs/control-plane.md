@@ -25,6 +25,7 @@ T2 目标阶段图仍有效；实现以 **product graph** 为准。
 
 ```text
 START
+  → [optional 1.1] intake_ocr → intake_parse → [human_confirm_intake?]
   → orchestrate
   → retrieve_or_seed          # seed 与/或 hybrid retrieve → notes/<slug>-retrieval.json
   → research                  # 消费 retrieval；写 notes/<slug>-research.md
@@ -44,6 +45,9 @@ START
   → provenance
 END
 ```
+
+**1.1 intake（可选前置）：** 权威 `specs/problem-intake.md`。  
+默认 **skip_intake** 兼容 T1–1.0；提供题面源时才跑 OCR/审读。intake **禁止**写 objective / 调 solve。
 
 ## 回修上限（硬）
 
@@ -72,6 +76,7 @@ Mock 模式：调参环可短路为「不再调参，直接走 validate_repair�
 | 字段 / 制品 | 唯一写者 |
 |-------------|----------|
 | plan ledger | orchestrate |
+| ocr raw/meta、problem-brief、`intake.json`、`gate_intake_ok` | **intake 工具 / gate**（见 `problem-intake.md`） |
 | `retrieval_path` / retrieval JSON | retrieve 节点 |
 | `research_path` | research |
 | `schema_path` / schema 内容 | model **only** |

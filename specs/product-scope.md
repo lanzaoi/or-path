@@ -24,7 +24,8 @@
 6. **知识竖切：** 种子图 + MinerU Cloud + LightRAG + BM25/FTS + RRF + Cognee Cloud smoke  
 7. **论文环：** draft + R1（含在线轨）+ R2 + 有界 revise  
 8. **UI：** OpenPi 主；Pi TUI 辅；T2 **OpenPi 截图硬 DoD**  
-9. **LG↔Pi bridge：** T2 **硬 DoD**（可开关，CI 默认可关，但 closeout 必须证明通）
+9. **LG↔Pi bridge：** T2 **硬 DoD**（可开关，CI 默认可关，但 closeout 必须证明通）  
+10. **题面 intake（1.1）：** 图/PDF OCR + 自主审读 brief/`intake.json`（无 objective）；可选人确认；与 MinerU 语料路径分离 — 见 `problem-intake.md`
 
 ## Out of scope / 非目标（明确不做或不宣称）
 
@@ -41,6 +42,8 @@
 | 自制「SOTA 黄金集」叙事 | 禁止；用 fixture gap + negatives + 诚实 smoke |
 | 宣称 LightRAG 直接吃生 PDF 数学 | 公式在 MinerU 阶段固定 |
 | 宣称顶会论文质量或抄论文准确率数字 | 无独立评测不写 |
+| 宣称 OCR/审题 100% 正确或替代专家读题 | 1.1 要可审计与歧义外显，不保证无错 |
+| intake 内求解 / 写最优解 | 仍只认 solve+validate |
 
 ## 作品集话术边界（claim ladder）
 
@@ -68,8 +71,11 @@
 | 里程碑 | 状态 / 含义 |
 |--------|-------------|
 | **T1** | CLOSED/PASS — 薄全链 + 多 Agent 证明；不重开 DoD |
-| **T2** | 数字真相加厚 + 知识竖切 + bridge + 云分轨 + OpenPi 截图 — 见 `gates-and-dod.md` |
-| **T3** | **LG 产品骨架** — 见 `t3-lg-skeleton.md`（DoD E）；T3-mini CVRPTW 为矩阵叶 |
+| **T2** | CLOSED/PASS — 数字真相加厚 + 知识竖切 + bridge + 云分轨 + OpenPi 截图 |
+| **T3** | 工程 PASS — LG 产品骨架 — 见 `t3-lg-skeleton.md`（DoD E）；T3-mini CVRPTW 为矩阵叶 |
+| **1.0** | PASS — 论文协议 + 多 Agent harness + ADR-0001…0006；不重开 DoD |
+| **1.1** | **CLOSED/PASS** — 题面 OCR + 自主审读 — `docs/1.1-closeout.md` |
+| **1.2** | **工程 PASS** — 真题 soak（intake→LG→live MA→BLOCKED）+ residual R1–R4 — `docs/1.2-closeout.md`；**非**交卷求解里程碑 |
 
 ## 工作区法
 

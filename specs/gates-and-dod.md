@@ -111,3 +111,54 @@ set T2_REQUIRE_CLOUD=1
 
 - Spec: `specs/t3-vrp-tw.md`；fixture gold objective **58**  
 - 挂在 T3 矩阵，不单独当 T3 标题  
+
+## 1.1 Problem Intake（2026-07-30 freeze）
+
+权威全文：`specs/problem-intake.md`。  
+**不重开** T1/T2/T3/1.0 DoD。
+
+| ID | 锁 |
+|----|-----|
+| F1 | 1.1 = OCR + 自主审读 brief/intake.json |
+| F2 | OCR 主序 pdf_text → paddle → manual_stub；MinerU ≠ 题面主路径 |
+| F3 | intake 禁 solution 键；数字只认 solve+validate |
+| F4 | 子问全覆盖 + 歧义外显 |
+| F5 | 最小 DoD **不强制** LG 挂载 / OpenPi UI |
+| F6 | 竞赛建议 `human_confirm_intake`；CI 可 skip_intake |
+
+### 1.1 门禁
+
+| 脚本 | 内容 |
+|------|------|
+| `scripts/intake_gate.py` | OCR stub、parse 契约、禁键负例、子问覆盖 |
+| 回归 | `t1_gate` + `t3_lg_gate` 必须仍绿 |
+
+### 1.1 CLOSED 硬清单（摘要）
+
+- [ ] `intake_gate` PASS  
+- [ ] t1_gate + t3_lg_gate PASS  
+- [ ] 至少一条真实图/PDF smoke（证据可打码）  
+- [ ] closeout 文档 + 诚实 claim ladder  
+- [ ] 无大 PDF/密钥进 git  
+
+## 1.2 Architecture Soak（2026-07-31 freeze）
+
+权威全文：`specs/1.2-architecture-soak.md`。  
+**不重开** T1/T2/T3/1.0/1.1 DoD。  
+**不是** C 题交卷 PASS；**不是** 零售产品扩类。
+
+| ID | 锁 |
+|----|-----|
+| 主测 | 杭电 2025 美珈羽杯新生赛 **C 题**（服装·优衣库 xls） |
+| 回退 | 圆管 B2026；回退时 **亦不接** 既有 tube solve 出数（对照壳） |
+| 父边界 | **Pi-only**（Hermes=OCR/拉起/监控） |
+| 拓扑 | 产品 LG 全图；`problem_id` 可借 SP 壳；禁金标冒充 C 题 |
+| solve | 无 C adapter → **诚实 FAIL**；FAIL 后仍跑 paper 壳（R2/provenance BLOCKED） |
+| live MA | research + model + cite + review **全硬** |
+| 时盒 | 总 45–60 min；单 lead 12–15 min |
+| PASS | 架构证据包（intake + 诚实 FAIL + MA 轨迹 + 监控报告） |
+
+### 1.2 与 CI
+
+- 确定性门禁保持 `ORPATH_LIVE_SUBAGENT=0`；1.2 live soak **不**塞进 t1/t3 默认绿条件  
+- 回归：既有 `t1_gate` / `t3_lg_gate` / `intake_gate` 不得无故变红  

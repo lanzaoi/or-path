@@ -1,0 +1,30 @@
+{
+  "slug": "intake_needs_human",
+  "schema_version": "1.1.0",
+  "status": "needs_human",
+  "sources": [
+    {
+      "path": "fixtures/intake/ok/source.txt",
+      "kind": "text"
+    }
+  ],
+  "subproblems": [
+    {
+      "id": "Q1",
+      "title": "Unclear question (OCR gap)",
+      "must_deliver": ["human clarification"],
+      "data_refs": []
+    }
+  ],
+  "data_assets": [],
+  "constraints_text": "unclear due to missing page",
+  "objectives_text": "unknown until page recovered",
+  "deliverables": ["clarified brief after human"],
+  "ambiguities": [
+    "Page 2 missing; cannot confirm whether Q2 exists"
+  ],
+  "brief_path": "fixtures/intake/needs_human/problem-brief.md",
+  "ocr_raw_path": "fixtures/intake/ok/ocr.raw.md",
+  "ocr_meta_path": "fixtures/intake/ok/ocr.meta.json",
+  "ocr_backend": "manual_stub"
+}

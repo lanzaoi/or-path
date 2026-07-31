@@ -39,6 +39,7 @@ corpus (PDF gitignore + curated md)
 - 输出：`knowledge/mineru_out/<doc_id>/`（gitignore）  
 - 再切成 chunks JSONL  
 - **禁止**默认本地下载多 GB MinerU 模型  
+- **不是**竞赛题面 intake 主路径；题面 OCR/审读见 **`specs/problem-intake.md`（1.1）**  
 
 ## Embedding
 

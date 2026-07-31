@@ -1,0 +1,257 @@
+{
+  "$defs": {
+    "IntakeDataAsset": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "kind": {
+          "default": "other",
+          "enum": [
+            "csv",
+            "xlsx",
+            "stp",
+            "pdf",
+            "image",
+            "other"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "role": {
+          "default": "unknown",
+          "title": "Role",
+          "type": "string"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "IntakeDataAsset",
+      "type": "object"
+    },
+    "IntakeSource": {
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
+        },
+        "pages": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Pages"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "IntakeSource",
+      "type": "object"
+    },
+    "IntakeSubproblem": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "must_deliver": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Must Deliver",
+          "type": "array"
+        },
+        "data_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Refs",
+          "type": "array"
+        },
+        "notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notes"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "title": "IntakeSubproblem",
+      "type": "object"
+    }
+  },
+  "description": "Structured problem intake (1.1). Not a Solution and not a ProblemSchema.",
+  "properties": {
+    "slug": {
+      "title": "Slug",
+      "type": "string"
+    },
+    "schema_version": {
+      "default": "1.1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "needs_human",
+        "error"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/IntakeSource"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "subproblems": {
+      "items": {
+        "$ref": "#/$defs/IntakeSubproblem"
+      },
+      "title": "Subproblems",
+      "type": "array"
+    },
+    "data_assets": {
+      "items": {
+        "$ref": "#/$defs/IntakeDataAsset"
+      },
+      "title": "Data Assets",
+      "type": "array"
+    },
+    "constraints_text": {
+      "default": "",
+      "title": "Constraints Text",
+      "type": "string"
+    },
+    "objectives_text": {
+      "default": "",
+      "title": "Objectives Text",
+      "type": "string"
+    },
+    "deliverables": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Deliverables",
+      "type": "array"
+    },
+    "ambiguities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Ambiguities",
+      "type": "array"
+    },
+    "brief_path": {
+      "title": "Brief Path",
+      "type": "string"
+    },
+    "ocr_raw_path": {
+      "title": "Ocr Raw Path",
+      "type": "string"
+    },
+    "ocr_meta_path": {
+      "title": "Ocr Meta Path",
+      "type": "string"
+    },
+    "ocr_backend": {
+      "title": "Ocr Backend",
+      "type": "string"
+    },
+    "problem_class_hint": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Problem Class Hint"
+    },
+    "problem_id_hint": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Problem Id Hint"
+    }
+  },
+  "required": [
+    "slug",
+    "status",
+    "subproblems",
+    "brief_path",
+    "ocr_raw_path",
+    "ocr_meta_path",
+    "ocr_backend"
+  ],
+  "title": "IntakeArtifact",
+  "type": "object"
+}

@@ -1,0 +1,30 @@
+{
+  "milestone": "1.2-residual-R1-R4",
+  "slug": "hdu-c2025-1.2-r",
+  "live_subagent": false,
+  "stages": [
+    "0001_intake_ocr.json",
+    "0002_intake_parse.json",
+    "0003_orchestrate.json",
+    "0004_retrieve.json",
+    "0005_bridge_pi.json",
+    "0006_research.json",
+    "0007_model.json",
+    "0008_gate_schema.json",
+    "0009_solve.json",
+    "0010_gate_validate.json",
+    "0011_explain.json",
+    "0012_draft_paper.json",
+    "0013_cite_pack.json",
+    "0014_review_pack.json",
+    "0015_revise_or_done.json",
+    "0016_provenance.json"
+  ],
+  "cite_count": 1,
+  "review_count": 1,
+  "revise_blocked": true,
+  "solution_status": "BLOCKED",
+  "objective": null,
+  "intake_whitelist": "outputs/hdu-c2025-1.2-r-intake-whitelist.json",
+  "unit": "UNIT_PASS R1-R4"
+}

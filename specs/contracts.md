@@ -132,8 +132,25 @@ VRP 用 `depot`, `locations`, `demands`, `vehicle_count`, `capacities` 等，不
 }
 ```
 
+## IntakeArtifact（1.1 · `outputs/<slug>-intake.json`）
+
+权威字段表与禁键：`specs/problem-intake.md` §6。
+
+**原则：**
+
+1. intake **不是** ProblemSchema，也 **不是** Solution。  
+2. 递归禁止 solution 形状键（与 Modeler 禁键同精神）：  
+   `objective`, `optimal`, `objective_value`, `optima`, `tour`, `routes`, …  
+   顶层/任意嵌套的解答形 `path` 亦禁；**例外：** `sources[]` / `data_assets[]` 元素上的文件 `path` 字段允许（见 `gate_intake.walk_forbidden_intake_keys`）。  
+3. 必填逻辑：`slug`, `schema_version` (`"1.1.0"`), `status`, `sources`, `subproblems`,  
+   `data_assets`, `constraints_text`, `objectives_text`, `deliverables`, `ambiguities`,  
+   `brief_path`, `ocr_raw_path`, `ocr_meta_path`, `ocr_backend`。  
+4. `problem_class_hint` / `problem_id_hint` 仅为软提示。  
+5. 伴随制品：`notes/<slug>-ocr.raw.md`、`notes/<slug>-ocr.meta.json`、`notes/<slug>-problem-brief.md`。
+
 ## 版本与兼容
 
 - T1 fixture `shortest_path` solution 可缺 `problem_class` 时由加载器默认 `shortest_path`  
 - T2 新 fixture 必须带齐字段  
-- R2 与 validate 必须以本契约为准扩展
+- R2 与 validate 必须以本契约为准扩展  
+- 1.1 intake 默认可选；`skip_intake` 时不要求 IntakeArtifact

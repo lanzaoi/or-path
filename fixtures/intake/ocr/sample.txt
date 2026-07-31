@@ -1,0 +1,3 @@
+Manual stub source for OCR.
+Q1: shortest path.
+Q2: TSP tour.

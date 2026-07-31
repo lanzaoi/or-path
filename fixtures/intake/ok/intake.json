@@ -1,0 +1,47 @@
+{
+  "slug": "intake_ok_demo",
+  "schema_version": "1.1.0",
+  "status": "ok",
+  "sources": [
+    {
+      "path": "fixtures/intake/ok/source.txt",
+      "kind": "text",
+      "pages": 1
+    }
+  ],
+  "subproblems": [
+    {
+      "id": "Q1",
+      "title": "Shortest path S to T",
+      "must_deliver": ["model description", "solver-backed path later"],
+      "data_refs": ["fixtures/intake/ok/source.txt"],
+      "notes": "solve only after model stage"
+    },
+    {
+      "id": "Q2",
+      "title": "TSP on 3 nodes",
+      "must_deliver": ["tour definition at solve time"],
+      "data_refs": ["fixtures/intake/ok/source.txt"]
+    }
+  ],
+  "data_assets": [
+    {
+      "path": "fixtures/intake/ok/source.txt",
+      "kind": "other",
+      "role": "problem_statement"
+    }
+  ],
+  "constraints_text": "Non-negative edge weights; Q2 tour returns to start.",
+  "objectives_text": "Minimize total travel distance per subproblem; prefer simple explanations.",
+  "deliverables": [
+    "notes and schema for modeling stage",
+    "solution JSON only after solve tools run"
+  ],
+  "ambiguities": [],
+  "brief_path": "fixtures/intake/ok/problem-brief.md",
+  "ocr_raw_path": "fixtures/intake/ok/ocr.raw.md",
+  "ocr_meta_path": "fixtures/intake/ok/ocr.meta.json",
+  "ocr_backend": "manual_stub",
+  "problem_class_hint": "shortest_path",
+  "problem_id_hint": null
+}

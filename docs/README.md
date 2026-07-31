@@ -9,6 +9,9 @@
 |------|------|
 | **`../specs/README.md`** | **法条总索引**（优先于 docs） |
 | `1.0-closeout.md` | 产品 1.0 关单总览 |
+| **`1.1-closeout.md`** | **1.1 题面 intake 关单** |
+| `1.1-smoke.md` | 1.1 操作冒烟 |
+| **`1.2-closeout.md`** | **1.2 架构 soak 关单**（真题 intake→LG→BLOCKED + residual） |
 | `architecture-refactor-status.md` | 架构整理 #1–#6 进度 |
 | `solver-stack.md` | 求解器组合与话术（claim ladder） |
 | `anti-cosplay-harness.md` | 反偷懒 harness 说明 |
@@ -17,6 +20,9 @@
 | `adr/` | 架构决策 ADR-0001… |
 | `tickets/` | 施工单 |
 | `OUT_OF_BAND.md` | vendor / openpi / pi-main 带外说明 |
+| **`../specs/problem-intake.md`** | **1.1 题面 OCR + 自主审读（法条）** |
+| **`../specs/1.2-architecture-soak.md`** | **1.2 soak 法条** |
+| **`1.1-smoke.md`** | **1.1 操作冒烟**（`intake_gate` / OCR→parse） |
 
 ## 归档（Archive）
 

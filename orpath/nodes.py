@@ -451,10 +451,109 @@ def node_gate_schema(state: ORPathState) -> dict:
     }
 
 
+def _intake_front_door_active(state: ORPathState) -> bool:
+    """True when run used intake sources (not default skip_intake CI path)."""
+    if state.get("skip_intake"):
+        return False
+    if state.get("intake_path"):
+        return True
+    srcs = state.get("intake_sources") or []
+    return bool(srcs)
+
+
+
+def _solution_is_blocked(state: ORPathState) -> bool:
+    """True when solve refused / BLOCKED envelope (intake soak, no domain adapter)."""
+    if state.get("solve_refused"):
+        return True
+    sp = state.get("solution_path") or ""
+    p = Path(sp) if sp else None
+    if not p or not p.is_file():
+        return False
+    try:
+        sol = json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False
+    if not isinstance(sol, dict):
+        return False
+    if str(sol.get("status") or "").upper() == "BLOCKED":
+        return True
+    meta = sol.get("meta")
+    return bool(isinstance(meta, dict) and meta.get("blocked"))
+
+
+def _intake_whitelist_path(root: Path, state: ORPathState) -> Path:
+    """Write/return intake-scoped whitelist (no SP fixture arxiv) for blocked soak paper."""
+    slug = str(state.get("slug") or "run")
+    out = root / "outputs" / f"{slug}-intake-whitelist.json"
+    notes: list[str] = ["notes://intake-blocked-soak"]
+    bp = state.get("brief_path") or ""
+    ip = state.get("intake_path") or ""
+    rp = state.get("research_path") or ""
+    if bp:
+        notes.append(str(bp).replace("\\", "/"))
+    if ip:
+        notes.append(str(ip).replace("\\", "/"))
+    if rp:
+        notes.append(str(rp).replace("\\", "/"))
+    notes.append(f"notes://{slug}-research")
+    payload = {"urls": [], "notes": notes, "meta": {"kind": "intake_blocked_soak"}}
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
+def _paper_whitelist_path(root: Path, state: ORPathState, fixture_dir: Path) -> Path:
+    """R4: when intake-on or BLOCKED, do not use shell fixture whitelist_refs.json."""
+    blocked = _solution_is_blocked(state)
+    intake_on = _intake_front_door_active(state)
+    if blocked or intake_on:
+        return _intake_whitelist_path(root, state)
+    wl = fixture_dir / "whitelist_refs.json"
+    return wl
+
+
+
 def node_solve(state: ORPathState) -> dict:
     root = _root(state)
     pc = state.get("problem_class") or "shortest_path"
     mode = state["solve_mode"]
+    out = root / "outputs" / f"{state['slug']}-solution.json"
+
+    # 1.2 soak law: intake-on must NOT bind fixture SP/TSP/VRP gold as the answer.
+    # No domain adapter for contest PDF → honest BLOCKED envelope (not mock pass).
+    if _intake_front_door_active(state):
+        blocked = {
+            "status": "BLOCKED",
+            "objective": None,
+            "solver": "none",
+            "source": "no_domain_adapter_for_intake",
+            "problem_id": state.get("problem_id"),
+            "problem_class": pc,
+            "slug": state.get("slug"),
+            "meta": {
+                "exact": False,
+                "proven_optimal": False,
+                "blocked": True,
+                "method_class": "fixture",
+                "reason": (
+                    "intake front-door active: refusing fixture solve bind "
+                    f"(problem_id={state.get('problem_id')!r}, mode={mode!r}); "
+                    "no contest-domain adapter registered"
+                ),
+                "intake_path": state.get("intake_path") or "",
+                "brief_path": state.get("brief_path") or "",
+            },
+        }
+        out.write_text(json.dumps(blocked, indent=2) + "\n", encoding="utf-8")
+        return {
+            "stage": "gate_validate",
+            "solution_path": str(out),
+            "gate_validate_ok": False,
+            "last_error": "no_domain_adapter_for_intake",
+            "solve_refused": True,
+        }
+
     extra: list[str] = []
     tune = int(state.get("solver_tune") or 0)
     if mode == "ortools" and tune > 0 and tune <= len(TUNE_STRATEGIES):
@@ -476,7 +575,6 @@ def node_solve(state: ORPathState) -> dict:
             "human_required": True,
             "last_error": raw,
         }
-    out = root / "outputs" / f"{state['slug']}-solution.json"
     out.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return {
         "stage": "gate_validate",
@@ -488,6 +586,43 @@ def node_solve(state: ORPathState) -> dict:
 def node_gate_validate(state: ORPathState) -> dict:
     root = _root(state)
     vpath = root / "outputs" / f"{state['slug']}-validate.json"
+    sol_path = Path(state.get("solution_path") or "")
+    # BLOCKED / intake refuse: no tune/model repair ladder — go explain→paper shell
+    if sol_path.is_file():
+        try:
+            sol_obj = json.loads(sol_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            sol_obj = {}
+        meta = sol_obj.get("meta") if isinstance(sol_obj, dict) else None
+        blocked = bool(
+            isinstance(sol_obj, dict)
+            and (
+                str(sol_obj.get("status") or "").upper() == "BLOCKED"
+                or (isinstance(meta, dict) and meta.get("blocked"))
+                or state.get("solve_refused")
+            )
+        )
+        if blocked:
+            report = {
+                "ok": False,
+                "blocked": True,
+                "errors": [
+                    sol_obj.get("meta", {}).get("reason")
+                    if isinstance(sol_obj.get("meta"), dict)
+                    else "solution BLOCKED"
+                ],
+                "solution_path": str(sol_path),
+                "detail": "intake_or_domain_adapter_blocked",
+            }
+            vpath.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+            return {
+                "stage": "explain",
+                "validate_path": str(vpath),
+                "gate_validate_ok": False,
+                "human_required": True,
+                "last_error": state.get("last_error") or "no_domain_adapter_for_intake",
+            }
+
     ok, report, msg = gate_validate(
         root, state["problem_id"], Path(state["solution_path"]), vpath
     )
@@ -554,20 +689,32 @@ def node_human_stop(state: ORPathState) -> dict:
 
 def node_explain(state: ORPathState) -> dict:
     root = _root(state)
-    sol = json.loads(Path(state["solution_path"]).read_text(encoding="utf-8"))
+    sol_path = Path(state.get("solution_path") or "")
+    if sol_path.is_file():
+        sol = json.loads(sol_path.read_text(encoding="utf-8"))
+    else:
+        sol = {"status": "MISSING", "objective": None, "solver": "none"}
     path = root / "notes" / f"{state['slug']}-explain.md"
     shape = sol.get("path") or sol.get("tour") or sol.get("routes")
+    meta = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
+    blocked = str(sol.get("status") or "").upper() == "BLOCKED" or bool(meta.get("blocked"))
+    note = (
+        "**BLOCKED:** no domain adapter for intake problem — do not treat fixture gold as answer."
+        if blocked
+        else ""
+    )
     path.write_text(
-        f"""# Explain: {state['slug']}
-
-Solver `{sol.get('solver')}` status `{sol.get('status')}`.
-
-- objective: {sol.get('objective')}
-- shape: {shape}
-- validate: {state.get('validate_path')}
-
-All numbers from `{state['solution_path']}` only.
-""",
+        (
+            f"# Explain: {state['slug']}\n\n"
+            f"Solver `{sol.get('solver')}` status `{sol.get('status')}`.\n\n"
+            f"- objective: {sol.get('objective')}\n"
+            f"- shape: {shape}\n"
+            f"- validate: {state.get('validate_path')}\n"
+            f"- blocked: {blocked}\n"
+            f"- last_error: {state.get('last_error')}\n\n"
+            f"All numbers from `{state.get('solution_path')}` only.\n"
+            f"{note}\n"
+        ),
         encoding="utf-8",
     )
     return {"stage": "draft_paper", "explain_path": str(path)}
@@ -576,44 +723,81 @@ All numbers from `{state['solution_path']}` only.
 def node_draft_paper(state: ORPathState) -> dict:
     root = _root(state)
     slug = state["slug"]
-    sol = json.loads(Path(state["solution_path"]).read_text(encoding="utf-8"))
+    sol_path = Path(state.get("solution_path") or "")
+    if sol_path.is_file():
+        sol = json.loads(sol_path.read_text(encoding="utf-8"))
+    else:
+        sol = {
+            "status": "BLOCKED",
+            "objective": None,
+            "solver": "none",
+            "source": "missing_solution",
+            "meta": {"blocked": True, "exact": False, "proven_optimal": False},
+        }
+        sol_path = root / "outputs" / f"{slug}-solution.json"
+        sol_path.write_text(json.dumps(sol, indent=2) + "\n", encoding="utf-8")
     paths = draft_paths(root, slug)
     paths["paper"].parent.mkdir(parents=True, exist_ok=True)
     pc = state.get("problem_class") or sol.get("problem_class")
     fb = _fixture_base(root, state["problem_id"])
-    rel = fb.relative_to(root).as_posix()
-    cites: list[str] = []
-    wl_path = fb / "whitelist_refs.json"
-    if wl_path.is_file():
+    meta0 = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
+    blocked0 = str(sol.get("status") or "").upper() == "BLOCKED" or bool(meta0.get("blocked"))
+    intake_on = _intake_front_door_active(state)
+    if blocked0 or intake_on:
+        rel = "shell_only:" + fb.relative_to(root).as_posix()
+        wl_path = _paper_whitelist_path(root, state, fb)
+        cites: list[str] = []
         try:
             wl = json.loads(wl_path.read_text(encoding="utf-8"))
             cites.extend(str(u) for u in (wl.get("urls") or []))
             cites.extend(str(n) for n in (wl.get("notes") or []))
-        except json.JSONDecodeError:
-            cites = []
-    if not cites:
+        except (json.JSONDecodeError, OSError):
+            cites = ["notes://intake-blocked-soak"]
         cites = [
-            "notes://t2-tsp-ref"
-            if pc == "tsp"
-            else (
-                "notes://t2-vrp-ref"
-                if pc == "vrp"
-                else "notes://t1-shortest-path-ref"
-            )
+            c
+            for c in cites
+            if "arxiv" not in c.lower() and "shortest-path" not in c.lower()
         ]
+        if not cites:
+            cites = ["notes://intake-blocked-soak"]
+    else:
+        rel = fb.relative_to(root).as_posix()
+        cites = []
+        wl_path = fb / "whitelist_refs.json"
+        if wl_path.is_file():
+            try:
+                wl = json.loads(wl_path.read_text(encoding="utf-8"))
+                cites.extend(str(u) for u in (wl.get("urls") or []))
+                cites.extend(str(n) for n in (wl.get("notes") or []))
+            except json.JSONDecodeError:
+                cites = []
+        if not cites:
+            cites = [
+                "notes://t2-tsp-ref"
+                if pc == "tsp"
+                else (
+                    "notes://t2-vrp-ref"
+                    if pc == "vrp"
+                    else "notes://t1-shortest-path-ref"
+                )
+            ]
     source_lines = list(cites)
-    source_lines.append(state["solution_path"])
+    source_lines.append(str(sol_path))
     if state.get("research_path"):
         source_lines.append(str(state.get("research_path")))
     if state.get("validate_path"):
         source_lines.append(str(state.get("validate_path")))
+    if state.get("brief_path"):
+        source_lines.append(str(state.get("brief_path")))
+    if state.get("intake_path"):
+        source_lines.append(str(state.get("intake_path")))
 
     body = render_or_paper(
         slug=slug,
         problem_class=str(pc),
         problem_id=state["problem_id"],
         solution=sol,
-        solution_path=state["solution_path"],
+        solution_path=str(sol_path),
         schema_path=str(state.get("schema_path") or ""),
         research_path=str(state.get("research_path") or ""),
         retrieval_path=str(state.get("retrieval_path") or ""),
@@ -623,6 +807,16 @@ def node_draft_paper(state: ORPathState) -> dict:
         source_lines=source_lines,
         template="or",
     )
+    meta = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
+    if str(sol.get("status") or "").upper() == "BLOCKED" or meta.get("blocked"):
+        body = (
+            body
+            + "\n\n## Provenance note (intake soak)\n\n"
+            + "Solution status is **BLOCKED** (`no_domain_adapter_for_intake`). "
+            + "Do **not** invent Q1–Q4 numeric tables or 2-week profit forecasts. "
+                        + "Do **not** treat shell fixture gold objectives as contest answers. "
+                        + "Paper gates R2/claim should remain BLOCKED/fail-closed.\n"
+                    )
     # P1-5 layered drafts: draft only here; cite_pack builds cited
     paths["draft"].write_text(body, encoding="utf-8")
     paths["paper"].write_text(body, encoding="utf-8")
@@ -637,6 +831,7 @@ def node_draft_paper(state: ORPathState) -> dict:
     return {
         "stage": "cite_pack",
         "paper_path": str(paths["paper"]),
+        "solution_path": str(sol_path),
         "last_error": "",
     }
 
@@ -650,7 +845,7 @@ def node_cite_pack(state: ORPathState) -> dict:
     if not paper.is_file() and paths["draft"].is_file():
         paper = paths["draft"]
     fb = _fixture_base(root, state["problem_id"])
-    wl = fb / "whitelist_refs.json"
+    wl = _paper_whitelist_path(root, state, fb)
     sol = Path(state["solution_path"])
     claim_out = root / "outputs" / ".drafts" / f"{slug}-claim-map.json"
 
@@ -815,7 +1010,7 @@ def node_review_pack(state: ORPathState) -> dict:
     paper = Path(state["paper_path"])
     sol = Path(state["solution_path"])
     fb = _fixture_base(root, state["problem_id"])
-    wl = fb / "whitelist_refs.json"
+    wl = _paper_whitelist_path(root, state, fb)
     paper_text = paper.read_text(encoding="utf-8") if paper.is_file() else ""
     review = root / "outputs" / f"{slug}-review.md"
 
@@ -942,6 +1137,30 @@ def node_revise_or_done(state: ORPathState) -> dict:
     root = _root(state)
     slug = state["slug"]
     paths = draft_paths(root, slug)
+
+    # 1.2 / intake soak: BLOCKED solution → paper shell is fail-closed by design.
+    # Do NOT burn revise + live cite/review loops on fixture gold prose (42/32/…).
+    if _solution_is_blocked(state):
+        append_plan_log(
+            root,
+            slug,
+            stage="revise",
+            status="blocked",
+            detail="solution BLOCKED — skip revise ladder; provenance fail-closed",
+            plan_file=state.get("plan_path"),
+        )
+        return {
+            "stage": "provenance",
+            "human_required": True,
+            "gate_r2_ok": False,
+            "gate_claim_ok": False,
+            "paper_blocked": True,
+            "last_error": (
+                "paper_blocked_no_domain_adapter: "
+                + str(state.get("last_error") or "R2/claim not applicable")
+            )[:500],
+        }
+
     if ok:
         append_plan_log(
             root,
@@ -973,7 +1192,7 @@ def node_revise_or_done(state: ORPathState) -> dict:
     paper = Path(state["paper_path"])
     sol = json.loads(Path(state["solution_path"]).read_text(encoding="utf-8"))
     fb = _fixture_base(root, state["problem_id"])
-    wl_path = fb / "whitelist_refs.json"
+    wl_path = _paper_whitelist_path(root, state, fb)
     allowed: list[str] = []
     if wl_path.is_file():
         try:
@@ -1075,7 +1294,6 @@ def node_revise_or_done(state: ORPathState) -> dict:
         "paper_path": str(paper),
         "last_error": f"after revise: r1={r1_msg}; r2={r2_msg}; claim={claim_msg}",
     }
-
 
 def node_provenance(state: ORPathState) -> dict:
     root = _root(state)
@@ -1293,6 +1511,10 @@ from typing import Any  # noqa: E402
 
 from orpath.node_context import wrap_node  # noqa: E402
 from orpath.pi_bridge import bridge_smoke, maybe_annotate_live  # noqa: E402
+from orpath.intake_nodes import (  # noqa: E402
+    run_intake_ocr_stage,
+    run_intake_parse_stage,
+)
 
 _core_orchestrate = node_orchestrate
 _core_retrieve = node_retrieve
@@ -1389,6 +1611,8 @@ def _provenance_thick(state: ORPathState) -> dict[str, Any]:
 
 
 # Public names for product graph (NodeContext snapshot + owner)
+node_intake_ocr = wrap_node("intake_ocr", run_intake_ocr_stage)
+node_intake_parse = wrap_node("intake_parse", run_intake_parse_stage)
 node_orchestrate = wrap_node("orchestrate", _after_orchestrate_stage)
 node_retrieve = wrap_node("retrieve", _after_retrieve_stage)
 node_bridge = wrap_node("bridge_pi", node_bridge_pi)

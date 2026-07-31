@@ -1,0 +1,28 @@
+{
+  "slug": "intake_bad_brief",
+  "schema_version": "1.1.0",
+  "status": "ok",
+  "sources": [
+    {
+      "path": "fixtures/intake/ok/source.txt",
+      "kind": "text"
+    }
+  ],
+  "subproblems": [
+    {
+      "id": "Q1",
+      "title": "Shortest path",
+      "must_deliver": ["later solution"],
+      "data_refs": []
+    }
+  ],
+  "data_assets": [],
+  "constraints_text": "none",
+  "objectives_text": "minimize length",
+  "deliverables": ["answer"],
+  "ambiguities": [],
+  "brief_path": "fixtures/intake/bad_brief/problem-brief.md",
+  "ocr_raw_path": "fixtures/intake/ok/ocr.raw.md",
+  "ocr_meta_path": "fixtures/intake/ok/ocr.meta.json",
+  "ocr_backend": "manual_stub"
+}

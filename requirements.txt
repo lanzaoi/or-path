@@ -10,3 +10,5 @@ rank-bm25>=0.2.2
 # LightRAG often installed as lightrag-hku; keep flexible
 pi-py-sdk>=0.2
 python-dotenv>=1.0
+# 1.1 intake OCR — PDF text layer
+pypdf>=4

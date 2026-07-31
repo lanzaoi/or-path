@@ -34,6 +34,20 @@ FORBIDDEN_SCHEMA_KEYS = frozenset(
     }
 )
 
+# 1.1 intake.json — same spirit + a few extra solution-ish keys (specs/problem-intake.md)
+FORBIDDEN_INTAKE_KEYS = frozenset(
+    {
+        *FORBIDDEN_SCHEMA_KEYS,
+        "proven_optimal",
+        "best_cost",
+        "best_objective",
+    }
+)
+
+INTAKE_SCHEMA_VERSION = "1.1.0"
+INTAKE_STATUSES = frozenset({"ok", "needs_human", "error"})
+INTAKE_ASSET_KINDS = frozenset({"csv", "xlsx", "stp", "pdf", "image", "other"})
+
 
 class Edge(BaseModel):
     u: str
@@ -153,18 +167,67 @@ class RetrievalArtifact(BaseModel):
     seed_facts: list[dict[str, Any]] = Field(default_factory=list)
 
 
-def walk_forbidden_keys(obj: Any, found: set[str] | None = None) -> set[str]:
+class IntakeSource(BaseModel):
+    path: str
+    sha256: str | None = None
+    kind: str | None = None
+    pages: int | None = None
+
+
+class IntakeSubproblem(BaseModel):
+    id: str
+    title: str
+    must_deliver: list[str] = Field(default_factory=list)
+    data_refs: list[str] = Field(default_factory=list)
+    notes: str | None = None
+
+
+class IntakeDataAsset(BaseModel):
+    path: str
+    kind: Literal["csv", "xlsx", "stp", "pdf", "image", "other"] = "other"
+    role: str = "unknown"
+    notes: str | None = None
+
+
+class IntakeArtifact(BaseModel):
+    """Structured problem intake (1.1). Not a Solution and not a ProblemSchema."""
+
+    slug: str
+    schema_version: str = INTAKE_SCHEMA_VERSION
+    status: Literal["ok", "needs_human", "error"]
+    sources: list[IntakeSource] = Field(default_factory=list)
+    subproblems: list[IntakeSubproblem]
+    data_assets: list[IntakeDataAsset] = Field(default_factory=list)
+    constraints_text: str = ""
+    objectives_text: str = ""
+    deliverables: list[str] = Field(default_factory=list)
+    ambiguities: list[str] = Field(default_factory=list)
+    brief_path: str
+    ocr_raw_path: str
+    ocr_meta_path: str
+    ocr_backend: str
+    problem_class_hint: str | None = None
+    problem_id_hint: str | None = None
+
+
+def walk_forbidden_keys(
+    obj: Any,
+    found: set[str] | None = None,
+    *,
+    forbidden: frozenset[str] | None = None,
+) -> set[str]:
+    keys = forbidden if forbidden is not None else FORBIDDEN_SCHEMA_KEYS
     if found is None:
         found = set()
     if isinstance(obj, dict):
         for k, v in obj.items():
             lk = str(k).lower()
-            if lk in FORBIDDEN_SCHEMA_KEYS:
+            if lk in keys:
                 found.add(lk)
-            walk_forbidden_keys(v, found)
+            walk_forbidden_keys(v, found, forbidden=keys)
     elif isinstance(obj, list):
         for item in obj:
-            walk_forbidden_keys(item, found)
+            walk_forbidden_keys(item, found, forbidden=keys)
     return found
 
 
@@ -179,6 +242,7 @@ def export_json_schemas(out_dir: Any) -> None:
         "validate_report.json": ValidateReport,
         "chunk.json": Chunk,
         "retrieval_hit.json": RetrievalHit,
+        "intake.json": IntakeArtifact,
     }
     for name, model in mapping.items():
         (d / name).write_text(

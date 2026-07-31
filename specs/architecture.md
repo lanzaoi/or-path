@@ -29,10 +29,11 @@
 
 ```text
 LangGraph（阶段老板）
+  ├─ [opt 1.1] intake_ocr/parse ──► 工具（+可选短 lead）──► brief + intake.json（无 objective）
   ├─ retrieve / research  ──► Pi 包工头 ──► or-researcher ──► notes/* 路径
   ├─ model                ──► Pi 包工头 ──► or-modeler    ──► schema（无 objective）
   ├─ GATE schema          ──► 代码
-  ├─ solve                ──► mock | networkx | ortools
+  ├─ solve                ──► mock | networkx | ortools | …
   ├─ GATE validate        ──► 重算；可触发调参重解 / 回 model（见 control-plane）
   ├─ explain / paper      ──► Pi 班组 + R1/R2
   └─ provenance           ──► 磁盘
@@ -58,10 +59,11 @@ CI 默认可不开 live Pi，但 **T2 closeout 不能没有 bridge 成功证据*
 | Solvers | NetworkX、**真** OR-Tools、mock |
 | Agent 模型 | **DeepSeek only** |
 | Embedding | 硅基 `BAAI/bge-m3` @1024 |
-| Preprocess | MinerU **Cloud** |
+| Preprocess | MinerU **Cloud**（**语料/知识** PDF；**不是** 1.1 竞赛题面主 OCR） |
 | L2 | LightRAG + BM25/FTS + RRF |
 | L3 | Cognee **Cloud** |
 | L4 | 领域种子图 |
+| 题面 OCR（1.1） | pdf 文字层 → PaddleOCR/MCP → manual_stub；见 `problem-intake.md` |
 | UI | OpenPi 主；Pi TUI 辅 |
 | OUT | Graphiti、Teams、Bus 脊柱、Feynman 主壳 |
 
@@ -76,9 +78,9 @@ CI 默认可不开 live Pi，但 **T2 closeout 不能没有 bridge 成功证据*
 | `orpath/nodes.py` | **阶段节点权威**（核心 + bridge + NodeContext wrap，ADR-0001） |
 | `orpath/nodes_product.py` | 兼容 shim → `nodes` |
 | `orpath/graph_product.py` | 产品图拓扑（边）；经 ControlPlane 编译 |
-| `tools/` | solve_* 适配器、**solve_dispatch / solve_envelope**、validate、R1/R2、schema gate |
+| `tools/` | solve_* 适配器、**solve_dispatch / solve_envelope**、validate、R1/R2、schema gate、**intake_ocr/parse/gate（1.1）** |
 | `contracts/` | JSON Schema 导出（由 pydantic 生成可） |
-| `knowledge/` / `knowledge_svc/` | 语料、种子图、摄取与检索 |
+| `knowledge/` / `knowledge_svc/` | 语料、种子图、摄取与检索（**≠** 题面 intake） |
 | `fixtures/t1|t2/` | 金标与冒烟题 |
 | `.pi/agents/or-*.md` | 子 Agent 定义 |
 | `specs/` | 本法 |
@@ -94,6 +96,7 @@ CI 默认可不开 live Pi，但 **T2 closeout 不能没有 bridge 成功证据*
 6. 过委派空转（必须有上限 → `HUMAN_REQUIRED`）  
 7. 知识检索幻觉引用（无 `chunk_id`）  
 8. memory 存 authoritative 最优解  
+9. 题面 OCR 静默猜数 / intake 写 objective / 只做最简单子问（见 `problem-intake.md`）  
 
 ## 参考
 

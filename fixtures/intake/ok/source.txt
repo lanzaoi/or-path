@@ -1,0 +1,7 @@
+Demo OR homework (synthetic fixture for intake_gate).
+
+Q1 Shortest path S→T on a 3-node complete graph with positive weights.
+Q2 TSP tour on the same nodes returning to start.
+
+Minimize total distance. Weights are non-negative.
+Do not put optimal objective numbers in the intake brief.

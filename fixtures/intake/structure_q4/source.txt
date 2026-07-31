@@ -1,0 +1,29 @@
+# Multi-question structure fixture (synthetic; mirrors competition Q1..Q4 shape).
+# Used only for intake structure smoke — NO solver optima.
+
+Contest-style cutting / packing demo for intake structure regression.
+
+Q1: Compute axial occupancy length for each of 10 part types from geometry files.
+Deliver model description and later solver-backed pack plan (solve stage only).
+
+Q2: Allow adjacent end co-cutting with LL/LR/RL/RR joins; keep Q1 assignment,
+re-order within bars only. Deliver qualitative co-cut definition (no optima here).
+
+Q3: Re-plan bars with co-cut, balancing total stock length, co-cut gain, and switch count.
+Deliverables later: result3.xlsx template fill after solve.
+
+Q4: Three sequential batches with remnant carry-over across batches.
+Minimize total standard stock length across batches (qualitative objective only).
+
+Data assets (logical names; may not exist in this fixture pack):
+- geometry/*.csv
+- demand_batches.xlsx
+- result1.xlsx result2.xlsx result3.xlsx result4.xlsx templates
+
+Constraints (qualitative):
+- Standard stock lengths only: 9m/10m/11m/12m (work in mm)
+- Non-negative lengths
+- Waiting/remnant rules as stated in full contest PDF (not fully OCR'd here)
+
+Minimize total stock length; secondary maximize co-cut gain; tertiary minimize switches.
+Do not put claimed optimal values into intake artifacts.

@@ -1,0 +1,46 @@
+{
+  "milestone": "1.2",
+  "title": "architecture_soak_hdu_c2025",
+  "law": "specs/1.2-architecture-soak.md",
+  "slug": "hdu-c2025-1.2",
+  "thread_id": "hdu-c2025-1.2",
+  "started_local": "2026-07-31T10:51:07",
+  "ended_local": "2026-07-31T11:14:37",
+  "wall_s_approx": 1410,
+  "exit": 2,
+  "human_required": true,
+  "intake": {
+    "ok": true,
+    "subproblems": 4,
+    "ocr_backend": "pdf_text",
+    "path": "outputs/hdu-c2025-1.2-intake.json"
+  },
+  "solution": {
+    "status": "BLOCKED",
+    "objective": null,
+    "source": "no_domain_adapter_for_intake",
+    "path": "outputs/hdu-c2025-1.2-solution.json"
+  },
+  "gates": {
+    "validate_ok": false,
+    "r1_ok": true,
+    "r2_ok": false,
+    "subagent_ok": true,
+    "live_subagent": true
+  },
+  "live_ma": {
+    "research": true,
+    "model": true,
+    "cite": true,
+    "review": true,
+    "agents_dir": "outputs/.agents/hdu-c2025-1.2"
+  },
+  "fallback_tube_b": false,
+  "claim": "architecture_evidence_pack_PASS_not_contest_submission",
+  "monitor": "outputs/hdu-c2025-1.2/logs/1.2_MONITOR.md",
+  "pipeline_fixes": [
+    "intake_front_door_refuse_fixture_solve_bind",
+    "blocked_validate_short_circuit_to_paper",
+    "blocked_revise_short_circuit_to_provenance"
+  ]
+}

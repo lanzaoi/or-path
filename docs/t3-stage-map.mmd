@@ -1,5 +1,9 @@
 flowchart TD
-  START --> orchestrate
+  START --> intake_ocr
+  intake_ocr -->|skip or no sources| orchestrate
+  intake_ocr -->|has sources| intake_parse
+  intake_parse -->|ok| orchestrate
+  intake_parse -->|needs_human or gate fail| human_stop
   orchestrate -->|before_retrieve| bridge_pi
   orchestrate -->|default| retrieve
   bridge_pi -->|before_retrieve| retrieve

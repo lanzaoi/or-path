@@ -25,6 +25,9 @@ from orpath.graph_product import (  # re-export seam
 
 # Canonical stage predecessors for --from-stage (product graph)
 PREDECESSORS: dict[str, str] = {
+    "intake_ocr": "START",
+    "intake_parse": "intake_ocr",
+    "orchestrate": "intake_ocr",
     "retrieve": "orchestrate",
     "bridge_pi": "retrieve",
     "research": "bridge_pi",
@@ -70,6 +73,11 @@ def default_initial(
     live_subagent: bool | None = None,
     thread_id: str,
     bridge_attachment: str = "before_research",
+    skip_intake: bool = True,
+    intake_sources: list[str] | None = None,
+    intake_assets_dir: str = "",
+    human_confirm_intake: bool = False,
+    intake_confirmed: bool = False,
 ) -> dict[str, Any]:
     """Canonical ORPathState seed for product runs."""
     root = Path(root)
@@ -121,6 +129,18 @@ def default_initial(
         "artifact_manifest_path": "",
         "last_snapshot_path": "",
         "pipeline": "product",
+        # 1.1 intake — default skip keeps T1–T3 paths green
+        "skip_intake": bool(skip_intake),
+        "intake_skipped": bool(skip_intake),
+        "intake_sources": list(intake_sources or []),
+        "intake_assets_dir": intake_assets_dir or "",
+        "ocr_raw_path": "",
+        "ocr_meta_path": "",
+        "intake_path": "",
+        "brief_path": "",
+        "gate_intake_ok": True if skip_intake else False,
+        "human_confirm_intake": bool(human_confirm_intake),
+        "intake_confirmed": bool(intake_confirmed),
     }
 
 
