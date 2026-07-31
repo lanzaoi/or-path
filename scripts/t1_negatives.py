@@ -29,7 +29,7 @@ def run(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess
     return subprocess.run(
         args,
         cwd=cwd or ROOT,
-        text=True,
+        text=True, encoding="utf-8", errors="replace",
         capture_output=True,
         env=env(),
     )

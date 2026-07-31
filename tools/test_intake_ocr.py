@@ -20,7 +20,7 @@ from intake_ocr import (  # noqa: E402
 
 
 def run(args: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(args, cwd=ROOT, text=True, capture_output=True)
+    return subprocess.run(args, cwd=ROOT, text=True, encoding="utf-8", errors="replace", capture_output=True)
 
 
 def test_choose_backend():

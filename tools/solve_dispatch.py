@@ -34,7 +34,7 @@ ADAPTER_SCRIPTS: dict[str, str] = {
 
 def _run_py(script: Path, args: list[str], cwd: Path) -> tuple[int, str, str]:
     cmd = [sys.executable, str(script), *args]
-    r = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True)
+    r = subprocess.run(cmd, cwd=cwd, text=True, encoding="utf-8", errors="replace", capture_output=True)
     return r.returncode, r.stdout, r.stderr
 
 

@@ -163,7 +163,7 @@ def node_retrieve(state: ORPathState) -> dict:
         "--out",
         str(out),
     ]
-    r = subprocess.run(cmd, cwd=root, text=True, capture_output=True)
+    r = subprocess.run(cmd, cwd=root, text=True, encoding="utf-8", errors="replace", capture_output=True)
     if r.returncode != 0 or not out.is_file():
         # fallback seed-only inline
         seed_path = root / "knowledge" / "seed_graph" / "or_domain_seed.json"

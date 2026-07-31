@@ -104,7 +104,7 @@ def main() -> int:
         ),
     ]
     for name, cmd, expect in cases:
-        r = subprocess.run(cmd, cwd=ROOT, env=env, text=True, capture_output=True)
+        r = subprocess.run(cmd, cwd=ROOT, env=env, text=True, encoding="utf-8", errors="replace", capture_output=True)
         if r.returncode != expect:
             print(r.stdout)
             print(r.stderr, file=sys.stderr)

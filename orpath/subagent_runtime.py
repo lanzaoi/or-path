@@ -493,6 +493,9 @@ def spawn_lead(
     env["PYTHONNOUSERSITE"] = "1"
     # Prefer project agent dir for packages/settings
     env.setdefault("PI_CODING_AGENT_DIR", str(Path.home() / ".pi" / "agent"))
+    # Windows: Pi/node may emit UTF-8; default text mode uses GBK and crashes reader threads.
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    env.setdefault("PYTHONUTF8", "1")
 
     try:
         proc = subprocess.run(
@@ -500,6 +503,8 @@ def spawn_lead(
             cwd=str(root),
             env=env,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             capture_output=True,
             timeout=timeout_s,
             shell=bool(cmd and str(cmd[0]).lower().endswith((".bat", ".cmd"))),
@@ -507,7 +512,17 @@ def spawn_lead(
         out = (proc.stdout or "") + "\n---STDERR---\n" + (proc.stderr or "")
         exit_code = proc.returncode
     except subprocess.TimeoutExpired as exc:
-        out = f"TIMEOUT after {timeout_s}s\n{exc}"
+        # Timeout may still hold partial bytes; never assume GBK.
+        partial_out = ""
+        try:
+            if exc.stdout:
+                partial_out += exc.stdout if isinstance(exc.stdout, str) else exc.stdout.decode("utf-8", "replace")
+            if exc.stderr:
+                partial_out += "\n---STDERR---\n"
+                partial_out += exc.stderr if isinstance(exc.stderr, str) else exc.stderr.decode("utf-8", "replace")
+        except Exception:  # noqa: BLE001
+            partial_out = ""
+        out = f"TIMEOUT after {timeout_s}s\n{exc}\n{partial_out}"
         exit_code = -9
     except Exception as exc:  # noqa: BLE001
         out = f"SPAWN_ERROR: {exc}"

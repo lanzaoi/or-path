@@ -42,7 +42,7 @@ def bridge_smoke(root: Path, slug: str) -> dict:
             r = subprocess.run(
                 [exe, "--help"],
                 cwd=root,
-                text=True,
+                text=True, encoding="utf-8", errors="replace",
                 capture_output=True,
                 timeout=60,
                 shell=True if exe.endswith(".bat") else False,
