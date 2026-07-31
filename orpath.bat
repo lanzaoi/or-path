@@ -3,6 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 REM OR-Path product launcher (relocatable).
 REM OpenPi desktop shell REMOVED 2026-07-31 - use menu / pi.
+REM NOTE: never use "shift" + "%*" together; on Windows %* ignores shift.
 
 if not defined ORPATH_HOME (
   set "ORPATH_HOME=%~dp0"
@@ -35,7 +36,7 @@ set "PYTHONUNBUFFERED=1"
 if not defined ORPATH_LIVE_SUBAGENT set "ORPATH_LIVE_SUBAGENT=1"
 
 set "CMD=%~1"
-REM Double-click / no args -> interactive menu (help used to flash-close the window).
+REM Double-click / no args -> interactive menu
 if "%CMD%"=="" set "CMD=menu"
 
 if /i "%CMD%"=="help" goto :help
@@ -146,8 +147,7 @@ if errorlevel 1 exit /b %ERRORLEVEL%
 exit /b %ERRORLEVEL%
 
 :paper
-shift
-"%PY%" "!ORPATH_HOME!\scripts\orpath_paper.py" %*
+"%PY%" "!ORPATH_HOME!\scripts\orpath_paper.py" %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 :paper_gate
@@ -165,8 +165,7 @@ exit /b %ERRORLEVEL%
 exit /b %ERRORLEVEL%
 
 :paper_protocol
-shift
-"%PY%" "!ORPATH_HOME!\scripts\orpath_paper.py" protocol %*
+"%PY%" "!ORPATH_HOME!\scripts\orpath_paper.py" protocol %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 :subagent_gate
@@ -175,18 +174,15 @@ set "ORPATH_LIVE_SUBAGENT=0"
 exit /b %ERRORLEVEL%
 
 :t2
-shift
-"%PY%" "!ORPATH_HOME!\orpath\run_t2.py" %*
+"%PY%" "!ORPATH_HOME!\orpath\run_t2.py" %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 :run
-shift
-"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run %*
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 :run_full
-shift
-"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run --auto-intake --fresh %*
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run --auto-intake --fresh %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 :gui_demo
@@ -199,28 +195,23 @@ echo    runs\gui-demo\stages\
 exit /b %ERRORLEVEL%
 
 :status
-shift
-"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" status %*
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" status %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 :resume
-shift
-"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run --resume %*
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run --resume %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 :list
-shift
-"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" list %*
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" list %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 :intake
-shift
-"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" intake %*
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" intake %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 :intake_auto
-shift
-"%PY%" "!ORPATH_HOME!\scripts\orpath_intake_auto.py" %*
+"%PY%" "!ORPATH_HOME!\scripts\orpath_intake_auto.py" %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 :gate_intake
@@ -233,6 +224,5 @@ if not exist "!ORPATH_HOME!\runtime\node_modules\@earendil-works\pi-coding-agent
   echo [ERROR] Pi runtime missing under install home.
   exit /b 1
 )
-shift
-call "!ORPATH_HOME!\pi.bat" -a %*
+call "!ORPATH_HOME!\pi.bat" -a %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
