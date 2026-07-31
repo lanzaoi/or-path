@@ -273,7 +273,7 @@ def export_stage_map() -> dict[str, Any]:
         ],
         "checkpointer": "sqlite:runs/orpath.sqlite",
         "bridge_default_attachment": "before_research",
-        "intake_default": "skip_intake=true",
+        "intake_default": "skip when no surface; --auto-intake uses inbox/; explicit --intake-in enables front-door",
         "paper_pipeline": "draft→cite→review→revise(re-cite)→provenance",
     }
 

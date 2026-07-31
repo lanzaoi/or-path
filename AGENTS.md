@@ -30,7 +30,7 @@ T2 grill 冻结表：`specs/gates-and-dod.md`。
 5. **Memory:** L0 disk + L1 LG checkpointer. pi-memory + Cognee = prefs/lessons/graph smoke — **never** authoritative objectives.
 6. **Hard gates:** schema (no optima) → solve → validate → R1/R2. Paper online R1 lives on **cloud** track.
 7. **Docs surface:** living docs under `docs/` top-level; history in `docs/archive/`; out-of-band trees in `docs/OUT_OF_BAND.md`.
-8. **Intake (1.1):** OCR + problem-brief + `intake.json` may precede orchestrate; **no** objectives in intake; full subproblem coverage; see `specs/problem-intake.md`.
+8. **Intake (1.1):** OCR + problem-brief + `intake.json` may precede orchestrate; **no** objectives in intake; full subproblem coverage; see `specs/problem-intake.md`. Default product: **live multi-agent ON**; intake when `--intake-in` or `inbox/` via `--auto-intake` (`ORPATH.md`). Gates force live OFF.
 
 ## Artifact layout
 

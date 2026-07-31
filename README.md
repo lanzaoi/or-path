@@ -6,10 +6,11 @@
 | | |
 |--|--|
 | 产品名 | OR-Path Multi-Agent / Graph-OR Agent |
-| 主 UI | **OpenPi**（`orpath.bat openpi`） |
+| 主 UI | **OpenPi**（`orpath.bat openpi`）— 读 **`ORPATH.md`** |
 | 辅 UI | Pi 终端（`orpath.bat pi` / `pi.bat`） |
 | 硬法 | **`specs/`**（SDD，冲突时以门禁输出 > specs > 本文件） |
-| 不是什么 | 不是 Feynman 主壳；不是 Hermes 产品运行时；数字不靠 LLM 心算 |
+| 默认 | **Live 多 Agent ON**；有题面/`inbox/` 才 intake；门禁用 `--no-live-subagent` |
+| 不是什么 | 不是 Feynman 主壳；不是 Hermes 产品运行时；裸聊天 ≠ 多 Agent；数字不靠 LLM 心算 |
 
 ---
 
@@ -23,7 +24,7 @@
 | 2 | **`specs/README.md`** | 规范索引；T3 主法 `specs/t3-lg-skeleton.md`；1.1/1.2 法条 |
 | 3 | **`orpath/`** | LangGraph 产品骨架与 runner（核心代码） |
 | 4 | **`tools/`** | solve_dispatch / validate / R1 / R2 / intake（数字真相+题面） |
-| 5 | **`docs/README.md`** · **`docs/1.2-closeout.md`** · **`docs/solver-stack.md`** | 文档导航 + 最新关单 + 求解话术 |
+| 5 | **`ORPATH.md`** · **`docs/OPENPI-DEFAULT-MA-INTAKE.md`** · **`docs/1.2-closeout.md`** | **GUI 主控** + 默认 MA/intake + 关单 |
 
 历史关单/证据/口播 → **`docs/archive/`**。带外大树 → **`docs/OUT_OF_BAND.md`**（vendor/openpi/pi-main）。
 

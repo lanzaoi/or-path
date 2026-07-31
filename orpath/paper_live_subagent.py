@@ -14,7 +14,12 @@ from orpath.subagent_runtime import check_env, detect_subagent_calls, require_en
 
 
 def live_subagent_enabled(state: dict[str, Any] | None = None) -> bool:
-    """Whether to spawn Pi leads for cite/review."""
+    """Whether to spawn Pi leads for research/model/cite/review.
+
+    Priority: env ORPATH_LIVE_SUBAGENT > state.live_subagent/live_pi >
+    product default ON when Pi env is healthy (check_env.ok).
+    Explicit env 0/false always wins (CI/gates).
+    """
     raw = (os.environ.get("ORPATH_LIVE_SUBAGENT") or "").strip().lower()
     if raw in {"0", "false", "no", "off"}:
         return False
@@ -25,6 +30,7 @@ def live_subagent_enabled(state: dict[str, Any] | None = None) -> bool:
             return True
         if state.get("live_subagent") is False:
             return False
+    # Product default: live MA ON when runtime is ready; else OFF (honest).
     return bool(check_env().ok)
 
 

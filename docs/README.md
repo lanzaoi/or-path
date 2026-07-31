@@ -7,6 +7,8 @@
 
 | 路径 | 用途 |
 |------|------|
+| **`../ORPATH.md`** | **OpenPi/GUI 主控：默认 live MA + intake** |
+| **`OPENPI-DEFAULT-MA-INTAKE.md`** | 开箱默认策略与人测封条 |
 | **`../specs/README.md`** | **法条总索引**（优先于 docs） |
 | `1.0-closeout.md` | 产品 1.0 关单总览 |
 | **`1.1-closeout.md`** | **1.1 题面 intake 关单** |

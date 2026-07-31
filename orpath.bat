@@ -29,6 +29,10 @@ if not defined PY (
 
 set "PYTHONNOUSERSITE=1"
 set "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1"
+set "PYTHONUNBUFFERED=1"
+
+REM Product default: live multi-agent ON (CI/gates set 0 explicitly).
+if not defined ORPATH_LIVE_SUBAGENT set "ORPATH_LIVE_SUBAGENT=1"
 
 set "CMD=%~1"
 if "%CMD%"=="" set "CMD=help"
@@ -42,10 +46,13 @@ if /i "%CMD%"=="pi" goto :pi
 if /i "%CMD%"=="openpi" goto :openpi
 if /i "%CMD%"=="t2" goto :t2
 if /i "%CMD%"=="run" goto :run
+if /i "%CMD%"=="run-full" goto :run_full
+if /i "%CMD%"=="gui-demo" goto :gui_demo
 if /i "%CMD%"=="status" goto :status
 if /i "%CMD%"=="resume" goto :resume
 if /i "%CMD%"=="list" goto :list
 if /i "%CMD%"=="intake" goto :intake
+if /i "%CMD%"=="intake-auto" goto :intake_auto
 if /i "%CMD%"=="gate-intake" goto :gate_intake
 if /i "%CMD%"=="env" goto :envshow
 if /i "%CMD%"=="paper" goto :paper
@@ -68,34 +75,28 @@ echo.
 echo  OR-Path launcher  (relocatable)
 echo  ORPATH_HOME    = !ORPATH_HOME!
 echo  ORPATH_WORKDIR = !ORPATH_WORKDIR!
+echo  LIVE_SUBAGENT  = !ORPATH_LIVE_SUBAGENT!  (default 1; set 0 or --no-live-subagent for CI)
 echo.
 echo  Usage:
 echo    orpath.bat doctor
-echo    orpath.bat isolation
-echo    orpath.bat gate
-echo    orpath.bat gate-t3
+echo    orpath.bat openpi              ^(GUI; sets LIVE=1, prints ORPATH.md tips^)
+echo    orpath.bat run-full [args...]  ^(auto-intake from inbox/ + product default live MA^)
+echo    orpath.bat gui-demo            ^(fixture intake + mock solve; still burns live if LIVE=1^)
 echo    orpath.bat run [args...]
+echo    orpath.bat intake --slug SLUG --in FILE
+echo    orpath.bat intake-auto --slug SLUG
+echo    orpath.bat gate / gate-t3 / gate-intake / subagent-gate
 echo    orpath.bat status --thread-id ID
-echo    orpath.bat resume --thread-id ID [args...]
-echo    orpath.bat list
-echo    orpath.bat intake --slug SLUG --in FILE [--assets DIR]
-echo    orpath.bat gate-intake
-echo    orpath.bat paper template^|review^|gate-research^|plan-log^|protocol ...
-echo    orpath.bat paper-gate
-echo    orpath.bat paper-1.0-gate
-echo    orpath.bat paper-tube
-echo    orpath.bat paper-protocol --slug ... --solution ...
-echo    orpath.bat subagent-gate
-echo    orpath.bat t2 [args...]
-echo    orpath.bat pi [args...]
-echo    orpath.bat openpi
 echo    orpath.bat env
+echo.
+echo  See ORPATH.md for OpenPi GUI workflow ^(no Hermes required^).
 echo.
 exit /b 0
 
 :envshow
 echo ORPATH_HOME=!ORPATH_HOME!
 echo ORPATH_WORKDIR=!ORPATH_WORKDIR!
+echo ORPATH_LIVE_SUBAGENT=!ORPATH_LIVE_SUBAGENT!
 echo PY=!PY!
 exit /b 0
 
@@ -104,14 +105,17 @@ exit /b 0
 exit /b %ERRORLEVEL%
 
 :isolation
+set "ORPATH_LIVE_SUBAGENT=0"
 "%PY%" "!ORPATH_HOME!\scripts\t2_multiagent_isolation.py"
 exit /b %ERRORLEVEL%
 
 :gate
+set "ORPATH_LIVE_SUBAGENT=0"
 "%PY%" "!ORPATH_HOME!\scripts\t2_gate.py"
 exit /b %ERRORLEVEL%
 
 :gate_t3
+set "ORPATH_LIVE_SUBAGENT=0"
 "%PY%" "!ORPATH_HOME!\scripts\t3_lg_gate.py"
 if errorlevel 1 exit /b %ERRORLEVEL%
 "%PY%" "!ORPATH_HOME!\scripts\t3_gate.py"
@@ -123,10 +127,12 @@ shift
 exit /b %ERRORLEVEL%
 
 :paper_gate
+set "ORPATH_LIVE_SUBAGENT=0"
 "%PY%" "!ORPATH_HOME!\scripts\paper_gate.py"
 exit /b %ERRORLEVEL%
 
 :paper_10_gate
+set "ORPATH_LIVE_SUBAGENT=0"
 "%PY%" "!ORPATH_HOME!\scripts\paper_1_0_gate.py"
 exit /b %ERRORLEVEL%
 
@@ -140,6 +146,7 @@ shift
 exit /b %ERRORLEVEL%
 
 :subagent_gate
+set "ORPATH_LIVE_SUBAGENT=0"
 "%PY%" "!ORPATH_HOME!\scripts\subagent_gate.py"
 exit /b %ERRORLEVEL%
 
@@ -151,6 +158,22 @@ exit /b %ERRORLEVEL%
 :run
 shift
 "%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run %*
+exit /b %ERRORLEVEL%
+
+:run_full
+shift
+REM Full product path: auto-intake from inbox/ (if present) + default live MA
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run --auto-intake --fresh %*
+exit /b %ERRORLEVEL%
+
+:gui_demo
+REM Cheap-ish demo with fixture surface; LIVE still ON unless user set 0
+"%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" run --fresh --auto-intake --slug gui-demo --thread-id gui-demo --problem-id shortest_path --solve-mode mock --intake-in "!ORPATH_HOME!\fixtures\intake\ok\source.txt"
+echo.
+echo  [OR-Path] Evidence:
+echo    outputs\gui-demo-intake.json  ^(if intake ran^)
+echo    outputs\.agents\gui-demo\   ^(lead logs; search name:subagent^)
+echo    runs\gui-demo\stages\
 exit /b %ERRORLEVEL%
 
 :status
@@ -173,7 +196,13 @@ shift
 "%PY%" "!ORPATH_HOME!\orpath\run_orpath.py" intake %*
 exit /b %ERRORLEVEL%
 
+:intake_auto
+shift
+"%PY%" "!ORPATH_HOME!\scripts\orpath_intake_auto.py" %*
+exit /b %ERRORLEVEL%
+
 :gate_intake
+set "ORPATH_LIVE_SUBAGENT=0"
 "%PY%" "!ORPATH_HOME!\scripts\intake_gate.py"
 exit /b %ERRORLEVEL%
 
@@ -188,10 +217,22 @@ exit /b %ERRORLEVEL%
 
 :openpi
 echo.
-echo  [OR-Path] ORPATH_HOME=!ORPATH_HOME!
-echo  [OR-Path] OpenPi project folder must be this install home.
-echo  [OR-Path] running doctor...
+echo  ========================================
+echo   OR-Path + OpenPi
+echo   ORPATH_HOME = !ORPATH_HOME!
+echo   LIVE MA     = !ORPATH_LIVE_SUBAGENT!  ^(product default 1^)
+echo  ----------------------------------------
+echo   GUI does NOT auto-run the graph.
+echo   After OpenPi opens this folder, run in a terminal:
+echo     orpath.bat run-full --slug myrun --thread-id myrun
+echo     orpath.bat gui-demo
+echo   Read: ORPATH.md
+echo   Evidence: outputs\.agents\  and  runs\^<thread^>\stages\
+echo   Cost warning: LIVE=1 spawns Pi subagents ^(DeepSeek^).
+echo     set ORPATH_LIVE_SUBAGENT=0  to disable.
+echo  ========================================
 echo.
+echo  [OR-Path] running doctor...
 "%PY%" "!ORPATH_HOME!\scripts\orpath_doctor.py"
 if errorlevel 1 (
   echo [ERROR] doctor failed - refusing OpenPi start.

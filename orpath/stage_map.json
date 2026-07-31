@@ -132,6 +132,6 @@
   ],
   "checkpointer": "sqlite:runs/orpath.sqlite",
   "bridge_default_attachment": "before_research",
-  "intake_default": "skip_intake=true",
+  "intake_default": "skip when no surface; --auto-intake uses inbox/; explicit --intake-in enables front-door",
   "paper_pipeline": "draft\u2192cite\u2192review\u2192revise(re-cite)\u2192provenance"
 }

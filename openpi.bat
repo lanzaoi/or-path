@@ -2,6 +2,12 @@
 setlocal EnableExtensions
 cd /d "%~dp0openpi"
 
+REM Inherit product defaults when launched via openpi.bat directly
+if not defined ORPATH_HOME set "ORPATH_HOME=%~dp0"
+if "%ORPATH_HOME:~-1%"=="\" set "ORPATH_HOME=%ORPATH_HOME:~0,-1%"
+if not defined ORPATH_LIVE_SUBAGENT set "ORPATH_LIVE_SUBAGENT=1"
+set "PYTHONNOUSERSITE=1"
+
 set "NODE="
 if exist "%ProgramFiles%\nodejs\node.exe" set "NODE=%ProgramFiles%\nodejs\node.exe"
 if not defined NODE if exist "%LocalAppData%\hermes\node\bin\node.exe" set "NODE=%LocalAppData%\hermes\node\bin\node.exe"
@@ -27,8 +33,10 @@ if not exist "node_modules\" (
 echo.
 echo  ========================================
 echo   OpenPi  (desktop workbench for Pi)
-echo   Repo:   openpi\
-echo   Start:  npm run dev
+echo   ORPATH_HOME = %ORPATH_HOME%
+echo   LIVE MA     = %ORPATH_LIVE_SUBAGENT%
+echo   Read        = %ORPATH_HOME%\ORPATH.md
+echo   Run graph   = orpath.bat run-full / gui-demo
 echo   Stop:   close the app window or Ctrl+C
 echo  ========================================
 echo.

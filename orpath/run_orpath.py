@@ -98,14 +98,39 @@ def _load_state_from_checkpoint(app: Any, thread_id: str) -> dict[str, Any] | No
 
 
 def _resolve_live_subagent(args: argparse.Namespace) -> bool | None:
-    """CLI > env. None = defer to ORPATH_LIVE_SUBAGENT / check_env default."""
+    """CLI > env. Product default ON when env unset.
+
+    --no-live-subagent → False / env 0 (CI, gates).
+    --live-subagent / --live-pi → True / env 1.
+    Else honour env; if unset → default ON.
+    """
     if getattr(args, "no_live_subagent", False):
         os.environ["ORPATH_LIVE_SUBAGENT"] = "0"
         return False
     if getattr(args, "live_subagent", False) or bool(getattr(args, "live_pi", False)):
-        os.environ.setdefault("ORPATH_LIVE_SUBAGENT", "1")
+        os.environ["ORPATH_LIVE_SUBAGENT"] = "1"
         return True
-    return None
+    raw = (os.environ.get("ORPATH_LIVE_SUBAGENT") or "").strip().lower()
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    os.environ["ORPATH_LIVE_SUBAGENT"] = "1"
+    return True
+
+
+def _resolve_intake_sources(root: Path, args: argparse.Namespace) -> tuple[list[str], bool]:
+    """Return (sources, skip_intake). --auto-intake scans inbox/ when no --intake-in."""
+    from orpath.intake_discover import merge_intake_sources
+
+    auto = bool(getattr(args, "auto_intake", False))
+    sources = merge_intake_sources(
+        root,
+        list(getattr(args, "intake_in", None) or []),
+        auto_intake=auto,
+    )
+    skip = len(sources) == 0
+    return sources, skip
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -147,6 +172,19 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     if args.fresh or not args.resume:
         live_sa = _resolve_live_subagent(args)
+        intake_sources, skip_intake = _resolve_intake_sources(root, args)
+        if skip_intake and bool(getattr(args, "auto_intake", False)):
+            print(
+                json.dumps(
+                    {
+                        "info": "auto_intake_empty",
+                        "detail": "no --intake-in and inbox/ empty — skip_intake=true",
+                        "inbox": str(root / "inbox"),
+                    },
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
         initial = _default_initial(
             root=root,
             slug=slug,
@@ -158,8 +196,8 @@ def cmd_run(args: argparse.Namespace) -> int:
             live_subagent=live_sa,
             thread_id=thread_id,
             bridge_attachment=args.bridge_attachment,
-            skip_intake=not bool(getattr(args, "intake_in", None)),
-            intake_sources=list(getattr(args, "intake_in", None) or []),
+            skip_intake=skip_intake,
+            intake_sources=intake_sources,
             intake_assets_dir=str(getattr(args, "intake_assets", "") or ""),
             human_confirm_intake=bool(getattr(args, "human_confirm_intake", False)),
             intake_confirmed=bool(getattr(args, "intake_confirmed", False)),
@@ -296,12 +334,12 @@ def main() -> int:
         sp.add_argument(
             "--live-subagent",
             action="store_true",
-            help="force Pi subagent live for research/model/cite/review",
+            help="force live MA ON (also product default when env unset)",
         )
         sp.add_argument(
             "--no-live-subagent",
             action="store_true",
-            help="force deterministic path (no Pi subagent spawn)",
+            help="force no live MA (CI/gates); overrides product default ON",
         )
         sp.add_argument(
             "--bridge-attachment",
@@ -318,6 +356,11 @@ def main() -> int:
             default=[],
             dest="intake_in",
             help="problem surface file (repeatable); enables intake front-door",
+        )
+        sp.add_argument(
+            "--auto-intake",
+            action="store_true",
+            help="if no --intake-in, scan inbox/ for md/txt/pdf/images and enable intake",
         )
         sp.add_argument(
             "--intake-assets",
@@ -374,6 +417,7 @@ def main() -> int:
     p.add_argument("--force", action="store_true")
     p.add_argument("--from-stage", default="")
     p.add_argument("--intake-in", action="append", default=[], dest="intake_in")
+    p.add_argument("--auto-intake", action="store_true")
     p.add_argument("--intake-assets", default="")
     p.add_argument("--human-confirm-intake", action="store_true")
     p.add_argument("--intake-confirmed", action="store_true")
