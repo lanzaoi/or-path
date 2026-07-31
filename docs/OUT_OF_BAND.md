@@ -5,7 +5,7 @@
 | 路径 | 性质 | Git |
 |------|------|-----|
 | `vendor/` | 上游镜像 / 依赖快照 | **忽略**（`.gitignore`） |
-| `openpi/` | OpenPi 桌面壳源码树 | **忽略** |
+| `openpi/` | **已移除**（曾为 Electron 壳；gitignore 保留防误提交） | **忽略** |
 | `pi-main/` | Pi 上游/本地克隆 | **忽略** |
 | `runtime/node_modules/` | Node 依赖 | **忽略** |
 | `outputs/` `notes/` `papers/` `runs/` | 运行制品 | **忽略** |
@@ -18,11 +18,13 @@ specs/          法
 orpath/         控制面 / 节点 / 协议
 tools/          求解与门禁脚本
 scripts/        门禁 CLI
-fixtures/       金标（无 raw 大赛附件）
+fixtures/       金标
 docs/           活文档 + archive/
 .pi/agents/     or-* 角色定义
 ```
 
 ## 启动器
 
-- `orpath.bat` / `openpi.bat` / `pi.bat` — 入口；不代表要把 openpi/pi-main 当产品模块 import。
+- **`orpath.bat menu`** — 主控（首选）  
+- **`pi.bat` / `orpath.bat pi`** — Pi TUI  
+- ~~`openpi.bat`~~ — **已删除**（2026-07-31）  

@@ -59,8 +59,9 @@ nul
 !docs/archive/evidence/t2-live-evidence-board.png
 !docs/archive/evidence/t2-openpi-screenshot.png
 
-# Heavy nested trees — keep package.json lockfiles only via selective add if needed
+# Heavy nested trees
 pi-main/
+# openpi/ removed from disk 2026-07-31; keep ignore to block accidental re-add
 openpi/
 runtime/node_modules/
 **/node_modules/

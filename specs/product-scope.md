@@ -12,7 +12,7 @@
 
 - 作品集主独立 AI 项目（Track B）  
 - 演示与工程可审计的 OR 闭环（最短路 / TSP / VRP 等）  
-- 开发者本机：`Desktop/agent` + OpenPi + Pi + LangGraph  
+- 开发者本机：`Desktop/agent` + Pi + LangGraph（OpenPi 已移除）  
 
 ## In scope（产品目标能力）
 
@@ -23,7 +23,7 @@
 5. **校验：** `validate_solution` 重算可行性与 objective  
 6. **知识竖切：** 种子图 + MinerU Cloud + LightRAG + BM25/FTS + RRF + Cognee Cloud smoke  
 7. **论文环：** draft + R1（含在线轨）+ R2 + 有界 revise  
-8. **UI：** OpenPi 主；Pi TUI 辅；T2 **OpenPi 截图硬 DoD**  
+8. **UI：** `orpath.bat menu` 主；Pi TUI 辅；OpenPi 已移除（截图 DoD 退役）  
 9. **LG↔Pi bridge：** T2 **硬 DoD**（可开关，CI 默认可关，但 closeout 必须证明通）  
 10. **题面 intake（1.1）：** 图/PDF OCR + 自主审读 brief/`intake.json`（无 objective）；可选人确认；与 MinerU 语料路径分离 — 见 `problem-intake.md`
 
@@ -71,7 +71,7 @@
 | 里程碑 | 状态 / 含义 |
 |--------|-------------|
 | **T1** | CLOSED/PASS — 薄全链 + 多 Agent 证明；不重开 DoD |
-| **T2** | CLOSED/PASS — 数字真相加厚 + 知识竖切 + bridge + 云分轨 + OpenPi 截图 |
+| **T2** | CLOSED/PASS — 数字真相加厚 + 知识竖切 + bridge + 云分轨 + bridge 证据 |
 | **T3** | 工程 PASS — LG 产品骨架 — 见 `t3-lg-skeleton.md`（DoD E）；T3-mini CVRPTW 为矩阵叶 |
 | **1.0** | PASS — 论文协议 + 多 Agent harness + ADR-0001…0006；不重开 DoD |
 | **1.1** | **CLOSED/PASS** — 题面 OCR + 自主审读 — `docs/1.1-closeout.md` |

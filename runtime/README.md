@@ -29,4 +29,4 @@ pi.bat
 Note: `pi-main/` is the monorepo source (A1). Full monorepo `npm run build` may need a clean install + Node >= 22.19. This `runtime/` folder is the practical launcher.
 
 
-GUI: use repo-root `openpi.bat` / `openpi.sh` (OpenPi Electron), not pi-web.
+GUI shell removed. Use repo-root `orpath.bat menu` or `pi.bat`, not pi-web.

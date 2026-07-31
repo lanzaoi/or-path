@@ -2,7 +2,7 @@
 
 ## STAR（对外叙事底稿）
 
-**技术栈（现行锁定）：** Pi Agent（`@earendil-works/pi-coding-agent`）· `pi-subagents` · LangGraph · MinerU Cloud · LightRAG + BM25 · Cognee Cloud · OR-Tools · NetworkX · OpenPi · Docker Compose（可选薄 K8s solver worker）· DeepSeek only
+**技术栈（现行锁定）：** Pi Agent（`@earendil-works/pi-coding-agent`）· `pi-subagents` · LangGraph · MinerU Cloud · LightRAG + BM25 · Cognee Cloud · OR-Tools · NetworkX ·  Docker Compose（可选薄 K8s solver worker）· DeepSeek only
 
 【Situation】经典运筹学（OR）计算工具门槛高且交互复杂，而通用大语言模型直接进行路径计算与数学建模时存在严重的数值计算幻觉，难以解决非结构化业务需求到确定性最优解的闭环。
 
@@ -12,7 +12,7 @@
 - 多智能体：Pi harness + 真子 Agent 隔离（Researcher / Modeler）；LangGraph 管阶段流水线与可恢复状态
 - 图检索：MinerU 预处理 → LightRAG + 关键词腿融合；Cognee 作长期记忆；领域种子图（问题类–约束–求解器–案例）
 - 确定性求解：OR-Tools / NetworkX 为数字唯一真相；LLM 禁止心算最优解
-- 工程交付：Compose 一键；可选薄 K8s solver worker；OpenPi 为桌面壳
+- 工程交付：Compose 一键；可选薄 K8s solver worker；桌面壳已移除；主控 orpath.bat menu
 
 【Result】打通「自然语言 → 语义研究 → 数学建模 → 确定性求解 → 验证与解释」闭环；作品集卖点是可验证的多 Agent OR，而非 Agent 平台发行。
 
@@ -120,11 +120,11 @@ LangGraph（老板：阶段 + 重试 + checkpoint）
 | **非 T1** | Hindsight | 与 Cognee 重叠；默认不上 |
 
 T1 计划：`.hermes/plans/2026-07-29_093802-t1-pi-multiagent.md`  
-**壳决策（2026-07-29）：** 主开发 = 本仓 + OpenPi + Pi + LG（原计划）。**不以 Feynman 为主开发**；`vendor/feynman` 仅参考/可后置论文侧车。
+**壳决策（2026-07-29）：** 主开发 = 本仓 + Pi + LG（OpenPi 已删）。**不以 Feynman 为主开发**；`vendor/feynman` 仅参考/可后置论文侧车。
 
 ## 工作区
 
 - 根目录：`C:\Users\Lanzao\Desktop\agent\`  
-- 含：`runtime/`、`openpi/`、`pi-main/`、`.venv-314/`、`pi.bat` / `openpi.bat`、`vendor/`（Feynman 等只读镜像）  
+- 含：`runtime/`、`pi-main/`、`.venv-314/`、`pi.bat`、`vendor/`（Feynman 等只读镜像）  
 - **禁止**在 `inquisitive-master` 写本项目业务代码  
 - 权威技能：`or-path-multi-agent`（含 `references/collaboration-patterns.md`）

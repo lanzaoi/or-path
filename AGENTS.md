@@ -1,6 +1,6 @@
 # OR-Path Project Guide (Pi)
 
-Durable project law for Pi / OpenPi sessions. Product runtime is **this repo + Pi**, not Hermes MEMORY.
+Durable project law for Pi sessions. Product runtime is **this repo + Pi** (`orpath.bat`), not Hermes MEMORY. **OpenPi removed** (2026-07-31).
 
 ## Specs first (SDD)
 
@@ -19,7 +19,7 @@ T2 grill 冻结表：`specs/gates-and-dod.md`。
 - **Product:** OR-Path Multi-Agent / Graph-OR Agent
 - **Loop:** (opt intake OCR/审读) → NL/brief → retrieve/research → model (schema) → **solve** → **validate** → explain → paper → review/revise
 - **Classes:** shortest_path, TSP (n=8), VRP (multi-vehicle, no time windows in T2)
-- **Primary UI:** OpenPi (`openpi.bat`); secondary Pi TUI (`pi.bat`)
+- **Primary UI:** `orpath.bat menu` (host-agnostic); secondary Pi TUI (`pi.bat`). OpenPi deleted.
 
 ## Ground Rules
 
@@ -63,7 +63,7 @@ T2 grill 冻结表：`specs/gates-and-dod.md`。
 | Repair | tune≤3 → model≤2 → HUMAN_REQUIRED (see specs) |
 | Intake (1.1) | `scripts/intake_gate.py` — brief/intake 契约 + 禁键 |
 | T1 | `scripts/t1_gate.py` must stay green |
-| T2 | `t2_gate` + `t2_gate_cloud` + OpenPi screenshot + bridge proof |
+| T2 | `t2_gate` + `t2_gate_cloud` + bridge proof (OpenPi screenshot retired) |
 
 ## Smoke
 

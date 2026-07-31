@@ -44,7 +44,7 @@ LangGraph（阶段老板）
 | 路径 | 用途 |
 |------|------|
 | **CI / deterministic** | LG 节点可写固定制品；`t2_gate` 可复现 |
-| **Live multi-agent** | Pi CLI / OpenPi + 真 subagent transcripts |
+| **Live multi-agent** | Pi CLI + 真 subagent transcripts |
 | **Bridge（T2 硬）** | `ORPATH_LIVE_PI=1` 时 LG 节点经 pi-py-sdk/RPC 拉起 Pi；closeout 必须证明至少一次成功 |
 
 CI 默认可不开 live Pi，但 **T2 closeout 不能没有 bridge 成功证据**（grill Q4-A）。
@@ -64,7 +64,7 @@ CI 默认可不开 live Pi，但 **T2 closeout 不能没有 bridge 成功证据*
 | L3 | Cognee **Cloud** |
 | L4 | 领域种子图 |
 | 题面 OCR（1.1） | pdf 文字层 → PaddleOCR/MCP → manual_stub；见 `problem-intake.md` |
-| UI | OpenPi 主；Pi TUI 辅 |
+| UI | `orpath.bat menu` 主；Pi TUI 辅 |
 | OUT | Graphiti、Teams、Bus 脊柱、Feynman 主壳 |
 
 ## 目录职责（逻辑）

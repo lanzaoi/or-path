@@ -29,7 +29,8 @@ OR-Path launcher (relocatable)
   ORPATH_HOME    = $ORPATH_HOME
   ORPATH_WORKDIR = $ORPATH_WORKDIR
 
-  orpath.sh doctor | isolation | gate | t2 | pi | openpi | env
+  orpath.sh doctor | isolation | gate | t2 | pi | menu | env
+  openpi → REMOVED; use menu / pi
 EOF
     ;;
   env)
@@ -53,8 +54,11 @@ EOF
     exec "$ORPATH_HOME/pi.sh" -a "$@" 2>/dev/null || exec cmd.exe //c "pi.bat -a $*"
     ;;
   openpi)
-    "$PY" "$ORPATH_HOME/scripts/orpath_doctor.py"
-    exec "$ORPATH_HOME/openpi.sh" "$@" 2>/dev/null || exec cmd.exe //c "openpi.bat"
+    echo "[REMOVED] OpenPi deleted. Use: orpath.sh menu | pi | run via orpath.bat" >&2
+    exit 2
+    ;;
+  menu)
+    exec "$PY" "$ORPATH_HOME/scripts/orpath_menu.py"
     ;;
   *)
     echo "unknown command: $CMD" >&2

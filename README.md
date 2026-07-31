@@ -6,7 +6,7 @@
 | | |
 |--|--|
 | 产品名 | OR-Path Multi-Agent / Graph-OR Agent |
-| 主 UI | **OpenPi**（`orpath.bat openpi`）— 读 **`ORPATH.md`** |
+| 主 UI | **`orpath.bat menu`**（OpenPi 已删）— 读 **`ORPATH.md`** |
 | 辅 UI | Pi 终端（`orpath.bat pi` / `pi.bat`） |
 | 硬法 | **`specs/`**（SDD，冲突时以门禁输出 > specs > 本文件） |
 | 默认 | **Live 多 Agent ON**；有题面/`inbox/` 才 intake；门禁用 `--no-live-subagent` |
@@ -20,13 +20,13 @@
 
 | 优先级 | 路径 | 干什么 |
 |--------|------|--------|
-| 1 | **`orpath.bat`** | 一切入口（doctor / gate / run / openpi） |
+| 1 | **`orpath.bat`** | 一切入口（menu / doctor / gate / run / pi） |
 | 2 | **`specs/README.md`** | 规范索引；T3 主法 `specs/t3-lg-skeleton.md`；1.1/1.2 法条 |
 | 3 | **`orpath/`** | LangGraph 产品骨架与 runner（核心代码） |
 | 4 | **`tools/`** | solve_dispatch / validate / R1 / R2 / intake（数字真相+题面） |
-| 5 | **`ORPATH.md`** · **`docs/OPENPI-DEFAULT-MA-INTAKE.md`** · **`docs/1.2-closeout.md`** | **GUI 主控** + 默认 MA/intake + 关单 |
+| 5 | **`ORPATH.md`** · **`docs/1.2-closeout.md`** | **menu 主控** + 默认 MA/intake + 关单 |
 
-历史关单/证据/口播 → **`docs/archive/`**。带外大树 → **`docs/OUT_OF_BAND.md`**（vendor/openpi/pi-main）。
+历史关单/证据/口播 → **`docs/archive/`**。带外大树 → **`docs/OUT_OF_BAND.md`**（vendor/pi-main；openpi 已移除）。
 
 ---
 
@@ -43,7 +43,7 @@
 | **1.2** | **工程 PASS** + residual R1–R4 | `docs/1.2-closeout.md` | 真题 intake→LG→live MA→solve 诚实 BLOCKED（非交卷求解） |
 | 规范 | 活文档 | `specs/`（含 `problem-intake.md` · `1.2-architecture-soak.md`） | 实现前先读 |
 
-**T3 人侧还欠（可选）：** OpenPi 截图 polish、resume 双帧拼图（工程门禁已绿）。  
+**T3 人侧还欠（可选）：** resume 双帧拼图（工程门禁已绿；OpenPi 截图已退役）。  
 **1.2 不宣称：** 服装 C 题 Q1–Q4 交卷数值；零售问题类产品化。
 
 金标数字（**只认求解器+validate**）：最短路 **42** · TSP n=8 **45** · VRP 多车 **58** · VRP 时间窗 **58**。  
@@ -72,7 +72,7 @@ orpath.bat list
 orpath.bat gate          :: T2 本地门禁（重）
 orpath.bat gate-t3       :: T3 骨架+矩阵门禁
 orpath.bat isolation     :: 真多 Agent 隔离硬检
-orpath.bat openpi        :: 先 doctor 再开 GUI（必须打开安装根目录）
+orpath.bat menu          :: 宿主无关主控（OpenPi 已删除）
 orpath.bat t2 --problem-id tsp_n8 --solve-mode ortools
 ```
 
@@ -167,7 +167,7 @@ runs/                  ★ LG checkpointer + 每 thread 的 stage 快照（gitig
 
 ```text
 runtime/               Pi npm 运行时（别 npx pi）
-openpi/                OpenPi Electron 源/依赖（很胖）
+# openpi/              REMOVED 2026-07-31
 pi-main/               Pi 上游 monorepo 源码研究用
 vendor/                Feynman 等只读参考
 .venv-314/             Python 虚拟环境
@@ -181,8 +181,7 @@ node_modules/          （若存在）依赖
 | 文件 | 用途 |
 |------|------|
 | **`orpath.bat` / `orpath.sh`** | ★ 正式产品启动器（优先用这个） |
-| `openpi.bat` / `openpi.sh` | 直接开 OpenPi（建议走 `orpath.bat openpi`，会先 doctor） |
-| `openpi-orpath.bat` | 防踩坑别名 |
+| ~~`openpi.bat`~~ | **已删除** |
 | `pi.bat` / `pi.sh` | Pi TUI |
 | `orpath.env.example` | 环境变量样例（真密钥在本地 `.env`，勿提交） |
 | `AGENTS.md` | 给 Agent 的短项目法（指针） |
@@ -194,7 +193,7 @@ node_modules/          （若存在）依赖
 ## 架构怎么记（防乱）
 
 ```text
-你 / OpenPi / Pi TUI
+你 / `orpath.bat menu` / Pi TUI
         │
         ▼
  LangGraph 产品图（老板：now→next、重试、checkpoint）
@@ -213,7 +212,7 @@ node_modules/          （若存在）依赖
 - **禁止：** 把 Teams、消息总线当主架构  
 - **双路径：**  
   - 门禁/CI = 确定性 LG 节点  
-  - 演示 = OpenPi/Pi + 真 subagent transcript  
+  - 演示 = menu/run-full/Pi + 真 subagent transcript  
 
 阶段图导出：`docs/t3-stage-map.mmd`（可用支持 Mermaid 的编辑器预览）。
 
@@ -264,8 +263,8 @@ set PYTHONNOUSERSITE=1
 2. **outputs 一堆 t3-mat- / t3-lg- 是什么？**  
    门禁和实验跑出来的制品，可清，也可留作证据；**权威金标在 `fixtures/`**。
 
-3. **OpenPi 打不开多智能体？**  
-   必须打开 **安装根**（有 `.pi/agents` 的那份），不要随手开到 `OOP` 等乱目录。用 `orpath.bat openpi`。
+3. **多智能体怎么开？**  
+   用 `orpath.bat menu` → run-full / gui-demo；cwd 必须是安装根。OpenPi 已删除。
 
 4. **数字和 README 对不上？**  
    以 **本次 `solve_*` + `validate` 输出** 为准，不要抄旧笔记。
@@ -280,9 +279,9 @@ set PYTHONNOUSERSITE=1
 - Harness：Pi（`runtime/`）+ **pi-subagents**  
 - 流程：LangGraph（Python）+ Sqlite checkpointer  
 - 求解：OR-Tools / NetworkX / mock + validate  
-- 模型：Pi/OpenPi 侧 **DeepSeek only**  
+- 模型：Pi 侧 **DeepSeek only**  
 - 知识：MinerU Cloud · LightRAG+BM25/FTS · Cognee Cloud · 种子图  
-- UI：OpenPi 主 · Pi TUI 辅  
+- UI：`orpath.bat menu` 主 · Pi TUI 辅  
 - OUT：Graphiti 主路径、Agent Teams/总线脊柱、Feynman 主开发壳  
 
 ---
@@ -294,7 +293,7 @@ set PYTHONNOUSERSITE=1
 | 入口永远 `orpath.bat` | 不要记十个 py 路径 |
 | 改行为先改 `specs/` + `docs/adr/` | 不要只改聊天结论 |
 | 活文档只加 `docs/` 顶层；历史进 `docs/archive/` | 不要在顶层堆 closeout |
-| 证据丢 `outputs/`；长期证据归档 `docs/archive/evidence/` | 不要往 `runtime/` `openpi/` 塞业务 |
+| 证据丢 `outputs/`；长期证据归档 `docs/archive/evidence/` | 不要往 `runtime/` 塞业务 |
 | 金标只动 `fixtures/` | 不要手改 solution 当真相 |
 
 带外树说明：`docs/OUT_OF_BAND.md`（ADR-0006）。

@@ -1,15 +1,15 @@
-# OpenPi / GUI boot — multi-agent + OCR（宿主无关）
+# Host-agnostic boot — MA + OCR（OpenPi removed）
 
-**Status:** law for host-agnostic control plane (D5: **no openpi source**).  
-**Plan:** `.hermes/plans/2026-07-31_openpi-boot-ma-ocr.md`
+**Status:** OpenPi **deleted** 2026-07-31. Control plane = `orpath.bat menu` only.  
+**Plan (historical):** `.hermes/plans/2026-07-31_openpi-boot-ma-ocr.md`
 
 ## Defaults
 
 | Item | Default |
 |------|---------|
 | Live MA | ON (`ORPATH_LIVE_SUBAGENT=1`) |
-| Control plane | `orpath.bat menu` (not OpenPi panel) |
-| OCR | `tools/intake_ocr.py`: ppocr/paddle python → paddle api → **rapidocr** fallback |
+| Control plane | `orpath.bat menu` |
+| OCR | `tools/intake_ocr.py`: ppocr → api → **rapidocr** |
 | Pi law | `.pi/APPEND_SYSTEM.md` + `.pi/settings.json` |
 
 ## Gates

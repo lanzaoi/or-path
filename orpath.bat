@@ -2,6 +2,7 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM OR-Path product launcher (relocatable).
+REM OpenPi desktop shell REMOVED 2026-07-31 — use menu / pi.
 
 if not defined ORPATH_HOME (
   set "ORPATH_HOME=%~dp0"
@@ -31,7 +32,6 @@ set "PYTHONNOUSERSITE=1"
 set "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1"
 set "PYTHONUNBUFFERED=1"
 
-REM Product default: live multi-agent ON (CI/gates set 0 explicitly).
 if not defined ORPATH_LIVE_SUBAGENT set "ORPATH_LIVE_SUBAGENT=1"
 
 set "CMD=%~1"
@@ -44,7 +44,7 @@ if /i "%CMD%"=="gate" goto :gate
 if /i "%CMD%"=="gate-t3" goto :gate_t3
 if /i "%CMD%"=="isolation" goto :isolation
 if /i "%CMD%"=="pi" goto :pi
-if /i "%CMD%"=="openpi" goto :openpi
+if /i "%CMD%"=="openpi" goto :openpi_removed
 if /i "%CMD%"=="t2" goto :t2
 if /i "%CMD%"=="run" goto :run
 if /i "%CMD%"=="run-full" goto :run_full
@@ -79,10 +79,10 @@ echo  ORPATH_WORKDIR = !ORPATH_WORKDIR!
 echo  LIVE_SUBAGENT  = !ORPATH_LIVE_SUBAGENT!  (default 1; set 0 or --no-live-subagent for CI)
 echo.
 echo  Usage:
-echo    orpath.bat menu                ^(host-agnostic control plane — preferred^)
+echo    orpath.bat menu                ^(preferred control plane^)
 echo    orpath.bat doctor
-echo    orpath.bat openpi              ^(optional heavy GUI; not required^)
-echo    orpath.bat run-full [args...]  ^(auto-intake inbox/ + live MA default^)
+echo    orpath.bat pi                  ^(Pi TUI^)
+echo    orpath.bat run-full [args...]  ^(auto-intake + live MA default^)
 echo    orpath.bat gui-demo
 echo    orpath.bat run [args...]
 echo    orpath.bat intake --slug SLUG --in FILE
@@ -91,9 +91,19 @@ echo    orpath.bat gate / gate-t3 / gate-intake / subagent-gate
 echo    orpath.bat status --thread-id ID
 echo    orpath.bat env
 echo.
-echo  See ORPATH.md
+echo  OpenPi: REMOVED 2026-07-31. See ORPATH.md
 echo.
 exit /b 0
+
+:openpi_removed
+echo.
+echo  [REMOVED] OpenPi desktop shell deleted from this install (2026-07-31).
+echo  Product control plane:  orpath.bat menu
+echo  Lightweight chat:       orpath.bat pi   /  pi.bat
+echo  Full graph:             orpath.bat run-full  /  gui-demo
+echo  See ORPATH.md
+echo.
+exit /b 2
 
 :menu
 "%PY%" "!ORPATH_HOME!\scripts\orpath_menu.py"
@@ -217,25 +227,4 @@ if not exist "!ORPATH_HOME!\runtime\node_modules\@earendil-works\pi-coding-agent
 )
 shift
 call "!ORPATH_HOME!\pi.bat" -a %*
-exit /b %ERRORLEVEL%
-
-:openpi
-echo.
-echo  ========================================
-echo   OR-Path + OpenPi (optional heavy GUI)
-echo   ORPATH_HOME = !ORPATH_HOME!
-echo   LIVE MA     = !ORPATH_LIVE_SUBAGENT!
-echo  ----------------------------------------
-echo   Preferred control plane: orpath.bat menu
-echo   (D5: no OpenPi embedded panel)
-echo   Read: ORPATH.md
-echo  ========================================
-echo.
-echo  [OR-Path] running doctor...
-"%PY%" "!ORPATH_HOME!\scripts\orpath_doctor.py"
-if errorlevel 1 (
-  echo [ERROR] doctor failed - refusing OpenPi start.
-  exit /b 1
-)
-call "!ORPATH_HOME!\openpi.bat" %*
 exit /b %ERRORLEVEL%

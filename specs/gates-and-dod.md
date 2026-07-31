@@ -163,13 +163,13 @@ set T2_REQUIRE_CLOUD=1
 - 确定性门禁保持 `ORPATH_LIVE_SUBAGENT=0`；1.2 live soak **不**塞进 t1/t3 默认绿条件  
 - 回归：既有 `t1_gate` / `t3_lg_gate` / `intake_gate` 不得无故变红
 
-## 产品默认（OpenPi / GUI，2026-07-31）
+## 产品默认（menu 主控，2026-07-31；OpenPi 已删）
 
 | 项 | 默认 | 门禁/CI |
 |----|------|---------|
 | Live 多 Agent | **ON**（`ORPATH_LIVE_SUBAGENT=1` 未设时） | `orpath.bat gate*` 强制 **0**；或 `--no-live-subagent` |
 | Intake | 有 `--intake-in` 或 `run --auto-intake`+`inbox/` 时启用 | 无题面 → skip_intake（legacy fixture） |
-| GUI 主控 | `ORPATH.md` · `orpath.bat openpi` / `run-full` / `gui-demo` | 人测封条见 `docs/OPENPI-DEFAULT-MA-INTAKE.md` |
+| 主控 | `ORPATH.md` · `orpath.bat menu` / `run-full` / `gui-demo` | OpenPi 已移除 |
 
-裸 OpenPi 聊天 ≠ 多 Agent；须跑产品图后检查 `outputs/.agents/*/…` 的 `"name":"subagent"`。
+裸 Pi 聊天 ≠ 多 Agent；须跑产品图后检查 `outputs/.agents/*/…` 的 `"name":"subagent"`。
 
