@@ -37,21 +37,32 @@ def _open_dir(rel: str) -> None:
 
 
 def main() -> int:
+    # Windows console: force UTF-8 when possible so Chinese/menu text shows.
+    if os.name == "nt":
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        except Exception:
+            pass
     print()
-    print("=== OR-Path menu (GUI-agnostic) ===")
+    print("=== OR-Path menu ===")
     print(f"ROOT = {ROOT}")
     print(f"LIVE = {os.environ.get('ORPATH_LIVE_SUBAGENT', '1 (default)')}")
     print()
-    print("  1) Intake only — file path")
-    print("  2) Intake auto — inbox/")
-    print("  3) Run full   — auto-intake + product graph (live MA default ON)")
-    print("  4) GUI demo   — fixture intake + mock solve")
-    print("  5) Run cheap  — --no-live-subagent fixture SP")
+    print("  1) Intake only - file path")
+    print("  2) Intake auto - inbox/")
+    print("  3) Run full   - auto-intake + product graph (live MA default ON)")
+    print("  4) GUI demo   - fixture intake + mock solve")
+    print("  5) Run cheap  - --no-live-subagent fixture SP")
     print("  6) Open evidence folders (agents + runs)")
     print("  7) Doctor")
     print("  0) Quit")
     print()
-    choice = (input("Select: ").strip() or "0")
+    try:
+        choice = (input("Select: ").strip() or "0")
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return 0
 
     if choice == "0":
         return 0

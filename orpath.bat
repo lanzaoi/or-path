@@ -2,7 +2,7 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 REM OR-Path product launcher (relocatable).
-REM OpenPi desktop shell REMOVED 2026-07-31 — use menu / pi.
+REM OpenPi desktop shell REMOVED 2026-07-31 - use menu / pi.
 
 if not defined ORPATH_HOME (
   set "ORPATH_HOME=%~dp0"
@@ -35,7 +35,8 @@ set "PYTHONUNBUFFERED=1"
 if not defined ORPATH_LIVE_SUBAGENT set "ORPATH_LIVE_SUBAGENT=1"
 
 set "CMD=%~1"
-if "%CMD%"=="" set "CMD=help"
+REM Double-click / no args -> interactive menu (help used to flash-close the window).
+if "%CMD%"=="" set "CMD=menu"
 
 if /i "%CMD%"=="help" goto :help
 if /i "%CMD%"=="menu" goto :menu
@@ -107,7 +108,14 @@ exit /b 2
 
 :menu
 "%PY%" "!ORPATH_HOME!\scripts\orpath_menu.py"
-exit /b %ERRORLEVEL%
+set "EC=!ERRORLEVEL!"
+if not "!EC!"=="0" (
+  echo.
+  echo [ERROR] menu exited with code !EC!
+  echo PY=!PY!
+  pause
+)
+exit /b !EC!
 
 :envshow
 echo ORPATH_HOME=!ORPATH_HOME!

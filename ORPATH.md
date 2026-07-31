@@ -16,11 +16,20 @@
 
 ## 推荐操作（无 Hermes、无 OpenPi）
 
+**双击打开（推荐）：** 资源管理器进入本目录，双击 **`START-ORPATH.bat`**  
+（会开菜单并在结束时 `pause`，窗口不会一闪就关。）
+
+或命令行：
+
 ```bat
 cd /d C:\Users\Lanzao\Desktop\agent
-orpath.bat doctor
+orpath.bat
 orpath.bat menu
+orpath.bat doctor
 ```
+
+> 注意：直接双击 `orpath.bat` 现在默认也是 **menu**。  
+> 若窗口闪退，用 `START-ORPATH.bat`，或在 **cmd** 里运行看报错。
 
 菜单：Intake / inbox / run-full / gui-demo / 廉价演示 / 证据目录 / doctor。
 
