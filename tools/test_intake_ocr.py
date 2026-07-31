@@ -83,9 +83,30 @@ def test_mixed_txt_pdf(tmp_path: Path):
     assert len(res.sources) == 2
 
 
-def test_image_without_paddle_errors(tmp_path: Path):
+def test_image_ocr_scan_sample(tmp_path: Path):
+    """Real image OCR via ppocr stack or rapidocr fallback (not placeholder)."""
+    src = FIX / "ocr" / "scan_sample.png"
+    assert src.is_file(), "fixtures/intake/ocr/scan_sample.png required"
+    notes = tmp_path / "notes"
+    res = run_ocr(
+        slug="s2_scan",
+        inputs=[src],
+        root=ROOT,
+        notes_dir=notes,
+        force_backend="paddleocr",
+    )
+    assert res.status == "ok", res.warnings
+    assert res.backend in {"paddleocr", "rapidocr", "mixed"}
+    assert "placeholder" not in res.backend.lower()
+    text = (notes / "s2_scan-ocr.raw.md").read_text(encoding="utf-8")
+    assert "Question" in text or "shortest" in text.lower() or "Q1" in text
+    meta = json.loads((notes / "s2_scan-ocr.meta.json").read_text(encoding="utf-8"))
+    assert validate_ocr_meta(meta) == []
+    assert meta["sources"][0]["char_count"] > 0
+
+
+def test_image_garbage_errors(tmp_path: Path):
     img = tmp_path / "scan.png"
-    # minimal invalid/empty png-like bytes is fine — backend chosen before decode
     img.write_bytes(b"\x89PNG\r\n\x1a\nnot-a-real-png")
     res = run_ocr(
         slug="s2_img",
@@ -94,7 +115,7 @@ def test_image_without_paddle_errors(tmp_path: Path):
         notes_dir=tmp_path / "notes",
     )
     assert res.status == "error"
-    assert any("paddle" in w.lower() or "not configured" in w.lower() for w in res.warnings)
+    assert res.warnings
 
 
 def test_cli_manual_stub(tmp_path: Path):

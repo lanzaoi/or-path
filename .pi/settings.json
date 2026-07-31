@@ -10,5 +10,11 @@
     "enabled": true,
     "localPath": ".pi/memory",
     "notes": "prefs/lessons only — never authoritative objective/tour/routes (specs/memory.md)"
+  },
+  "orpath": {
+    "liveSubagentDefault": true,
+    "appendSystem": ".pi/APPEND_SYSTEM.md",
+    "controlPlane": "orpath.bat menu | run-full | intake",
+    "ocr": "tools/intake_ocr.py (paddle/ppocr → api → rapidocr)"
   }
 }
