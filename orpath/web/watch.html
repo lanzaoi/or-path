@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OR-Path Live Watch</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --border: #2d3a4d;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --ok: #3dd68c;
+      --fail: #f07178;
+      --run: #ffcc66;
+      --blocked: #c792ea;
+      --idle: #6c7a89;
+      --accent: #82aaff;
+      --cosplay: #ff5370;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .ctrl { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .ctrl label { color: var(--muted); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
+    .ctrl input[type="text"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 4px 8px;
+      border-radius: 4px;
+      width: 130px;
+    }
+    .ctrl button, .chip {
+      background: #243044;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+    }
+    .ctrl button:hover, .chip:hover { border-color: var(--accent); color: var(--accent); }
+    .chip.on { border-color: var(--accent); color: var(--accent); background: #1a2a40; }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+    .badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--bg);
+    }
+    .badge.on { color: var(--ok); border-color: #2a5a40; }
+    .badge.off { color: var(--fail); }
+    .badge.st-ok { color: var(--ok); }
+    .badge.st-fail { color: var(--fail); }
+    .badge.st-blocked { color: var(--blocked); }
+    .badge.st-running { color: var(--run); box-shadow: 0 0 0 1px rgba(255,204,102,.25); }
+    .badge.st-idle, .badge.st-no_product_run { color: var(--idle); }
+    #errBanner {
+      display: none;
+      width: 100%;
+      background: #3a1820;
+      border: 1px solid var(--fail);
+      color: #ffb4b8;
+      padding: 8px 12px;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    #errBanner.show { display: block; }
+    #errBanner .err-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    #errBanner .err-bar strong { color: #ffd0d3; }
+    #errBanner .err-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+    #errBanner button {
+      background: #243044;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 3px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+    }
+    #errBanner button:hover { border-color: var(--accent); color: var(--accent); }
+    #errBanner button.primary { border-color: var(--fail); color: #ffb4b8; }
+    #errBanner .x { cursor: pointer; color: var(--muted); padding: 0 4px; }
+    #errBanner pre {
+      margin: 4px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 11px;
+      color: #ffd0d3;
+      max-height: 7em;
+      overflow: auto;
+    }
+    #errBanner .err-meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    #nextActions {
+      display: none;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,180,184,.25);
+    }
+    #nextActions.show { display: block; }
+    #nextActions .na-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    #nextActions .na-item {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      padding: 6px 8px;
+      background: #141c28;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+    #nextActions .na-item strong { color: var(--text); font-size: 12px; }
+    #nextActions .na-reason { color: var(--muted); font-size: 11px; width: 100%; }
+    #nextActions .na-cmd {
+      width: 100%;
+      margin: 0;
+      padding: 6px 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 11px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    #nextActions .na-copy {
+      background: #243044;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 3px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+    }
+    #nextActions .na-copy:hover { border-color: var(--accent); color: var(--accent); }
+    #errCopyToast {
+      display: none;
+      color: var(--ok);
+      font-size: 11px;
+    }
+    #errCopyToast.show { display: inline; }
+    .stage.has-err { border-color: var(--fail) !important; }
+    .stage.active {
+      outline: 2px solid var(--accent);
+      background: #1a2a40;
+    }
+    .stage.active.has-err { outline-color: var(--fail); }
+    .swim .cell.fail, .swim .cell.blocked { box-shadow: inset 0 0 0 1px var(--fail); }
+    .swim .cell.active {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    #stageDetail {
+      display: none;
+      margin: 8px 0 0;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #141c28;
+      font-size: 12px;
+    }
+    #stageDetail.show { display: block; }
+    #stageDetail .k { color: var(--muted); }
+    #stageDetail pre {
+      margin: 6px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 11px;
+      color: #ffb4b8;
+    }
+    .rail {
+      flex-shrink: 0;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 12px 10px;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    .rail .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+    .swim {
+      display: flex;
+      gap: 4px;
+      min-width: min-content;
+      align-items: stretch;
+    }
+    .swim .cell {
+      flex: 0 0 auto;
+      min-width: 52px;
+      max-width: 88px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      cursor: pointer;
+      text-align: center;
+      color: var(--text);
+      font: inherit;
+    }
+    .swim .cell .nm {
+      display: block;
+      font-size: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .swim .cell .sq { font-size: 9px; color: var(--muted); }
+    .swim .cell.ok { border-color: #2a5a40; }
+    .swim .cell.fail { border-color: var(--fail); }
+    .swim .cell.blocked { border-color: var(--blocked); }
+    .swim .cell.running {
+      border-color: var(--run);
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .swim .cell.active { outline: 1px solid var(--accent); }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,204,102,.35); }
+      50% { box-shadow: 0 0 0 4px rgba(255,204,102,0); }
+    }
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(280px, 2fr) minmax(180px, 1fr);
+      gap: 1px;
+      background: var(--border);
+      min-height: 0;
+    }
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(140px, 28vh) minmax(220px, 1fr) minmax(140px, 28vh);
+      }
+      .ctrl input[type="text"] { width: 100px; }
+    }
+    section {
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      min-width: 0;
+    }
+    section h2 {
+      margin: 0;
+      padding: 8px 12px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+      flex-shrink: 0;
+    }
+    .scroll { flex: 1; overflow: auto; padding: 8px; -webkit-overflow-scrolling: touch; }
+    .stage {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      color: var(--text);
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .stage:hover { background: #162030; }
+    .stage.active { border-color: var(--accent); background: #18263a; }
+    .stage.running {
+      border-color: rgba(255,204,102,.5);
+      background: #2a2418;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    .stage .n { color: var(--muted); margin-right: 6px; font-variant-numeric: tabular-nums; }
+    .dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+      background: var(--idle);
+    }
+    .dot.ok { background: var(--ok); }
+    .dot.fail { background: var(--fail); }
+    .dot.blocked { background: var(--blocked); }
+    .dot.running { background: var(--run); }
+    .tree-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 8px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      font: inherit;
+    }
+    .tree-item.active { border-color: var(--accent); }
+    .tree-item.cosplay { border-color: var(--cosplay); }
+    .tree-item .meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .tag {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    .tag.hit { color: var(--ok); border-color: #2a5a40; }
+    .tag.miss { color: var(--fail); }
+    .ev {
+      border-left: 2px solid var(--border);
+      padding: 4px 8px;
+      margin: 0 0 6px 4px;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .ev.tool { border-color: var(--accent); }
+    .ev.tool_result { border-color: #89ddff; }
+    .ev.assistant { border-color: var(--ok); }
+    .ev.thinking { border-color: var(--blocked); opacity: 0.95; }
+    .ev.meta { color: var(--muted); }
+    .ev .k {
+      display: inline-block;
+      min-width: 72px;
+      color: var(--muted);
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+    details.thinking-box {
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      background: #141c28;
+    }
+    details.thinking-box summary {
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .art a, .art span.path {
+      display: block;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 4px 0;
+      word-break: break-all;
+      font-family: ui-monospace, Consolas, monospace;
+      font-size: 12px;
+    }
+    .art .k { color: var(--muted); font-size: 11px; }
+    .empty { color: var(--muted); padding: 12px; }
+    footer {
+      padding: 4px 12px;
+      font-size: 11px;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      background: var(--panel);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    #fetchErr { color: var(--fail); }
+    .toolbar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>OR-Path Live Watch <span class="badge">P5</span></h1>
+    <div class="ctrl">
+      <label>slug <input type="text" id="slug" value="test" /></label>
+      <label>thread <input type="text" id="thread" value="test" placeholder="=slug" /></label>
+      <button type="button" id="btnApply">Apply</button>
+      <button type="button" id="btnRefresh">Refresh</button>
+      <button type="button" id="btnFollow" class="chip on" title="Auto-scroll event tail">Follow tail</button>
+      <button type="button" id="btnPause" class="chip" title="Pause dirty poll">Pause</button>
+    </div>
+    <div class="badges" id="badges"></div>
+  </header>
+  <div id="errBanner" data-m1-error-panel="1">
+    <div class="err-bar">
+      <strong id="errTitle">Error</strong>
+      <span id="errCopyToast">copied</span>
+      <div class="err-actions">
+        <button type="button" class="primary" id="errCopy" title="Copy last_error">Copy error</button>
+        <button type="button" id="errJump" title="Highlight failing stage">Jump stage</button>
+        <span class="x" id="errDismiss" title="Dismiss">✕</span>
+      </div>
+    </div>
+    <div class="err-meta" id="errMeta"></div>
+    <pre id="errText"></pre>
+    <div id="nextActions" data-m1-next-actions="1">
+      <div class="na-label">Next actions (copy &amp; run in terminal — no auto-resume)</div>
+      <div id="nextActionsList"></div>
+    </div>
+  </div>
+  <div class="rail" id="rail">
+    <div class="label">L0 timeline</div>
+    <div class="swim" id="swim"></div>
+  </div>
+  <main>
+    <section>
+      <h2>L0 Stages</h2>
+      <div class="scroll" id="stages"></div>
+      <div id="stageDetail" data-m1-stage-detail="1"></div>
+    </section>
+    <section>
+      <h2>L1 Dispatch · L2/L3 Events</h2>
+      <div class="scroll" id="mid">
+        <div id="tree"></div>
+        <div id="thinking"></div>
+        <div id="events"></div>
+      </div>
+    </section>
+    <section>
+      <h2>L4 · Tier-2/3</h2>
+      <div class="scroll art" id="artifacts"></div>
+    </section>
+  </main>
+  <footer>
+    <span id="pollInfo">poll —</span>
+    <span id="fetchErr"></span>
+    <span id="genInfo"></span>
+  </footer>
+  <script>
+    const POLL_MS = 1000;
+    const EVENT_WINDOW = 80; // P5: only paint last N into DOM
+    let selectedStageSeq = null;
+    let selectedDispatch = null;
+    let lastSnap = null;
+    let lastFp = null;
+    let lastEventsCount = null;
+    let timer = null;
+    let pollMode = "dirty";
+    let lastEventsAdded = null;
+    let followTail = true;
+    let paused = false;
+    let errDismissed = "";
+    let eventLimit = EVENT_WINDOW;
+    let autoJumpedError = false;
+    let copyToastTimer = null;
+
+    const $ = (id) => document.getElementById(id);
+
+    function qs() {
+      const p = new URLSearchParams(location.search);
+      return {
+        slug: p.get("slug") || "test",
+        thread: p.get("thread") || p.get("thread_id") || "",
+      };
+    }
+
+    function setQS(slug, thread) {
+      const p = new URLSearchParams();
+      p.set("slug", slug);
+      if (thread) p.set("thread", thread);
+      history.replaceState(null, "", "?" + p.toString());
+    }
+
+    function statusClass(st) {
+      return "badge st-" + String(st || "idle").replace(/\s+/g, "_");
+    }
+
+    function esc(x) {
+      return String(x == null ? "" : x)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function errorPayload(s) {
+      const e = (s && s.error) || {};
+      const cur = (s && s.current) || {};
+      const last = (e.last_error || cur.last_error || "").trim();
+      const has = e.has_error != null
+        ? !!e.has_error
+        : !!(last || cur.human_required || ["fail", "blocked"].includes(s && s.status));
+      return {
+        has_error: has,
+        last_error: last,
+        stage_seq: e.stage_seq != null ? e.stage_seq : cur.error_stage_seq,
+        node: e.node || cur.node,
+        stage: e.stage || cur.stage,
+        human_required: !!(e.human_required || cur.human_required),
+        status: e.status || (s && s.status) || "",
+        copy_text: e.copy_text || last,
+      };
+    }
+
+    function showErrorBanner(s) {
+      const e = errorPayload(s);
+      const t = (e.last_error || "").trim();
+      if (!e.has_error || !t || t === errDismissed) {
+        if (!e.has_error || !t) $("errBanner").classList.remove("show");
+        renderNextActions(s);
+        return;
+      }
+      $("errTitle").textContent = e.human_required ? "HUMAN / blocked" : "Error";
+      $("errText").textContent = t;
+      const meta = [
+        e.status ? `status=${e.status}` : "",
+        e.node ? `node=${e.node}` : "",
+        e.stage ? `stage=${e.stage}` : "",
+        e.stage_seq != null ? `seq=${e.stage_seq}` : "",
+      ].filter(Boolean).join(" · ");
+      $("errMeta").textContent = meta;
+      $("errBanner").classList.add("show");
+      // auto-jump once per error text
+      if (!autoJumpedError && e.stage_seq != null) {
+        autoJumpedError = true;
+        selectedStageSeq = Number(e.stage_seq);
+      }
+      renderNextActions(s);
+    }
+
+    function renderNextActions(s) {
+      const box = $("nextActions");
+      const list = $("nextActionsList");
+      if (!box || !list) return;
+      const acts = (s && (s.next_actions || (s.error && s.error.next_actions))) || [];
+      if (!acts.length) {
+        box.classList.remove("show");
+        list.innerHTML = "";
+        return;
+      }
+      // show with banner when error, or alone under banner area if human
+      box.classList.add("show");
+      if (!$("errBanner").classList.contains("show")) {
+        $("errBanner").classList.add("show");
+        $("errTitle").textContent = "Next steps";
+        $("errText").textContent = "";
+        $("errMeta").textContent = "status=" + esc((s && s.status) || "");
+      }
+      list.innerHTML = acts.map((a, i) => {
+        const title = esc(a.title || ("Action " + (i + 1)));
+        const reason = esc(a.reason || "");
+        const cmd = esc(a.command || "");
+        return `<div class="na-item" data-na-idx="${i}">
+          <strong>${title}</strong>
+          <button type="button" class="na-copy" data-na-copy="${i}">Copy cmd</button>
+          <div class="na-reason">${reason}</div>
+          <pre class="na-cmd" id="naCmd${i}">${cmd}</pre>
+        </div>`;
+      }).join("");
+      list.querySelectorAll("[data-na-copy]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const i = btn.getAttribute("data-na-copy");
+          const pre = document.getElementById("naCmd" + i);
+          const text = pre ? pre.textContent : "";
+          if (!text) return;
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(text);
+            } else {
+              const ta = document.createElement("textarea");
+              ta.value = text;
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand("copy");
+              ta.remove();
+            }
+            btn.textContent = "Copied";
+            setTimeout(() => { btn.textContent = "Copy cmd"; }, 1000);
+          } catch (err) {
+            $("fetchErr").textContent = "copy cmd failed: " + err.message;
+          }
+        });
+      });
+    }
+
+    async function copyErrorText() {
+      const s = lastSnap;
+      const e = errorPayload(s || {});
+      const text = (e.copy_text || e.last_error || "").trim();
+      if (!text) return;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const ta = document.createElement("textarea");
+          ta.value = text;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand("copy");
+          ta.remove();
+        }
+        $("errCopyToast").classList.add("show");
+        if (copyToastTimer) clearTimeout(copyToastTimer);
+        copyToastTimer = setTimeout(() => $("errCopyToast").classList.remove("show"), 1200);
+      } catch (err) {
+        $("fetchErr").textContent = "copy failed: " + err.message;
+      }
+    }
+
+    function jumpToErrorStage() {
+      const e = errorPayload(lastSnap || {});
+      if (e.stage_seq == null || !lastSnap) return;
+      selectedStageSeq = Number(e.stage_seq);
+      followTail = false;
+      $("btnFollow").classList.remove("on");
+      renderSwim(lastSnap);
+      renderStages(lastSnap);
+      const el = document.querySelector(`.stage[data-seq="${selectedStageSeq}"]`);
+      if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+
+    function renderBadges(s) {
+      const live = s.live_subagent;
+      const poll = s.poll || {};
+      const t2 = s.tier2 || {};
+      const t3 = s.tier3 || {};
+      const html = [
+        `<span class="badge">slug ${esc(s.slug)}</span>`,
+        `<span class="badge">thread ${esc(s.thread_id)}</span>`,
+        `<span class="badge ${live ? "on" : "off"}">LIVE ${live ? "on" : "off"}</span>`,
+        `<span class="${statusClass(s.status)}">${esc(s.status)}</span>`,
+        poll.sources_fresh ? `<span class="badge st-running">fresh</span>` : "",
+        s.current && s.current.human_required
+          ? `<span class="badge st-blocked">HUMAN</span>` : "",
+        s.thinking
+          ? `<span class="badge">${esc(s.thinking.status)}</span>` : "",
+        poll.events_truncated ? `<span class="badge st-fail">trunc</span>` : "",
+        t2.pi_session_env ? `<span class="badge on">session</span>` : `<span class="badge off">no-session</span>`,
+        t3.enabled ? `<span class="badge on">langfuse</span>` : "",
+        paused ? `<span class="badge st-blocked">paused</span>` : "",
+      ].filter(Boolean).join("");
+      $("badges").innerHTML = html;
+      showErrorBanner(s);
+    }
+
+    function renderSwim(s) {
+      const box = $("swim");
+      const stages = s.stages || [];
+      if (!stages.length) {
+        box.innerHTML = `<span class="empty" style="padding:0">no stages</span>`;
+        return;
+      }
+      let view = stages;
+      if (stages.length > 24) view = stages.slice(-24);
+      box.innerHTML = view.map((st) => {
+        const stt = st.state || "idle";
+        const active = selectedStageSeq === st.seq ? " active" : "";
+        const errish = (st.last_error || st.state === "fail" || st.human_required) ? " fail" : "";
+        return `<button type="button" class="cell ${esc(stt)}${active}${errish}" data-seq="${st.seq}" title="${esc(st.node)} ${esc(st.stage || "")} ${esc(st.last_error || "")}">
+          <span class="sq">${String(st.seq).padStart(3,"0")}</span>
+          <span class="nm">${esc(st.node)}</span>
+        </button>`;
+      }).join("");
+      box.querySelectorAll(".cell").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedStageSeq = Number(btn.dataset.seq);
+          followTail = false;
+          $("btnFollow").classList.remove("on");
+          renderSwim(lastSnap);
+          renderStages(lastSnap);
+        });
+      });
+      if (followTail && ((s.poll && s.poll.sources_fresh) || s.status === "running")) {
+        const rail = $("rail");
+        rail.scrollLeft = rail.scrollWidth;
+      }
+    }
+
+    function renderStageDetail(s) {
+      const box = $("stageDetail");
+      if (!box) return;
+      const stages = s.stages || [];
+      const st = stages.find((x) => x.seq === selectedStageSeq);
+      if (!st) {
+        box.classList.remove("show");
+        box.innerHTML = "";
+        return;
+      }
+      const err = (st.last_error || "").trim();
+      box.classList.add("show");
+      box.innerHTML = `
+        <div><span class="k">selected</span> #${esc(st.seq)} <strong>${esc(st.node)}</strong> · ${esc(st.stage || "")}
+          · state=${esc(st.state || "")}${st.human_required ? " · HUMAN" : ""}</div>
+        ${err ? `<div class="k" style="margin-top:4px">stage last_error</div><pre id="stageErrText">${esc(err)}</pre>
+          <button type="button" id="stageErrCopy" style="margin-top:6px">Copy stage error</button>` : `<div class="k" style="margin-top:4px">no last_error on this stage</div>`}
+      `;
+      const btn = document.getElementById("stageErrCopy");
+      if (btn) {
+        btn.addEventListener("click", async () => {
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(err);
+            }
+            btn.textContent = "Copied";
+            setTimeout(() => { btn.textContent = "Copy stage error"; }, 1000);
+          } catch (_) { /* ignore */ }
+        });
+      }
+    }
+
+    function renderStages(s) {
+      const box = $("stages");
+      const stages = s.stages || [];
+      if (!stages.length) {
+        box.innerHTML = `<div class="empty">无 stages — ${esc((s.honesty && s.honesty.messages || []).join("; ") || "no_product_run")}</div>`;
+        renderStageDetail(s);
+        return;
+      }
+      box.innerHTML = stages.map((st) => {
+        const active = selectedStageSeq === st.seq ? " active" : "";
+        const run = st.state === "running" ? " running" : "";
+        const hasErr = (st.last_error || st.state === "fail" || st.human_required) ? " has-err" : "";
+        const errHint = (st.last_error || "").trim()
+          ? `<div style="color:var(--fail);font-size:11px;margin-top:2px">${esc(String(st.last_error).slice(0, 120))}</div>`
+          : "";
+        return `<button type="button" class="stage${active}${run}${hasErr}" data-seq="${st.seq}">
+          <span class="dot ${esc(st.state)}"></span>
+          <span class="n">${String(st.seq).padStart(4,"0")}</span>
+          <strong>${esc(st.node)}</strong>
+          <span style="color:var(--muted)"> · ${esc(st.stage || "")}</span>
+          ${errHint}
+        </button>`;
+      }).join("");
+      box.querySelectorAll(".stage").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedStageSeq = Number(btn.dataset.seq);
+          followTail = false;
+          $("btnFollow").classList.remove("on");
+          renderStages(lastSnap);
+          renderSwim(lastSnap);
+        });
+      });
+      if (followTail && ((s.poll && s.poll.sources_fresh) || s.status === "running")) {
+        const last = stages[stages.length - 1];
+        if (last) {
+          selectedStageSeq = last.seq;
+          const el = box.querySelector(`.stage[data-seq="${last.seq}"]`);
+          if (el) el.scrollIntoView({ block: "nearest" });
+        }
+      } else if (selectedStageSeq != null) {
+        const el = box.querySelector(`.stage[data-seq="${selectedStageSeq}"]`);
+        if (el) el.scrollIntoView({ block: "nearest" });
+      }
+      renderStageDetail(s);
+    }
+
+    function renderTree(s) {
+      const box = $("tree");
+      const ds = s.dispatches || [];
+      if (!ds.length) {
+        box.innerHTML = `<div class="empty">无派工（LIVE off / 无 lead log / 非 MA 站）</div>`;
+        return;
+      }
+      box.innerHTML = ds.map((d) => {
+        const active = selectedDispatch === d.id ? " active" : "";
+        const cos = d.cosplay ? " cosplay" : "";
+        const tag = d.subagent_detected
+          ? `<span class="tag hit">subagent</span>`
+          : d.cosplay
+            ? `<span class="tag miss">cosplay</span>`
+            : `<span class="tag">no toolCall</span>`;
+        const sz = d.log_size != null ? ` · ${d.log_size}B` : "";
+        const kids = d.children || [];
+        const kidHtml = kids.length
+          ? `<div class="meta" style="margin-top:4px">${kids.map((c) => {
+              const t = c.transcript_path
+                ? `<span class="tag hit">transcript</span>`
+                : `<span class="tag miss">no tx</span>`;
+              return `↳ ${esc(c.agent || "?")} ${t} tools=${esc(c.tool_count ?? "?")} ev=${esc(c.event_count ?? 0)}`;
+            }).join("<br/>")}</div>`
+          : (d.subagent_detected
+              ? `<div class="meta" style="color:var(--fail)">↳ transcript_missing</div>`
+              : "");
+        const ek = d.event_kinds || {};
+        const ekLine = Object.keys(ek).length
+          ? `<div class="meta">lead: ${Object.entries(ek).map(([k,v]) => `${esc(k)}=${v}`).join(" ")}</div>`
+          : "";
+        return `<button type="button" class="tree-item${active}${cos}" data-id="${esc(d.id)}">
+          <div><strong>${esc(d.stage)}</strong> → ${esc(d.role)} ${tag}</div>
+          <div class="meta">${esc(d.log_path || "")}${sz}</div>
+          ${ekLine}
+          ${kidHtml}
+        </button>`;
+      }).join("");
+      box.querySelectorAll(".tree-item").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedDispatch = btn.dataset.id;
+          renderTree(lastSnap);
+          renderEvents(lastSnap);
+        });
+      });
+    }
+
+    function renderThinking(s) {
+      const box = $("thinking");
+      const th = s.thinking || {};
+      const note = th.note || "";
+      const proc = s.process || {};
+      const kinds = proc.event_kinds || (s.poll && s.poll.event_kinds) || {};
+      const kline = Object.keys(kinds).length
+        ? Object.entries(kinds).map(([k,v]) => `${esc(k)}=${v}`).join(" · ")
+        : "—";
+      box.innerHTML = `<details class="thinking-box" open>
+        <summary>L2/L3 · ${esc(th.status || "thinking_unavailable")} · sub_tx=${esc(proc.sub_events ?? 0)} children=${esc(proc.children_count ?? 0)}</summary>
+        <div style="margin-top:6px;color:var(--muted);font-size:12px">${esc(note)}</div>
+        <div style="margin-top:4px;font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--muted)">kinds: ${kline}</div>
+      </details>`;
+    }
+
+    function renderEvents(s) {
+      const box = $("events");
+      let evs = s.events || [];
+      if (selectedDispatch) {
+        evs = evs.filter((e) => e.dispatch_id === selectedDispatch);
+      }
+      const srcFilter = box.dataset.srcFilter || "all";
+      if (srcFilter === "lead") evs = evs.filter((e) => e.source !== "sub");
+      if (srcFilter === "sub") evs = evs.filter((e) => e.source === "sub");
+
+      const total = evs.length;
+      if (!total) {
+        box.innerHTML = `<div class="empty">无事件（选 dispatch 或等 lead 写盘）</div>`;
+        return;
+      }
+
+      const limited = total > eventLimit;
+      const view = limited ? evs.slice(-eventLimit) : evs;
+
+      const chips = `<div class="toolbar">
+        <button type="button" class="chip ctrl-chip ${srcFilter==="all"?"on":""}" data-src="all">all</button>
+        <button type="button" class="chip ctrl-chip ${srcFilter==="lead"?"on":""}" data-src="lead">lead</button>
+        <button type="button" class="chip ctrl-chip ${srcFilter==="sub"?"on":""}" data-src="sub">sub</button>
+        <span style="color:var(--muted);font-size:11px">paint ${view.length}/${total}${limited ? " (window)" : ""}</span>
+        ${limited ? `<button type="button" class="chip" id="btnMoreEv">+80 more</button>` : ""}
+        ${eventLimit > EVENT_WINDOW ? `<button type="button" class="chip" id="btnLessEv">reset window</button>` : ""}
+      </div>`;
+
+      box.innerHTML = chips + view.map((e) => {
+        const src = e.source === "sub" ? "sub" : "lead";
+        const agent = e.agent ? ` · ${esc(e.agent)}` : "";
+        if (e.kind === "thinking") {
+          return `<details class="ev thinking"><summary><span class="k">${src}/thinking${agent}</span> ${esc((e.text || "").slice(0, 80))}</summary>${esc(e.text || "")}</details>`;
+        }
+        return `<div class="ev ${esc(e.kind)}"><span class="k">${src}/${esc(e.kind)}${agent}</span> ${esc(e.text || "")}</div>`;
+      }).join("");
+
+      box.querySelectorAll(".ctrl-chip").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          box.dataset.srcFilter = btn.dataset.src;
+          renderEvents(lastSnap);
+        });
+      });
+      const more = $("btnMoreEv");
+      if (more) more.addEventListener("click", () => {
+        eventLimit += 80;
+        renderEvents(lastSnap);
+      });
+      const less = $("btnLessEv");
+      if (less) less.addEventListener("click", () => {
+        eventLimit = EVENT_WINDOW;
+        renderEvents(lastSnap);
+      });
+
+      if (followTail) {
+        // scroll the mid panel to bottom
+        const mid = $("mid");
+        mid.scrollTop = mid.scrollHeight;
+      }
+    }
+
+    function renderArtifacts(s) {
+      const box = $("artifacts");
+      const a = s.artifacts || {};
+      const counters = (s.current && s.current.counters) || {};
+      const rows = [
+        ["solution", a.solution],
+        ["validate", a.validate],
+        ["schema", a.schema],
+        ["intake", a.intake],
+        ["plan", a.plan],
+        ["provenance", a.provenance],
+        ["runs_dir", a.runs_dir],
+        ["agents_dir", a.agents_dir],
+      ];
+      const chtml = Object.keys(counters).length
+        ? `<div style="margin-bottom:10px"><div class="k">counters</div>
+           <div style="font-family:ui-monospace,Consolas,monospace;font-size:12px">
+           ${Object.entries(counters).map(([k,v]) => `${esc(k)}=${esc(v)}`).join(" · ")}
+           </div></div>`
+        : "";
+      const honesty = (s.honesty && s.honesty.messages) || [];
+      const hhtml = honesty.length
+        ? `<div style="margin-top:12px"><div class="k">honesty</div>
+           ${honesty.map((m) => `<div style="color:var(--fail);font-size:12px;margin:4px 0">${esc(m)}</div>`).join("")}
+           </div>`
+        : "";
+      const t2 = s.tier2 || {};
+      const sessOn = !!t2.pi_session_env;
+      const recent = t2.recent || [];
+      const t3 = s.tier3 || {};
+      const t2html = `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+        <div class="k">Tier-2 Pi deep look (P4)</div>
+        <div style="font-size:12px;margin:6px 0">
+          <span class="tag ${sessOn ? "hit" : "miss"}">ORPATH_PI_SESSION=${sessOn ? "1" : "0"}</span>
+        </div>
+        <div class="meta" style="word-break:break-all">sessions_root: ${esc(t2.sessions_root || "—")}</div>
+        <div class="meta" style="margin-top:6px">${esc(t2.kanban_hint || "")}</div>
+        <div class="meta">${esc(t2.fleet_hint || "")}</div>
+        <div class="k" style="margin-top:8px">recent sessions (${recent.length})</div>
+        ${recent.length
+          ? recent.slice(0, 5).map((r) =>
+              `<div class="path" title="${esc(r.path || "")}">${esc(r.name || "")}</div>`
+            ).join("")
+          : `<div class="empty" style="padding:6px 0">no session jsonl</div>`}
+      </div>`;
+      const t3html = `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+        <div class="k">Tier-3 Langfuse (optional)</div>
+        <div style="font-size:12px;margin:6px 0">
+          <span class="tag ${t3.enabled ? "hit" : "miss"}">ORPATH_LANGFUSE=${t3.enabled ? "1" : "0"}</span>
+        </div>
+        <div class="meta">${esc(t3.hint || "docs/p5-tier3-langfuse.md")}</div>
+        <div class="meta">${esc(t3.note || "Watch remains product face; Langfuse is portfolio/debug only.")}</div>
+      </div>`;
+      const demo = `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
+        <div class="k">Demo checklist (P5)</div>
+        <div class="meta">1) orpath.bat watch-run --keep-watch</div>
+        <div class="meta">2) 看 timeline 变长 · 点 dispatch · 滤 sub</div>
+        <div class="meta">3) 右栏产物路径 · 勿宣称 CoT 必有</div>
+      </div>`;
+      box.innerHTML = chtml + rows.map(([k, v]) => {
+        if (!v) return `<div><span class="k">${esc(k)}</span><span class="path" style="color:var(--muted)">—</span></div>`;
+        return `<div><span class="k">${esc(k)}</span><span class="path">${esc(v)}</span></div>`;
+      }).join("") + hhtml + t2html + t3html + demo;
+    }
+
+    function renderPollFooter(extra) {
+      const s = lastSnap || {};
+      const p = (s && s.poll) || {};
+      const fp = p.fingerprint || lastFp || "—";
+      const sc = p.stages_count != null ? p.stages_count : "—";
+      const ec = p.events_count != null ? p.events_count : "—";
+      const ea = lastEventsAdded != null ? lastEventsAdded : (p.events_added != null ? p.events_added : "—");
+      const curs = p.log_cursors || {};
+      const ncur = Object.keys(curs).length;
+      $("pollInfo").textContent =
+        `P5 ${paused ? "PAUSED" : pollMode} ${POLL_MS}ms · follow=${followTail ? "on" : "off"} · fp ${fp} · stages ${sc} · events ${ec} · +${ea} · cursors ${ncur} · ${new Date().toLocaleTimeString()}` +
+        (extra ? " · " + extra : "");
+    }
+
+    function renderAll(s) {
+      lastSnap = s;
+      const p = s.poll || {};
+      if (p.fingerprint) lastFp = p.fingerprint;
+      if (p.events_count != null) {
+        if (lastEventsCount != null) {
+          lastEventsAdded = p.events_count - lastEventsCount;
+        } else if (p.events_added != null) {
+          lastEventsAdded = p.events_added;
+        }
+        lastEventsCount = p.events_count;
+      }
+      if (!selectedDispatch && (s.dispatches || []).length) {
+        selectedDispatch = s.dispatches[0].id;
+      }
+      renderBadges(s);
+      renderSwim(s);
+      renderStages(s);
+      renderTree(s);
+      renderThinking(s);
+      renderEvents(s);
+      renderArtifacts(s);
+      $("genInfo").textContent = "gen " + (s.generated_utc || "");
+      renderPollFooter("snap");
+    }
+
+    async function fetchSnapshot() {
+      const slug = $("slug").value.trim() || "test";
+      const thread = $("thread").value.trim() || slug;
+      let url = `/api/snapshot?slug=${encodeURIComponent(slug)}&thread=${encodeURIComponent(thread)}`;
+      if (lastFp) url += `&prev_fp=${encodeURIComponent(lastFp)}`;
+      if (lastEventsCount != null) url += `&prev_events=${encodeURIComponent(String(lastEventsCount))}`;
+      try {
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        const s = await r.json();
+        if (s && s.error && !s.schema_version) throw new Error(s.error);
+        $("fetchErr").textContent = "";
+        renderAll(s);
+      } catch (e) {
+        $("fetchErr").textContent = "fetch error: " + e.message;
+        renderPollFooter("error");
+      }
+    }
+
+    async function tick() {
+      if (paused) {
+        renderPollFooter("paused");
+        return;
+      }
+      if (document.hidden) {
+        pollMode = "hidden";
+        renderPollFooter("tab-hidden");
+        return;
+      }
+      const slug = $("slug").value.trim() || "test";
+      const thread = $("thread").value.trim() || slug;
+      try {
+        let purl = `/api/poll?slug=${encodeURIComponent(slug)}&thread=${encodeURIComponent(thread)}`;
+        if (lastFp) purl += `&prev_fp=${encodeURIComponent(lastFp)}`;
+        const pr = await fetch(purl, { cache: "no-store" });
+        if (!pr.ok) throw new Error("poll HTTP " + pr.status);
+        const info = await pr.json();
+        $("fetchErr").textContent = "";
+        const dirty = info.dirty !== false && info.fingerprint !== lastFp;
+        if (!lastSnap || dirty || lastFp == null) {
+          pollMode = dirty ? "dirty→snap" : "init";
+          await fetchSnapshot();
+        } else {
+          pollMode = "poll-clean";
+          if (lastSnap.poll) {
+            lastSnap.poll.stages_count = info.stages_count;
+            lastSnap.poll.fingerprint = info.fingerprint;
+            lastSnap.poll.sources_fresh = info.sources_fresh;
+          }
+          renderPollFooter("clean");
+        }
+      } catch (e) {
+        pollMode = "fallback";
+        await fetchSnapshot();
+        $("fetchErr").textContent = "poll err→full: " + e.message;
+      }
+    }
+
+    function apply() {
+      const slug = $("slug").value.trim() || "test";
+      let thread = $("thread").value.trim();
+      if (!thread) thread = slug;
+      $("thread").value = thread;
+      setQS(slug, thread);
+      selectedStageSeq = null;
+      selectedDispatch = null;
+      lastFp = null;
+      lastEventsCount = null;
+      lastEventsAdded = null;
+      lastSnap = null;
+      eventLimit = EVENT_WINDOW;
+      errDismissed = "";
+      autoJumpedError = false;
+      tick();
+    }
+
+    function boot() {
+      const q = qs();
+      $("slug").value = q.slug;
+      $("thread").value = q.thread || q.slug;
+      $("btnApply").addEventListener("click", apply);
+      $("btnRefresh").addEventListener("click", () => fetchSnapshot());
+      $("btnFollow").addEventListener("click", () => {
+        followTail = !followTail;
+        $("btnFollow").classList.toggle("on", followTail);
+        if (followTail && lastSnap) renderEvents(lastSnap);
+        renderPollFooter("follow");
+      });
+      $("btnPause").addEventListener("click", () => {
+        paused = !paused;
+        $("btnPause").classList.toggle("on", paused);
+        $("btnPause").textContent = paused ? "Resume" : "Pause";
+        renderPollFooter(paused ? "paused" : "resume");
+        if (!paused) tick();
+      });
+      $("errDismiss").addEventListener("click", () => {
+        errDismissed = ($("errText").textContent || "").trim();
+        $("errBanner").classList.remove("show");
+      });
+      $("errCopy").addEventListener("click", () => { copyErrorText(); });
+      $("errJump").addEventListener("click", () => { jumpToErrorStage(); });
+      $("slug").addEventListener("keydown", (e) => { if (e.key === "Enter") apply(); });
+      $("thread").addEventListener("keydown", (e) => { if (e.key === "Enter") apply(); });
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden && !paused) tick();
+      });
+      tick();
+      timer = setInterval(tick, POLL_MS);
+    }
+
+    boot();
+  </script>
+</body>
+</html>

@@ -141,9 +141,15 @@ def solve(
         return False, {}, f"unknown solve mode: {mode}"
 
     script_name = ADAPTER_SCRIPTS[mode_l]
-    script = root / "tools" / script_name
+    # Adapters live next to this module (install tools/), not under case workdir.
+    tools_dir = Path(__file__).resolve().parent
+    script = tools_dir / script_name
     if not script.is_file():
-        return False, {}, f"adapter missing: {script}"
+        alt = root / "tools" / script_name
+        if alt.is_file():
+            script = alt
+        else:
+            return False, {}, f"adapter missing: {script}"
 
     args = _build_args(mode_l, problem_id, problem_class, extra_args)
 
@@ -191,8 +197,12 @@ def validate(
 ) -> tuple[bool, dict[str, Any], str]:
     """Delegate to validate_solution.py (single validate seam)."""
     root = Path(root)
+    tools_dir = Path(__file__).resolve().parent
+    script = tools_dir / "validate_solution.py"
+    if not script.is_file():
+        script = root / "tools" / "validate_solution.py"
     code, stdout, err = _run_py(
-        root / "tools" / "validate_solution.py",
+        script,
         [
             "--problem-id",
             problem_id,
@@ -203,7 +213,7 @@ def validate(
         ],
         root,
     )
-    data: dict[str, Any] = {}
+
     try:
         data = (
             json.loads(stdout)

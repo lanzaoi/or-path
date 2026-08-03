@@ -6,11 +6,11 @@
 | | |
 |--|--|
 | 产品名 | OR-Path Multi-Agent / Graph-OR Agent |
-| 主 UI | **`orpath.bat menu`**（OpenPi 已删）— 读 **`ORPATH.md`** |
+| 主 UI | **`orpath.bat menu`** + **实时脸 `orpath.bat watch`**（OpenPi 已删）— 读 **`ORPATH.md`** |
 | 辅 UI | Pi 终端（`orpath.bat pi` / `pi.bat`） |
 | 硬法 | **`specs/`**（SDD，冲突时以门禁输出 > specs > 本文件） |
 | 默认 | **Live 多 Agent ON**；有题面/`inbox/` 才 intake；门禁用 `--no-live-subagent` |
-| 不是什么 | 不是 Feynman 主壳；不是 Hermes 产品运行时；裸聊天 ≠ 多 Agent；数字不靠 LLM 心算 |
+| 不是什么 | 不是 Feynman 主壳；不是 Hermes 产品运行时；裸聊天 ≠ 多 Agent；数字不靠 LLM 心算；**开文件夹 ≠ 实时可视** |
 
 ---
 
@@ -20,11 +20,11 @@
 
 | 优先级 | 路径 | 干什么 |
 |--------|------|--------|
-| 1 | **`orpath.bat`** | 一切入口（menu / doctor / gate / run / pi） |
-| 2 | **`specs/README.md`** | 规范索引；T3 主法 `specs/t3-lg-skeleton.md`；1.1/1.2 法条 |
-| 3 | **`orpath/`** | LangGraph 产品骨架与 runner（核心代码） |
+| 1 | **`orpath.bat`** | 一切入口（menu / **watch** / doctor / gate / run / pi） |
+| 2 | **`specs/README.md`** | 规范索引；**过程脸** `specs/process-visibility.md`；总流程 `product-flow-sdd.md` |
+| 3 | **`orpath/`** | LangGraph 产品骨架与 runner（核心代码）；**`watch_snapshot.py`** 过程聚合 |
 | 4 | **`tools/`** | solve_dispatch / validate / R1 / R2 / intake（数字真相+题面） |
-| 5 | **`ORPATH.md`** · **`docs/1.2-closeout.md`** | **menu 主控** + 默认 MA/intake + 关单 |
+| 5 | **`ORPATH.md`** · **`docs/v0-smoke.md`** | **menu + Live Watch** 操作；V0 冒烟 |
 
 历史关单/证据/口播 → **`docs/archive/`**。带外大树 → **`docs/OUT_OF_BAND.md`**（vendor/pi-main；openpi 已移除）。
 
@@ -58,6 +58,15 @@ cd /d C:\Users\Lanzao\Desktop\agent
 :: 可装到任意目录：set ORPATH_HOME=你的安装根
 
 orpath.bat doctor
+orpath.bat v0-watch-gate
+orpath.bat watch --slug test
+:: 浏览器看 L0 阶段 / L1 派工 / L2·L3 事件（实时过程台 = 产品脸）
+
+orpath.bat demo-m0 --slug m0
+orpath.bat m0-gate
+orpath.bat m1-gate
+:: M1：workdir + Watch 错误/CTA；见 docs/m1-smoke.md
+
 orpath.bat gate-t3
 
 :: 跑一条产品流水线（可恢复 thread）
@@ -69,10 +78,15 @@ orpath.bat list
 常用：
 
 ```bat
+orpath.bat watch --slug <slug>   :: ★ 实时过程台（V0 脸；不是开文件夹）
+orpath.bat demo-m0 --slug m0     :: ★ M0 证据串（mock 数字 + 清单）
 orpath.bat gate          :: T2 本地门禁（重）
 orpath.bat gate-t3       :: T3 骨架+矩阵门禁
+orpath.bat v0-watch-gate :: V0 watch 文档+HTTP 烟
+orpath.bat m0-gate       :: M0 demo 门禁
+orpath.bat m1-gate       :: M1 workdir + Watch 加厚
 orpath.bat isolation     :: 真多 Agent 隔离硬检
-orpath.bat menu          :: 宿主无关主控（OpenPi 已删除）
+orpath.bat menu          :: 宿主无关主控（含 Live Watch / Demo M0）
 orpath.bat t2 --problem-id tsp_n8 --solve-mode ortools
 ```
 
@@ -193,7 +207,7 @@ node_modules/          （若存在）依赖
 ## 架构怎么记（防乱）
 
 ```text
-你 / `orpath.bat menu` / Pi TUI
+你 / `orpath.bat menu` / **`orpath.bat watch`（实时脸）** / Pi TUI
         │
         ▼
  LangGraph 产品图（老板：now→next、重试、checkpoint）
@@ -206,13 +220,16 @@ node_modules/          （若存在）依赖
  工具：solve_* 只写 objective；validate 重算
         │
  Pi 子 Agent（包工头+班组）：只在需要隔离的节点里干活，交文件路径
+        │
+ watch 读盘 L0–L4（无 LLM 编协作故事）
 ```
 
 - **禁止：** LLM / memory / 子 Agent 口述最优解  
 - **禁止：** 把 Teams、消息总线当主架构  
+- **禁止：** 只开 `runs/` 文件夹却宣称「已有实时可视」  
 - **双路径：**  
   - 门禁/CI = 确定性 LG 节点  
-  - 演示 = menu/run-full/Pi + 真 subagent transcript  
+  - 演示 = menu/run-full + **watch** + 真 subagent transcript  
 
 阶段图导出：`docs/t3-stage-map.mmd`（可用支持 Mermaid 的编辑器预览）。
 
@@ -222,6 +239,9 @@ node_modules/          （若存在）依赖
 
 | 你想确认 | 命令 | 轻重 |
 |----------|------|------|
+| **V0 实时过程台** | `orpath.bat v0-watch-gate` | 轻 |
+| **M0 demo 证据串** | `orpath.bat m0-gate` | 中（含 mock run） |
+| **M1 workdir+Watch** | `orpath.bat m1-gate` | 中（含 workdir e2e mock） |
 | T3 骨架+矩阵 | `orpath.bat gate-t3` | 中 |
 | 仅骨架 | `python scripts/t3_lg_gate.py` | 轻 |
 | T2 全家桶 | `orpath.bat gate` | **重** |
@@ -246,7 +266,7 @@ set PYTHONNOUSERSITE=1
 | 架构 ADR | `docs/adr/` |
 | T1–T3 历史关单 | `docs/archive/closeouts/` |
 | 口播 / 证据 | `docs/archive/portfolio/` · `docs/archive/evidence/` |
-| 冒烟操作 | `docs/t1-smoke.md` · `docs/t2-smoke.md` |
+| 冒烟操作 | `docs/v0-smoke.md` · `docs/t1-smoke.md` · `docs/t2-smoke.md` |
 | 带外大树 | `docs/OUT_OF_BAND.md` |
 | 规范总索引 | `specs/README.md` |
 | 产品故事长文 | `IDEA.md` |
@@ -263,14 +283,18 @@ set PYTHONNOUSERSITE=1
 2. **outputs 一堆 t3-mat- / t3-lg- 是什么？**  
    门禁和实验跑出来的制品，可清，也可留作证据；**权威金标在 `fixtures/`**。
 
-3. **多智能体怎么开？**  
-   用 `orpath.bat menu` → run-full / gui-demo；cwd 必须是安装根。OpenPi 已删除。
+3. **多智能体怎么开 / 过程怎么看？**  
+   用 `orpath.bat menu` → run-full / gui-demo；cwd 必须是安装根。OpenPi 已删除。  
+   **实时看阶段与 sub：`orpath.bat watch --slug <slug>`**（不要用开文件夹代替）。
 
 4. **数字和 README 对不上？**  
    以 **本次 `solve_*` + `validate` 输出** 为准，不要抄旧笔记。
 
 5. **Hermes MEMORY？**  
    只是写代码的助手笔记，**不是** OR-Path 运行时记忆。
+
+6. **gate 绿了算体验完成吗？**  
+   **不算。** 工程门禁 ≠ 用户看见过程；V0 必须 watch 台达标（`specs/process-visibility.md`）。
 
 ---
 
@@ -281,7 +305,7 @@ set PYTHONNOUSERSITE=1
 - 求解：OR-Tools / NetworkX / mock + validate  
 - 模型：Pi 侧 **DeepSeek only**  
 - 知识：MinerU Cloud · LightRAG+BM25/FTS · Cognee Cloud · 种子图  
-- UI：`orpath.bat menu` 主 · Pi TUI 辅  
+- UI：`orpath.bat menu` 主 · **`orpath.bat watch` 实时脸** · Pi TUI 辅  
 - OUT：Graphiti 主路径、Agent Teams/总线脊柱、Feynman 主开发壳  
 
 ---

@@ -1,8 +1,10 @@
 # Problem Intake — 题面 OCR 与自主审读（OR-Path **1.1**）
 
-**状态：** LAW（实现前冻结；行为变更须先改本文件）  
-**里程碑：** **1.1**（在 1.0 PASS 之上；**不重开** T1/T2/T3/1.0 DoD）  
-**主题：** 扫描图 / PDF / 已解压附件 → **OCR** → **自主审题 brief** →（可选人确认）→ 再进入既有 `orchestrate…` 环。
+**状态：** LAW（**1.1 CLOSED/PASS**；行为变更须先改本文件）  
+**里程碑：** **1.1**（在 1.0 之上；**不重开** T1/T2/T3/1.0 DoD）  
+**总流程对齐：** `product-flow-sdd.md` · `control-plane.md` · `contracts.md`  
+**过程可视：** intake 站必须出现在 timeline L0（`process-visibility.md`）  
+**主题：** 扫描图 / PDF / 已解压附件 → **OCR** → **自主审题 brief** →（可选人确认）→ 再进入 `orchestrate…` 环。
 
 ---
 
@@ -32,8 +34,9 @@
 2. **自主审读：** raw → `problem-brief.md` + `intake.json`（子问全覆盖、数据资产、约束文字、歧义）  
 3. **禁数字门：** intake 制品不得含 solution 形状键 / 宣称最优  
 4. **可选人确认门：** 竞赛默认建议开；CI/fixture 可关  
-5. **CLI +（实现中）LG 可选节点：** 老路径 `skip_intake` 不变绿  
-6. **门禁：** `scripts/intake_gate.py`（或等价）覆盖契约与负例  
+5. **CLI + LG 可选节点：** 老路径 `skip_intake` 不变绿  
+6. **门禁：** `scripts/intake_gate.py` 覆盖契约与负例  
+7. **class_hint：** 可软提示；**未注册 class 不得假绿求解**（见 1.2 / solvers 域注册法）  
 
 ### 2.3 Out of scope（1.1 明确不做）
 
@@ -43,10 +46,11 @@
 | 把 MinerU 知识竖切与题面 intake 合成一体 | MinerU = corpus；intake = 题面 |
 | 宣称 OCR 100% 正确 | 要可审计 + 歧义外显 |
 | 本地下载多 GB OCR 模型作默认 | 云/MCP/已有运行时优先 |
-| OpenPi 完整 GUI 导入面板 | 可后置；非 1.1 硬 DoD |
+| OpenPi 完整 GUI 导入面板 | 已删除；menu/intake CLI |
 | 重开 T1/T2/T3/1.0 门禁 DoD | 回归保持绿即可 |
 | Compose/K8s/codegen sandbox | 仍 OUT |
 | 自制 SOTA 评测集叙事 | 禁止 |
+| 未注册域 intake 后绑 SP 金标 | **禁止**（1.2） |
 
 ---
 
@@ -59,7 +63,7 @@ START
   → [optional] human_confirm_intake
         ├─ reject / 未确认 → HUMAN_REQUIRED 或停在 intake（实现可选）
         └─ ok / skip → orchestrate
-  → orchestrate → retrieve → …（1.0 不变）
+  → orchestrate → retrieve → …（产品图其余）
 ```
 
 | 模式 | 行为 |
@@ -67,6 +71,7 @@ START
 | **Legacy / CI** | `skip_intake=1` 或未提供 `source_paths` → 直接 `orchestrate`（默认兼容） |
 | **Intake on** | 提供题面源 → 必须产出 brief + intake.json 且过 `gate_intake` 才可进 orchestrate |
 | **竞赛谨慎** | `human_confirm_intake=1`（默认建议 **on** 当且仅当 intake on） |
+| **M0 Demo** | 可用 fixture 文本 stub，不必强依赖扫描图 |
 
 **禁止：** intake 节点调用 solve；intake 写 `objective`；用 memory 补最优值。
 
@@ -80,14 +85,17 @@ START
 
 | 优先级 | 后端 id | 何时用 |
 |--------|---------|--------|
-| 1 | `pdf_text` | PDF **已有文字层**（如 pymupdf / pypdf 抽字，非空且达阈值阈值） |
-| 2 | `paddleocr_mcp` / `paddleocr` | 图片、扫描页、文字层失败；优先 **已配置的 PaddleOCR / AI Studio MCP** |
-| 3 | `manual_stub` | 仅测试：输入已是 `.md`/`.txt` 原文，原样或规范化拷贝 |
+| 1 | `pdf_text` / `manual_stub` | PDF 文字层非空；或 `.md`/`.txt` 测试原文 |
+| 2 | `ppocr` / `paddleocr`（`ORPATH_PADDLEOCR_PYTHON`） | 图片/扫描；本机 paddle |
+| 3 | `paddleocr_mcp` / api token | 本地 paddle 失败且有 token |
+| 4 | **`rapidocr`** | 最终本地回退；**诚实写 backend=rapidocr** |
+| — | placeholder | **禁止**当成功 |
 
 **禁止默认：**
 
 - 把 **MinerU Cloud** 当竞赛题面主 OCR（可日后「可选增强」，不得替代 §4.1 主序）  
 - 为 1.1 强制用户本机装巨型本地 OCR 权重  
+- backend 撒谎
 
 ### 4.2 输入
 

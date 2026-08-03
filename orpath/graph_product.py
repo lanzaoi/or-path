@@ -279,8 +279,17 @@ def export_stage_map() -> dict[str, Any]:
 
 
 def write_stage_map_files(root: Path) -> None:
+    """Write topology map under install home; optional copy under case workdir/runs.
+
+    ``root`` is the case data root (M1 workdir). Install package paths must not
+    be required under workdir — stage_map.json lives in ``orpath_home()/orpath/``.
+    """
+    from orpath.paths import orpath_home
+
+    home = orpath_home().resolve()
     data = export_stage_map()
-    (root / "orpath" / "stage_map.json").write_text(
+    (home / "orpath").mkdir(parents=True, exist_ok=True)
+    (home / "orpath" / "stage_map.json").write_text(
         json.dumps(data, indent=2) + "\n", encoding="utf-8"
     )
     mmd = [
@@ -313,6 +322,14 @@ def write_stage_map_files(root: Path) -> None:
         "  revise_or_done -->|HUMAN| human_stop",
         "  provenance --> END",
     ]
-    docs = root / "docs"
+    docs = home / "docs"
     docs.mkdir(parents=True, exist_ok=True)
     (docs / "t3-stage-map.mmd").write_text("\n".join(mmd) + "\n", encoding="utf-8")
+
+    # Case workdir: keep a copy under runs/ for local inspection (not package path)
+    root_p = Path(root).resolve()
+    if root_p != home:
+        (root_p / "runs").mkdir(parents=True, exist_ok=True)
+        (root_p / "runs" / "stage_map.json").write_text(
+            json.dumps(data, indent=2) + "\n", encoding="utf-8"
+        )

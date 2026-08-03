@@ -51,6 +51,9 @@ def main() -> int:
         "scripts/t2_multiagent_isolation.py",
         "runtime/node_modules/@earendil-works/pi-coding-agent/dist/cli.js",
         "pi.bat",
+        "orpath/watch_snapshot.py",
+        "scripts/orpath_watch.py",
+        "orpath/web/watch.html",
     ):
         p = home / rel
         if p.is_file():

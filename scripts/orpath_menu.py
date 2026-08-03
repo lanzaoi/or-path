@@ -54,8 +54,11 @@ def main() -> int:
     print("  3) Run full   - auto-intake + product graph (live MA default ON)")
     print("  4) GUI demo   - fixture intake + mock solve")
     print("  5) Run cheap  - --no-live-subagent fixture SP")
-    print("  6) Open evidence folders (agents + runs)")
-    print("  7) Doctor")
+    print("  6) Live Watch - 实时过程台 (product face)")
+    print("  7) Watch-run  - 边跑边看 P3 (watch + mock run)")
+    print("  8) Demo M0    - mock numbers + V0/M0 evidence checklist")
+    print("  9) Open evidence folders (agents + runs) [debug only]")
+    print("  d) Doctor")
     print("  0) Quit")
     print()
     try:
@@ -109,11 +112,37 @@ def main() -> int:
             ]
         )
     if choice == "6":
+        slug = input("Slug [test]: ").strip() or "test"
+        thread = input(f"Thread-id [{slug}]: ").strip() or slug
+        wd = input("Workdir [install default]: ").strip()
+        args = ["watch", "--slug", slug, "--thread-id", thread]
+        if wd:
+            args.extend(["--workdir", wd])
+        return _run(args)
+    if choice == "7":
+        slug = input("Slug [auto p3-...]: ").strip()
+        live = (input("LIVE subagent? [y/N]: ").strip().lower() in {"y", "yes", "1"})
+        keep = (input("Keep watch after run? [Y/n]: ").strip().lower() not in {"n", "no", "0"})
+        wd = input("Workdir [install default]: ").strip()
+        args = ["watch-run"]
+        if slug:
+            args.extend(["--slug", slug, "--thread-id", slug])
+        if live:
+            args.append("--live")
+        if keep:
+            args.append("--keep-watch")
+        if wd:
+            args.extend(["--workdir", wd])
+        return _run(args)
+    if choice == "8":
+        slug = input("Slug [m0]: ").strip() or "m0"
+        return _run(["demo-m0", "--slug", slug, "--no-live"])
+    if choice == "9":
         _open_dir("outputs/.agents")
         _open_dir("runs")
-        print("opened outputs/.agents and runs")
+        print("opened outputs/.agents and runs (debug; face = menu 6/7)")
         return 0
-    if choice == "7":
+    if choice.lower() in {"d", "doctor"}:
         return _run(["doctor"])
     print("unknown choice")
     return 2

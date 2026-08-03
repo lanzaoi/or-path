@@ -308,29 +308,185 @@ def _validate_vrp(problem_id: str, sol: dict) -> list[dict]:
     return checks
 
 
+def _validate_tube(_problem_id: str, sol: dict) -> list[dict]:
+    """Validate tube_cut / cutting_stock envelope from solve_tube_cut_b2026.
+
+    Does not re-solve the cutting problem. Checks:
+    - envelope already applied by caller
+    - questions.q1.. present with stocks/batches
+    - top objective matches primary question total (q3 preferred, else q1)
+    - source/solver claim tube tool (not SP mock gold)
+    """
+    checks: list[dict] = []
+    pc = str(sol.get("problem_class") or "").lower()
+    checks.append(
+        {
+            "name": "problem_class",
+            "ok": pc in {"tube_cut", "tube", "tube_bfd", "cutting_stock", "cut_stock"},
+            "detail": None if pc else "missing problem_class",
+        }
+    )
+    src = str(sol.get("source") or "")
+    solver = str(sol.get("solver") or "")
+    tube_src = "tube" in src.lower() or "tube" in solver.lower() or "solve_tube" in src
+    checks.append(
+        {
+            "name": "tube_source",
+            "ok": tube_src,
+            "detail": None if tube_src else f"source/solver not tube: {src!r}/{solver!r}",
+        }
+    )
+    qs = sol.get("questions")
+    if not isinstance(qs, dict) or not qs:
+        checks.append(
+            {"name": "shape_questions", "ok": False, "detail": "questions object required"}
+        )
+        return checks
+    checks.append({"name": "shape_questions", "ok": True})
+
+    for name in ("q1", "q2", "q3"):
+        q = qs.get(name)
+        if not isinstance(q, dict):
+            checks.append(
+                {"name": f"shape_{name}", "ok": False, "detail": f"{name} missing"}
+            )
+            continue
+        stocks = q.get("stocks")
+        ok_stocks = isinstance(stocks, list) and len(stocks) >= 1
+        checks.append(
+            {
+                "name": f"shape_{name}_stocks",
+                "ok": ok_stocks,
+                "detail": None if ok_stocks else f"{name}.stocks empty/missing",
+            }
+        )
+        st = str(q.get("status") or "").upper()
+        checks.append(
+            {
+                "name": f"status_{name}",
+                "ok": st in {"FEASIBLE", "OPTIMAL", "OK", ""},
+                "detail": None if st in {"FEASIBLE", "OPTIMAL", "OK", ""} else f"{name}.status={st}",
+            }
+        )
+        # light recompute: sum stock_length ≈ total_stock_length_mm
+        if ok_stocks and "total_stock_length_mm" in q:
+            try:
+                total = sum(float(s.get("stock_length_mm") or 0) for s in stocks if isinstance(s, dict))
+                declared = float(q["total_stock_length_mm"])
+                checks.append(
+                    {
+                        "name": f"recompute_{name}_stock_sum",
+                        "ok": _num_eq(total, declared),
+                        "expected": declared,
+                        "got": total,
+                    }
+                )
+            except (TypeError, ValueError) as exc:
+                checks.append(
+                    {
+                        "name": f"recompute_{name}_stock_sum",
+                        "ok": False,
+                        "detail": str(exc),
+                    }
+                )
+
+    q4 = qs.get("q4")
+    if isinstance(q4, dict):
+        batches = q4.get("batches")
+        ok_b = isinstance(batches, list) and len(batches) >= 1
+        checks.append(
+            {
+                "name": "shape_q4_batches",
+                "ok": ok_b,
+                "detail": None if ok_b else "q4.batches empty/missing",
+            }
+        )
+    else:
+        checks.append({"name": "shape_q4", "ok": False, "detail": "q4 missing"})
+
+    # primary objective = q3 total if present else q1 (matches solve_dispatch envelope)
+    primary = None
+    if isinstance(qs.get("q3"), dict) and "total_stock_length_mm" in qs["q3"]:
+        primary = float(qs["q3"]["total_stock_length_mm"])
+        primary_name = "q3.total_stock_length_mm"
+    elif isinstance(qs.get("q1"), dict) and "total_stock_length_mm" in qs["q1"]:
+        primary = float(qs["q1"]["total_stock_length_mm"])
+        primary_name = "q1.total_stock_length_mm"
+    else:
+        primary_name = "missing"
+    if primary is None:
+        checks.append(
+            {
+                "name": "recompute_objective",
+                "ok": False,
+                "detail": "no q1/q3 total_stock_length_mm",
+            }
+        )
+    else:
+        try:
+            obj = float(sol["objective"])
+            checks.append(
+                {
+                    "name": "recompute_objective",
+                    "ok": _num_eq(obj, primary),
+                    "expected": primary,
+                    "got": sol.get("objective"),
+                    "detail": f"primary={primary_name}",
+                }
+            )
+        except (TypeError, ValueError, KeyError) as exc:
+            checks.append(
+                {"name": "recompute_objective", "ok": False, "detail": str(exc)}
+            )
+
+    # heuristic honesty: not proven optimal unless meta says so
+    meta = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
+    if meta.get("proven_optimal") is True and str(sol.get("status")).upper() == "OPTIMAL":
+        checks.append(
+            {
+                "name": "optimality_claim",
+                "ok": False,
+                "detail": "tube BFD must not claim proven_optimal OPTIMAL",
+            }
+        )
+    else:
+        checks.append({"name": "optimality_claim", "ok": True})
+
+    return checks
+
+
 def validate(problem_id: str, solution: dict, gold: dict | None = None) -> dict:
     pc = str(
         solution.get("problem_class")
         or (gold or {}).get("problem_class")
         or "shortest_path"
-    )
-    checks = _checks_envelope(solution, pc)
-    if solution.get("status") in {"INFEASIBLE", "ERROR"}:
+    ).lower()
+    # aliases
+    if pc in {"tube", "tube_bfd", "cutting_stock", "cut_stock"}:
+        pc_norm = "tube_cut"
+    else:
+        pc_norm = pc
+
+    checks = _checks_envelope_tube(solution) if pc_norm == "tube_cut" else _checks_envelope(solution, pc_norm)
+
+    if solution.get("status") in {"INFEASIBLE", "ERROR", "BLOCKED"}:
         report = {
             "ok": False,
             "problem_id": problem_id,
-            "problem_class": pc,
+            "problem_class": pc_norm,
             "checks": checks,
             "errors": [f"status={solution.get('status')}"],
         }
         return report
 
-    if pc == "shortest_path":
+    if pc_norm == "shortest_path":
         checks.extend(_validate_sp(problem_id, solution))
-    elif pc == "tsp":
+    elif pc_norm == "tsp":
         checks.extend(_validate_tsp(problem_id, solution))
-    elif pc == "vrp":
+    elif pc_norm == "vrp":
         checks.extend(_validate_vrp(problem_id, solution))
+    elif pc_norm == "tube_cut":
+        checks.extend(_validate_tube(problem_id, solution))
     else:
         checks.append(
             {"name": "problem_class", "ok": False, "detail": f"unknown class {pc}"}
@@ -340,16 +496,18 @@ def validate(problem_id: str, solution: dict, gold: dict | None = None) -> dict:
         "OPTIMAL",
         "FEASIBLE",
     }:
-        gap = abs(float(solution["objective"]) - float(gold["objective"]))
-        checks.append(
-            {
-                "name": "gold_gap",
-                "ok": _num_eq(solution["objective"], gold["objective"]),
-                "expected": gold["objective"],
-                "got": solution["objective"],
-                "detail": f"gap={gap}",
-            }
-        )
+        # only gold-gap for fixture classes, not tube contest heuristics unless gold provided intentionally
+        if pc_norm != "tube_cut" or gold.get("problem_class"):
+            gap = abs(float(solution["objective"]) - float(gold["objective"]))
+            checks.append(
+                {
+                    "name": "gold_gap",
+                    "ok": _num_eq(solution["objective"], gold["objective"]),
+                    "expected": gold["objective"],
+                    "got": solution["objective"],
+                    "detail": f"gap={gap}",
+                }
+            )
 
     errors = [
         c.get("detail") or c["name"]
@@ -360,10 +518,24 @@ def validate(problem_id: str, solution: dict, gold: dict | None = None) -> dict:
     return {
         "ok": ok,
         "problem_id": problem_id,
-        "problem_class": pc,
+        "problem_class": pc_norm,
         "checks": checks,
         "errors": errors,
     }
+
+
+def _checks_envelope_tube(sol: dict) -> list[dict]:
+    required = ["problem_id", "status", "objective", "solver", "source"]
+    missing = [k for k in required if k not in sol]
+    return [
+        {
+            "name": "envelope",
+            "ok": not missing
+            and str(sol.get("status") or "").upper()
+            in {"OPTIMAL", "FEASIBLE", "INFEASIBLE", "ERROR", "BLOCKED"},
+            "detail": f"missing={missing}" if missing else None,
+        }
+    ]
 
 
 def main(argv: list[str] | None = None) -> int:

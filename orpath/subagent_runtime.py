@@ -376,13 +376,34 @@ def build_lead_prompt(
     return "\n".join(lines)
 
 
+def pi_session_enabled() -> bool:
+    """ORPATH_PI_SESSION=1 → write Pi sessions (Tier-2 kanban/Fleet).
+
+    Default OFF so CI/gates keep --no-session (ephemeral).
+    """
+    raw = (os.environ.get("ORPATH_PI_SESSION") or "0").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
+def pi_sessions_root() -> Path:
+    """Default Pi coding-agent sessions directory."""
+    return Path.home() / ".pi" / "agent" / "sessions"
+
+
+def resolve_no_session(no_session: bool | None = None) -> bool:
+    """If no_session is None, derive from ORPATH_PI_SESSION (default: no_session=True)."""
+    if no_session is not None:
+        return bool(no_session)
+    return not pi_session_enabled()
+
+
 def build_pi_command(
     root: Path,
     *,
     prompt: str,
     provider: str = DEFAULT_PROVIDER,
     model: str = DEFAULT_MODEL,
-    no_session: bool = True,
+    no_session: bool | None = None,
     json_mode: bool = True,
     tools: str | None = None,
     append_system_prompt: str | None = None,
@@ -404,7 +425,7 @@ def build_pi_command(
         cmd = [cli, "-p", "--provider", provider, "--model", model]
     else:
         cmd = [cli, "-p", "--provider", provider, "--model", model]
-    if no_session:
+    if resolve_no_session(no_session):
         cmd.append("--no-session")
     # JSON event stream so tool_call / subagent names appear in logs (detection)
     if json_mode:
@@ -433,6 +454,7 @@ def spawn_lead(
     tools: str | None = None,
     append_system_prompt: str | None = None,
     json_mode: bool = True,
+    no_session: bool | None = None,
 ) -> LeadResult:
     """Run a short Pi lead; optionally enforce subagent call + output files."""
     root = project_root(root)
@@ -445,6 +467,7 @@ def spawn_lead(
     if require_subagent_call is None:
         require_subagent_call = stage_requires_subagent(stage)
 
+    sess_off = resolve_no_session(no_session)
     try:
         cmd = build_pi_command(
             root,
@@ -454,6 +477,7 @@ def spawn_lead(
             tools=tools,
             append_system_prompt=append_system_prompt,
             json_mode=json_mode,
+            no_session=sess_off,
         )
     except RuntimeError as exc:
         return LeadResult(
@@ -472,7 +496,13 @@ def spawn_lead(
 
     if dry_run:
         log_path.write_text(
-            "DRY_RUN\n" + " ".join(cmd[:14]) + " …\nprompt_len=" + str(len(prompt)) + "\n",
+            "DRY_RUN\n"
+            + " ".join(cmd[:14])
+            + " …\nprompt_len="
+            + str(len(prompt))
+            + f"\npi_session={'off' if sess_off else 'on'}\n"
+            f"no_session_flag={sess_off}\n"
+            f"sessions_root={pi_sessions_root()}\n",
             encoding="utf-8",
         )
         return LeadResult(
@@ -531,7 +561,12 @@ def spawn_lead(
     header = (
         f"stage={stage}\nslug={slug}\nstarted={started_utc}\n"
         f"cmd={cmd[:12]!r}\nrequire_subagent_call={require_subagent_call}\n"
-        f"tools={tools!r}\n---\n"
+        f"tools={tools!r}\n"
+        f"pi_session={'off' if sess_off else 'on'}\n"
+        f"no_session_flag={sess_off}\n"
+        f"sessions_root={pi_sessions_root()}\n"
+        f"ORPATH_PI_SESSION={os.environ.get('ORPATH_PI_SESSION', '')!r}\n"
+        f"---\n"
     )
     log_path.write_text(header + out, encoding="utf-8")
     hit, evidence = detect_subagent_calls(out)

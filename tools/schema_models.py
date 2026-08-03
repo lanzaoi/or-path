@@ -216,6 +216,12 @@ def walk_forbidden_keys(
     *,
     forbidden: frozenset[str] | None = None,
 ) -> set[str]:
+    """Collect forbidden key names under obj.
+
+    Special case: key ``path`` is only forbidden when the value looks like a
+    *solution tour* (list of nodes). A string filesystem/URI path is allowed
+    (common in intake/schema data_refs).
+    """
     keys = forbidden if forbidden is not None else FORBIDDEN_SCHEMA_KEYS
     if found is None:
         found = set()
@@ -223,7 +229,11 @@ def walk_forbidden_keys(
         for k, v in obj.items():
             lk = str(k).lower()
             if lk in keys:
-                found.add(lk)
+                if lk == "path" and isinstance(v, str):
+                    # e.g. "path": "notes/foo.md" — not a graph solution path
+                    pass
+                else:
+                    found.add(lk)
             walk_forbidden_keys(v, found, forbidden=keys)
     elif isinstance(obj, list):
         for item in obj:

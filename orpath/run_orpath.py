@@ -29,6 +29,7 @@ from orpath.control_plane import (  # noqa: E402
     write_stage_map_files,
 )
 from orpath.node_context import dirty_artifacts, thread_dir  # noqa: E402
+from orpath.paths import apply_workdir, orpath_home  # noqa: E402
 
 
 def cmd_list(root: Path) -> int:
@@ -133,8 +134,20 @@ def _resolve_intake_sources(root: Path, args: argparse.Namespace) -> tuple[list[
     return sources, skip
 
 
+def _resolve_data_root(args: argparse.Namespace) -> Path:
+    """Case data root (runs/outputs/…). Prefer --workdir, else --root; sync ORPATH_WORKDIR."""
+    wd = getattr(args, "workdir", None)
+    if wd is not None and str(wd).strip():
+        return apply_workdir(wd)
+    # Historical --root is the data root; align env so Watch uses the same tree.
+    root = getattr(args, "root", None) or ROOT
+    return apply_workdir(root)
+
+
 def cmd_run(args: argparse.Namespace) -> int:
-    root = args.root.resolve()
+    root = _resolve_data_root(args)
+    # Install home stays on sys.path for package imports (ROOT already inserted).
+    _ = orpath_home()
     write_stage_map_files(root)
     thread_id = args.thread_id or f"{args.slug or args.problem_id}-{uuid.uuid4().hex[:8]}"
     slug = args.slug or f"orpath-{args.problem_id}"
@@ -297,7 +310,7 @@ def cmd_intake(args: argparse.Namespace) -> int:
     """Standalone 1.1 OCR + parse (no solve)."""
     from orpath.intake_nodes import standalone_intake
 
-    root = args.root.resolve()
+    root = _resolve_data_root(args)
     sources = [Path(p) for p in (args.intake_in or [])]
     assets = Path(args.intake_assets) if getattr(args, "intake_assets", "") else None
     if assets and not assets.is_absolute():
@@ -317,7 +330,18 @@ def main() -> int:
     sub = p.add_subparsers(dest="cmd")
 
     def add_common(sp: argparse.ArgumentParser) -> None:
-        sp.add_argument("--root", type=Path, default=ROOT)
+        sp.add_argument(
+            "--root",
+            type=Path,
+            default=ROOT,
+            help="case data root (alias of workdir when --workdir unset)",
+        )
+        sp.add_argument(
+            "--workdir",
+            type=Path,
+            default=None,
+            help="case data root: outputs/notes/papers/runs (sets ORPATH_WORKDIR)",
+        )
         sp.add_argument("--thread-id", default="")
         sp.add_argument("--problem-id", default="shortest_path")
         sp.add_argument("--problem-class", default="")
@@ -383,13 +407,16 @@ def main() -> int:
 
     st = sub.add_parser("status", help="show thread status")
     st.add_argument("--root", type=Path, default=ROOT)
+    st.add_argument("--workdir", type=Path, default=None)
     st.add_argument("--thread-id", required=True)
 
     ls = sub.add_parser("list", help="list threads")
     ls.add_argument("--root", type=Path, default=ROOT)
+    ls.add_argument("--workdir", type=Path, default=None)
 
     inp = sub.add_parser("intake", help="1.1 OCR+parse only (no full graph solve)")
     inp.add_argument("--root", type=Path, default=ROOT)
+    inp.add_argument("--workdir", type=Path, default=None)
     inp.add_argument("--slug", required=True)
     inp.add_argument(
         "--in",
@@ -410,6 +437,12 @@ def main() -> int:
     p.add_argument("--live-subagent", action="store_true")
     p.add_argument("--no-live-subagent", action="store_true")
     p.add_argument("--root", type=Path, default=ROOT)
+    p.add_argument(
+        "--workdir",
+        type=Path,
+        default=None,
+        help="case data root (outputs/runs/…); sets ORPATH_WORKDIR",
+    )
     p.add_argument("--thread-id", default="")
     p.add_argument("--bridge-attachment", default="before_research")
     p.add_argument("--resume", action="store_true")
@@ -425,9 +458,9 @@ def main() -> int:
     args = p.parse_args()
 
     if args.cmd == "list":
-        return cmd_list(args.root.resolve())
+        return cmd_list(_resolve_data_root(args))
     if args.cmd == "status":
-        return cmd_status(args.root.resolve(), args.thread_id)
+        return cmd_status(_resolve_data_root(args), args.thread_id)
     if args.cmd == "intake":
         return cmd_intake(args)
     if args.cmd == "run" or args.cmd is None:

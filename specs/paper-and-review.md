@@ -1,100 +1,127 @@
-# Paper and Review — 论文环与审稿门
+# Paper and Review — 论文环（详细）
 
-## 统一接缝（ADR-0004）
+**对齐：** `product-flow-sdd.md` · ADR-0004  
+**状态：** LAW 2026-08-01
+
+---
+
+## 1. 统一接缝
 
 | 模块 | 职责 |
 |------|------|
-| **`orpath/paper_protocol.py`** | **PaperProtocol 权威**：`run_from_solution` / 路径与模板 re-export |
-| `orpath/paper_workflow.py` | 渲染、review md、plan log 等实现细节 |
-| `orpath/paper_live_subagent.py` | cite/review live 适配器（nodes 内用） |
-| `orpath/post_solve_paper.py` | 兼容 shim → `paper_protocol` |
-| `scripts/orpath_paper.py` | 薄 CLI |
-| `scripts/run_tube_cut_paper.py` | 圆管 → `run_from_solution`（不重解） |
-| 图内 | `nodes` 的 `draft_paper`…`provenance` = 同环（`IN_GRAPH_STAGES`） |
+| **`orpath/paper_protocol.py`** | `run_from_solution` 权威 |
+| `paper_workflow.py` | 渲染/review 实现 |
+| `paper_live_subagent.py` | cite/review live |
+| `post_solve_paper.py` | shim |
+| 图内节点 | draft→cite→review→revise→provenance = 同环 |
 
 ```text
 python scripts/orpath_paper.py protocol --slug S --solution path/to/solution.json
-# 或
 from orpath.paper_protocol import run_from_solution
 ```
 
-## 两环分离
+---
+
+## 2. 两环分离
 
 | 环 | 目标 | 数字权威 |
 |----|------|----------|
-| A Solve | 可行/最优解 | solution + validate（ADR-0002 dispatch） |
-| B Paper | 文稿 | **必须绑定** solution/validate 制品 |
+| A Solve | 可行/优解 | solution+validate |
+| B Paper | 文稿 | **绑定** solution；禁编造 objective |
 
-禁止 writer 在无 solution 时编造 objective。
+已有 solution 时优先 **只跑 B**，不重解。
 
-## T2 Paper DoD（Q10-C）
+---
 
-1. **三类题**（SP / TSP / VRP）各至少一条：  
-   `solve → validate 绿 → draft` 且 **R2 脚本绿**（可 mock solve）进本地 gate  
-2. **Live writer ≥ 1**（建议 TSP 或 VRP）  
-3. **OpenPi 截图** 可覆盖该 live 条（与 Q1-C 合并证据）  
-4. **在线 R1**（真 arXiv/DOI 校验）进 **cloud/online 轨**（Q11-B）
-
-## Review 通道
-
-| 通道 | 类型 | T2 |
-|------|------|-----|
-| **R2** | 脚本：文中 objective-like / 大数值 ⊆ solution | **硬**；支持 path/tour/routes |
-| **R1 本地** | 引用 ⊆ whitelist ∪ research/retrieval 证据 | **硬**（`t2_gate`） |
-| **R1 在线** | HTTP/API 校验 DOI/arXiv 存在性 | **硬**（`t2_gate_cloud` 或 `t2_gate_paper_online`） |
-| **R0** | 结构完整性 | 可选软 |
-| **R3** | 语义 / 反虚榜 | 可选 LLM critic |
-
-## 默认顺序
+## 3. 默认顺序
 
 ```text
-writer draft  (outputs/.drafts/<slug>-draft.md)
-  → cite_pack   (R1 whitelist + claim_map → .drafts/<slug>-cited.md + claim-map.json)
-  → review_pack (R1∥R2∥claim + inline annotations)
+draft_paper  → outputs/.drafts/<slug>-draft.md / papers/
+  → cite_pack   → cited + claim-map +（live）or-verifier
+  → review_pack → R1∥R2∥claim + review md +（live）or-reviewer
   → revise_or_done
-       ├─ fix → revise-proof.md → re-cite (cite_pack) → review
-       └─ done → provenance (PASS|BLOCKED)
+       ├─ fix → revise-proof → 可 re-cite → review
+       └─ done → provenance PASS|BLOCKED
   → FATAL ceiling → HUMAN_REQUIRED
 ```
 
-P0 硬门：`tools/r1_claim_map.py`（数字/URL/全局最优话术/面积结构映射到 solution 或 research）。
+---
 
-## R2 规则要点
+## 4. Review 通道
 
-- objective-like 断言必须能在 solution 中找到  
-- 继承 T1 教训：小计数器 0–20 可放行；边权原样出现需在 solution/graph 允许集  
-- tour 长度、路线数、总距离等从 solution 抽取允许集  
+| 通道 | 类型 | 硬度 |
+|------|------|------|
+| R2 | 文中数字 ⊆ solution | **硬** |
+| R1 本地 | 引用 ⊆ WL ∪ retrieval | **硬**（本地 gate） |
+| R1 在线 | arXiv/DOI | **硬**（cloud 轨） |
+| claim_map | 结构/URL/虚榜/面积等 | **硬**（P0） |
+| claim_ledger | 稳定 claimId | 厚 paper 1.0 |
+| R0 结构 | 软可选 | |
+| R3 语义 critic | 软可选 | |
 
-## R1 本地 whitelist
+---
 
-- fixture：`whitelist_refs.json`  
-- 另允许 retrieval artifact 中的 `source_path` / 约定 chunk 引用格式  
+## 5. 打回（论文侧）
 
-## R1 在线
+- `revise_count` ≤ **2**  
+- 回 **draft** 再 cite/review  
+- **不改** solution 数字；数错回环 A  
+- 时间线须能标 repair_edge（process-visibility）  
 
-- 仅校验 **可解析** 的 arXiv id / DOI  
-- 网络失败：cloud 轨 FAIL 或重试，**不得**静默当 PASS  
-- 本地轨不依赖外网  
+特殊：BLOCKED 求解后 paper 应 fail-closed / 快速 provenance，避免无意义烧 cite 次数（1.2 residual）。
 
-## 文稿路径
+---
 
-- `papers/<slug>.md`  
-- 分层草稿（P1）：`outputs/.drafts/<slug>-{draft,cited,revised}.md`  
-- review：`outputs/<slug>-review.md`（含 **Inline Annotations**）  
-- verify notes：`outputs/<slug>-verify-notes.md`  
-- plan ledger：`outputs/.plans/<slug>.md`（每阶段 append Verification log）  
-- 模板：`templates/paper/or-portfolio.md` · `or-mcm.md`  
+## 6. Live vs 确定性
 
-## P1 入口
+| | LIVE=0 | LIVE=1 |
+|--|--------|--------|
+| cite/review | 脚本路径 | harness 真 sub + 本地硬门 |
+| 宣称 MA paper | 否 | 需 toolCall + 子文件 |
+
+Draft：允许 lead 写（Feynman Step4 取向）；**禁止** lead ghost-write cited/review。
+
+---
+
+## 7. 路径约定
+
+| 制品 | 路径 |
+|------|------|
+| 终稿 | `papers/<slug>.md` |
+| 草稿层 | `outputs/.drafts/<slug>-{draft,cited,revised}.md` |
+| review | `outputs/<slug>-review.md` |
+| claim-map | `.drafts/*-claim-map.json` |
+| provenance | `outputs/<slug>.provenance.md` |
+| 模板 | `templates/paper/*` |
+
+---
+
+## 8. R2 要点
+
+- objective-like 必须在 solution  
+- 小计数器策略继承 T1 教训  
+- 多题 `questions`/`metrics` 绑定  
+- 掩 arXiv `YYYY.NNNNN` 防大数误报  
+
+---
+
+## 9. CLI
 
 ```bat
 orpath.bat paper-gate
-orpath.bat paper template --slug X --solution path.json
-orpath.bat paper review --slug X --paper papers/X.md --solution ... --whitelist ...
-python tools/gate_research.py --research notes/X-research.md --retrieval notes/X-retrieval.json --knowledge-mode seed
+orpath.bat paper-1.0-gate
+orpath.bat paper-protocol --slug S --solution path.json
+orpath.bat paper-tube
 ```
 
-## 话术
+---
 
-- LLM review ≠ 真期刊审稿  
-- 不宣称论文已发表或达顶会水平  
+## 10. 话术
+
+LLM review ≠ 真期刊审稿；不宣称已发表/顶会水平。
+
+---
+
+## 11. 参考
+
+`docs/paper-1.0-closeout.md` · ADR-0004 · `multi-agent.md`  

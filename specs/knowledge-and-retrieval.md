@@ -1,89 +1,108 @@
-# Knowledge and Retrieval — 知识与检索
+# Knowledge and Retrieval — 知识与检索（详细）
 
-## 管道（T2 竖切必达）
+**对齐：** `product-flow-sdd.md`  
+**状态：** LAW 2026-08-01  
+**边界：** 本文件 = **语料/检索**；题面 OCR = `problem-intake.md`（分离）
+
+---
+
+## 1. 管道总图
 
 ```text
-corpus (PDF gitignore + curated md)
-  → MinerU Cloud（真 PDF）
-  → unified chunks (chunk_id)
-       ├─ LightRAG
-       └─ BM25 + FTS5（双写同一 chunk_id）
-  → RRF fusion → retrieve CLI / LG retrieve 节点
-  → notes/<slug>-retrieval.json → or-researcher
-  + L4 seed graph
-  + L3 Cognee Cloud smoke（非数字源）
+docs/papers
+  → MinerU Cloud 预处理（语料）
+  → chunks (chunk_id)
+       ├─ LightRAG / semantic stub
+       └─ BM25 / FTS5
+  → RRF 融合 → research 消费
+  + 领域种子图 + Cognee（可选 smoke，非主记忆）
 ```
 
-## knowledge_mode
+---
 
-| 模式 | 行为 |
-|------|------|
-| `off` | 不检索；research 可用 fixture 说明 |
-| `seed` | 仅领域种子图 → `seed_facts` |
-| `hybrid` | seed + 向量/词法融合 hits |
+## 2. 模式
 
-`t2_gate`：**至少 seed 常绿**。  
-`t2_gate_cloud`：**hybrid + MinerU + Cognee** 必绿（本机交付）。
+| knowledge_mode | 行为 |
+|----------------|------|
+| off | 无检索；research scale 可 off |
+| seed | 种子图查询 |
+| hybrid | semantic + lexical + RRF |
 
-## L4 种子图
+Research **必须能读** retrieval 制品路径（mode≠off 时）。
 
-- 路径：`knowledge/seed_graph/or_domain_seed.json`  
-- 节点类型：`ProblemClass`、`Constraint`、`Solver`、`Case`  
-- 必须覆盖：shortest_path、tsp、vrp 与 networkx/ortools 关系  
-- CLI：`knowledge_svc.seed_graph_query`  
+---
 
-## MinerU Cloud（Q8-B）
+## 3. Claim ladder（知识）
 
-- 真 PDF 走 Cloud API（`MINERU_API_TOKEN`）  
-- 另备 1–2 篇 curated `.md` 可同管道入库  
-- 输出：`knowledge/mineru_out/<doc_id>/`（gitignore）  
-- 再切成 chunks JSONL  
-- **禁止**默认本地下载多 GB MinerU 模型  
-- **不是**竞赛题面 intake 主路径；题面 OCR/审读见 **`specs/problem-intake.md`（1.1）**  
+| 可 | 不可 |
+|----|------|
+| hybrid on preprocessed chunks | LightRAG 直接精通生 PDF 数学 |
+| smoke 级 Cognee（旁路） | 生产级企业搜索 / Cognee 主记忆已完成 |
+| 空 hits 保持 [] | 伪造 cite |
 
-## Embedding
+RRF 默认权重类：`w_semantic` / `w_lexical`（实现默认以代码为准，变更写本文件）。
 
-- 硅基 OpenAI-compatible：`BAAI/bge-m3`，维度 **1024**  
-- `SILICONFLOW_API_KEY` / `SILICONFLOW_BASE_URL`  
-- base URL **不含** `/embeddings` 叶子路径  
+---
 
-## LightRAG + 词法 + RRF
+## 4. 种子图（L4）
 
-- 只索引 **预处理后** chunks  
-- BM25（`rank_bm25`）与 SQLite FTS5 双写 `chunk_id`  
-- RRF：默认权重 `w_semantic=1.0`，`w_lexical=0.4`（可配）  
-- 空命中：返回 `hits: []`，Researcher **不得**伪造 cite  
+- ProblemClass – Constraint – Solver – Case  
+- 数量门禁以 knowledge smoke / t2 为准  
+- 边字段兼容 from/to 与 source/target  
 
-## Researcher 消费（硬）
+---
 
-当 `knowledge_mode != off`：
+## 5. MinerU
 
-1. 必须读取 `notes/<slug>-retrieval.json`（或 state 中路径）  
-2. 笔记中的引用应能映射到 `chunk_id` 或 seed 节点 id  
-3. R1 本地轨：whitelist ∪ retrieval 中的 source/chunk 标识  
-4. **P1：** `tools/gate_research.py` 校验 Evidence table + Coverage Status；seed/hybrid 下 id 未引用则 research 节点 **HUMAN_REQUIRED**  
+- **Cloud** 默认；本地重模型非默认  
+- **仅语料**；竞赛题面主 OCR 不走 MinerU  
 
-## Cognee Cloud
+---
 
-- 配置：`COGNEE_API_KEY`、`COGNEE_BASE_URL`  
-- T2：write 一条 lesson + search smoke  
-- **禁止**写入 authoritative `objective` / tour / routes  
-- solve 路径 **不得**从 Cognee 读数字真相  
+## 6. Embedding
 
-## Claim ladder（文档/简历）
+- 硅基 `BAAI/bge-m3` @1024  
+- 无 key 时允许 stub/cosine mock 以保 CI 形  
 
-| 可写 | 不可写 |
-|------|--------|
-| 预处理解耦 + 混合检索供研究 | LightRAG 精通生 PDF 公式 |
-| chunk 级可追溯引用 | 已达某公开 RAG 榜 SOTA |
-| Cognee 作跨任务记忆 smoke | Cognee 保证最优解 |
+---
 
-## 评测
+## 7. Cognee（旁路 smoke · 非主记忆）
 
-- T2 **不做**自建 OR 术语 MRR 黄金集（Q7-B）  
-- 验收 = smoke + 契约 + research 消费检索制品  
+- Cloud Free 额度 **smoke**；503 → LOCAL_FALLBACK 可接受  
+- **禁止** objective dump 入库  
+- **定位：** 作品集/实验级跨任务图；**不是**运筹长期记忆主轴  
+- 运筹稳定战法 → **Skill / agent md / specs**（见 `memory.md` §0 §4）  
+- 生产检索与领域结构 → **本文件 hybrid/seed + L4 种子图**，不以 Cognee 为唯一  
+- V0+M0 前不新开 Cognee 生产化史诗；以后默认保持可选 smoke  
 
-## 密钥
+---
 
-- 仅 `.env`（gitignore）；evidence 打码  
-- 不得把 token 写入 specs/plan/docs  
+## 8. 制品路径
+
+| | |
+|--|--|
+| retrieval | `notes/<slug>-retrieval.json` |
+| research | `notes/<slug>-research.md` |
+| 索引缓存 | gitignore 目录 |
+
+---
+
+## 9. M0 关系
+
+M0 可用 `knowledge_mode=seed` 或 off；**不**以 hybrid 云调用为 M0 硬依赖。  
+真 sub 证据优先于「检索很炫」。
+
+---
+
+## 10. 验证
+
+```bat
+.venv-314\Scripts\python.exe scripts\knowledge_smoke.py --step all
+pytest knowledge_svc/test_knowledge_unit.py -q
+```
+
+---
+
+## 11. 参考
+
+`memory.md` · `multi-agent.md` research scale · T2 knowledge 实现笔记（archive）  

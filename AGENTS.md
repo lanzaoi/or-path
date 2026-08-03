@@ -4,11 +4,23 @@ Durable project law for Pi sessions. Product runtime is **this repo + Pi** (`orp
 
 ## Specs first (SDD)
 
-**硬法目录：`specs/`。** 实现与评审前先读 `specs/README.md`。
+**硬法目录：`specs/`。** 实现与评审前先读：
 
-冲突优先级：`门禁真实输出` > `specs/**` > 本文件 > `.hermes/plans/*` > `docs/**`（活文档优先 `docs/README.md`；历史在 `docs/archive/`） > chat。
+1. **`specs/product-flow-sdd.md`** — 总流程主合同 · Demo **M0**  
+2. **`specs/process-visibility.md`** — 时间线 · **sub 思考过程**怎么看见  
+3. `specs/README.md` — 全册索引  
 
-T2 grill 冻结表：`specs/gates-and-dod.md`。  
+冲突优先级：`门禁真实输出` > **`product-flow-sdd.md`** ≥ **`process-visibility.md`** ≥ `specs/**` 其它分册 > 本文件 > `.hermes/plans/*` > `docs/**` > chat。
+
+**当前产品最高优先级：**
+
+1. **V0 实时过程台**（`process-visibility.md`）— **硬底线**  
+2. **选型已冻结 S1**（`process-visibility.md` §9）：Watch 主脸；kanban/Fleet；Langfuse 可选  
+3. **实时可视完工节奏：** 同文件 **§11 五阶段 P1→P5**（**P1–P5 工程已收口**，见 `docs/p5-closeout.md`）  
+4. **M0** 可信数字 + 真 sub（`product-flow-sdd.md` §9）  
+
+无 V0 工程入口不得宣称有脸。未过 **§11 P3** 不得宣称「实时可视化已满意」。S1 选型 ≠ 已实现增强。未 V0+M0 主路径前不新开记忆/MCP/大域桥史诗。  
+T2 grill 冻结表：`specs/gates-and-dod.md`（历史 DoD）。  
 **1.1 题面 intake：** `specs/problem-intake.md`。  
 架构决策：`docs/adr/`（ADR-0001…0006）。
 
@@ -27,7 +39,7 @@ T2 grill 冻结表：`specs/gates-and-dod.md`。
 2. **Multi-agent:** Real `pi-subagents` via **`orpath.subagent_dispatch`** + **`orpath.pi_launch_law`**. Roles `or-orchestrator`, `or-researcher`, `or-modeler`, `or-writer`, `or-verifier`, `or-reviewer`. **裸 `pi -p` ≠ 多 Agent**（须 harness：`--tools …subagent`、无 write、`--mode json`）。No persona cosplay.
 3. **Control plane:** **LangGraph** via **`orpath.control_plane`**. **Pi** is the **in-node** foreman (包工头), not the global boss. Subagents return **file paths**.
 4. **File handoffs:** `notes/`, `outputs/`, `papers/`. Prefer paths over huge blobs in parent context.
-5. **Memory:** L0 disk + L1 LG checkpointer. pi-memory + Cognee = prefs/lessons/graph smoke — **never** authoritative objectives.
+5. **Memory:** L0 disk + L1 LG checkpointer **必须**. 运筹长期战法 → **Skill / agent md**（主加强轴）；pi-memory = 短 prefs；Cognee = 图 **smoke 旁路**（非主记忆）— **never** authoritative objectives. 详见 `specs/memory.md`。
 6. **Hard gates:** schema (no optima) → solve → validate → R1/R2. Paper online R1 lives on **cloud** track.
 7. **Docs surface:** living docs under `docs/` top-level; history in `docs/archive/`; out-of-band trees in `docs/OUT_OF_BAND.md`.
 8. **Intake (1.1):** OCR + problem-brief + `intake.json` may precede orchestrate; **no** objectives in intake; full subproblem coverage; see `specs/problem-intake.md`. Default product: **live multi-agent ON**; intake when `--intake-in` or `inbox/` via `--auto-intake` (`ORPATH.md`). Gates force live OFF.

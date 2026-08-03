@@ -62,7 +62,7 @@ def run_research_subagent_lead(
     *,
     research_path: Path,
     retrieval_path: Path | None,
-    fixture_dir: Path,
+    fixture_dir: Path | None,
 ) -> dict[str, Any]:
     """Spawn research lead with 1–N or-researcher children; merge into research_path."""
     slug = str(state["slug"])
@@ -278,7 +278,7 @@ def run_model_subagent_lead(
     *,
     schema_path: Path,
     research_path: Path | None,
-    fixture_dir: Path,
+    fixture_dir: Path | None,
 ) -> dict[str, Any]:
     """Harness: lead without write → subagent or-modeler → schema_path."""
     slug = str(state["slug"])

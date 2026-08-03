@@ -55,6 +55,14 @@ def _root(state: ORPathState) -> Path:
     return Path(state["root"])
 
 
+def _rel_under(path: Path, root: Path) -> str:
+    """Path relative to root when possible; else absolute posix (fixture may live under install home)."""
+    try:
+        return path.resolve().relative_to(Path(root).resolve()).as_posix()
+    except ValueError:
+        return path.resolve().as_posix()
+
+
 def _ensure_dirs(root: Path) -> None:
     for rel in (
         "outputs/.plans",
@@ -66,21 +74,34 @@ def _ensure_dirs(root: Path) -> None:
         (root / rel).mkdir(parents=True, exist_ok=True)
 
 
-def _fixture_base(root: Path, problem_id: str) -> Path:
-    for base in (
-        root / "fixtures" / "t3",
-        root / "fixtures" / "t2",
-        root / "fixtures" / "t1",
-    ):
-        if (base / problem_id).is_dir():
-            return base / problem_id
-    raise FileNotFoundError(problem_id)
+def _fixture_base(root: Path, problem_id: str) -> Path | None:
+    """Locate fixtures/t*/<id> under workdir root and/or install home."""
+    from orpath.paths import fixture_search_roots
+
+    for base_root in fixture_search_roots(root):
+        for base in (
+            base_root / "fixtures" / "t3",
+            base_root / "fixtures" / "t2",
+            base_root / "fixtures" / "t1",
+        ):
+            if (base / problem_id).is_dir():
+                return base / problem_id
+    return None
 
 
 def _infer_class(root: Path, problem_id: str, explicit: str | None) -> str:
     if explicit:
         return explicit
+    pid = (problem_id or "").strip().lower()
+    # Ad-hoc / contest ids (no fixtures/t*/<id> dir)
+    if "tube" in pid:
+        return "tube_cut"
+    if "polyomino" in pid or "poly" in pid:
+        return "polyomino_cover"
     d = _fixture_base(root, problem_id)
+    if d is None:
+        # Intake-driven run without fixture: do not fake shortest_path gold.
+        return "unknown"
     if (d / "locations.json").is_file():
         return "vrp"
     if (d / "coords.json").is_file() or (d / "distance_matrix.json").is_file():
@@ -377,7 +398,7 @@ def node_model(state: ORPathState) -> dict:
                 "problem_class": "shortest_path",
                 "problem_id": pid,
                 "nodes": graph.get("nodes", []),
-                "edges_ref": str(fb.relative_to(root) / "graph.json").replace("\\", "/"),
+                "edges_ref": _rel_under(fb / "graph.json", root),
                 "source": graph["nodes"][0],
                 "target": graph["nodes"][-1],
                 "weight_key": "w",
@@ -503,11 +524,13 @@ def _intake_whitelist_path(root: Path, state: ORPathState) -> Path:
     return out
 
 
-def _paper_whitelist_path(root: Path, state: ORPathState, fixture_dir: Path) -> Path:
+def _paper_whitelist_path(
+    root: Path, state: ORPathState, fixture_dir: Path | None
+) -> Path:
     """R4: when intake-on or BLOCKED, do not use shell fixture whitelist_refs.json."""
     blocked = _solution_is_blocked(state)
     intake_on = _intake_front_door_active(state)
-    if blocked or intake_on:
+    if blocked or intake_on or fixture_dir is None:
         return _intake_whitelist_path(root, state)
     wl = fixture_dir / "whitelist_refs.json"
     return wl
@@ -521,38 +544,45 @@ def node_solve(state: ORPathState) -> dict:
     out = root / "outputs" / f"{state['slug']}-solution.json"
 
     # 1.2 soak law: intake-on must NOT bind fixture SP/TSP/VRP gold as the answer.
-    # No domain adapter for contest PDF → honest BLOCKED envelope (not mock pass).
+    # Domain adapters (e.g. tube_cut) may still run under intake.
     if _intake_front_door_active(state):
-        blocked = {
-            "status": "BLOCKED",
-            "objective": None,
-            "solver": "none",
-            "source": "no_domain_adapter_for_intake",
-            "problem_id": state.get("problem_id"),
-            "problem_class": pc,
-            "slug": state.get("slug"),
-            "meta": {
-                "exact": False,
-                "proven_optimal": False,
-                "blocked": True,
-                "method_class": "fixture",
-                "reason": (
-                    "intake front-door active: refusing fixture solve bind "
-                    f"(problem_id={state.get('problem_id')!r}, mode={mode!r}); "
-                    "no contest-domain adapter registered"
-                ),
-                "intake_path": state.get("intake_path") or "",
-                "brief_path": state.get("brief_path") or "",
-            },
-        }
-        out.write_text(json.dumps(blocked, indent=2) + "\n", encoding="utf-8")
-        return {
-            "stage": "gate_validate",
-            "solution_path": str(out),
-            "gate_validate_ok": False,
-            "last_error": "no_domain_adapter_for_intake",
-            "solve_refused": True,
-        }
+        pc_l = str(pc or "").lower()
+        pid_l = str(state.get("problem_id") or "").lower()
+        has_domain_adapter = pc_l in {"tube_cut", "tube", "tube_bfd"} or "tube" in pid_l
+        if not has_domain_adapter:
+            blocked = {
+                "status": "BLOCKED",
+                "objective": None,
+                "solver": "none",
+                "source": "no_domain_adapter_for_intake",
+                "problem_id": state.get("problem_id"),
+                "problem_class": pc,
+                "slug": state.get("slug"),
+                "meta": {
+                    "exact": False,
+                    "proven_optimal": False,
+                    "blocked": True,
+                    "method_class": "fixture",
+                    "reason": (
+                        "intake front-door active: refusing fixture solve bind "
+                        f"(problem_id={state.get('problem_id')!r}, mode={mode!r}); "
+                        "no contest-domain adapter registered"
+                    ),
+                    "intake_path": state.get("intake_path") or "",
+                    "brief_path": state.get("brief_path") or "",
+                },
+            }
+            out.write_text(json.dumps(blocked, indent=2) + "\n", encoding="utf-8")
+            return {
+                "stage": "gate_validate",
+                "solution_path": str(out),
+                "gate_validate_ok": False,
+                "last_error": "no_domain_adapter_for_intake",
+                "solve_refused": True,
+            }
+        # Prefer tube solve mode when adapter applies
+        if has_domain_adapter and str(mode).lower() in {"mock", "auto", ""}:
+            mode = "tube"
 
     extra: list[str] = []
     tune = int(state.get("solver_tune") or 0)
@@ -744,7 +774,13 @@ def node_draft_paper(state: ORPathState) -> dict:
     blocked0 = str(sol.get("status") or "").upper() == "BLOCKED" or bool(meta0.get("blocked"))
     intake_on = _intake_front_door_active(state)
     if blocked0 or intake_on:
-        rel = "shell_only:" + fb.relative_to(root).as_posix()
+        if fb is not None:
+            try:
+                rel = "shell_only:" + _rel_under(fb, root)
+            except ValueError:
+                rel = f"shell_only:adhoc:{state.get('problem_id')}"
+        else:
+            rel = f"shell_only:adhoc:{state.get('problem_id')}"
         wl_path = _paper_whitelist_path(root, state, fb)
         cites: list[str] = []
         try:
@@ -761,14 +797,21 @@ def node_draft_paper(state: ORPathState) -> dict:
         if not cites:
             cites = ["notes://intake-blocked-soak"]
     else:
-        rel = fb.relative_to(root).as_posix()
-        cites = []
-        wl_path = fb / "whitelist_refs.json"
+        if fb is None:
+            rel = f"adhoc:{state.get('problem_id')}"
+            cites = []
+            wl_path = _paper_whitelist_path(root, state, None)
+        else:
+            try:
+                rel = _rel_under(fb, root)
+            except ValueError:
+                rel = str(fb)
+            cites = []
+            wl_path = fb / "whitelist_refs.json"
         if wl_path.is_file():
             try:
                 wl = json.loads(wl_path.read_text(encoding="utf-8"))
                 cites.extend(str(u) for u in (wl.get("urls") or []))
-                cites.extend(str(n) for n in (wl.get("notes") or []))
             except json.JSONDecodeError:
                 cites = []
         if not cites:

@@ -41,6 +41,26 @@ def check_schema(data: dict) -> list[str]:
             errors.append("vrp requires capacities")
         if "demands" not in top:
             errors.append("vrp requires demands")
+    elif pc in {"tube_cut", "tube", "tube_bfd", "cutting_stock", "cut_stock"}:
+        # Contest B / tube cutting: structural schema only (no optima keys — checked above).
+        # Accept modeler shapes that describe stock/workpieces without requiring SP/TSP/VRP fields.
+        if not any(
+            k in top
+            for k in (
+                "workpiece_specs",
+                "workpieces",
+                "stock",
+                "stock_lengths",
+                "batches",
+                "geometry_preprocessing",
+                "questions",
+                "subproblems",
+            )
+        ):
+            errors.append(
+                "tube_cut/cutting_stock requires structural keys "
+                "(workpiece_specs|stock|batches|geometry_preprocessing|…)"
+            )
     else:
         errors.append(f"unknown problem_class: {pc}")
 

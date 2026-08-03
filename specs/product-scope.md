@@ -1,84 +1,127 @@
-# Product Scope — 产品范围
+# Product Scope — 产品范围（详细）
 
-## 产品名
+**对齐：** `product-flow-sdd.md`  
+**状态：** LAW 2026-08-01
+
+---
+
+## 1. 产品名与一句话
 
 **OR-Path Multi-Agent / Graph-OR Agent**
 
-## 一句话
+自然语言/题面运筹问题 → 研究与建模 → **确定性求解 + validate** → 论文有界打回；真多 Agent 隔离；过程可审计、可可视化。
 
-自然语言运筹问题 → 检索增强研究 → 结构化建模（无最优值）→ **确定性求解** → **validate 重算** → 解释与论文草稿（R1/R2）→ 有界回修；多智能体真隔离；知识云优先且可引用。
+---
 
-## 目标用户 / 场景
+## 2. 目标用户 / 场景
 
-- 作品集主独立 AI 项目（Track B）  
-- 演示与工程可审计的 OR 闭环（最短路 / TSP / VRP 等）  
-- 开发者本机：`Desktop/agent` + Pi + LangGraph（OpenPi 已移除）  
+- 作品集主独立 AI（Track B）  
+- 工程可审计 OR 闭环演示  
+- 本机：`ORPATH_HOME` + Pi + LangGraph  
+- **当前交付焦点：** Demo **M0**（见总流程），不是「全竞赛自动交卷」  
 
-## In scope（产品目标能力）
+---
 
-1. **多问题类：** `shortest_path`、`tsp`、`vrp`（T2：TSP n=8；VRP ≥2 车 + 容量）  
-2. **真多智能体：** `pi-subagents` 角色隔离 + 可检 transcript  
-3. **控制面：** LangGraph 阶段机 + checkpointer  
-4. **数字真相：** 精确轨（NetworkX / CP-SAT / HiGHS）与实用轨（OR-Tools Routing）+ mock；**一律 validate 重算**；LLM 禁止心算最优；**禁止**把启发式宣传成全局最优  
-5. **校验：** `validate_solution` 重算可行性与 objective  
-6. **知识竖切：** 种子图 + MinerU Cloud + LightRAG + BM25/FTS + RRF + Cognee Cloud smoke  
-7. **论文环：** draft + R1（含在线轨）+ R2 + 有界 revise  
-8. **UI：** `orpath.bat menu` 主；Pi TUI 辅；OpenPi 已移除（截图 DoD 退役）  
-9. **LG↔Pi bridge：** T2 **硬 DoD**（可开关，CI 默认可关，但 closeout 必须证明通）  
-10. **题面 intake（1.1）：** 图/PDF OCR + 自主审读 brief/`intake.json`（无 objective）；可选人确认；与 MinerU 语料路径分离 — 见 `problem-intake.md`
+## 3. In scope
 
-## Out of scope / 非目标（明确不做或不宣称）
+### 3.1 能力（产品目标，分期交付）
+
+| # | 能力 | 最低里程碑 |
+|---|------|------------|
+| 1 | 问题类 SP / TSP / VRP（+ 已注册域 adapter） | 基线已有；新域 M2+ |
+| 2 | 真多智能体 pi-subagents | 已有；M0 要证据+时间线 |
+| 3 | LG 控制面 + checkpointer | 已有 |
+| 4 | 数字真相 + claim ladder | 已有 |
+| 5 | validate 重算 | 已有 |
+| 6 | 知识竖切（seed/hybrid） | 已有 smoke |
+| 7 | 论文环 R1/R2/revise | 已有 |
+| 8 | menu 主入口 | 已有 |
+| 9 | 题面 intake OCR | 已有 |
+| 10 | **过程时间线 + sub 轨迹可视** | **M0/M1** |
+| 11 | 域桥（如 polyomino） | M2 |
+| 12 | launch SYSTEM 真注入 | M3 |
+| 13 | 记忆叙事 / 1 MCP | M4 |
+
+### 3.2 当前唯一对外承诺
+
+在 M0 PASS 前，对外只承诺：
+
+> 能按文档跑通 **M0 Demo**：出数 + 真 sub 证据 + 时间线文件。
+
+T1–1.2 closeout = **历史工程资产**，不等于愿景完成。
+
+---
+
+## 4. Out of scope / 非目标
 
 | 非目标 | 说明 |
 |--------|------|
-| Agent Teams / 消息总线作脊柱 | 拓扑 OUT |
-| Graphiti / MS GraphRAG 主路径 | 不用 |
-| Feynman 作主开发壳 | vendor 参考 only |
-| Hermes MEMORY 作产品记忆 | 仅导航 |
-| 完整 codegen + sandbox 自修环 | OR-LLM-Agent 全套 → 非 T2（validate 调参 ≠ codegen） |
-| 时间窗 VRP | T2 不做 TW |
-| Compose/K8s 硬交付 | T2 不进仓内硬 DoD（Q15-A）；日后可再冻 |
-| 多租户 SaaS / 计费 | 不做 |
-| 自制「SOTA 黄金集」叙事 | 禁止；用 fixture gap + negatives + 诚实 smoke |
-| 宣称 LightRAG 直接吃生 PDF 数学 | 公式在 MinerU 阶段固定 |
-| 宣称顶会论文质量或抄论文准确率数字 | 无独立评测不写 |
-| 宣称 OCR/审题 100% 正确或替代专家读题 | 1.1 要可审计与歧义外显，不保证无错 |
-| intake 内求解 / 写最优解 | 仍只认 solve+validate |
+| Agent Teams / 消息总线脊柱 | 拓扑 OUT |
+| Graphiti / MS GraphRAG 主路径 | OUT |
+| Feynman 主开发壳 | vendor only |
+| Hermes MEMORY 产品记忆 | 导航 only |
+| Cognee 作运筹主长期记忆 / 生产图脑 | **OUT**；仅 smoke 旁路（`memory.md`） |
+| 完整 codegen sandbox 自修 | 非本阶段 |
+| 未注册域假装求解成功 | 必须 BLOCKED 或显式 adapter |
+| OpenPi 产品壳 | 已删除 |
+| 自制 SOTA 黄金集叙事 | 禁止 |
+| LightRAG 直接吃生 PDF 数学 | 公式在 MinerU |
+| 抄论文准确率无本仓评测 | 禁止 |
+| OCR 100% / 替代专家读题 | 禁止 |
+| intake 内求解 | 禁止 |
+| M0 前上完整 MCP 市场 / Cognee 生产化记忆大脑 | 禁止抢跑；战法用 Skill 沉淀不抢 V0 |
+| 时间线用 LLM 编造协作 | 禁止 |
 
-## 作品集话术边界（claim ladder）
+---
 
-**可以说：**
+## 5. Claim ladder（话术）
+
+### 可以说（有证据时）
 
 - 带验证关卡的 Supervisor–Worker 流水线  
-- 多 Agent 隔离轨迹可检  
-- 最短路 / 小 TSP 等用 **精确算法/CP-SAT/MIP** 并 **validate 重算**  
-- 较大 VRP 用路由搜索作扩展，**明确非证明最优**，仍经 validate  
-- 云优先知识预处理 + 混合检索供 Researcher  
+- 多 Agent 隔离轨迹可检（toolCall + 路径）  
+- 精确轨 + validate；Routing 诚实非证明最优  
+- 过程时间线来自磁盘聚合  
+- M0：一入口 + 数 + sub + 时间线  
 
-**不可以说：**
+### 不可以说
 
-- 「保证全局最优 / 替代 OR 专家」（超出现有精确轨规模时）  
-- 「OR-Tools Routing = 数学证明最优」  
-- 「启发式引擎是产品核心卖点」  
-- 「Pi/LG 保证最优」  
-- 「已达 OR-LLM-Agent 85%」等无本仓评测支撑的数字  
-- 「FTS/LightRAG 主搜索引擎已生产级」若仅 smoke  
+- 保证全局最优（超规模）  
+- Routing = 数学证明最优  
+- 启发式是核心卖点  
+- Pi/LG 保证最优  
+- 无评测抄 85%  
+- 裸 pi 聊天 = 产品 MA  
+- 门禁绿 = 用户 Demo 完成  
+- 已自动交 B 题（无 adapter/solution 时）  
 
-求解器组合权威：`docs/solver-stack.md` · `specs/solvers-and-validate.md`。
+权威求解 claim：`solvers-and-validate.md` · `docs/solver-stack.md`。
 
-## 里程碑关系
+---
 
-| 里程碑 | 状态 / 含义 |
-|--------|-------------|
-| **T1** | CLOSED/PASS — 薄全链 + 多 Agent 证明；不重开 DoD |
-| **T2** | CLOSED/PASS — 数字真相加厚 + 知识竖切 + bridge + 云分轨 + bridge 证据 |
-| **T3** | 工程 PASS — LG 产品骨架 — 见 `t3-lg-skeleton.md`（DoD E）；T3-mini CVRPTW 为矩阵叶 |
-| **1.0** | PASS — 论文协议 + 多 Agent harness + ADR-0001…0006；不重开 DoD |
-| **1.1** | **CLOSED/PASS** — 题面 OCR + 自主审读 — `docs/1.1-closeout.md` |
-| **1.2** | **工程 PASS** — 真题 soak（intake→LG→live MA→BLOCKED）+ residual R1–R4 — `docs/1.2-closeout.md`；**非**交卷求解里程碑 |
+## 6. 里程碑状态表
 
-## 工作区法
+| 里程碑 | 状态 | 含义 |
+|--------|------|------|
+| T1 | CLOSED/PASS | 薄全链 + MA 证明；不重开 |
+| T2 | CLOSED/PASS | 厚栈；OpenPi 截图 DoD 退役 |
+| T3 | 工程 PASS | LG 骨架 |
+| 1.0 | PASS | paper + harness + ADR |
+| 1.1 | CLOSED/PASS | intake |
+| 1.2 | 工程 PASS | soak + BLOCKED 诚实；非交卷 |
+| **M0** | **当前目标** | 总流程 Demo 合同 |
+| M1+ | 未开 | 可视加厚/域桥/launch/记忆 |
 
-- 根目录：`C:\Users\Lanzao\Desktop\agent\`  
-- **禁止**在 `inquisitive-master` 等其它仓写本产品业务代码  
-- 会话标题 ≠ cwd：写前确认 Project / pwd  
+---
+
+## 7. 工作区法
+
+- 根：`Desktop/agent` 或 `ORPATH_HOME`  
+- 会话标题 ≠ cwd  
+- git：不提交 `.env`、竞赛 PDF 附件、大宗 outputs、node_modules、默认 pi-main/vendor  
+
+---
+
+## 8. 参考
+
+`product-flow-sdd.md` · `process-visibility.md` · `gates-and-dod.md`  
