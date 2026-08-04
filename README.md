@@ -9,8 +9,8 @@
 | 主入口 | **`START-CASE.bat`** · **`START-WATCH.bat`** · `orpath.bat` |
 | 法条 | **`specs/`**（索引 `specs/README.md`） |
 | 架构 | **`docs/ARCHITECTURE.md`** |
-| 安装 | **`docs/install.md`** · Release **v0.2.0** |
-| 操作 | **`ORPATH.md`** |
+| 安装 | **`docs/install.md`** · Release **v0.2.0**（线上）· **v0.3.0** 说明见 notes |
+| 教程 | **`docs/user-guide.md`**（详细）· **`ORPATH.md`**（速查） |
 
 ---
 
@@ -91,7 +91,7 @@ ORPATH.md        操作说明
 | T1–T2 / 1.0 / 1.1 | CLOSED — `docs/archive/closeouts/` |
 | V0 / M0 / M1 | 过程脸 · mock · workdir |
 | **M2 polyomino** | 域桥 · Q1.1 obj=**6** |
-| L1 / L2 安装 | setup + Release v0.2.0 |
+| L1 / L2 安装 | setup + 线上 **v0.2.0** · 下一包 **v0.3.0** |
 | **Knowledge RAG v1–v3** | CLOSED ~88–92% — hybrid + lit 主粮 + research 档 |
 | **promote-run** | 跑完题 → 压缩 skill/lesson → allowlist → sync |
 | **Tube B LIVE** | 产品路径可全绿（启发式 FEASIBLE；共切弱于强手优化稿） |
@@ -128,7 +128,8 @@ orpath.bat promote-run-gate
 | 读这个 | 当… |
 |--------|-----|
 | [`docs/install.md`](docs/install.md) | 安装 / Release |
-| [`ORPATH.md`](ORPATH.md) | 每天怎么点 |
+| [`docs/user-guide.md`](docs/user-guide.md) | **详细使用教程** |
+| [`ORPATH.md`](ORPATH.md) | 命令速查 |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 架构快照 |
 | [`specs/README.md`](specs/README.md) | 法条索引 |
 | [`docs/README.md`](docs/README.md) | docs 导航 |
@@ -144,5 +145,5 @@ orpath.bat m2-gate
 orpath.bat phase5-v3-gate
 orpath.bat promote-run-gate
 orpath.bat pack-release
-orpath.bat l2-gate --zip dist\orpath-0.2.0-win-x64.zip
+orpath.bat l2-gate --zip dist\orpath-0.3.0-win-x64.zip
 ```

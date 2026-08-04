@@ -8,7 +8,8 @@
 | 路径 | 用途 |
 |------|------|
 | **[`install.md`](install.md)** | L1 setup · L2 Release 安装 |
-| **[`../ORPATH.md`](../ORPATH.md)** | 日常操作（路径 A · Watch · LIVE） |
+| **[`user-guide.md`](user-guide.md)** | **详细使用教程**（路径 A · LIVE · 求解 · RAG） |
+| **[`../ORPATH.md`](../ORPATH.md)** | 日常命令速查 |
 | **[`../README.md`](../README.md)** | 仓库总览 |
 | **[`../START-CASE.bat`](../START-CASE.bat)** | 路径 A 一键 |
 | **[`../START-WATCH.bat`](../START-WATCH.bat)** | 过程脸一键 |

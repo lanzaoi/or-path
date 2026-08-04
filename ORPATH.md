@@ -3,7 +3,9 @@
 **Hermes 不是产品运行时。** **OpenPi 桌面壳已从本安装删除**（2026-07-31，方案 B）。  
 控制面：**`orpath.bat menu`**；**实时过程脸：双击 `START-WATCH.bat` / `orpath.bat face` / `watch`**；轻量对话：**`pi.bat` / `orpath.bat pi`**。
 
-**全新机器请先：** `orpath.bat setup` → `doctor`（说明见 **`docs/install.md`**）。
+**详细使用教程 → [`docs/user-guide.md`](docs/user-guide.md)**（安装 · 路径 A · LIVE · 求解器 · RAG · FAQ）。  
+**全新机器请先：** `orpath.bat setup` → `doctor`（说明见 **`docs/install.md`**）。  
+**版本：** 根目录 `VERSION`（**0.3.0**）；线上 L2 zip 仍可能是 v0.2.0，见 install 版本表。
 
 ## 一键启动（推荐）
 
@@ -120,15 +122,15 @@ orpath.bat phase2-real-corpus-gate
 orpath.bat phase3-live-default-gate
 orpath.bat product-research-gate
 orpath.bat phase5-v3-gate
+orpath.bat promote-run --slug <slug>
+orpath.bat promote-run-gate
 :: set ORPATH_KNOWLEDGE_PROFILE=research
 orpath.bat phase3-scale-gate
 orpath.bat thick-hybrid-gate
 orpath.bat phase5-thick-gate
 :: set ORPATH_KNOWLEDGE_EMBED=auto|live|stub  (default auto)
-orpath.bat phase3-hybrid-gate
 
 orpath.bat phase5-knowledge-gate
-:: optional: run_t2.py --knowledge-mode hybrid --solve-mode mock --no-live-subagent --slug my-hybrid
 orpath.bat tools-list
 orpath.bat mcp
 orpath.bat mcp-highs
