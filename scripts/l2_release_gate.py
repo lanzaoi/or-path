@@ -192,6 +192,32 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"OK seed face {sol}")
 
+        # Watch face must open as ok (not blocked repair loop)
+        try:
+            sys.path.insert(0, str(root))
+            from orpath.paths import apply_workdir  # type: ignore
+            from orpath.watch_snapshot import build_snapshot  # type: ignore
+
+            apply_workdir(root)
+            snap = build_snapshot(
+                slug="live-btube",
+                thread_id="live-btube",
+                root=root,
+                workdir=root,
+            )
+            st = snap.get("status")
+            nst = len(snap.get("stages") or [])
+            if st != "ok":
+                print(f"FAIL watch snapshot status={st!r} (want ok), stages={nst}")
+                return 1
+            if nst < 6:
+                print(f"FAIL watch snapshot stages too few: {nst}")
+                return 1
+            print(f"OK watch face status=ok stages={nst}")
+        except Exception as exc:  # noqa: BLE001
+            print(f"FAIL watch snapshot check: {exc}")
+            return 1
+
     print("PASS l2_release_gate")
     return 0
 

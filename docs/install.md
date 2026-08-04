@@ -15,18 +15,22 @@
 
 ## L2 — GitHub Release（推荐路人）
 
-发布后资产示例：
+发布资产（`v0.2.0`）：
 
 - `orpath-0.2.0-win-x64.zip` — 半肥包（源码 + **预装 Pi** + `demo/seed`）
 - `SHA256SUMS`
 - `install.ps1`
 
+**本机已验收（作者机）：** `pack_release` → `l2_release_gate` PASS；`install.ps1 -LocalZip` → doctor PASS → Watch face `status=ok`。
+
 ```powershell
 # 在线（发布 tag 后）
 irm https://github.com/lanzaoi/or-path/releases/download/v0.2.0/install.ps1 | iex
 
-# 或本机已有 zip
-powershell -File scripts\install\install.ps1 -LocalZip .\dist\orpath-0.2.0-win-x64.zip -InstallDir $env:TEMP\orpath-try
+# 或本机已有 zip（不经 GitHub）
+powershell -ExecutionPolicy Bypass -File scripts\install\install.ps1 `
+  -LocalZip .\dist\orpath-0.2.0-win-x64.zip `
+  -InstallDir $env:TEMP\orpath-try -NoPath
 ```
 
 安装默认目录：`%LOCALAPPDATA%\Programs\orpath`  
