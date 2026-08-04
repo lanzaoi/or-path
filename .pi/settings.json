@@ -4,7 +4,7 @@
     "npm:@samfp/pi-memory"
   ],
   "subagents": {
-    "defaultModel": "deepseek-v4-pro"
+    "defaultModel": "deepseek-v4-flash"
   },
   "memory": {
     "enabled": true,
@@ -15,6 +15,8 @@
     "liveSubagentDefault": true,
     "appendSystem": ".pi/APPEND_SYSTEM.md",
     "controlPlane": "orpath.bat menu | run-full | intake",
-    "ocr": "tools/intake_ocr.py (paddle/ppocr → api → rapidocr)"
+    "ocr": "tools/intake_ocr.py (paddle/ppocr → api → rapidocr)",
+    "piDefaultModel": "deepseek-v4-flash",
+    "piDefaultProvider": "deepseek"
   }
 }

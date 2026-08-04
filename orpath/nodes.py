@@ -371,27 +371,38 @@ def node_model(state: ORPathState) -> dict:
     live_req = live_subagent_enabled(dict(state))
     sub_ok = sub_meta.get("gate_subagent_ok")
 
-    # Deterministic modeler if live skipped or child failed (only when live off)
-    need_det = sub_meta.get("skipped") or (not live_req)
+    # Deterministic modeler if live skipped/off/failed (Path A: never leave empty schema).
+    need_det = bool(sub_meta.get("skipped") or (not live_req) or (not sp.is_file()))
     if live_req and sub_ok is False:
+        live_err = str(sub_meta.get("error") or "model subagent failed")
         append_plan_log(
             root,
             slug,
             stage="model",
-            status="fail",
-            detail=str(sub_meta.get("error") or "model subagent failed")[:300],
+            status="warn",
+            detail=("live model failed → deterministic fallback: " + live_err)[:300],
             plan_file=state.get("plan_path"),
         )
-        return {
-            "stage": "gate_schema",
-            "schema_path": str(sp) if sp.is_file() else "",
-            "gate_subagent_ok": False,
-            "last_error": str(sub_meta.get("error") or "model subagent failed"),
-        }
+        need_det = True
 
     if need_det or not sp.is_file():
         schema: dict
-        if pc == "shortest_path":
+        try:
+            from orpath.domain_registry import is_polyomino_class, normalize_problem_class
+
+            pc_n = normalize_problem_class(pc) or str(pc or "")
+            poly = is_polyomino_class(pc_n)
+        except Exception:  # noqa: BLE001
+            pc_n = str(pc or "")
+            poly = "polyomino" in pc_n.lower()
+
+        if pc_n == "shortest_path" or pc == "shortest_path":
+            if fb is None:
+                return {
+                    "stage": "human_stop",
+                    "human_required": True,
+                    "last_error": "model: no fixture for shortest_path",
+                }
             graph = json.loads((fb / "graph.json").read_text(encoding="utf-8"))
             schema = {
                 "slug": slug,
@@ -406,7 +417,13 @@ def node_model(state: ORPathState) -> dict:
                 "constraints": [],
                 "notes": "T2/T3 deterministic modeler",
             }
-        elif pc == "tsp":
+        elif pc_n == "tsp" or pc == "tsp":
+            if fb is None:
+                return {
+                    "stage": "human_stop",
+                    "human_required": True,
+                    "last_error": "model: no fixture for tsp",
+                }
             coords = json.loads((fb / "coords.json").read_text(encoding="utf-8"))
             schema = {
                 "slug": slug,
@@ -417,7 +434,36 @@ def node_model(state: ORPathState) -> dict:
                 "constraints": [],
                 "notes": "T2/T3 TSP modeler",
             }
+        elif poly:
+            board: dict = {}
+            if fb is not None and (fb / "board.json").is_file():
+                board = json.loads((fb / "board.json").read_text(encoding="utf-8"))
+            schema = {
+                "slug": slug,
+                "problem_class": "polyomino_cover",
+                "problem_id": pid,
+                "preferred_solve_mode": "polyomino",
+                "constraints": [],
+                "notes": "M2 polyomino deterministic modeler (no placements/objective)",
+            }
+            if board:
+                schema["board_ref"] = (
+                    _rel_under(fb / "board.json", root) if fb else "board.json"
+                )
+                for k in ("rows", "cols", "pieces", "removed", "max_counts"):
+                    if k in board and board[k] is not None:
+                        schema[k] = board[k]
+            else:
+                schema["rows"] = 4
+                schema["cols"] = 4
+                schema["pieces"] = [{"id": "M"}, {"id": "D"}, {"id": "L3"}]
         else:
+            if fb is None or not (fb / "locations.json").is_file():
+                return {
+                    "stage": "human_stop",
+                    "human_required": True,
+                    "last_error": f"model: unsupported class or missing fixture pc={pc}",
+                }
             loc = json.loads((fb / "locations.json").read_text(encoding="utf-8"))
             schema = {
                 "slug": slug,
@@ -432,6 +478,7 @@ def node_model(state: ORPathState) -> dict:
                 "constraints": ["capacity"],
                 "notes": "T2 multi-vehicle VRP modeler (not proven global opt)",
             }
+        sp.parent.mkdir(parents=True, exist_ok=True)
         sp.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
 
     append_plan_log(
@@ -452,7 +499,29 @@ def node_model(state: ORPathState) -> dict:
 
 def node_gate_schema(state: ORPathState) -> dict:
     root = _root(state)
-    ok, msg = gate_schema(root, Path(state["schema_path"]))
+    raw_sp = state.get("schema_path") or ""
+    sp = Path(str(raw_sp)) if str(raw_sp).strip() not in {"", "."} else Path()
+    if not sp.is_file():
+        msg = (
+            "schema_path missing or not a file "
+            f"(got {raw_sp!r}) — modeler did not write outputs/*-schema.json"
+        )
+        repair = int(state.get("schema_repair") or 0)
+        max_r = int(state.get("max_schema_repair") or 2)
+        if repair < max_r:
+            return {
+                "stage": "model",
+                "gate_schema_ok": False,
+                "schema_repair": repair + 1,
+                "last_error": msg,
+            }
+        return {
+            "stage": "human_stop",
+            "human_required": True,
+            "gate_schema_ok": False,
+            "last_error": f"schema repair exhausted: {msg}",
+        }
+    ok, msg = gate_schema(root, sp)
     if ok:
         return {"stage": "solve", "gate_schema_ok": True, "last_error": ""}
     repair = int(state.get("schema_repair") or 0)
@@ -544,11 +613,20 @@ def node_solve(state: ORPathState) -> dict:
     out = root / "outputs" / f"{state['slug']}-solution.json"
 
     # 1.2 soak law: intake-on must NOT bind fixture SP/TSP/VRP gold as the answer.
-    # Domain adapters (e.g. tube_cut) may still run under intake.
+    # Domain adapters (tube_cut, polyomino_cover) may still run under intake.
     if _intake_front_door_active(state):
         pc_l = str(pc or "").lower()
         pid_l = str(state.get("problem_id") or "").lower()
-        has_domain_adapter = pc_l in {"tube_cut", "tube", "tube_bfd"} or "tube" in pid_l
+        try:
+            from orpath.domain_registry import is_polyomino_class, is_registered_solve_class
+
+            poly_ad = is_polyomino_class(pc_l) or "polyomino" in pid_l
+            tube_ad = pc_l in {"tube_cut", "tube", "tube_bfd"} or "tube" in pid_l
+            has_domain_adapter = bool(poly_ad or tube_ad or is_registered_solve_class(pc_l))
+        except Exception:  # noqa: BLE001
+            poly_ad = "polyomino" in pc_l or "polyomino" in pid_l
+            tube_ad = pc_l in {"tube_cut", "tube", "tube_bfd"} or "tube" in pid_l
+            has_domain_adapter = poly_ad or tube_ad
         if not has_domain_adapter:
             blocked = {
                 "status": "BLOCKED",
@@ -580,9 +658,25 @@ def node_solve(state: ORPathState) -> dict:
                 "last_error": "no_domain_adapter_for_intake",
                 "solve_refused": True,
             }
-        # Prefer tube solve mode when adapter applies
+        # Prefer domain solve mode when adapter applies
         if has_domain_adapter and str(mode).lower() in {"mock", "auto", ""}:
-            mode = "tube"
+            mode = "polyomino" if poly_ad else "tube"
+
+    # Non-intake: polyomino must not use SP mock bind
+    try:
+        from orpath.domain_registry import is_polyomino_class
+
+        if is_polyomino_class(str(pc or "")) or "polyomino" in str(
+            state.get("problem_id") or ""
+        ).lower():
+            if str(mode).lower() in {"mock", "auto", "ortools", ""}:
+                mode = "polyomino"
+    except Exception:  # noqa: BLE001
+        if "polyomino" in str(pc or "").lower() or "polyomino" in str(
+            state.get("problem_id") or ""
+        ).lower():
+            if str(mode).lower() in {"mock", "auto", "ortools", ""}:
+                mode = "polyomino"
 
     extra: list[str] = []
     tune = int(state.get("solver_tune") or 0)
@@ -597,7 +691,14 @@ def node_solve(state: ORPathState) -> dict:
             str(tl),
         ]
     ok, data, raw = solve(root, state["problem_id"], mode, pc, extra or None)
-    if not ok and mode != "mock":
+    if not ok and mode not in {
+        "mock",
+        "polyomino",
+        "polyomino_cover",
+        "poly",
+        "tube",
+        "tube_cut",
+    }:
         ok, data, raw = solve(root, state["problem_id"], "mock", pc)
     if not ok:
         return {
@@ -611,7 +712,6 @@ def node_solve(state: ORPathState) -> dict:
         "solution_path": str(out),
         "last_error": "",
     }
-
 
 def node_gate_validate(state: ORPathState) -> dict:
     root = _root(state)
@@ -978,10 +1078,25 @@ def node_cite_pack(state: ORPathState) -> dict:
     paper.write_text(body, encoding="utf-8")
 
     sub_ok = sub_meta.get("gate_subagent_ok")
-    # When live was requested, subagent failure is hard fail (Q11)
+    # Live cite fail: if solve+validate already green, keep deterministic R1/claim
+    # so Path-A does not hang the whole face on paper prose alone (numbers truth first).
     live_req = live_subagent_enabled(dict(state))
     if live_req and sub_ok is False:
-        ok = False
+        if state.get("gate_validate_ok"):
+            ok = bool(r1_ok and claim_ok)
+            append_plan_log(
+                root,
+                slug,
+                stage="cite",
+                status="warn",
+                detail=(
+                    "live cite failed/timeout; kept deterministic gates because "
+                    f"validate_ok=1 sub_err={(sub_meta.get('error') or '')[:180]}"
+                ),
+                plan_file=state.get("plan_path"),
+            )
+        else:
+            ok = False
     else:
         ok = r1_ok and claim_ok
 

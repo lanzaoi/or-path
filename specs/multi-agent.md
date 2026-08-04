@@ -68,7 +68,7 @@
 | or-verifier | cite | 引用辅助 | 替代 R1 脚本 |
 | or-reviewer | review | 语义批评 | 无上限互怼 |
 
-模型：Pi 侧 **DeepSeek only**（如 deepseek-v4-pro）。
+模型：Pi 侧 **DeepSeek only**（默认 **deepseek-v4-flash**；见 `orpath.subagent_runtime` / `.pi/settings.json`）。
 
 ---
 

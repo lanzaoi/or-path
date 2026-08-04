@@ -101,6 +101,8 @@ if /i "%CMD%"=="demo-m0" goto :demo_m0
 if /i "%CMD%"=="m0" goto :demo_m0
 
 if /i "%CMD%"=="watch" goto :watch
+if /i "%CMD%"=="face" goto :face
+if /i "%CMD%"=="start-watch" goto :face
 
 if /i "%CMD%"=="watch-run" goto :watch_run
 
@@ -134,6 +136,8 @@ if /i "%CMD%"=="polish-gate" goto :p5_gate
 
 if /i "%CMD%"=="m0-gate" goto :m0_gate
 if /i "%CMD%"=="m1-gate" goto :m1_gate
+if /i "%CMD%"=="m2-gate" goto :m2_gate
+if /i "%CMD%"=="gate-m2" goto :m2_gate
 if /i "%CMD%"=="gate-m1" goto :m1_gate
 
 if /i "%CMD%"=="tube-live-gate" goto :tube_live_gate
@@ -202,6 +206,8 @@ echo    orpath.bat menu                ^(preferred control plane^)
 echo    orpath.bat doctor
 
 echo    orpath.bat watch [--slug SLUG] [--thread-id ID] [--port N] [--no-browser]
+echo    orpath.bat face                 ^(one-click Watch, default live-btube^)
+echo    START-WATCH.bat                 ^(double-click same^)
 
 echo    orpath.bat watch-run [--slug SLUG] [--workdir DIR] [--live] [--keep-watch]   ^(P3/M1^)
 
@@ -217,6 +223,7 @@ echo    orpath.bat p5-gate
 
 echo    orpath.bat m0-gate
 echo    orpath.bat m1-gate
+echo    orpath.bat m2-gate
 
 echo    orpath.bat tube-live-gate
 
@@ -403,6 +410,12 @@ set "ORPATH_LIVE_SUBAGENT=0"
 "%PY%" "!ORPATH_HOME!\scripts\m1_gate.py"
 exit /b %ERRORLEVEL%
 
+
+:m2_gate
+set "ORPATH_LIVE_SUBAGENT=0"
+"%PY%" "!ORPATH_HOME!\scripts\m2_gate.py"
+exit /b %ERRORLEVEL%
+
 :tube_live_gate
 set "ORPATH_LIVE_SUBAGENT=0"
 "%PY%" "!ORPATH_HOME!\scripts\tube_live_gate.py" %2 %3 %4 %5
@@ -430,6 +443,16 @@ exit /b %ERRORLEVEL%
 
 "%PY%" "!ORPATH_HOME!\scripts\orpath_watch.py" %2 %3 %4 %5 %6 %7 %8 %9
 
+exit /b %ERRORLEVEL%
+
+
+:face
+REM One-click product face. Default slug=live-btube when no args.
+if "%~2"=="" (
+  "%PY%" "!ORPATH_HOME!\scripts\orpath_watch.py" --slug live-btube --thread-id live-btube --host 127.0.0.1 --port 8765
+) else (
+  "%PY%" "!ORPATH_HOME!\scripts\orpath_watch.py" %2 %3 %4 %5 %6 %7 %8 %9
+)
 exit /b %ERRORLEVEL%
 
 :watch_run
@@ -543,4 +566,6 @@ if not exist "!ORPATH_HOME!\runtime\node_modules\@earendil-works\pi-coding-agent
 call "!ORPATH_HOME!\pi.bat" -a %2 %3 %4 %5 %6 %7 %8 %9
 
 exit /b %ERRORLEVEL%
+
+
 

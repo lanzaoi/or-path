@@ -80,6 +80,9 @@ def _clean_env(*, live: bool, workdir: Path) -> dict[str, str]:
     # Force case data root (do not leave stale ORPATH_WORKDIR from parent shell)
     env["ORPATH_WORKDIR"] = str(Path(workdir).resolve())
     env["ORPATH_LIVE_SUBAGENT"] = "1" if live else "0"
+    # Path-A LIVE: cap each Pi lead so cite/review cannot hang 20min+ per stage
+    if live and not (env.get("ORPATH_SUBAGENT_TIMEOUT") or "").strip():
+        env["ORPATH_SUBAGENT_TIMEOUT"] = "360"
     return env
 
 
@@ -173,11 +176,8 @@ def _run_product(
         assets = (intake_assets or "").strip()
         if assets:
             cmd.extend(["--intake-assets", str(Path(assets).expanduser().resolve())])
-    else:
-        # Default stable fixture when caller did not pass a problem surface
-        intake = ROOT / "fixtures" / "intake" / "ok" / "source.txt"
-        if intake.is_file():
-            cmd.extend(["--auto-intake", "--intake-in", str(intake)])
+    # Path A: do NOT auto-inject fixtures/intake when user gave no surface.
+    # Old default forced intake-on + blocked SP mock bind under workdir cases.
 
     print("[watch-run] >>", " ".join(cmd))
     try:
@@ -217,7 +217,16 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument(
         "--solve-mode",
         default="mock",
-        choices=["mock", "networkx", "ortools", "cpsat", "highs"],
+        choices=[
+            "mock",
+            "networkx",
+            "ortools",
+            "cpsat",
+            "highs",
+            "polyomino",
+            "polyomino_cover",
+            "tube",
+        ],
     )
     p.add_argument(
         "--intake-in",
@@ -366,6 +375,9 @@ def main(argv: list[str] | None = None) -> int:
             time.sleep(0.4)
 
         wt.join(timeout=max(1.0, float(args.run_timeout)))
+        # Recount after full product run (grow loop may exit at first L0 tick)
+        after = _stages_count(slug, thread, wd)
+        grew = after > before
         run_exit = int(result.get("code", 1))
         run_log_tail = str(result.get("out") or "")[-4000:]
         evidence["run_exit"] = run_exit

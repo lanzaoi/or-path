@@ -10,6 +10,64 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from schema_models import FORBIDDEN_SCHEMA_KEYS, walk_forbidden_keys  # noqa: E402
 
+# Prefer package registry when available (product install)
+try:
+    from orpath.domain_registry import (  # type: ignore
+        POLYOMINO_SCHEMA_KEYS,
+        is_polyomino_class,
+        normalize_problem_class,
+        schema_class_ok,
+    )
+except Exception:  # noqa: BLE001 — tools/ may run without package on path
+    POLYOMINO_SCHEMA_KEYS = frozenset(
+        {
+            "board",
+            "board_ref",
+            "rows",
+            "cols",
+            "grid",
+            "cells",
+            "removed",
+            "pieces",
+            "piece_types",
+            "piece_ids",
+            "max_counts",
+            "inventory",
+            "allow_reflect",
+            "max_uncovered",
+            "task",
+            "subproblems",
+            "questions",
+        }
+    )
+
+    def normalize_problem_class(raw: str | None) -> str:
+        pc = (raw or "").strip().lower()
+        aliases = {
+            "polyomino": "polyomino_cover",
+            "poly": "polyomino_cover",
+            "polyomino_tiling": "polyomino_cover",
+            "tiling_cover": "polyomino_cover",
+            "tube": "tube_cut",
+            "tube_bfd": "tube_cut",
+            "cutting_stock": "tube_cut",
+            "cut_stock": "tube_cut",
+        }
+        return aliases.get(pc, pc)
+
+    def is_polyomino_class(raw: str | None) -> bool:
+        return normalize_problem_class(raw) == "polyomino_cover"
+
+    def schema_class_ok(raw: str | None) -> bool:
+        pc = normalize_problem_class(raw)
+        return pc in {
+            "shortest_path",
+            "tsp",
+            "vrp",
+            "tube_cut",
+            "polyomino_cover",
+        }
+
 
 def check_schema(data: dict) -> list[str]:
     errors: list[str] = []
@@ -19,7 +77,8 @@ def check_schema(data: dict) -> list[str]:
             errors.append(f"forbidden key present: {k}")
 
     top = {str(k).lower() for k in data.keys()}
-    pc = str(data.get("problem_class") or "").lower()
+    pc_raw = str(data.get("problem_class") or "")
+    pc = normalize_problem_class(pc_raw)
     if not pc:
         if "nodes" in top or "edges" in top or "edges_ref" in top:
             pc = "shortest_path"
@@ -41,9 +100,7 @@ def check_schema(data: dict) -> list[str]:
             errors.append("vrp requires capacities")
         if "demands" not in top:
             errors.append("vrp requires demands")
-    elif pc in {"tube_cut", "tube", "tube_bfd", "cutting_stock", "cut_stock"}:
-        # Contest B / tube cutting: structural schema only (no optima keys — checked above).
-        # Accept modeler shapes that describe stock/workpieces without requiring SP/TSP/VRP fields.
+    elif pc == "tube_cut":
         if not any(
             k in top
             for k in (
@@ -61,8 +118,15 @@ def check_schema(data: dict) -> list[str]:
                 "tube_cut/cutting_stock requires structural keys "
                 "(workpiece_specs|stock|batches|geometry_preprocessing|…)"
             )
-    else:
-        errors.append(f"unknown problem_class: {pc}")
+    elif is_polyomino_class(pc):
+        # M2 phase 1: structural board/pieces only — no placements/objective (forbidden walk)
+        if not any(k in top for k in POLYOMINO_SCHEMA_KEYS):
+            errors.append(
+                "polyomino_cover requires structural keys "
+                "(board|board_ref|rows|cols|pieces|piece_types|…)"
+            )
+    elif not schema_class_ok(pc):
+        errors.append(f"unknown problem_class: {pc_raw or pc}")
 
     if "problem_id" not in top:
         errors.append("require problem_id")

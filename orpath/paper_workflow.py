@@ -135,8 +135,44 @@ def render_or_paper(
             else "see solution.meta"
         )
     )
+
+    def _leaf(p: str) -> str:
+        """Safe display path for paper body (R2 must not see run-id digits)."""
+        import re
+
+        s = (p or "").strip()
+        if not s or s == "n/a":
+            return s or "n/a"
+        if s.startswith("notes://") or s.startswith("shell_only:"):
+            return s
+        try:
+            name = Path(s).name or s
+        except Exception:  # noqa: BLE001
+            name = s
+        low = name.lower()
+        # map known artifact roles to digit-free labels
+        role_map = (
+            ("solution", "solution.json"),
+            ("validate", "validate.json"),
+            ("schema", "schema.json"),
+            ("research", "research.md"),
+            ("explain", "explain.md"),
+            ("provenance", "provenance.md"),
+            ("intake", "intake.json"),
+            ("whitelist", "whitelist.json"),
+        )
+        for key, lab in role_map:
+            if key in low:
+                return lab
+        # strip digit runs (timestamps / run ids / path noise); keep years out via R2 year allow
+        cleaned = re.sub(r"\d{4,}", "id", name)
+        # never leave bare multi-digit tokens as source lines
+        if re.search(r"\d{3,}", cleaned):
+            return "artifact"
+        return cleaned or "artifact"
+
     sources = source_lines or []
-    src_block = "\n".join(f"- {s}" for s in sources) if sources else "- (none)"
+    src_block = "\n".join(f"- {_leaf(s)}" for s in sources) if sources else "- (none)"
 
     metrics = solution.get("metrics") or {}
     questions = solution.get("questions") or {}
@@ -156,11 +192,12 @@ def render_or_paper(
                     lines_m.append(f"- Claim: metrics.{kk} = `{vv}`")
         extra_metrics = "\n".join(lines_m) + "\n"
 
+    # Title uses problem_id only — slug often embeds timestamps that trip R2 big-num.
     if template == "mcm":
-        title = f"数模风写稿（OR 绑定）: {slug}"
+        title = f"数模风写稿（OR 绑定）: {problem_id}"
         abstract_extra = "本稿数字仅绑定求解器 JSON，禁止启发式冒充全局最优。"
     else:
-        title = f"OR Fixture Study ({slug})"
+        title = f"OR Fixture Study ({problem_id})"
         abstract_extra = "All numerics bind to solver JSON + validate."
 
     return f"""# {title}
@@ -172,22 +209,23 @@ Solver honesty: **{honesty}**. {abstract_extra}
 ## Problem statement
 - problem_id: `{problem_id}`
 - problem_class: `{problem_class}`
-- fixture: `{fixture_rel or "n/a"}`
+- fixture: `{_leaf(fixture_rel) if fixture_rel else "n/a"}`
 
 ## Related modeling notes
-- Research: `{research_path or "n/a"}`
-- Retrieval: `{retrieval_path or "n/a"}`
-- Explain: `{explain_path or "n/a"}`
+- Research: `{_leaf(research_path) if research_path else "n/a"}`
+- Retrieval: `{_leaf(retrieval_path) if retrieval_path else "n/a"}`
+- Explain: `{_leaf(explain_path) if explain_path else "n/a"}`
 
 Evidence for modeling claims must appear in the research evidence table (paths/chunk_ids).
 
 ## Method / formulation
-- Schema: `{schema_path or "n/a"}`
+- Schema: `{_leaf(schema_path) if schema_path else "n/a"}`
 - Solver owns optima; LLM must not invent objective/path/tour/routes.
 - Preferred stack: exact tracks (NetworkX / CP-SAT / HiGHS) when applicable; OR-Tools Routing as scale extension only.
+- Domain note: polyomino uses CP-SAT cover; objective is piece count when applicable.
 
 ## Results
-From `{solution_path}` only:
+From `{_leaf(solution_path)}` only:
 - status: `{solution.get("status")}`
 - objective = `{solution.get("objective")}`
 - solver: `{solution.get("solver")}`
@@ -201,7 +239,7 @@ Claim: solution status is `{solution.get("status")}` under declared solve_mode.
 Finding: exactness flags are exact=`{exact}` proven_optimal=`{proven}`.
 
 ## Validation
-- validate report: `{validate_path or "n/a"}`
+- validate report: `{_leaf(validate_path) if validate_path else "n/a"}`
 - Feasibility and objective recomputed by `validate_solution` when available.
 
 ## Limitations

@@ -29,12 +29,18 @@ ADAPTER_SCRIPTS: dict[str, str] = {
     "ortools": "solve_ortools.py",
     "tube": "solve_tube_cut_b2026.py",
     "tube_bfd": "solve_tube_cut_b2026.py",
+    # M2 phase 1: polyomino product registration
+    "polyomino": "solve_polyomino.py",
+    "polyomino_cover": "solve_polyomino.py",
+    "poly": "solve_polyomino.py",
 }
 
 
 def _run_py(script: Path, args: list[str], cwd: Path) -> tuple[int, str, str]:
     cmd = [sys.executable, str(script), *args]
-    r = subprocess.run(cmd, cwd=cwd, text=True, encoding="utf-8", errors="replace", capture_output=True)
+    r = subprocess.run(
+        cmd, cwd=cwd, text=True, encoding="utf-8", errors="replace", capture_output=True
+    )
     return r.returncode, r.stdout, r.stderr
 
 
@@ -60,6 +66,9 @@ def _build_args(
     if mode in ("tube", "tube_bfd"):
         # full batch tool; problem_id unused by CLI today
         return list(extra)
+    if mode in ("polyomino", "polyomino_cover", "poly"):
+        # solve_polyomino.py: positional problem_id + optional flags via extra_args
+        return [problem_id, *extra]
     return [problem_id, *extra]
 
 
@@ -83,7 +92,6 @@ def _tube_envelope_from_outputs(root: Path, problem_id: str) -> dict[str, Any]:
         if st in ("FEASIBLE", "OPTIMAL"):
             status = st
     if primary_obj is None:
-        # try DONE metrics file
         for alt in ("solution.json", "summary.json"):
             ap = out_dir / alt
             if ap.is_file():
@@ -127,15 +135,24 @@ def solve(
     """Run adapter and return (ok, solution_dict, raw_text)."""
     root = Path(root)
     mode_l = (mode or "mock").lower().strip()
-    # auto-route tube problem ids
+    pc_l = (problem_class or "").lower().strip()
+    pid_l = (problem_id or "").lower()
+    # auto-route domain adapters when mode is generic/unknown
     if mode_l not in ADAPTER_SCRIPTS:
-        if "tube" in problem_id.lower() or (problem_class or "").lower() in {
-            "tube_cut",
-            "tube",
-        }:
+        if "tube" in pid_l or pc_l in {"tube_cut", "tube", "cutting_stock", "cut_stock"}:
             mode_l = "tube"
+        elif (
+            "polyomino" in pid_l
+            or pc_l in {"polyomino", "polyomino_cover", "poly", "polyomino_tiling", "tiling_cover"}
+        ):
+            mode_l = "polyomino"
         else:
-            mode_l = "ortools" if mode_l not in ADAPTER_SCRIPTS else mode_l
+            mode_l = "ortools"
+    # class forces polyomino even if mode was ortools by default
+    if mode_l == "ortools" and (
+        pc_l in {"polyomino", "polyomino_cover", "poly"} or "polyomino" in pid_l
+    ):
+        mode_l = "polyomino"
 
     if mode_l not in ADAPTER_SCRIPTS:
         return False, {}, f"unknown solve mode: {mode}"
@@ -180,7 +197,6 @@ def solve(
         return False, {}, "adapter returned non-object JSON"
     if normalize:
         data = normalize_solution(data, mode=mode_l)
-        # stamp source if missing
         data.setdefault("source", f"tools/{script_name}")
         data.setdefault("problem_id", problem_id)
     ok_e, e_errs = validate_envelope(data)

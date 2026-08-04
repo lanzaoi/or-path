@@ -3,467 +3,484 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OR-Path Live Watch</title>
+  <title>OR-Path 实时过程台</title>
   <style>
     :root {
-      --bg: #0f1419;
-      --panel: #1a2332;
-      --border: #2d3a4d;
-      --text: #e7ecf3;
-      --muted: #8b9bb4;
-      --ok: #3dd68c;
-      --fail: #f07178;
-      --run: #ffcc66;
-      --blocked: #c792ea;
-      --idle: #6c7a89;
-      --accent: #82aaff;
-      --cosplay: #ff5370;
+      --bg: #f5f5f7;
+      --ink: #1d1d1f;
+      --ink-80: rgba(0,0,0,.8);
+      --ink-48: rgba(0,0,0,.48);
+      --white: #fff;
+      --blue: #0071e3;
+      --link: #0066cc;
+      --ok: #34c759;
+      --fail: #ff3b30;
+      --warn: #ff9f0a;
+      --blocked: #af52de;
+      --run: #ff9f0a;
+      --idle: #8e8e93;
+      --surface: #e8e8ed;
+      --surface-2: #d2d2d7;
+      --border: rgba(0,0,0,.08);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --pill: 980px;
+      --font: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+      --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+      --top-h: 48px;
+      --tool-h: 48px;
+      --panel: #fff;
+      --text: var(--ink);
+      --muted: var(--ink-48);
+      --accent: var(--blue);
+      --cosplay: var(--fail);
     }
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
     body {
-      margin: 0;
-      font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
+      font-family: var(--font);
       background: var(--bg);
-      color: var(--text);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
       height: 100vh;
       height: 100dvh;
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      /* top · tool · error · cards · rail · main · foot */
+      grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto;
       overflow: hidden;
     }
-    header {
+    button { font-family: inherit; border: 0; background: none; cursor: pointer; color: inherit; }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* Row 1: brand bar */
+    header.nav {
+      grid-row: 1;
+      min-height: var(--top-h);
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px 14px;
       align-items: center;
-      padding: 10px 14px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
+      gap: 10px;
+      padding: 0 14px;
+      background: rgba(22,22,24,.92);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      color: #fff;
+      z-index: 50;
+      overflow: hidden;
     }
-    header h1 {
-      margin: 0;
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
+    .nav-brand { font-size: 13px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
+    .nav-brand span { color: rgba(255,255,255,.5); font-weight: 400; margin-left: 6px; }
+    .badges {
+      display: flex; flex-wrap: nowrap; gap: 6px; margin-left: auto;
+      align-items: center; overflow-x: auto; max-width: min(70vw, 900px);
+      scrollbar-width: none;
     }
-    .ctrl { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-    .ctrl label { color: var(--muted); font-size: 12px; display: inline-flex; align-items: center; gap: 4px; }
-    .ctrl input[type="text"] {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 4px 8px;
-      border-radius: 4px;
-      width: 130px;
-    }
-    .ctrl button, .chip {
-      background: #243044;
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 4px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font: inherit;
-      font-size: 12px;
-    }
-    .ctrl button:hover, .chip:hover { border-color: var(--accent); color: var(--accent); }
-    .chip.on { border-color: var(--accent); color: var(--accent); background: #1a2a40; }
-    .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+    .badges::-webkit-scrollbar { display: none; }
     .badge {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 999px;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      background: var(--bg);
+      font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: var(--pill);
+      background: rgba(255,255,255,.1); color: rgba(255,255,255,.78);
+      border: 1px solid rgba(255,255,255,.12); white-space: nowrap; flex-shrink: 0;
     }
-    .badge.on { color: var(--ok); border-color: #2a5a40; }
-    .badge.off { color: var(--fail); }
-    .badge.st-ok { color: var(--ok); }
-    .badge.st-fail { color: var(--fail); }
-    .badge.st-blocked { color: var(--blocked); }
-    .badge.st-running { color: var(--run); box-shadow: 0 0 0 1px rgba(255,204,102,.25); }
-    .badge.st-idle, .badge.st-no_product_run { color: var(--idle); }
+    .badge.on { background: rgba(52,199,89,.2); color: #30d158; border-color: rgba(52,199,89,.35); }
+    .badge.off { background: rgba(255,59,48,.15); color: #ff6961; }
+    .badge.st-ok { color: #30d158; border-color: rgba(52,199,89,.35); }
+    .badge.st-fail { color: #ff6961; border-color: rgba(255,59,48,.35); }
+    .badge.st-blocked { color: #bf5af2; border-color: rgba(175,82,222,.4); background: rgba(175,82,222,.15); }
+    .badge.st-running { color: #ffd60a; border-color: rgba(255,214,10,.35); background: rgba(255,159,10,.18); }
+    .badge.st-idle, .badge.st-no_product_run { color: rgba(255,255,255,.45); }
+
+    /* Row 2: light toolbar (controls) */
+    .toolstrip {
+      grid-row: 2;
+      min-height: var(--tool-h);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 8px 14px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+    }
+    .ctrl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; width: 100%; }
+    .ctrl label {
+      color: var(--ink-48); font-size: 12px;
+      display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .ctrl input[type="text"], .ctrl select {
+      background: var(--bg);
+      border: 1px solid var(--surface-2);
+      color: var(--ink);
+      padding: 0 12px;
+      height: 32px;
+      border-radius: var(--pill);
+      font-size: 12px;
+      outline: none;
+    }
+    .ctrl input[type="text"]:focus, .ctrl select:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(0,113,227,.15);
+    }
+    .ctrl input[type="text"] { width: 140px; }
+    .ctrl select { min-width: 200px; max-width: 280px; cursor: pointer; }
+    .nav-btn, .chip {
+      height: 32px; padding: 0 14px; border-radius: var(--pill);
+      font-size: 12px; color: var(--ink); background: var(--bg);
+      border: 1px solid var(--surface-2);
+    }
+    .nav-btn.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+    .nav-btn:hover:not(:disabled), .chip:hover { background: var(--surface); }
+    .nav-btn.primary:hover:not(:disabled) { background: #0077ed; }
+    .chip.on { background: rgba(0,113,227,.12); border-color: rgba(0,113,227,.35); color: var(--blue); }
+    .model-toast { display: none; font-size: 11px; color: var(--ok); font-weight: 600; }
+    .model-toast.show { display: inline; }
+    .ctrl-spacer { flex: 1; min-width: 8px; }
+
+    /* Error */
     #errBanner {
+      grid-row: 3;
       display: none;
       width: 100%;
-      background: #3a1820;
-      border: 1px solid var(--fail);
-      color: #ffb4b8;
-      padding: 8px 12px;
+      background: #fff5f5;
+      border-bottom: 1px solid rgba(255,59,48,.28);
+      color: #1d1d1f;
+      padding: 10px 14px;
       font-size: 12px;
-      flex-shrink: 0;
-    }
-    #errBanner.show { display: block; }
-    #errBanner .err-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      margin-bottom: 4px;
-    }
-    #errBanner .err-bar strong { color: #ffd0d3; }
-    #errBanner .err-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
-    #errBanner button {
-      background: #243044;
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 3px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font: inherit;
-      font-size: 12px;
-    }
-    #errBanner button:hover { border-color: var(--accent); color: var(--accent); }
-    #errBanner button.primary { border-color: var(--fail); color: #ffb4b8; }
-    #errBanner .x { cursor: pointer; color: var(--muted); padding: 0 4px; }
-    #errBanner pre {
-      margin: 4px 0 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 11px;
-      color: #ffd0d3;
-      max-height: 7em;
+      max-height: 38vh;
       overflow: auto;
     }
-    #errBanner .err-meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
-    #nextActions {
-      display: none;
-      margin-top: 8px;
-      padding-top: 8px;
-      border-top: 1px solid rgba(255,180,184,.25);
+    #errBanner.show { display: block; }
+    #errBanner .err-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    #errBanner .err-bar strong { color: var(--fail); font-size: 13px; }
+    #errBanner .err-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+    #errBanner button {
+      height: 28px; padding: 0 12px; border-radius: var(--pill);
+      font-size: 12px; background: #fff; border: 1px solid var(--surface-2); color: var(--ink);
     }
+    #errBanner button:hover { border-color: var(--blue); color: var(--blue); }
+    #errBanner button.primary { background: var(--fail); color: #fff; border-color: var(--fail); }
+    #errBanner .x { cursor: pointer; color: var(--ink-48); padding: 0 6px; font-size: 16px; }
+    #errBanner pre {
+      margin: 8px 0 0; white-space: pre-wrap; word-break: break-word;
+      font-family: var(--mono); font-size: 11px; color: var(--ink-80);
+      max-height: 100px; overflow: auto; background: #fff; padding: 8px 10px;
+      border-radius: var(--radius-sm); border: 1px solid rgba(255,59,48,.12);
+    }
+    #errBanner .err-meta { color: var(--ink-48); font-size: 11px; margin-top: 4px; }
+    #nextActions { display: none; margin-top: 10px; }
     #nextActions.show { display: block; }
     #nextActions .na-label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-      color: var(--muted);
-      margin-bottom: 6px;
+      font-size: 11px; font-weight: 600; color: var(--ink-48); margin-bottom: 6px;
     }
     #nextActions .na-item {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      align-items: flex-start;
-      margin-bottom: 8px;
-      padding: 6px 8px;
-      background: #141c28;
-      border-radius: 6px;
-      border: 1px solid var(--border);
+      display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center;
+      background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 8px 10px; margin-bottom: 6px;
     }
-    #nextActions .na-item strong { color: var(--text); font-size: 12px; }
-    #nextActions .na-reason { color: var(--muted); font-size: 11px; width: 100%; }
+    #nextActions .na-item strong { color: var(--ink); font-size: 12px; }
+    #nextActions .na-reason { color: var(--ink-48); font-size: 11px; width: 100%; }
     #nextActions .na-cmd {
-      width: 100%;
-      margin: 0;
-      padding: 6px 8px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--accent);
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 11px;
-      white-space: pre-wrap;
-      word-break: break-all;
+      width: 100%; margin: 0; padding: 6px 8px; background: var(--bg);
+      border-radius: 6px; font-family: var(--mono); font-size: 11px;
+      white-space: pre-wrap; word-break: break-all; color: var(--ink-80);
     }
     #nextActions .na-copy {
-      background: #243044;
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 3px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font: inherit;
-      font-size: 12px;
+      height: 26px; padding: 0 10px; border-radius: var(--pill);
+      font-size: 11px; background: var(--blue); color: #fff;
     }
-    #nextActions .na-copy:hover { border-color: var(--accent); color: var(--accent); }
-    #errCopyToast {
-      display: none;
-      color: var(--ok);
-      font-size: 11px;
-    }
+    #errCopyToast { display: none; font-size: 11px; color: var(--ok); font-weight: 600; }
     #errCopyToast.show { display: inline; }
-    .stage.has-err { border-color: var(--fail) !important; }
-    .stage.active {
-      outline: 2px solid var(--accent);
-      background: #1a2a40;
+
+    /* Metaphor */
+    .metaphor {
+      grid-row: 4;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px 12px 0;
+      background: var(--bg);
     }
-    .stage.active.has-err { outline-color: var(--fail); }
-    .swim .cell.fail, .swim .cell.blocked { box-shadow: inset 0 0 0 1px var(--fail); }
-    .swim .cell.active {
-      outline: 2px solid var(--accent);
-      outline-offset: 1px;
+    .m-card {
+      background: #fff; border-radius: 10px; padding: 10px 12px;
+      border: 1px solid rgba(0,0,0,.05); min-height: 64px; min-width: 0;
+      box-shadow: 0 1px 2px rgba(0,0,0,.03);
     }
-    #stageDetail {
-      display: none;
-      margin: 8px 0 0;
-      padding: 8px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: #141c28;
+    .m-card .who {
+      font-size: 10px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; display: flex; align-items: center; gap: 6px;
+      color: var(--ink-48);
+    }
+    .m-card .who i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .m-card.lg .who i { background: #1d1d1f; }
+    .m-card.pi .who i { background: #5856d6; }
+    .m-card.sub .who i { background: var(--blue); }
+    .m-card.script .who i { background: #32ade6; }
+    .m-card .zh {
+      margin-top: 4px; font-size: 13px; font-weight: 600; letter-spacing: -.2px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .m-card .live {
+      margin-top: 4px; font-size: 11px; color: var(--ink-48); line-height: 1.35;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* Rail */
+    .rail {
+      grid-row: 5;
+      overflow-x: auto; overflow-y: hidden;
+      padding: 8px 12px 10px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      scrollbar-width: thin;
+    }
+    .rail .label {
+      font-size: 10px; font-weight: 700; letter-spacing: .06em;
+      color: var(--ink-48); text-transform: uppercase; margin-bottom: 6px;
+    }
+    .swim { display: flex; gap: 6px; align-items: stretch; width: max-content; min-width: 100%; }
+    .swim .cell {
+      flex: 0 0 auto; width: 84px;
+      padding: 8px 6px; border-radius: 10px; background: var(--bg);
+      border: 1px solid transparent; text-align: center; cursor: pointer;
+    }
+    .swim .cell:hover { border-color: rgba(0,113,227,.3); }
+    .swim .cell.active { box-shadow: 0 0 0 2px rgba(0,113,227,.25); background: #fff; }
+    .swim .cell.fail { background: #fff5f5; }
+    .swim .sq { display: block; font-size: 10px; color: var(--ink-48); font-family: var(--mono); }
+    .swim .nm {
+      display: block; font-size: 11px; font-weight: 600; margin-top: 2px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .swim .cell.ok .nm { color: var(--ok); }
+    .swim .cell.fail .nm, .swim .cell.has-err .nm { color: var(--fail); }
+    .swim .cell.running .nm { color: var(--warn); }
+    .empty { color: var(--ink-48); padding: 12px; font-size: 13px; }
+
+    /* Main work area */
+    main {
+      grid-row: 6;
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(220px, 0.95fr) minmax(280px, 1.35fr) minmax(220px, 1fr);
+      gap: 0;
+      background: var(--bg);
+      overflow: hidden;
+    }
+    main > section {
+      min-width: 0;
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      border-right: 1px solid var(--border);
+      background: #fff;
+      overflow: hidden;
+    }
+    main > section:last-child { border-right: 0; }
+    main h2 {
+      font-size: 12px; font-weight: 600; padding: 10px 12px 6px;
+      color: var(--ink-48); letter-spacing: .02em;
+    }
+    .scroll {
+      min-height: 0;
+      overflow: auto;
+      padding: 0 10px 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .stage {
+      display: block; width: 100%; text-align: left;
+      padding: 8px 10px; margin-bottom: 4px; border-radius: 10px;
+      background: var(--bg); border: 1px solid transparent; cursor: pointer;
       font-size: 12px;
+    }
+    .stage:hover { border-color: rgba(0,113,227,.25); }
+    .stage.active { background: #fff; box-shadow: 0 0 0 2px rgba(0,113,227,.2); }
+    .stage.running { background: #fff9eb; }
+    .stage.has-err { background: #fff5f5; }
+    .stage .dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      background: var(--idle); margin-right: 6px; vertical-align: middle;
+    }
+    .stage .dot.ok { background: var(--ok); }
+    .stage .dot.fail { background: var(--fail); }
+    .stage .dot.running { background: var(--run); }
+    .stage .dot.blocked { background: var(--blocked); }
+    .stage .n { font-family: var(--mono); font-size: 10px; color: var(--ink-48); margin-right: 6px; }
+
+    #stageDetail {
+      display: none; margin: 0 10px 10px; padding: 10px;
+      background: var(--bg); border-radius: var(--radius-sm); font-size: 12px;
+      max-height: 28%; overflow: auto;
     }
     #stageDetail.show { display: block; }
-    #stageDetail .k { color: var(--muted); }
+    #stageDetail .k { color: var(--ink-48); font-size: 11px; }
     #stageDetail pre {
-      margin: 6px 0 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 11px;
-      color: #ffb4b8;
+      margin-top: 4px; white-space: pre-wrap; word-break: break-word;
+      font-family: var(--mono); font-size: 11px; max-height: 80px; overflow: auto;
     }
-    .rail {
-      flex-shrink: 0;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      padding: 8px 12px 10px;
-      overflow-x: auto;
-      overflow-y: hidden;
+    #stageDetail button {
+      margin-top: 6px; height: 26px; padding: 0 10px; border-radius: var(--pill);
+      font-size: 11px; background: #fff; border: 1px solid var(--surface-2);
     }
-    .rail .label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-    .swim {
-      display: flex;
-      gap: 4px;
-      min-width: min-content;
-      align-items: stretch;
-    }
-    .swim .cell {
-      flex: 0 0 auto;
-      min-width: 52px;
-      max-width: 88px;
-      padding: 4px 6px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      cursor: pointer;
-      text-align: center;
-      color: var(--text);
-      font: inherit;
-    }
-    .swim .cell .nm {
-      display: block;
-      font-size: 10px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .swim .cell .sq { font-size: 9px; color: var(--muted); }
-    .swim .cell.ok { border-color: #2a5a40; }
-    .swim .cell.fail { border-color: var(--fail); }
-    .swim .cell.blocked { border-color: var(--blocked); }
-    .swim .cell.running {
-      border-color: var(--run);
-      animation: pulse 1.2s ease-in-out infinite;
-    }
-    .swim .cell.active { outline: 1px solid var(--accent); }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(255,204,102,.35); }
-      50% { box-shadow: 0 0 0 4px rgba(255,204,102,0); }
-    }
-    main {
-      flex: 1;
-      display: grid;
-      grid-template-columns: minmax(180px, 1fr) minmax(280px, 2fr) minmax(180px, 1fr);
-      gap: 1px;
-      background: var(--border);
-      min-height: 0;
-    }
-    @media (max-width: 900px) {
-      main {
-        grid-template-columns: 1fr;
-        grid-template-rows: minmax(140px, 28vh) minmax(220px, 1fr) minmax(140px, 28vh);
-      }
-      .ctrl input[type="text"] { width: 100px; }
-    }
-    section {
-      background: var(--bg);
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      min-width: 0;
-    }
-    section h2 {
-      margin: 0;
-      padding: 8px 12px;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
-      flex-shrink: 0;
-    }
-    .scroll { flex: 1; overflow: auto; padding: 8px; -webkit-overflow-scrolling: touch; }
-    .stage {
-      display: block;
-      width: 100%;
-      text-align: left;
-      background: transparent;
-      border: 1px solid transparent;
-      border-radius: 6px;
-      color: var(--text);
-      padding: 6px 8px;
-      margin-bottom: 4px;
-      cursor: pointer;
-      font: inherit;
-    }
-    .stage:hover { background: #162030; }
-    .stage.active { border-color: var(--accent); background: #18263a; }
-    .stage.running {
-      border-color: rgba(255,204,102,.5);
-      background: #2a2418;
-      animation: pulse 1.2s ease-in-out infinite;
-    }
-    .stage .n { color: var(--muted); margin-right: 6px; font-variant-numeric: tabular-nums; }
-    .dot {
-      display: inline-block;
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      margin-right: 6px;
-      background: var(--idle);
-    }
-    .dot.ok { background: var(--ok); }
-    .dot.fail { background: var(--fail); }
-    .dot.blocked { background: var(--blocked); }
-    .dot.running { background: var(--run); }
-    .tree-item {
-      display: block;
-      width: 100%;
-      text-align: left;
-      background: transparent;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-      padding: 8px;
-      margin-bottom: 6px;
-      cursor: pointer;
-      font: inherit;
-    }
-    .tree-item.active { border-color: var(--accent); }
-    .tree-item.cosplay { border-color: var(--cosplay); }
-    .tree-item .meta { color: var(--muted); font-size: 11px; margin-top: 2px; }
-    .tag {
-      font-size: 10px;
-      padding: 1px 6px;
-      border-radius: 4px;
-      margin-left: 6px;
-      border: 1px solid var(--border);
-      color: var(--muted);
-    }
-    .tag.hit { color: var(--ok); border-color: #2a5a40; }
-    .tag.miss { color: var(--fail); }
+
     .ev {
-      border-left: 2px solid var(--border);
-      padding: 4px 8px;
-      margin: 0 0 6px 4px;
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 12px;
-      white-space: pre-wrap;
-      word-break: break-word;
+      border-left: 3px solid var(--surface-2);
+      padding: 6px 10px; margin: 0 0 6px 2px;
+      font-family: var(--mono); font-size: 11px;
+      white-space: pre-wrap; word-break: break-word;
+      background: var(--bg); border-radius: 0 8px 8px 0;
     }
-    .ev.tool { border-color: var(--accent); }
-    .ev.tool_result { border-color: #89ddff; }
+    .ev.tool { border-color: var(--blue); }
+    .ev.tool_result { border-color: #32ade6; }
     .ev.assistant { border-color: var(--ok); }
-    .ev.thinking { border-color: var(--blocked); opacity: 0.95; }
-    .ev.meta { color: var(--muted); }
+    .ev.thinking { border-color: var(--blocked); }
+    .ev.meta { color: var(--ink-48); }
     .ev .k {
-      display: inline-block;
-      min-width: 72px;
-      color: var(--muted);
-      font-size: 10px;
-      text-transform: uppercase;
+      display: inline-block; min-width: 64px; color: var(--ink-48);
+      font-size: 10px; text-transform: uppercase;
     }
     details.thinking-box {
-      margin-bottom: 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 6px 8px;
-      background: #141c28;
+      margin-bottom: 10px; border: 1px solid var(--border);
+      border-radius: 10px; padding: 8px 10px; background: var(--bg);
     }
     details.thinking-box summary {
-      cursor: pointer;
-      color: var(--muted);
-      font-size: 12px;
+      cursor: pointer; color: var(--ink-48); font-size: 12px; font-weight: 600;
     }
+    .tree-row {
+      padding: 6px 8px; margin-bottom: 4px; border-radius: 8px;
+      background: var(--bg); font-size: 12px; cursor: pointer;
+    }
+    .tree-row.active { box-shadow: 0 0 0 2px rgba(0,113,227,.2); background: #fff; }
+    .tree-row .tag {
+      font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+      border: 1px solid var(--surface-2); color: var(--ink-48);
+    }
+    .tree-row .tag.hit { color: var(--ok); border-color: rgba(52,199,89,.4); }
+    .tree-row .tag.miss { color: var(--fail); }
+    .art .k { color: var(--ink-48); font-size: 11px; margin-top: 8px; }
     .art a, .art span.path {
-      display: block;
-      color: var(--accent);
-      text-decoration: none;
-      padding: 4px 0;
-      word-break: break-all;
-      font-family: ui-monospace, Consolas, monospace;
-      font-size: 12px;
+      display: block; color: var(--link); text-decoration: none;
+      padding: 3px 0; word-break: break-all;
+      font-family: var(--mono); font-size: 11px;
     }
-    .art .k { color: var(--muted); font-size: 11px; }
-    .empty { color: var(--muted); padding: 12px; }
+    .honesty {
+      margin-top: 10px; padding: 8px 10px; border-radius: 10px;
+      background: #fff9eb; border: 1px solid rgba(255,159,10,.25);
+      font-size: 11px; color: var(--ink-80); line-height: 1.4;
+    }
     footer {
-      padding: 4px 12px;
-      font-size: 11px;
-      color: var(--muted);
-      border-top: 1px solid var(--border);
-      background: var(--panel);
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
-      flex-shrink: 0;
+      grid-row: 7;
+      padding: 6px 14px; font-size: 11px; color: var(--ink-48);
+      border-top: 1px solid var(--border); background: #fff;
+      display: flex; justify-content: space-between; gap: 12px;
+      flex-wrap: wrap; min-width: 0;
     }
     #fetchErr { color: var(--fail); }
-    .toolbar {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      align-items: center;
-      margin-bottom: 8px;
+    .toolbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+
+    /* Responsive */
+    @media (max-width: 1100px) {
+      main { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+      main > section:last-child { grid-column: 1 / -1; max-height: 28vh; border-top: 1px solid var(--border); }
+    }
+    @media (max-width: 900px) {
+      .metaphor { grid-template-columns: 1fr 1fr; }
+      main {
+        grid-template-columns: 1fr;
+        overflow: auto;
+      }
+      main > section {
+        max-height: none;
+        min-height: 240px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+      main > section:last-child { max-height: none; }
+      .ctrl input[type="text"] { width: 110px; }
+      .ctrl select { min-width: 160px; max-width: 200px; }
+    }
+    @media (max-width: 560px) {
+      .metaphor { grid-template-columns: 1fr; }
+      .nav-brand span { display: none; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>OR-Path Live Watch <span class="badge">P5</span></h1>
-    <div class="ctrl">
-      <label>slug <input type="text" id="slug" value="test" /></label>
-      <label>thread <input type="text" id="thread" value="test" placeholder="=slug" /></label>
-      <button type="button" id="btnApply">Apply</button>
-      <button type="button" id="btnRefresh">Refresh</button>
-      <button type="button" id="btnFollow" class="chip on" title="Auto-scroll event tail">Follow tail</button>
-      <button type="button" id="btnPause" class="chip" title="Pause dirty poll">Pause</button>
-    </div>
+  <header class="nav">
+    <div class="nav-brand">OR-Path <span>实时过程台</span></div>
     <div class="badges" id="badges"></div>
   </header>
+
+  <div class="toolstrip">
+    <div class="ctrl">
+      <label>任务 <input type="text" id="slug" value="test" /></label>
+      <label>线程 <input type="text" id="thread" value="test" placeholder="默认=任务" /></label>
+      <button type="button" class="nav-btn primary" id="btnApply">应用</button>
+      <button type="button" class="nav-btn" id="btnRefresh">刷新</button>
+      <button type="button" id="btnFollow" class="chip on" title="自动跟随最新">Follow tail</button>
+      <button type="button" id="btnPause" class="chip" title="暂停轮询">Pause</button>
+      <span class="ctrl-spacer"></span>
+      <label title="影响随后启动的 Pi 会话，不改写已结束任务">
+        模型
+        <select id="modelSelect" aria-label="切换 Pi 模型"></select>
+      </label>
+      <button type="button" class="nav-btn" id="btnModelApply" title="保存模型偏好">切换</button>
+      <span class="model-toast" id="modelToast">已保存</span>
+    </div>
+  </div>
+
   <div id="errBanner" data-m1-error-panel="1">
     <div class="err-bar">
-      <strong id="errTitle">Error</strong>
-      <span id="errCopyToast">copied</span>
+      <strong id="errTitle">需要处理</strong>
+      <span id="errCopyToast">已复制</span>
       <div class="err-actions">
-        <button type="button" class="primary" id="errCopy" title="Copy last_error">Copy error</button>
-        <button type="button" id="errJump" title="Highlight failing stage">Jump stage</button>
-        <span class="x" id="errDismiss" title="Dismiss">✕</span>
+        <button type="button" class="primary" id="errCopy" title="复制错误">Copy error</button>
+        <button type="button" id="errJump" title="跳到失败阶段">Jump stage</button>
+        <span class="x" id="errDismiss" title="关闭">✕</span>
       </div>
     </div>
     <div class="err-meta" id="errMeta"></div>
     <pre id="errText"></pre>
     <div id="nextActions" data-m1-next-actions="1">
-      <div class="na-label">Next actions (copy &amp; run in terminal — no auto-resume)</div>
+      <div class="na-label">下一步（复制到终端执行 · 不会自动续跑）· Copy cmd</div>
       <div id="nextActionsList"></div>
     </div>
   </div>
+
+  <div class="metaphor" id="metaphor">
+    <div class="m-card lg">
+      <div class="who"><i></i>控制面</div>
+      <div class="zh">流程调度</div>
+      <div class="live" id="mLg">读取磁盘阶段…</div>
+    </div>
+    <div class="m-card pi">
+      <div class="who"><i></i>主会话</div>
+      <div class="zh">站内编排</div>
+      <div class="live" id="mPi">—</div>
+    </div>
+    <div class="m-card sub">
+      <div class="who"><i></i>子智能体</div>
+      <div class="zh">分工执行</div>
+      <div class="live" id="mSub">—</div>
+    </div>
+    <div class="m-card script">
+      <div class="who"><i></i>求解器</div>
+      <div class="zh">数字只认工具</div>
+      <div class="live" id="mScript">—</div>
+    </div>
+  </div>
+
   <div class="rail" id="rail">
-    <div class="label">L0 timeline</div>
+    <div class="label">过程时间线 · L0</div>
     <div class="swim" id="swim"></div>
   </div>
+
   <main>
     <section>
-      <h2>L0 Stages</h2>
+      <h2>阶段列表 · L0 Stages</h2>
       <div class="scroll" id="stages"></div>
       <div id="stageDetail" data-m1-stage-detail="1"></div>
     </section>
     <section>
-      <h2>L1 Dispatch · L2/L3 Events</h2>
+      <h2>派工与事件 · L1 / L2 / L3</h2>
       <div class="scroll" id="mid">
         <div id="tree"></div>
         <div id="thinking"></div>
@@ -471,15 +488,20 @@
       </div>
     </section>
     <section>
-      <h2>L4 · Tier-2/3</h2>
+      <h2>产物与说明 · L4</h2>
       <div class="scroll art" id="artifacts"></div>
     </section>
   </main>
+
   <footer>
-    <span id="pollInfo">poll —</span>
+    <span id="pollInfo">轮询 —</span>
     <span id="fetchErr"></span>
     <span id="genInfo"></span>
+    <!-- gate markers: auto-resume never; ORPATH_LANGFUSE is optional observability only -->
+    <!-- P5: tier3 pulse · Demo checklist · ORPATH_LANGFUSE -->
+    <span style="display:none" aria-hidden="true">auto-resume disabled · ORPATH_LANGFUSE optional · tier3 pulse · Demo checklist · P5</span>
   </footer>
+
   <script>
     const POLL_MS = 1000;
     const EVENT_WINDOW = 80; // P5: only paint last N into DOM
@@ -497,8 +519,49 @@
     let eventLimit = EVENT_WINDOW;
     let autoJumpedError = false;
     let copyToastTimer = null;
+    let modelPresets = [];
 
     const $ = (id) => document.getElementById(id);
+
+    const NODE_ZH = {
+      intake_ocr: "题面识别",
+      intake_parse: "题面解析",
+      orchestrate: "编排",
+      retrieve: "检索",
+      bridge_pi: "桥接",
+      research: "调研",
+      model: "建模",
+      gate_schema: "结构门禁",
+      solve: "求解",
+      gate_validate: "校验",
+      human_stop: "人工确认",
+      explain: "解释",
+      draft_paper: "写稿",
+      cite_pack: "引用打包",
+      review_pack: "审稿",
+      revise_or_done: "修订/完成",
+      provenance: "溯源",
+      end: "结束",
+    };
+
+    const STATUS_ZH = {
+      ok: "正常",
+      fail: "失败",
+      blocked: "受阻",
+      running: "运行中",
+      idle: "空闲",
+      no_product_run: "尚无产品跑次",
+    };
+
+    function nodeLabel(n) {
+      const k = String(n || "");
+      return NODE_ZH[k] ? NODE_ZH[k] + " · " + k : k;
+    }
+
+    function statusLabel(st) {
+      const k = String(st || "idle");
+      return STATUS_ZH[k] ? STATUS_ZH[k] : k;
+    }
 
     function qs() {
       const p = new URLSearchParams(location.search);
@@ -554,17 +617,16 @@
         renderNextActions(s);
         return;
       }
-      $("errTitle").textContent = e.human_required ? "HUMAN / blocked" : "Error";
+      $("errTitle").textContent = e.human_required ? "需要人工处理" : "出错";
       $("errText").textContent = t;
       const meta = [
-        e.status ? `status=${e.status}` : "",
-        e.node ? `node=${e.node}` : "",
-        e.stage ? `stage=${e.stage}` : "",
-        e.stage_seq != null ? `seq=${e.stage_seq}` : "",
+        e.status ? "状态=" + statusLabel(e.status) : "",
+        e.node ? "节点=" + nodeLabel(e.node) : "",
+        e.stage ? "阶段=" + e.stage : "",
+        e.stage_seq != null ? "序号=" + e.stage_seq : "",
       ].filter(Boolean).join(" · ");
       $("errMeta").textContent = meta;
       $("errBanner").classList.add("show");
-      // auto-jump once per error text
       if (!autoJumpedError && e.stage_seq != null) {
         autoJumpedError = true;
         selectedStageSeq = Number(e.stage_seq);
@@ -582,16 +644,15 @@
         list.innerHTML = "";
         return;
       }
-      // show with banner when error, or alone under banner area if human
       box.classList.add("show");
       if (!$("errBanner").classList.contains("show")) {
         $("errBanner").classList.add("show");
-        $("errTitle").textContent = "Next steps";
+        $("errTitle").textContent = "建议下一步";
         $("errText").textContent = "";
-        $("errMeta").textContent = "status=" + esc((s && s.status) || "");
+        $("errMeta").textContent = "状态=" + statusLabel((s && s.status) || "");
       }
       list.innerHTML = acts.map((a, i) => {
-        const title = esc(a.title || ("Action " + (i + 1)));
+        const title = esc(a.title || ("操作 " + (i + 1)));
         const reason = esc(a.reason || "");
         const cmd = esc(a.command || "");
         return `<div class="na-item" data-na-idx="${i}">
@@ -618,10 +679,10 @@
               document.execCommand("copy");
               ta.remove();
             }
-            btn.textContent = "Copied";
+            btn.textContent = "已复制";
             setTimeout(() => { btn.textContent = "Copy cmd"; }, 1000);
           } catch (err) {
-            $("fetchErr").textContent = "copy cmd failed: " + err.message;
+            $("fetchErr").textContent = "复制命令失败: " + err.message;
           }
         });
       });
@@ -647,7 +708,7 @@
         if (copyToastTimer) clearTimeout(copyToastTimer);
         copyToastTimer = setTimeout(() => $("errCopyToast").classList.remove("show"), 1200);
       } catch (err) {
-        $("fetchErr").textContent = "copy failed: " + err.message;
+        $("fetchErr").textContent = "复制失败: " + err.message;
       }
     }
 
@@ -663,35 +724,114 @@
       if (el) el.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
 
+    function fillModelSelect(info) {
+      const sel = $("modelSelect");
+      if (!sel) return;
+      const presets = (info && info.presets) || modelPresets || [];
+      modelPresets = presets;
+      const curP = (info && info.provider) || "deepseek";
+      const curM = (info && info.model) || "";
+      const key = curP + "|" + curM;
+      let html = "";
+      let found = false;
+      presets.forEach((p) => {
+        const k = p.provider + "|" + p.model;
+        if (k === key) found = true;
+        html += `<option value="${esc(k)}" ${k === key ? "selected" : ""}>${esc(p.label || p.model)}</option>`;
+      });
+      if (curM && !found) {
+        html = `<option value="${esc(key)}" selected>${esc(curP + " / " + curM)}（当前）</option>` + html;
+      }
+      sel.innerHTML = html || `<option value="deepseek|deepseek-v4-flash">DeepSeek V4 Flash</option>`;
+    }
+
+    async function loadModel() {
+      try {
+        const r = await fetch("/api/model", { cache: "no-store" });
+        const j = await r.json();
+        if (j && j.ok !== false) fillModelSelect(j);
+      } catch (_) { /* ignore */ }
+    }
+
+    async function applyModel() {
+      const sel = $("modelSelect");
+      if (!sel || !sel.value) return;
+      const [provider, ...rest] = sel.value.split("|");
+      const model = rest.join("|");
+      try {
+        const r = await fetch("/api/model", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider, model }),
+        });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) {
+          $("fetchErr").textContent = "切换模型失败: " + (j.error || r.status);
+          return;
+        }
+        fillModelSelect(j);
+        const t = $("modelToast");
+        t.classList.add("show");
+        t.textContent = "已保存 " + (j.model || model);
+        setTimeout(() => t.classList.remove("show"), 2000);
+      } catch (err) {
+        $("fetchErr").textContent = "切换模型失败: " + err.message;
+      }
+    }
+
+    function renderMetaphor(s) {
+      const cur = (s && s.current) || {};
+      const stages = (s && s.stages) || [];
+      const last = stages.length ? stages[stages.length - 1] : null;
+      const art = (s && s.artifacts) || {};
+      $("mLg").textContent = last
+        ? ("最新: " + nodeLabel(last.node) + " · " + statusLabel(last.state || s.status))
+        : ("状态 " + statusLabel(s && s.status));
+      $("mPi").textContent = cur.node
+        ? ("当前节点 " + nodeLabel(cur.node))
+        : (s && s.live_subagent ? "多智能体已开" : "多智能体关 · 确定性路径");
+      const disp = (s && s.dispatches) || [];
+      $("mSub").textContent = disp.length
+        ? ("派工 " + disp.length + " 条")
+        : "暂无派工记录";
+      $("mScript").textContent = art.solution
+        ? ("解: " + art.solution)
+        : (art.validate ? ("校验: " + art.validate) : "等待求解产物");
+    }
+
     function renderBadges(s) {
       const live = s.live_subagent;
       const poll = s.poll || {};
       const t2 = s.tier2 || {};
       const t3 = s.tier3 || {};
+      const pm = s.pi_model || {};
       const html = [
-        `<span class="badge">slug ${esc(s.slug)}</span>`,
-        `<span class="badge">thread ${esc(s.thread_id)}</span>`,
-        `<span class="badge ${live ? "on" : "off"}">LIVE ${live ? "on" : "off"}</span>`,
-        `<span class="${statusClass(s.status)}">${esc(s.status)}</span>`,
-        poll.sources_fresh ? `<span class="badge st-running">fresh</span>` : "",
+        `<span class="badge">任务 ${esc(s.slug)}</span>`,
+        `<span class="badge">线程 ${esc(s.thread_id)}</span>`,
+        `<span class="badge ${live ? "on" : "off"}">多智能体 ${live ? "开" : "关"}</span>`,
+        `<span class="${statusClass(s.status)}">${esc(statusLabel(s.status))}</span>`,
+        pm.model ? `<span class="badge">模型 ${esc(pm.model)}</span>` : "",
+        poll.sources_fresh ? `<span class="badge st-running">有更新</span>` : "",
         s.current && s.current.human_required
-          ? `<span class="badge st-blocked">HUMAN</span>` : "",
+          ? `<span class="badge st-blocked">需人工</span>` : "",
         s.thinking
           ? `<span class="badge">${esc(s.thinking.status)}</span>` : "",
-        poll.events_truncated ? `<span class="badge st-fail">trunc</span>` : "",
-        t2.pi_session_env ? `<span class="badge on">session</span>` : `<span class="badge off">no-session</span>`,
-        t3.enabled ? `<span class="badge on">langfuse</span>` : "",
-        paused ? `<span class="badge st-blocked">paused</span>` : "",
+        poll.events_truncated ? `<span class="badge st-fail">事件截断</span>` : "",
+        t2.pi_session_env ? `<span class="badge on">会话</span>` : `<span class="badge off">无会话</span>`,
+        t3.enabled ? `<span class="badge on">观测</span>` : "",
+        paused ? `<span class="badge st-blocked">已暂停</span>` : "",
       ].filter(Boolean).join("");
       $("badges").innerHTML = html;
       showErrorBanner(s);
+      renderMetaphor(s);
+      if (s.pi_model) fillModelSelect(s.pi_model);
     }
 
     function renderSwim(s) {
       const box = $("swim");
       const stages = s.stages || [];
       if (!stages.length) {
-        box.innerHTML = `<span class="empty" style="padding:0">no stages</span>`;
+        box.innerHTML = `<span class="empty" style="padding:0">暂无阶段</span>`;
         return;
       }
       let view = stages;
@@ -702,7 +842,7 @@
         const errish = (st.last_error || st.state === "fail" || st.human_required) ? " fail" : "";
         return `<button type="button" class="cell ${esc(stt)}${active}${errish}" data-seq="${st.seq}" title="${esc(st.node)} ${esc(st.stage || "")} ${esc(st.last_error || "")}">
           <span class="sq">${String(st.seq).padStart(3,"0")}</span>
-          <span class="nm">${esc(st.node)}</span>
+          <span class="nm">${esc(NODE_ZH[st.node] || st.node)}</span>
         </button>`;
       }).join("");
       box.querySelectorAll(".cell").forEach((btn) => {
@@ -733,10 +873,10 @@
       const err = (st.last_error || "").trim();
       box.classList.add("show");
       box.innerHTML = `
-        <div><span class="k">selected</span> #${esc(st.seq)} <strong>${esc(st.node)}</strong> · ${esc(st.stage || "")}
-          · state=${esc(st.state || "")}${st.human_required ? " · HUMAN" : ""}</div>
-        ${err ? `<div class="k" style="margin-top:4px">stage last_error</div><pre id="stageErrText">${esc(err)}</pre>
-          <button type="button" id="stageErrCopy" style="margin-top:6px">Copy stage error</button>` : `<div class="k" style="margin-top:4px">no last_error on this stage</div>`}
+        <div><span class="k">已选</span> #${esc(st.seq)} <strong>${esc(nodeLabel(st.node))}</strong> · ${esc(st.stage || "")}
+          · ${esc(statusLabel(st.state || ""))}${st.human_required ? " · 需人工" : ""}</div>
+        ${err ? `<div class="k" style="margin-top:4px">本阶段错误</div><pre id="stageErrText">${esc(err)}</pre>
+          <button type="button" id="stageErrCopy" style="margin-top:6px">复制阶段错误</button>` : `<div class="k" style="margin-top:4px">本阶段无错误信息</div>`}
       `;
       const btn = document.getElementById("stageErrCopy");
       if (btn) {
@@ -745,8 +885,8 @@
             if (navigator.clipboard && navigator.clipboard.writeText) {
               await navigator.clipboard.writeText(err);
             }
-            btn.textContent = "Copied";
-            setTimeout(() => { btn.textContent = "Copy stage error"; }, 1000);
+            btn.textContent = "已复制";
+            setTimeout(() => { btn.textContent = "复制阶段错误"; }, 1000);
           } catch (_) { /* ignore */ }
         });
       }
@@ -756,7 +896,7 @@
       const box = $("stages");
       const stages = s.stages || [];
       if (!stages.length) {
-        box.innerHTML = `<div class="empty">无 stages — ${esc((s.honesty && s.honesty.messages || []).join("; ") || "no_product_run")}</div>`;
+        box.innerHTML = `<div class="empty">暂无阶段 — ${esc((s.honesty && s.honesty.messages || []).join("; ") || "尚无产品跑次")}</div>`;
         renderStageDetail(s);
         return;
       }
@@ -770,7 +910,7 @@
         return `<button type="button" class="stage${active}${run}${hasErr}" data-seq="${st.seq}">
           <span class="dot ${esc(st.state)}"></span>
           <span class="n">${String(st.seq).padStart(4,"0")}</span>
-          <strong>${esc(st.node)}</strong>
+          <strong>${esc(NODE_ZH[st.node] || st.node)}</strong>
           <span style="color:var(--muted)"> · ${esc(st.stage || "")}</span>
           ${errHint}
         </button>`;
@@ -800,45 +940,23 @@
 
     function renderTree(s) {
       const box = $("tree");
-      const ds = s.dispatches || [];
-      if (!ds.length) {
-        box.innerHTML = `<div class="empty">无派工（LIVE off / 无 lead log / 非 MA 站）</div>`;
+      const items = s.dispatches || [];
+      if (!items.length) {
+        box.innerHTML = `<div class="empty">暂无派工</div>`;
         return;
       }
-      box.innerHTML = ds.map((d) => {
-        const active = selectedDispatch === d.id ? " active" : "";
-        const cos = d.cosplay ? " cosplay" : "";
-        const tag = d.subagent_detected
-          ? `<span class="tag hit">subagent</span>`
-          : d.cosplay
-            ? `<span class="tag miss">cosplay</span>`
-            : `<span class="tag">no toolCall</span>`;
-        const sz = d.log_size != null ? ` · ${d.log_size}B` : "";
-        const kids = d.children || [];
-        const kidHtml = kids.length
-          ? `<div class="meta" style="margin-top:4px">${kids.map((c) => {
-              const t = c.transcript_path
-                ? `<span class="tag hit">transcript</span>`
-                : `<span class="tag miss">no tx</span>`;
-              return `↳ ${esc(c.agent || "?")} ${t} tools=${esc(c.tool_count ?? "?")} ev=${esc(c.event_count ?? 0)}`;
-            }).join("<br/>")}</div>`
-          : (d.subagent_detected
-              ? `<div class="meta" style="color:var(--fail)">↳ transcript_missing</div>`
-              : "");
-        const ek = d.event_kinds || {};
-        const ekLine = Object.keys(ek).length
-          ? `<div class="meta">lead: ${Object.entries(ek).map(([k,v]) => `${esc(k)}=${v}`).join(" ")}</div>`
-          : "";
-        return `<button type="button" class="tree-item${active}${cos}" data-id="${esc(d.id)}">
-          <div><strong>${esc(d.stage)}</strong> → ${esc(d.role)} ${tag}</div>
-          <div class="meta">${esc(d.log_path || "")}${sz}</div>
-          ${ekLine}
-          ${kidHtml}
-        </button>`;
+      box.innerHTML = `<div class="toolbar"><span class="k">派工树</span></div>` + items.map((d, i) => {
+        const active = selectedDispatch === i ? " active" : "";
+        const hit = d.tool_call_detected ? "hit" : "miss";
+        return `<div class="tree-row${active}" data-di="${i}">
+          <strong>${esc(d.role || d.name || ("agent-" + i))}</strong>
+          <span class="tag ${hit}">${d.tool_call_detected ? "有工具调用" : "未见工具"}</span>
+          <div style="color:var(--muted);font-size:11px;margin-top:2px">${esc((d.path || d.log || "").toString().slice(-80))}</div>
+        </div>`;
       }).join("");
-      box.querySelectorAll(".tree-item").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          selectedDispatch = btn.dataset.id;
+      box.querySelectorAll(".tree-row").forEach((el) => {
+        el.addEventListener("click", () => {
+          selectedDispatch = Number(el.dataset.di);
           renderTree(lastSnap);
           renderEvents(lastSnap);
         });
@@ -848,174 +966,69 @@
     function renderThinking(s) {
       const box = $("thinking");
       const th = s.thinking || {};
-      const note = th.note || "";
-      const proc = s.process || {};
-      const kinds = proc.event_kinds || (s.poll && s.poll.event_kinds) || {};
-      const kline = Object.keys(kinds).length
-        ? Object.entries(kinds).map(([k,v]) => `${esc(k)}=${v}`).join(" · ")
-        : "—";
+      const chunks = th.chunks || th.texts || [];
+      if (!chunks.length && !th.status) {
+        box.innerHTML = "";
+        return;
+      }
+      const body = (Array.isArray(chunks) ? chunks : [chunks]).map((c) => esc(typeof c === "string" ? c : JSON.stringify(c))).join("\n---\n");
       box.innerHTML = `<details class="thinking-box" open>
-        <summary>L2/L3 · ${esc(th.status || "thinking_unavailable")} · sub_tx=${esc(proc.sub_events ?? 0)} children=${esc(proc.children_count ?? 0)}</summary>
-        <div style="margin-top:6px;color:var(--muted);font-size:12px">${esc(note)}</div>
-        <div style="margin-top:4px;font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--muted)">kinds: ${kline}</div>
+        <summary>思考片段 · ${esc(th.status || "available")}</summary>
+        <pre style="white-space:pre-wrap;font-family:var(--mono);font-size:11px;margin-top:6px">${body || "（空）"}</pre>
       </details>`;
     }
 
     function renderEvents(s) {
       const box = $("events");
-      let evs = s.events || [];
-      if (selectedDispatch) {
-        evs = evs.filter((e) => e.dispatch_id === selectedDispatch);
+      let events = s.events || [];
+      if (selectedDispatch != null && s.dispatches && s.dispatches[selectedDispatch]) {
+        const d = s.dispatches[selectedDispatch];
+        if (d.events && d.events.length) events = d.events;
       }
-      const srcFilter = box.dataset.srcFilter || "all";
-      if (srcFilter === "lead") evs = evs.filter((e) => e.source !== "sub");
-      if (srcFilter === "sub") evs = evs.filter((e) => e.source === "sub");
-
-      const total = evs.length;
-      if (!total) {
-        box.innerHTML = `<div class="empty">无事件（选 dispatch 或等 lead 写盘）</div>`;
+      if (!events.length) {
+        box.innerHTML = `<div class="empty">暂无事件流</div>`;
         return;
       }
-
-      const limited = total > eventLimit;
-      const view = limited ? evs.slice(-eventLimit) : evs;
-
-      const chips = `<div class="toolbar">
-        <button type="button" class="chip ctrl-chip ${srcFilter==="all"?"on":""}" data-src="all">all</button>
-        <button type="button" class="chip ctrl-chip ${srcFilter==="lead"?"on":""}" data-src="lead">lead</button>
-        <button type="button" class="chip ctrl-chip ${srcFilter==="sub"?"on":""}" data-src="sub">sub</button>
-        <span style="color:var(--muted);font-size:11px">paint ${view.length}/${total}${limited ? " (window)" : ""}</span>
-        ${limited ? `<button type="button" class="chip" id="btnMoreEv">+80 more</button>` : ""}
-        ${eventLimit > EVENT_WINDOW ? `<button type="button" class="chip" id="btnLessEv">reset window</button>` : ""}
-      </div>`;
-
-      box.innerHTML = chips + view.map((e) => {
-        const src = e.source === "sub" ? "sub" : "lead";
-        const agent = e.agent ? ` · ${esc(e.agent)}` : "";
-        if (e.kind === "thinking") {
-          return `<details class="ev thinking"><summary><span class="k">${src}/thinking${agent}</span> ${esc((e.text || "").slice(0, 80))}</summary>${esc(e.text || "")}</details>`;
-        }
-        return `<div class="ev ${esc(e.kind)}"><span class="k">${src}/${esc(e.kind)}${agent}</span> ${esc(e.text || "")}</div>`;
+      const slice = events.slice(-eventLimit);
+      box.innerHTML = slice.map((ev) => {
+        const t = esc(ev.type || ev.kind || "meta");
+        const role = esc(ev.role || "");
+        const text = esc(ev.text || ev.content || ev.summary || JSON.stringify(ev).slice(0, 400));
+        return `<div class="ev ${t}"><span class="k">${t}</span> ${role ? "[" + role + "] " : ""}${text}</div>`;
       }).join("");
-
-      box.querySelectorAll(".ctrl-chip").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          box.dataset.srcFilter = btn.dataset.src;
-          renderEvents(lastSnap);
-        });
-      });
-      const more = $("btnMoreEv");
-      if (more) more.addEventListener("click", () => {
-        eventLimit += 80;
-        renderEvents(lastSnap);
-      });
-      const less = $("btnLessEv");
-      if (less) less.addEventListener("click", () => {
-        eventLimit = EVENT_WINDOW;
-        renderEvents(lastSnap);
-      });
-
-      if (followTail) {
-        // scroll the mid panel to bottom
-        const mid = $("mid");
-        mid.scrollTop = mid.scrollHeight;
-      }
+      if (followTail) box.scrollTop = box.scrollHeight;
     }
 
     function renderArtifacts(s) {
       const box = $("artifacts");
       const a = s.artifacts || {};
-      const counters = (s.current && s.current.counters) || {};
-      const rows = [
-        ["solution", a.solution],
-        ["validate", a.validate],
-        ["schema", a.schema],
-        ["intake", a.intake],
-        ["plan", a.plan],
-        ["provenance", a.provenance],
-        ["runs_dir", a.runs_dir],
-        ["agents_dir", a.agents_dir],
-      ];
-      const chtml = Object.keys(counters).length
-        ? `<div style="margin-bottom:10px"><div class="k">counters</div>
-           <div style="font-family:ui-monospace,Consolas,monospace;font-size:12px">
-           ${Object.entries(counters).map(([k,v]) => `${esc(k)}=${esc(v)}`).join(" · ")}
-           </div></div>`
-        : "";
-      const honesty = (s.honesty && s.honesty.messages) || [];
-      const hhtml = honesty.length
-        ? `<div style="margin-top:12px"><div class="k">honesty</div>
-           ${honesty.map((m) => `<div style="color:var(--fail);font-size:12px;margin:4px 0">${esc(m)}</div>`).join("")}
-           </div>`
-        : "";
-      const t2 = s.tier2 || {};
-      const sessOn = !!t2.pi_session_env;
-      const recent = t2.recent || [];
-      const t3 = s.tier3 || {};
-      const t2html = `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
-        <div class="k">Tier-2 Pi deep look (P4)</div>
-        <div style="font-size:12px;margin:6px 0">
-          <span class="tag ${sessOn ? "hit" : "miss"}">ORPATH_PI_SESSION=${sessOn ? "1" : "0"}</span>
-        </div>
-        <div class="meta" style="word-break:break-all">sessions_root: ${esc(t2.sessions_root || "—")}</div>
-        <div class="meta" style="margin-top:6px">${esc(t2.kanban_hint || "")}</div>
-        <div class="meta">${esc(t2.fleet_hint || "")}</div>
-        <div class="k" style="margin-top:8px">recent sessions (${recent.length})</div>
-        ${recent.length
-          ? recent.slice(0, 5).map((r) =>
-              `<div class="path" title="${esc(r.path || "")}">${esc(r.name || "")}</div>`
-            ).join("")
-          : `<div class="empty" style="padding:6px 0">no session jsonl</div>`}
-      </div>`;
-      const t3html = `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
-        <div class="k">Tier-3 Langfuse (optional)</div>
-        <div style="font-size:12px;margin:6px 0">
-          <span class="tag ${t3.enabled ? "hit" : "miss"}">ORPATH_LANGFUSE=${t3.enabled ? "1" : "0"}</span>
-        </div>
-        <div class="meta">${esc(t3.hint || "docs/p5-tier3-langfuse.md")}</div>
-        <div class="meta">${esc(t3.note || "Watch remains product face; Langfuse is portfolio/debug only.")}</div>
-      </div>`;
-      const demo = `<div style="margin-top:14px;border-top:1px solid var(--border);padding-top:10px">
-        <div class="k">Demo checklist (P5)</div>
-        <div class="meta">1) orpath.bat watch-run --keep-watch</div>
-        <div class="meta">2) 看 timeline 变长 · 点 dispatch · 滤 sub</div>
-        <div class="meta">3) 右栏产物路径 · 勿宣称 CoT 必有</div>
-      </div>`;
-      box.innerHTML = chtml + rows.map(([k, v]) => {
-        if (!v) return `<div><span class="k">${esc(k)}</span><span class="path" style="color:var(--muted)">—</span></div>`;
-        return `<div><span class="k">${esc(k)}</span><span class="path">${esc(v)}</span></div>`;
-      }).join("") + hhtml + t2html + t3html + demo;
-    }
-
-    function renderPollFooter(extra) {
-      const s = lastSnap || {};
-      const p = (s && s.poll) || {};
-      const fp = p.fingerprint || lastFp || "—";
-      const sc = p.stages_count != null ? p.stages_count : "—";
-      const ec = p.events_count != null ? p.events_count : "—";
-      const ea = lastEventsAdded != null ? lastEventsAdded : (p.events_added != null ? p.events_added : "—");
-      const curs = p.log_cursors || {};
-      const ncur = Object.keys(curs).length;
-      $("pollInfo").textContent =
-        `P5 ${paused ? "PAUSED" : pollMode} ${POLL_MS}ms · follow=${followTail ? "on" : "off"} · fp ${fp} · stages ${sc} · events ${ec} · +${ea} · cursors ${ncur} · ${new Date().toLocaleTimeString()}` +
-        (extra ? " · " + extra : "");
+      const keys = ["solution", "validate", "schema", "paper", "intake", "plan", "provenance", "runs_dir", "agents_dir"];
+      const labels = {
+        solution: "求解结果",
+        validate: "校验报告",
+        schema: "问题结构",
+        paper: "文稿",
+        intake: "题面 intake",
+        plan: "任务账本",
+        provenance: "溯源",
+        runs_dir: "运行目录",
+        agents_dir: "智能体日志",
+      };
+      let html = "";
+      keys.forEach((k) => {
+        if (!a[k]) return;
+        html += `<div class="k">${esc(labels[k] || k)}</div><span class="path">${esc(a[k])}</span>`;
+      });
+      const honest = (s.honesty && s.honesty.messages) || [];
+      if (honest.length) {
+        html += `<div class="honesty"><strong>说明</strong><br/>${honest.map(esc).join("<br/>")}</div>`;
+      }
+      if (!html) html = `<div class="empty">暂无产物路径</div>`;
+      box.innerHTML = html;
     }
 
     function renderAll(s) {
       lastSnap = s;
-      const p = s.poll || {};
-      if (p.fingerprint) lastFp = p.fingerprint;
-      if (p.events_count != null) {
-        if (lastEventsCount != null) {
-          lastEventsAdded = p.events_count - lastEventsCount;
-        } else if (p.events_added != null) {
-          lastEventsAdded = p.events_added;
-        }
-        lastEventsCount = p.events_count;
-      }
-      if (!selectedDispatch && (s.dispatches || []).length) {
-        selectedDispatch = s.dispatches[0].id;
-      }
       renderBadges(s);
       renderSwim(s);
       renderStages(s);
@@ -1023,118 +1036,87 @@
       renderThinking(s);
       renderEvents(s);
       renderArtifacts(s);
-      $("genInfo").textContent = "gen " + (s.generated_utc || "");
-      renderPollFooter("snap");
+      const poll = s.poll || {};
+      $("pollInfo").textContent =
+        "轮询 " + (poll.fingerprint || "—").toString().slice(0, 12) +
+        " · 事件 " + (poll.events_count != null ? poll.events_count : "—") +
+        (paused ? " · 暂停" : "");
+      $("genInfo").textContent =
+        (s.workdir ? "工作区 " + s.workdir : "") +
+        (s.generated_at ? " · " + s.generated_at : "");
     }
 
-    async function fetchSnapshot() {
-      const slug = $("slug").value.trim() || "test";
-      const thread = $("thread").value.trim() || slug;
-      let url = `/api/snapshot?slug=${encodeURIComponent(slug)}&thread=${encodeURIComponent(thread)}`;
-      if (lastFp) url += `&prev_fp=${encodeURIComponent(lastFp)}`;
-      if (lastEventsCount != null) url += `&prev_events=${encodeURIComponent(String(lastEventsCount))}`;
+    async function fetchSnapshot(force) {
+      if (paused && !force) return;
+      const { slug, thread } = {
+        slug: $("slug").value.trim() || "test",
+        thread: $("thread").value.trim() || $("slug").value.trim() || "test",
+      };
+      const p = new URLSearchParams();
+      p.set("slug", slug);
+      p.set("thread", thread);
+      if (lastFp && !force) p.set("prev_fp", lastFp);
+      if (lastEventsCount != null && !force) p.set("prev_events", String(lastEventsCount));
       try {
-        const r = await fetch(url, { cache: "no-store" });
+        if (!force && lastFp) {
+          const pr = await fetch("/api/poll?" + p.toString(), { cache: "no-store" });
+          const pi = await pr.json();
+          if (pi && pi.dirty === false) {
+            $("pollInfo").textContent = "轮询 干净 · " + (pi.fingerprint || "").toString().slice(0, 12);
+            return;
+          }
+        }
+        const r = await fetch("/api/snapshot?" + p.toString(), { cache: "no-store" });
         if (!r.ok) throw new Error("HTTP " + r.status);
         const s = await r.json();
-        if (s && s.error && !s.schema_version) throw new Error(s.error);
+        if (s.error && !s.stages) throw new Error(s.error);
+        lastFp = (s.poll && s.poll.fingerprint) || lastFp;
+        lastEventsCount = (s.poll && s.poll.events_count != null) ? s.poll.events_count : lastEventsCount;
         $("fetchErr").textContent = "";
         renderAll(s);
-      } catch (e) {
-        $("fetchErr").textContent = "fetch error: " + e.message;
-        renderPollFooter("error");
+      } catch (err) {
+        $("fetchErr").textContent = "拉取失败: " + err.message;
       }
     }
 
-    async function tick() {
-      if (paused) {
-        renderPollFooter("paused");
-        return;
-      }
-      if (document.hidden) {
-        pollMode = "hidden";
-        renderPollFooter("tab-hidden");
-        return;
-      }
+    function applyControls() {
       const slug = $("slug").value.trim() || "test";
       const thread = $("thread").value.trim() || slug;
-      try {
-        let purl = `/api/poll?slug=${encodeURIComponent(slug)}&thread=${encodeURIComponent(thread)}`;
-        if (lastFp) purl += `&prev_fp=${encodeURIComponent(lastFp)}`;
-        const pr = await fetch(purl, { cache: "no-store" });
-        if (!pr.ok) throw new Error("poll HTTP " + pr.status);
-        const info = await pr.json();
-        $("fetchErr").textContent = "";
-        const dirty = info.dirty !== false && info.fingerprint !== lastFp;
-        if (!lastSnap || dirty || lastFp == null) {
-          pollMode = dirty ? "dirty→snap" : "init";
-          await fetchSnapshot();
-        } else {
-          pollMode = "poll-clean";
-          if (lastSnap.poll) {
-            lastSnap.poll.stages_count = info.stages_count;
-            lastSnap.poll.fingerprint = info.fingerprint;
-            lastSnap.poll.sources_fresh = info.sources_fresh;
-          }
-          renderPollFooter("clean");
-        }
-      } catch (e) {
-        pollMode = "fallback";
-        await fetchSnapshot();
-        $("fetchErr").textContent = "poll err→full: " + e.message;
-      }
-    }
-
-    function apply() {
-      const slug = $("slug").value.trim() || "test";
-      let thread = $("thread").value.trim();
-      if (!thread) thread = slug;
-      $("thread").value = thread;
       setQS(slug, thread);
-      selectedStageSeq = null;
-      selectedDispatch = null;
       lastFp = null;
       lastEventsCount = null;
-      lastEventsAdded = null;
-      lastSnap = null;
-      eventLimit = EVENT_WINDOW;
-      errDismissed = "";
       autoJumpedError = false;
-      tick();
+      errDismissed = "";
+      fetchSnapshot(true);
     }
 
     function boot() {
       const q = qs();
       $("slug").value = q.slug;
       $("thread").value = q.thread || q.slug;
-      $("btnApply").addEventListener("click", apply);
-      $("btnRefresh").addEventListener("click", () => fetchSnapshot());
+      $("btnApply").addEventListener("click", applyControls);
+      $("btnRefresh").addEventListener("click", () => fetchSnapshot(true));
       $("btnFollow").addEventListener("click", () => {
         followTail = !followTail;
         $("btnFollow").classList.toggle("on", followTail);
-        if (followTail && lastSnap) renderEvents(lastSnap);
-        renderPollFooter("follow");
       });
       $("btnPause").addEventListener("click", () => {
         paused = !paused;
         $("btnPause").classList.toggle("on", paused);
-        $("btnPause").textContent = paused ? "Resume" : "Pause";
-        renderPollFooter(paused ? "paused" : "resume");
-        if (!paused) tick();
+        if (!paused) fetchSnapshot(true);
       });
+      $("errCopy").addEventListener("click", copyErrorText);
+      $("errJump").addEventListener("click", jumpToErrorStage);
       $("errDismiss").addEventListener("click", () => {
-        errDismissed = ($("errText").textContent || "").trim();
+        const e = errorPayload(lastSnap || {});
+        errDismissed = (e.last_error || "").trim();
         $("errBanner").classList.remove("show");
       });
-      $("errCopy").addEventListener("click", () => { copyErrorText(); });
-      $("errJump").addEventListener("click", () => { jumpToErrorStage(); });
-      $("slug").addEventListener("keydown", (e) => { if (e.key === "Enter") apply(); });
-      $("thread").addEventListener("keydown", (e) => { if (e.key === "Enter") apply(); });
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden && !paused) tick();
-      });
-      tick();
-      timer = setInterval(tick, POLL_MS);
+      $("btnModelApply").addEventListener("click", applyModel);
+      $("modelSelect").addEventListener("change", () => { /* wait for 切换 */ });
+      loadModel();
+      applyControls();
+      timer = setInterval(() => fetchSnapshot(false), POLL_MS);
     }
 
     boot();

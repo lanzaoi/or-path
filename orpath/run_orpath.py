@@ -348,7 +348,16 @@ def main() -> int:
         sp.add_argument("--slug", default="")
         sp.add_argument(
             "--solve-mode",
-            choices=("mock", "networkx", "ortools", "cpsat", "highs"),
+            choices=(
+                "mock",
+                "networkx",
+                "ortools",
+                "cpsat",
+                "highs",
+                "polyomino",
+                "polyomino_cover",
+                "tube",
+            ),
             default="mock",
         )
         sp.add_argument(

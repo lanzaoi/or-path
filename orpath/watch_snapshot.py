@@ -1098,6 +1098,7 @@ def collect_artifacts(
         "validate": _resolve_artifact(workdir, slug, ("-validate.json",)),
         "schema": _resolve_artifact(workdir, slug, ("-schema.json",)),
         "intake": _resolve_artifact(workdir, slug, ("-intake.json",)),
+        "paper": None,
         "provenance": None,
         "plan": None,
         "runs_dir": _rel_or_str(workdir / "runs" / thread_id, workdir),
@@ -1109,6 +1110,9 @@ def collect_artifacts(
     plan = workdir / "outputs" / ".plans" / f"{slug}.md"
     if plan.is_file():
         art["plan"] = _rel_or_str(plan, workdir)
+    paper = workdir / "papers" / f"{slug}.md"
+    if paper.is_file():
+        art["paper"] = _rel_or_str(paper, workdir)
 
     # merge stage path pointers (prefer existing files)
     if stage_paths:
@@ -1237,6 +1241,35 @@ _FROM_STAGE_WHITELIST = frozenset(
 )
 
 
+def _detect_run_flags(workdir: Path, slug: str) -> str:
+    """Optional --problem-id/--class/--solve-mode for resume CTAs (disk-only)."""
+    flags = ""
+    for name in (f"{slug}-schema.json", f"{slug}-solution.json"):
+        p = Path(workdir) / "outputs" / name
+        if not p.is_file():
+            continue
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        pid = str(data.get("problem_id") or "").strip()
+        pc = str(data.get("problem_class") or "").strip()
+        if pid:
+            flags += f" --problem-id {pid}"
+        if pc:
+            flags += f" --problem-class {pc}"
+        pc_l = pc.lower()
+        pid_l = pid.lower()
+        if "polyomino" in pc_l or "polyomino" in pid_l or "poly" == pc_l:
+            flags += " --solve-mode polyomino"
+        elif "tube" in pc_l or "tube" in pid_l:
+            flags += " --solve-mode tube"
+        break
+    return flags
+
+
 def _build_next_actions(
     *,
     slug: str,
@@ -1266,7 +1299,6 @@ def _build_next_actions(
     hm = Path(home).resolve()
     wd_flag = ""
     if wd != hm:
-        # Quote path for cmd.exe friendliness when spaces
         wd_s = str(wd)
         if " " in wd_s:
             wd_flag = f' --workdir "{wd_s}"'
@@ -1275,6 +1307,13 @@ def _build_next_actions(
 
     slug_s = slug or "run"
     tid_s = thread_id or slug_s
+    run_flags = _detect_run_flags(wd, slug_s)
+    # polyomino hint from slug/error even if artifacts missing
+    if "polyomino" in slug_s.lower() and "--solve-mode" not in run_flags:
+        run_flags += (
+            " --problem-id polyomino_b_q1 --problem-class polyomino_cover"
+            " --solve-mode polyomino"
+        )
 
     def act(title: str, command: str, reason: str) -> dict[str, str]:
         return {"title": title, "command": command, "reason": reason}
@@ -1285,7 +1324,7 @@ def _build_next_actions(
             return None
         return (
             f"orpath.bat run --resume --force --slug {slug_s} --thread-id {tid_s}"
-            f"{wd_flag} --from-stage {st}"
+            f"{wd_flag}{run_flags} --from-stage {st}"
         )
 
     actions: list[dict[str, str]] = []
@@ -1305,7 +1344,6 @@ def _build_next_actions(
         or node in {"gate_schema", "model"}
         or schema_repair > 0
     ):
-        # Prefer re-enter gate_schema if schema file may now pass; else re-model
         cmd_g = from_stage("gate_schema")
         cmd_m = from_stage("model")
         if schema_repair >= 2:
@@ -1325,6 +1363,7 @@ def _build_next_actions(
         or "unknown class" in last_err
         or node in {"gate_validate", "solve"}
         or validate_repair > 0
+        or "polyomino" in last_err
     ):
         add(
             "Resume at gate_validate",
@@ -1340,7 +1379,7 @@ def _build_next_actions(
     # 3) paper / cite / claim
     if any(
         k in last_err
-        for k in ("cite", "claim", "r1", "r2", "paper", "numeric claim", "unmapped")
+        for k in ("cite", "claim", "r1", "r2", "paper", "numeric claim", "unmapped", "whitelist")
     ) or node in {"cite_pack", "review_pack", "draft_paper", "revise_or_done"}:
         add(
             "Resume at cite_pack",
@@ -1369,7 +1408,7 @@ def _build_next_actions(
     # 5) generic resume + always watch face
     add(
         "Resume product run",
-        f"orpath.bat run --resume --force --slug {slug_s} --thread-id {tid_s}{wd_flag}",
+        f"orpath.bat run --resume --force --slug {slug_s} --thread-id {tid_s}{wd_flag}{run_flags}",
         "continue from last checkpoint",
     )
     add(
@@ -1378,7 +1417,6 @@ def _build_next_actions(
         "product face — not folder open",
     )
 
-    # Cap for UI
     return actions[:8]
 
 

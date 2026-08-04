@@ -31,7 +31,7 @@ python tools/validate_solution.py --problem-id <id> --solution path.json
 | solve_highs | HiGHS MTZ TSP | ✅ |
 | solve_ortools | Routing 实用搜索 | ❌ |
 | solve_tube_cut_b2026 | 圆管 BFD | ❌ FEASIBLE |
-| solve_polyomino* | 骨牌（**注册进 dispatch 前不算产品**） | 视实现 |
+| solve_polyomino* | 骨牌 **polyomino_cover**（M2：已注册 dispatch；validate 见阶段 2） | CP-SAT exact 视 meta |
 | validate_solution | 重算与可行性 | — |
 
 禁止：NetworkX 标 ortools；Routing/BFD 宣传 proven optimal。
@@ -58,12 +58,14 @@ python tools/validate_solution.py --problem-id <id> --solution path.json
 | highs | TSP 对照 |
 | ortools | VRP/TW/扩展 |
 | tube | 圆管 |
+| polyomino | 多联骨牌覆盖（M2） |
 
 | class | 默认 | 金标例 |
 |-------|------|--------|
 | shortest_path | networkx | 42 |
 | tsp | cpsat | n=8 → 45 |
 | vrp / tw | ortools 诚实 | 58 |
+| polyomino_cover | polyomino | fixtures/t3/polyomino_b_q1 |
 
 ---
 

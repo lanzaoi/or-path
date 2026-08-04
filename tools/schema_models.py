@@ -11,6 +11,8 @@ class ProblemClass(str, Enum):
     shortest_path = "shortest_path"
     tsp = "tsp"
     vrp = "vrp"
+    tube_cut = "tube_cut"
+    polyomino_cover = "polyomino_cover"
 
 
 class SolutionStatus(str, Enum):
@@ -75,6 +77,15 @@ class ProblemSchema(BaseModel):
     demands: dict[str, float] | list[float] | None = None
     vehicle_count: int | None = None
     capacities: list[float] | None = None
+    # polyomino_cover (M2) — structural only; no placements/objective in schema
+    board: dict[str, Any] | None = None
+    board_ref: str | None = None
+    rows: int | None = None
+    cols: int | None = None
+    pieces: list[Any] | None = None
+    piece_types: list[Any] | None = None
+    removed: list[Any] | None = None
+    max_counts: dict[str, Any] | None = None
     constraints: list[Any] = Field(default_factory=list)
     notes: str | None = None
     meta: dict[str, Any] = Field(default_factory=dict)
@@ -95,6 +106,14 @@ class ProblemSchema(BaseModel):
                 raise ValueError("vrp requires capacities")
             if self.demands is None:
                 raise ValueError("vrp requires demands")
+        elif pc == ProblemClass.polyomino_cover:
+            has_board = bool(self.board or self.board_ref)
+            has_rc = self.rows is not None and self.cols is not None
+            has_pieces = bool(self.pieces or self.piece_types)
+            if not (has_board or has_rc or has_pieces):
+                raise ValueError(
+                    "polyomino_cover requires board|board_ref or rows+cols or pieces|piece_types"
+                )
         return self
 
 
@@ -123,6 +142,7 @@ class Solution(BaseModel):
             raise ValueError("tsp solution requires tour")
         if pc == "vrp" and not self.routes:
             raise ValueError("vrp solution requires routes")
+        # polyomino_cover: placements live in meta or free fields — envelope not strict here
         return self
 
 

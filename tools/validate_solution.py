@@ -65,6 +65,16 @@ def _checks_envelope(sol: dict, pc: str) -> list[dict]:
                 "detail": None if sol.get("routes") else "routes required",
             }
         )
+    elif pc in {"polyomino_cover", "polyomino", "poly"}:
+        pls = sol.get("placements")
+        ok_pl = isinstance(pls, list) and len(pls) >= 1
+        checks.append(
+            {
+                "name": "shape_placements",
+                "ok": ok_pl,
+                "detail": None if ok_pl else "placements list required",
+            }
+        )
     return checks
 
 
@@ -455,6 +465,281 @@ def _validate_tube(_problem_id: str, sol: dict) -> list[dict]:
     return checks
 
 
+def _cell_tuple(cell: Any) -> tuple[int, int] | None:
+    if isinstance(cell, (list, tuple)) and len(cell) >= 2:
+        try:
+            return int(cell[0]), int(cell[1])
+        except (TypeError, ValueError):
+            return None
+    if isinstance(cell, dict) and "r" in cell and "c" in cell:
+        try:
+            return int(cell["r"]), int(cell["c"])
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _cells_connected(cells: list[tuple[int, int]]) -> bool:
+    if not cells:
+        return False
+    s = set(cells)
+    if len(s) != len(cells):
+        return False  # internal dup
+    start = cells[0]
+    stack = [start]
+    seen = {start}
+    while stack:
+        r, c = stack.pop()
+        for dr, dc in ((0, 1), (0, -1), (1, 0), (-1, 0)):
+            n = (r + dr, c + dc)
+            if n in s and n not in seen:
+                seen.add(n)
+                stack.append(n)
+    return len(seen) == len(s)
+
+
+def _load_polyomino_board(problem_id: str, sol: dict) -> dict[str, Any]:
+    """Board geometry from fixture board.json, sol.meta, or sol fields."""
+    board: dict[str, Any] = {}
+    try:
+        d = fixture_dir(problem_id)
+        bp = d / "board.json"
+        if bp.is_file():
+            board = _load(bp)
+    except FileNotFoundError:
+        board = {}
+    meta = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
+    rows = board.get("rows") or meta.get("rows") or sol.get("rows")
+    cols = board.get("cols") or meta.get("cols") or sol.get("cols")
+    removed = board.get("removed") or meta.get("removed") or sol.get("removed") or []
+    must_cover = board.get("must_cover_all", True)
+    pieces = board.get("pieces") or []
+    size_by_id: dict[str, int] = {}
+    for p in pieces:
+        if isinstance(p, dict) and p.get("id") is not None:
+            if "size" in p:
+                size_by_id[str(p["id"])] = int(p["size"])
+    # defaults for common pieces
+    defaults = {"M": 1, "D": 2, "L3": 3, "I3": 3, "S": 4, "I4": 4, "T4": 4, "L4": 4, "Z4": 4}
+    for k, v in defaults.items():
+        size_by_id.setdefault(k, v)
+    return {
+        "rows": int(rows) if rows is not None else None,
+        "cols": int(cols) if cols is not None else None,
+        "removed": {(int(a), int(b)) for a, b in (removed or [])},
+        "must_cover_all": bool(must_cover),
+        "size_by_id": size_by_id,
+        "cells_declared": board.get("cells"),
+    }
+
+
+def _validate_polyomino(problem_id: str, sol: dict) -> list[dict]:
+    """Recompute polyomino cover feasibility + piece-count objective.
+
+    Does not re-run CP-SAT. Checks placements cover board without overlap;
+    objective == len(placements) (minimize piece count convention).
+    """
+    checks: list[dict] = []
+    pc = str(sol.get("problem_class") or "").lower()
+    try:
+        root = Path(__file__).resolve().parents[1]
+        if str(root) not in sys.path:
+            sys.path.insert(0, str(root))
+        from orpath.domain_registry import is_polyomino_class
+
+        pc_ok = is_polyomino_class(pc)
+    except Exception:  # noqa: BLE001
+        pc_ok = pc in {"polyomino", "polyomino_cover", "poly", "polyomino_tiling"}
+    checks.append(
+        {
+            "name": "problem_class",
+            "ok": pc_ok,
+            "detail": None if pc_ok else f"not polyomino: {pc}",
+        }
+    )
+    src = str(sol.get("source") or "")
+    solver = str(sol.get("solver") or "")
+    poly_src = (
+        "polyomino" in src.lower()
+        or "polyomino" in solver.lower()
+        or "solve_polyomino" in src
+    )
+    checks.append(
+        {
+            "name": "polyomino_source",
+            "ok": poly_src,
+            "detail": None if poly_src else f"source/solver not polyomino: {src!r}/{solver!r}",
+        }
+    )
+
+    placements = sol.get("placements")
+    if not isinstance(placements, list) or not placements:
+        checks.append(
+            {"name": "feasibility", "ok": False, "detail": "placements empty/missing"}
+        )
+        return checks
+
+    board = _load_polyomino_board(problem_id, sol)
+    rows, cols = board["rows"], board["cols"]
+    removed: set[tuple[int, int]] = board["removed"]
+    size_by_id: dict[str, int] = board["size_by_id"]
+
+    if rows is None or cols is None:
+        all_c: list[tuple[int, int]] = []
+        for pl in placements:
+            if not isinstance(pl, dict):
+                continue
+            for c in pl.get("cells") or []:
+                t = _cell_tuple(c)
+                if t:
+                    all_c.append(t)
+        if not all_c:
+            checks.append(
+                {"name": "board_geometry", "ok": False, "detail": "no cells / no board"}
+            )
+            return checks
+        rows = max(r for r, _ in all_c) + 1
+        cols = max(c for _, c in all_c) + 1
+        checks.append(
+            {
+                "name": "board_geometry",
+                "ok": True,
+                "detail": f"inferred rows={rows} cols={cols}",
+            }
+        )
+    else:
+        checks.append(
+            {
+                "name": "board_geometry",
+                "ok": True,
+                "detail": f"rows={rows} cols={cols} removed={len(removed)}",
+            }
+        )
+
+    board_cells = {
+        (r, c)
+        for r in range(int(rows))
+        for c in range(int(cols))
+        if (r, c) not in removed
+    }
+    covered: dict[tuple[int, int], int] = {}
+    feas_ok = True
+    feas_detail: str | None = None
+    connected_ok = True
+
+    for i, pl in enumerate(placements):
+        if not isinstance(pl, dict):
+            feas_ok = False
+            feas_detail = f"placement[{i}] not object"
+            break
+        piece = str(pl.get("piece") or pl.get("id") or "")
+        cells: list[tuple[int, int]] = []
+        for c in pl.get("cells") or []:
+            t = _cell_tuple(c)
+            if t is None:
+                feas_ok = False
+                feas_detail = f"placement[{i}] bad cell {c!r}"
+                break
+            cells.append(t)
+        if not feas_ok:
+            break
+        if not cells:
+            feas_ok = False
+            feas_detail = f"placement[{i}] empty cells"
+            break
+        declared_size = pl.get("size")
+        if declared_size is not None and int(declared_size) != len(cells):
+            feas_ok = False
+            feas_detail = f"placement[{i}] size={declared_size} != n_cells={len(cells)}"
+            break
+        if piece in size_by_id and size_by_id[piece] != len(cells):
+            feas_ok = False
+            feas_detail = (
+                f"placement[{i}] piece {piece} expects size {size_by_id[piece]} "
+                f"got {len(cells)}"
+            )
+            break
+        if not _cells_connected(cells):
+            connected_ok = False
+            feas_ok = False
+            feas_detail = f"placement[{i}] cells not 4-connected"
+            break
+        for cell in cells:
+            if cell not in board_cells:
+                feas_ok = False
+                feas_detail = f"placement[{i}] cell {cell} outside board/removed"
+                break
+            if cell in covered:
+                feas_ok = False
+                feas_detail = f"overlap at {cell} (placements {covered[cell]} and {i})"
+                break
+            covered[cell] = i
+        if not feas_ok:
+            break
+
+    if feas_ok and board.get("must_cover_all", True):
+        missing = board_cells - set(covered)
+        if missing:
+            feas_ok = False
+            sample = sorted(missing)[:5]
+            feas_detail = f"uncovered cells n={len(missing)} sample={sample}"
+
+    checks.append({"name": "feasibility", "ok": feas_ok, "detail": feas_detail})
+    checks.append(
+        {
+            "name": "connectivity",
+            "ok": connected_ok,
+            "detail": None if connected_ok else "some placement not 4-connected",
+        }
+    )
+
+    n_pieces = len(placements)
+    try:
+        obj = float(sol["objective"])
+        checks.append(
+            {
+                "name": "recompute_objective",
+                "ok": _num_eq(obj, n_pieces),
+                "expected": n_pieces,
+                "got": sol.get("objective"),
+                "detail": "objective == len(placements)",
+            }
+        )
+    except (TypeError, ValueError, KeyError) as exc:
+        checks.append({"name": "recompute_objective", "ok": False, "detail": str(exc)})
+
+    if sol.get("piece_count") is not None:
+        try:
+            pc_val = int(sol["piece_count"])
+            checks.append(
+                {
+                    "name": "piece_count_match",
+                    "ok": pc_val == n_pieces,
+                    "expected": n_pieces,
+                    "got": pc_val,
+                }
+            )
+        except (TypeError, ValueError):
+            checks.append(
+                {"name": "piece_count_match", "ok": False, "detail": "piece_count not int"}
+            )
+
+    meta = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
+    if str(sol.get("status") or "").upper() == "OPTIMAL" and meta.get("exact") is False:
+        checks.append(
+            {
+                "name": "optimality_claim",
+                "ok": False,
+                "detail": "OPTIMAL with meta.exact=false",
+            }
+        )
+    else:
+        checks.append({"name": "optimality_claim", "ok": True})
+
+    return checks
+
+
+
 def validate(problem_id: str, solution: dict, gold: dict | None = None) -> dict:
     pc = str(
         solution.get("problem_class")
@@ -464,10 +749,21 @@ def validate(problem_id: str, solution: dict, gold: dict | None = None) -> dict:
     # aliases
     if pc in {"tube", "tube_bfd", "cutting_stock", "cut_stock"}:
         pc_norm = "tube_cut"
+    elif pc in {"polyomino", "poly", "polyomino_tiling", "tiling_cover"}:
+        pc_norm = "polyomino_cover"
     else:
-        pc_norm = pc
+        try:
+            from orpath.domain_registry import normalize_problem_class
 
-    checks = _checks_envelope_tube(solution) if pc_norm == "tube_cut" else _checks_envelope(solution, pc_norm)
+            pc_norm = normalize_problem_class(pc) or pc
+        except Exception:  # noqa: BLE001
+            pc_norm = pc
+
+    checks = (
+        _checks_envelope_tube(solution)
+        if pc_norm == "tube_cut"
+        else _checks_envelope(solution, pc_norm)
+    )
 
     if solution.get("status") in {"INFEASIBLE", "ERROR", "BLOCKED"}:
         report = {
@@ -487,6 +783,8 @@ def validate(problem_id: str, solution: dict, gold: dict | None = None) -> dict:
         checks.extend(_validate_vrp(problem_id, solution))
     elif pc_norm == "tube_cut":
         checks.extend(_validate_tube(problem_id, solution))
+    elif pc_norm == "polyomino_cover":
+        checks.extend(_validate_polyomino(problem_id, solution))
     else:
         checks.append(
             {"name": "problem_class", "ok": False, "detail": f"unknown class {pc}"}

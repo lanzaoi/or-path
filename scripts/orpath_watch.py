@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""OR-Path Live Watch HTTP face (V0 Tier-1 + P1 poll spine).
+"""OR-Path Live Watch HTTP face (V0 Tier-1 + P1 poll + model pref).
 
-  GET /                         → orpath/web/watch.html
-  GET /api/health               → {ok, root, workdir}
-  GET /api/poll?slug=&thread=   → cheap fingerprint (no lead parse)
-  GET /api/snapshot?slug=&thread=&prev_fp=&prev_events=
-  GET /api/stream?slug=&thread= → SSE: poll every ~0.5s, push snapshot when dirty
+  GET  /                         → orpath/web/watch.html
+  GET  /api/health
+  GET  /api/poll
+  GET  /api/snapshot
+  GET  /api/stream
+  GET  /api/model                → current Pi model + presets
+  POST /api/model                → {provider, model} set preference
 
-Bind 127.0.0.1 only. Clients: poll≤1s on /api/poll, full snapshot only when dirty.
+Bind 127.0.0.1 only.
 """
 from __future__ import annotations
 
@@ -40,7 +42,7 @@ SSE_INTERVAL_S = 0.5
 
 
 class WatchHandler(SimpleHTTPRequestHandler):
-    server_version = "ORPathWatch/0.2-p1"
+    server_version = "ORPathWatch/0.3-apple"
 
     def __init__(self, *args, home: Path, workdir: Path, **kwargs):
         self._home = home
@@ -57,6 +59,8 @@ class WatchHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
         self.wfile.write(raw)
 
@@ -77,12 +81,59 @@ class WatchHandler(SimpleHTTPRequestHandler):
         thread = (qs.get("thread") or qs.get("thread_id") or [slug])[0].strip() or slug
         return slug, thread
 
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
+
+    def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        path = parsed.path or "/"
+        if path != "/api/model":
+            self.send_error(404, "not found")
+            return
+        length = int(self.headers.get("Content-Length") or 0)
+        raw = self.rfile.read(length) if length > 0 else b"{}"
+        try:
+            body = json.loads(raw.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            self._send_json(400, {"ok": False, "error": "invalid json"})
+            return
+        if not isinstance(body, dict):
+            self._send_json(400, {"ok": False, "error": "body must be object"})
+            return
+        provider = str(body.get("provider") or "").strip()
+        model = str(body.get("model") or "").strip()
+        if not model:
+            self._send_json(400, {"ok": False, "error": "model required"})
+            return
+        try:
+            from orpath.pi_model_pref import set_pi_model_pref
+
+            info = set_pi_model_pref(
+                provider=provider or "deepseek",
+                model=model,
+                home=self._home,
+            )
+            info["ok"] = True
+            self._send_json(200, info)
+        except Exception as exc:  # noqa: BLE001
+            self._send_json(400, {"ok": False, "error": str(exc)})
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path or "/"
         qs = parse_qs(parsed.query or "")
 
         if path == "/api/health":
+            try:
+                from orpath.pi_model_pref import get_pi_model_pref
+
+                m = get_pi_model_pref(home=self._home)
+            except Exception:  # noqa: BLE001
+                m = {}
             self._send_json(
                 200,
                 {
@@ -92,9 +143,27 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     "html": str(WEB_DIR / HTML_NAME),
                     "html_exists": (WEB_DIR / HTML_NAME).is_file(),
                     "p1": True,
-                    "endpoints": ["/api/health", "/api/poll", "/api/snapshot", "/api/stream"],
+                    "model": m,
+                    "endpoints": [
+                        "/api/health",
+                        "/api/poll",
+                        "/api/snapshot",
+                        "/api/stream",
+                        "/api/model",
+                    ],
                 },
             )
+            return
+
+        if path == "/api/model":
+            try:
+                from orpath.pi_model_pref import get_pi_model_pref
+
+                info = get_pi_model_pref(home=self._home)
+                info["ok"] = True
+                self._send_json(200, info)
+            except Exception as exc:  # noqa: BLE001
+                self._send_json(500, {"ok": False, "error": str(exc)})
             return
 
         if path == "/api/poll":
@@ -129,6 +198,12 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     prev_fingerprint=prev_fp,
                     prev_events_count=prev_events,
                 )
+                try:
+                    from orpath.pi_model_pref import get_pi_model_pref
+
+                    snap["pi_model"] = get_pi_model_pref(home=self._home)
+                except Exception:  # noqa: BLE001
+                    pass
                 self._send_json(200, snap)
             except Exception as exc:  # noqa: BLE001
                 self._send_json(500, {"ok": False, "error": str(exc)})
@@ -146,7 +221,6 @@ class WatchHandler(SimpleHTTPRequestHandler):
         self.send_error(404, "not found")
 
     def _sse_loop(self, slug: str, thread: str) -> None:
-        """Server-Sent Events: emit snapshot when fingerprint changes."""
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
@@ -157,7 +231,6 @@ class WatchHandler(SimpleHTTPRequestHandler):
         last_fp: str | None = None
         last_ev = 0
         try:
-            # initial
             snap = build_snapshot(
                 slug=slug,
                 thread_id=thread,
@@ -250,7 +323,7 @@ def serve(
     print(f"[watch] workdir = {workdir}")
     print(f"[watch] listen  = http://{host}:{bound_port}/")
     print(f"[watch] open    = {url}")
-    print(f"[watch] P1      = /api/poll + /api/stream (dirty spine)")
+    print(f"[watch] P1      = /api/poll + /api/stream + /api/model")
     print("[watch] Ctrl+C to stop")
 
     if open_browser:

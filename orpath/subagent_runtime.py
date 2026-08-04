@@ -49,7 +49,19 @@ LEAD_OWNED_STAGES = frozenset(
 )
 
 DEFAULT_PROVIDER = "deepseek"
-DEFAULT_MODEL = "deepseek-v4-pro"
+DEFAULT_MODEL = "deepseek-v4-flash"
+
+
+def _effective_defaults() -> tuple[str, str]:
+    try:
+        from orpath.pi_model_pref import resolve_launch_model
+
+        return resolve_launch_model()
+    except Exception:  # noqa: BLE001
+        return (
+            os.environ.get("ORPATH_PI_PROVIDER", DEFAULT_PROVIDER).strip() or DEFAULT_PROVIDER,
+            os.environ.get("ORPATH_PI_MODEL", DEFAULT_MODEL).strip() or DEFAULT_MODEL,
+        )
 
 # Patterns that indicate a real subagent tool invocation in Pi logs / jsonl
 _CALL_PATTERNS = [
@@ -97,23 +109,58 @@ class LeadResult:
 
 
 def project_root(start: Path | None = None) -> Path:
+    """Install root for Pi defs / tools — never a bare case workdir.
+
+    Prefer ``ORPATH_HOME`` / package home. Walking from a Path-A workdir
+    (no orpath.bat) used to return the case folder and then fail with
+    ``missing .pi/agents`` / ``missing .pi/settings.json``.
+    """
+    try:
+        from orpath.paths import orpath_home
+
+        home = orpath_home()
+        if (home / "orpath").is_dir():
+            return home.resolve()
+    except Exception:  # noqa: BLE001
+        pass
     if start is None:
         start = Path.cwd()
     p = start.resolve()
     for cand in [p, *p.parents]:
         if (cand / "orpath").is_dir() and (cand / "orpath.bat").is_file():
             return cand
-    return p
+    # last resort: package parent
+    return Path(__file__).resolve().parents[1]
 
 
-def agents_dir(root: Path) -> Path:
-    return root / ".pi" / "agents"
+def agents_dir(root: Path | None = None) -> Path:
+    try:
+        from orpath.paths import agents_dir as _agents_home
+
+        return _agents_home()
+    except Exception:  # noqa: BLE001
+        r = project_root(root)
+        return r / ".pi" / "agents"
 
 
 def agent_logs_dir(root: Path, slug: str) -> Path:
-    d = root / "outputs" / ".agents" / slug
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+    """Per-case lead logs under workdir (Path A), not install home."""
+    try:
+        from orpath.paths import case_agents_dir, orpath_home, orpath_workdir
+
+        home_p = orpath_home().resolve()
+        root_p = Path(root).resolve()
+        if root_p != home_p:
+            d = root_p / "outputs" / ".agents" / slug
+            d.mkdir(parents=True, exist_ok=True)
+            return d
+        d = case_agents_dir(orpath_workdir(), slug)
+        d.mkdir(parents=True, exist_ok=True)
+        return d
+    except Exception:  # noqa: BLE001
+        d = Path(root) / "outputs" / ".agents" / slug
+        d.mkdir(parents=True, exist_ok=True)
+        return d
 
 
 def find_pi_cli(root: Path) -> str | None:
@@ -166,18 +213,19 @@ def list_project_agents(root: Path) -> list[str]:
 
 
 def check_env(root: Path | None = None) -> EnvCheck:
-    root = project_root(root)
+    # Pi agent defs + settings always on install home (Path A workdir has no .pi).
+    home = project_root(root)
     errors: list[str] = []
-    pi_cli = find_pi_cli(root)
+    pi_cli = find_pi_cli(home)
     if not pi_cli:
         errors.append("pi CLI not found (runtime/.../cli.js or pi.bat)")
-    pkg = find_pi_subagents_pkg(root)
+    pkg = find_pi_subagents_pkg(home)
     if not pkg:
         errors.append("pi-subagents package not installed under runtime or ~/.pi/agent/npm")
     key_ok = api_key_present()
     if not key_ok:
         errors.append("no API key / Pi auth.json (DEEPSEEK_API_KEY or ~/.pi/agent/auth.json)")
-    agents = list_project_agents(root)
+    agents = list_project_agents(home)
     required = {
         "or-orchestrator",
         "or-researcher",
@@ -190,7 +238,7 @@ def check_env(root: Path | None = None) -> EnvCheck:
     if missing:
         errors.append(f"missing agent defs: {missing}")
     # settings packages
-    settings = root / ".pi" / "settings.json"
+    settings = home / ".pi" / "settings.json"
     if settings.is_file():
         try:
             data = json.loads(settings.read_text(encoding="utf-8"))
@@ -208,7 +256,7 @@ def check_env(root: Path | None = None) -> EnvCheck:
         pi_cli=pi_cli,
         pi_subagents_ok=pkg is not None,
         api_key_ok=key_ok,
-        agent_dir=str(agents_dir(root)),
+        agent_dir=str(agents_dir(home)),
         project_agents=agents,
         detail="ok" if ok else "; ".join(errors),
         errors=errors,
@@ -401,8 +449,8 @@ def build_pi_command(
     root: Path,
     *,
     prompt: str,
-    provider: str = DEFAULT_PROVIDER,
-    model: str = DEFAULT_MODEL,
+    provider: str | None = None,
+    model: str | None = None,
     no_session: bool | None = None,
     json_mode: bool = True,
     tools: str | None = None,
@@ -411,6 +459,9 @@ def build_pi_command(
     chk = require_env(root)
     cli = chk.pi_cli
     assert cli
+    ep, em = _effective_defaults()
+    provider = (provider or ep).strip() or ep
+    model = (model or em).strip() or em
     if cli.endswith(".js"):
         cmd = [
             "node",
@@ -445,8 +496,8 @@ def spawn_lead(
     slug: str,
     stage: str,
     prompt: str,
-    provider: str = DEFAULT_PROVIDER,
-    model: str = DEFAULT_MODEL,
+    provider: str | None = None,
+    model: str | None = None,
     timeout_s: int = 1800,
     require_subagent_call: bool | None = None,
     expected_outputs: Sequence[Path] | None = None,
@@ -466,6 +517,10 @@ def spawn_lead(
 
     if require_subagent_call is None:
         require_subagent_call = stage_requires_subagent(stage)
+
+    ep, em = _effective_defaults()
+    provider = (provider or ep).strip() or ep
+    model = (model or em).strip() or em
 
     sess_off = resolve_no_session(no_session)
     try:
