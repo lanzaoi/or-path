@@ -4,12 +4,14 @@
 
 | 子目录 | 说明 |
 |--------|------|
-| `closeouts/` | 里程碑关单（T1/T2/T3/paper） |
-| `evidence/` | 截图、live prompt、meta JSON |
+| `closeouts/` | 里程碑关单（T1–T3、1.x、M0、P5…） |
+| `plans/` | 施工单（原 `.hermes/plans` + L1/L2 计划） |
+| `tickets/` | 已完成架构票（ADR 配套） |
+| `design-notes/` | 设计长文、OpenPi 退役、IDEA 草稿、solver 旧笔记 |
+| `evidence/` | 截图与 JSON 证据 |
+| `ops/` | 运维 / 隔离说明 |
 | `portfolio/` | 作品集口播 |
-| `design-notes/` | 阶段性设计笔记（M1–M3 等；产品策略已沉淀到 ADR） |
-| `ops/` | 运维/隔离/可搬迁说明 |
-| **`plans/`** | 历史施工单（原 `.hermes/plans`，可公开） |
 
 **活文档入口：** [`../README.md`](../README.md)  
+**架构简图：** [`../ARCHITECTURE.md`](../ARCHITECTURE.md)  
 **产品法：** `../../specs/README.md`

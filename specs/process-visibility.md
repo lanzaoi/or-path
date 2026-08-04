@@ -285,7 +285,7 @@ Tier-3 研发/作品集（可选后置）：
 | `ORPATH_PI_SESSION` | 写 session 供 kanban | **未/未普及** |
 | pi-kanban / Langfuse | Tier-2/3 | **P4 session 桥 + P5 文档/开关**；kanban 安装与 LF span **可选未强制** |
 
-**诚实：** `docs/m0-closeout.md` 记 V0 **工程** PASS；用户体感仍「不理想」→ 见 **§11 五阶段完工**（目标 = **真·实时可视体验**，不是再勾一次 gate）。
+**诚实：** `docs/archive/closeouts/m0-closeout.md` 记 V0 **工程** PASS；用户体感仍「不理想」→ 见 **§11 五阶段完工**（目标 = **真·实时可视体验**，不是再勾一次 gate）。
 
 ---
 

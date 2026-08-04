@@ -67,7 +67,6 @@ runtime/node_modules/
 # Screenshots default-ignore (allow listed evidence)
 *.png
 !docs/archive/evidence/t2-live-evidence-board.png
-!docs/archive/evidence/t2-openpi-screenshot.png
 
 # Contest bulk / local case drops — NEVER publish
 fixtures/t3/tube_cut_b2026/raw/

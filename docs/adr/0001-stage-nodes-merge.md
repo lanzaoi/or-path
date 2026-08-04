@@ -17,7 +17,7 @@
    - 删除 `nodes_t2.py`  
    - `nodes_product.py` = 兼容 shim  
    - `graph.py` / `graph_t2.py` = 委托 `graph_product`  
-5. 工单：`docs/tickets/2026-07-29_stage-nodes-merge.md`
+5. 工单：`docs/archive/tickets/2026-07-29_stage-nodes-merge.md`
 
 ## 后果
 

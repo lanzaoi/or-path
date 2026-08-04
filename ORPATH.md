@@ -74,7 +74,7 @@ orpath.bat watch-run --slug p3-demo --keep-watch
 orpath.bat p3-gate
 ```
 
-法条：`specs/process-visibility.md` · 冒烟：`docs/v0-smoke.md` · M1：`docs/m1-smoke.md` · M2：`docs/m2-polyomino.md`。
+法条：`specs/process-visibility.md` · 架构：`docs/ARCHITECTURE.md` · 冒烟：`docs/v0-smoke.md` · M1：`docs/m1-smoke.md` · M2：`docs/m2-polyomino.md` · 安装：`docs/install.md`。
 
 ## 菜单与 doctor
 

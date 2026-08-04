@@ -168,4 +168,4 @@ run 落 L0/L1
 - `product-flow-sdd.md` §11  
 - `knowledge-and-retrieval.md`  
 - `process-visibility.md`（可视 L 层 ≠ 记忆 L 层）  
-- `docs/harness-ideal-on-lcc-skeleton.md` s07/s09 讲法  
+- `docs/archive/design-notes/harness-ideal-on-lcc-skeleton.md` s07/s09 讲法  

@@ -9,8 +9,9 @@
 | `orpath/` `tools/` `scripts/` `specs/` `fixtures/`（无 raw 大附件） | 产品代码与金标壳 |
 | `START-CASE.bat` `START-WATCH.bat` `START-ORPATH.bat` `orpath.bat` `pi.bat` `orpath.sh` `pi.sh` | 启动器 |
 | `.pi/agents/` `.pi/settings.json` | Pi 角色定义与默认设置 |
-| `docs/`（含 `docs/archive/plans/`） | 活文档 + **已归档施工计划** |
+| `docs/`（顶层活文档 + `archive/`） | 导航见 `docs/README.md`；架构 `docs/ARCHITECTURE.md` |
 | `AGENTS.md` `README.md` `ORPATH.md` `requirements.txt` | 入口与依赖声明 |
+| `demo/seed/` | L1/L2 默认 Watch 回放 |
 | `inbox/README.md` | 仅说明如何本地放题 |
 
 ## 禁止进 Git（本机 / 机密 / 赛题）
@@ -24,7 +25,7 @@
 | **`outputs/` `notes/` `papers/` `runs/`** | 运行产物 |
 | **`.pi/orpath_model.json`** | 本机换模型偏好 |
 | **`.pi-subagents/` `.pi/npm/` `.pi/memory/`** | 运行时缓存 |
-| **`demo/`** | 可选视觉实验室，非产品主路径 |
+| **`demo/*` except `demo/seed/**`** | 可选视觉实验室，非产品主路径 |
 | **`vendor/` `pi-main/` `openpi/` `.venv-314/`** | 上游/环境 |
 
 ## `.hermes` 架构（改完后）

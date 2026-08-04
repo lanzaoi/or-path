@@ -1,57 +1,56 @@
-# docs/ 导航（活文档面）
+# docs/ — 活文档导航
 
-**原则：** 默认只读本目录顶层 + `adr/` + `tickets/` + 仓库根 `specs/`。  
-历史关单/证据/口播进 **`archive/`**，不参与日常导航。
+**原则：** 顶层只放「现在还要读的」。历史关单 / 计划 / 证据 → **`archive/`**。  
+产品法在 **`../specs/`**，操作入口在仓库根 **`ORPATH.md`** / **`START-*.bat`**。
 
 ## 先跑起来
 
 | 路径 | 用途 |
 |------|------|
-| **`../START-CASE.bat`** | 路径 A：本地案例文件夹 + Watch/watch-run |
-| **`../START-WATCH.bat`** | 一键过程脸（默认 live-btube） |
-| **`../ORPATH.md`** | 操作主说明 |
-| **`../README.md`** | 仓库总览 |
-| **`repo-surface.md`** | **可上传 / 禁上传边界（.hermes 等）** |
-| **`archive/plans/`** | 历史施工单（原 `.hermes/plans`） |
+| **[`install.md`](install.md)** | L1 setup · L2 Release 安装 |
+| **[`../ORPATH.md`](../ORPATH.md)** | 日常操作（路径 A · Watch · LIVE） |
+| **[`../README.md`](../README.md)** | 仓库总览 |
+| **[`../START-CASE.bat`](../START-CASE.bat)** | 路径 A 一键 |
+| **[`../START-WATCH.bat`](../START-WATCH.bat)** | 过程脸一键 |
 
 ## 活文档（Living）
 
-| 路径 | 用途 |
+| 文件 | 用途 |
 |------|------|
-| **`../specs/README.md`** | **法条总索引**（优先于 docs） |
-| **`../specs/process-visibility.md`** | **实时过程台硬底线（V0）** |
+| **[`ARCHITECTURE.md`](ARCHITECTURE.md)** | 当前产品架构（简洁） |
+| **[`repo-surface.md`](repo-surface.md)** | 可上传 / 禁上传边界 |
+| **[`OUT_OF_BAND.md`](OUT_OF_BAND.md)** | vendor / pi-main / .hermes 等带外 |
+| **[`m2-polyomino.md`](m2-polyomino.md)** | M2 骨牌域桥 |
+| **[`solver-stack.md`](solver-stack.md)** | 求解栈 claim（与 specs 配套） |
+| **[`v0-smoke.md`](v0-smoke.md)** | Watch / 过程脸冒烟（门禁锚点） |
+| **[`p5-closeout.md`](p5-closeout.md)** | P5 过程脸收口（门禁锚点） |
+| **[`m0-smoke.md`](m0-smoke.md)** · **[`m1-smoke.md`](m1-smoke.md)** | M0 mock · M1 workdir |
+| **[`m1-closeout.md`](m1-closeout.md)** · **[`m2-closeout.md`](m2-closeout.md)** | 近里程碑关单（门禁仍引用） |
+| **[`t1-smoke.md`](t1-smoke.md)** · **[`t2-smoke.md`](t2-smoke.md)** · **[`1.1-smoke.md`](1.1-smoke.md)** | 回归冒烟入口 |
+
+## 架构决策（ADR）
+
+| 路径 | 说明 |
+|------|------|
+| **[`adr/`](adr/)** | ADR-0001…0006（阶段节点、solve/validate、控制面、论文、subagent、文档卫生） |
+
+## 历史（默认不整树加载）
+
+| 路径 | 说明 |
+|------|------|
+| **[`archive/closeouts/`](archive/closeouts/)** | T1–T3 / 1.x / M0 / P5 / 旧关单 |
+| **[`archive/plans/`](archive/plans/)** | 施工单（原 `.hermes/plans`） |
+| **[`archive/tickets/`](archive/tickets/)** | 已完成架构票 |
+| **[`archive/design-notes/`](archive/design-notes/)** | 设计长文 / OpenPi 退役笔记 / IDEA 草稿 |
+| **[`archive/evidence/`](archive/evidence/)** | 截图与 JSON 证据 |
+| **[`archive/ops/`](archive/ops/)** · **[`archive/portfolio/`](archive/portfolio/)** | 运维与口播 |
+
+完整索引：[`archive/README.md`](archive/README.md)
+
+## 法条（不在 docs）
+
+| 路径 | 说明 |
+|------|------|
+| **`../specs/README.md`** | 规格总索引 |
 | **`../specs/product-flow-sdd.md`** | 总流程主合同 |
-| **`v0-smoke.md`** | V0 Live Watch 冒烟 |
-| **`m0-smoke.md` / `m0-closeout.md`** | M0 证据串 |
-| **`m1-smoke.md` / `m1-closeout.md`** | M1 workdir + Watch CTA |
-| **`m2-polyomino.md` / `m2-closeout.md`** | **M2 第一域桥 polyomino** |
-| **`live-btube-closeout.md`** | 圆管 B LIVE 旁路 |
-| `1.0-closeout.md` · `1.1-closeout.md` · `1.2-closeout.md` | 产品关单 |
-| `solver-stack.md` | 求解器话术 |
-| `anti-cosplay-harness.md` | 反偷懒 harness |
-| `t1-smoke.md` / `t2-smoke.md` | 历史冒烟 |
-| `adr/` | ADR-0001… |
-| `tickets/` | 施工单 |
-| `OUT_OF_BAND.md` | vendor / pi-main 带外 |
-
-## B 题全问
-
-| 路径 | 用途 |
-|------|------|
-| `../scripts/pack_b_polyomino_case.py` | 把全问 JSON/Excel/论文打进案例目录 |
-| `../tools/solve_polyomino.py` · `solve_polyomino_q3.py` | CP-SAT 求解 |
-| 案例内 `papers/B-polyomino-full-paper.md` | 打包后的完整论文 |
-| 案例内 `outputs/b-full/` | 各子问明细 |
-
-单次 `watch-run` 默认只演示 Q1.1；全问用 pack 脚本。
-
-## 归档（Archive）
-
-见 [`archive/README.md`](archive/README.md)。
-
-## 读法
-
-1. 产品法 → `specs/`  
-2. 怎么跑 → 根 `README` / `ORPATH.md` / `*-smoke.md`  
-3. 架构为什么 → `adr/`  
-4. 历史证据 → `archive/`（需要时再开）
+| **`../specs/process-visibility.md`** | 过程可视合同 |

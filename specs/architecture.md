@@ -140,4 +140,4 @@ CI 可无 live；**不得**用 CI 绿宣称 live MA demo 完成。
 - `product-flow-sdd.md`  
 - `process-visibility.md`  
 - ADR-0001…0006  
-- `IDEA.md`（叙事；冲突以 specs 为准）  
+- `docs/archive/design-notes/IDEA.md`（叙事；冲突以 specs 为准）  

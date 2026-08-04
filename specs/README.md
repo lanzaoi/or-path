@@ -15,7 +15,7 @@
 5. AGENTS.md
 6. docs/archive/plans/*（历史施工单；可过期）
 7. docs/**（活文档 docs/README.md；历史 docs/archive/）
-8. IDEA.md / README 叙事
+8. docs/archive/design-notes/IDEA.md / README 叙事
 9. 聊天记录
 ```
 （`.hermes/` 整棵本机-only，见 `docs/repo-surface.md`。）

@@ -341,10 +341,10 @@ set PYTHONNOUSERSITE=1
 - [x] 本 spec 已合入且与实现一致  
 - [x] `scripts/intake_gate.py` PASS  
 - [x] t1_gate + t3_lg_gate 仍 PASS（默认 skip_intake；S5 验收）  
-- [x] 至少一条 **真实赛题** smoke：圆管 B2026 OCR brief → intake（`docs/1.1-closeout.md` + `docs/archive/evidence/1.1-tube-cut-intake-smoke.json`）  
+- [x] 至少一条 **真实赛题** smoke：圆管 B2026 OCR brief → intake（`docs/archive/closeouts/1.1-closeout.md` + `docs/archive/evidence/1.1-tube-cut-intake-smoke.json`）  
 - [x] 结构回归：圆管 Q1–Q4 + `structure_q4` fixture  
 - [x] claim ladder 诚实：不宣称 OCR 完美、不宣称 intake 替代求解  
-- [x] `docs/1.1-closeout.md` PASS  
+- [x] `docs/archive/closeouts/1.1-closeout.md` PASS  
 - [x] 无密钥进 git；大 PDF/扫描件不进 git（题面用 md stub 固化）  
 
 ### 9.4 非门禁（1.1）
@@ -383,7 +383,7 @@ set PYTHONNOUSERSITE=1
 | `multi-agent.md` | parse 可用 lead；禁止假求解 |
 | `gates-and-dod.md` | 挂 1.1 门禁入口 |
 | `product-scope.md` | 里程碑 1.1 |
-| `docs/1.0-closeout.md` | 前置 PASS；1.1 不重开 |
+| `docs/archive/closeouts/1.0-closeout.md` | 前置 PASS；1.1 不重开 |
 
 ---
 

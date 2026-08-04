@@ -39,7 +39,7 @@ Call tools/solve_ortools.py and tools/validate_solution.py.
 Then or-writer draft binding solution JSON only.
 ```
 
-4. Confirm subagent cards + save screenshot to `docs/t2-openpi-screenshot.png`
+4. Confirm subagent cards + save screenshot to `docs/archive/evidence/t2-live-evidence-board.png (OpenPi screenshot retired)`
 5. Transcripts under `.pi-subagents/artifacts/` (local, gitignored)
 
 ## Specs

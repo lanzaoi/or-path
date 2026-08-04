@@ -21,7 +21,6 @@ INCLUDE_TOP = [
     "README.md",
     "ORPATH.md",
     "AGENTS.md",
-    "IDEA.md",
     "requirements.txt",
     ".env.example",
     "orpath.env.example",
