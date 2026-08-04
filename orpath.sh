@@ -29,14 +29,28 @@ OR-Path launcher (relocatable)
   ORPATH_HOME    = $ORPATH_HOME
   ORPATH_WORKDIR = $ORPATH_WORKDIR
 
-  orpath.sh doctor | isolation | gate | t2 | pi | menu | env
+  orpath.sh setup | doctor | demo-seed | menu | pack-release | l2-gate
+  orpath.sh isolation | gate | t2 | pi | env
   openpi → REMOVED; use menu / pi
+  Fresh machine: setup → doctor → demo-m0 / watch
 EOF
     ;;
   env)
     echo "ORPATH_HOME=$ORPATH_HOME"
     echo "ORPATH_WORKDIR=$ORPATH_WORKDIR"
     echo "PY=$PY"
+    ;;
+  setup|bootstrap)
+    exec "$PY" "$ORPATH_HOME/scripts/bootstrap_orpath.py" "$@"
+    ;;
+  demo-seed|seed)
+    exec "$PY" "$ORPATH_HOME/scripts/install_demo_seed.py" "$@"
+    ;;
+  pack-release)
+    exec "$PY" "$ORPATH_HOME/scripts/pack_release.py" "$@"
+    ;;
+  l2-gate)
+    exec "$PY" "$ORPATH_HOME/scripts/l2_release_gate.py" "$@"
     ;;
   doctor)
     exec "$PY" "$ORPATH_HOME/scripts/orpath_doctor.py"

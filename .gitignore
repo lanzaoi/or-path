@@ -15,7 +15,6 @@ backend.env
 
 # Local data / indexes
 data/
-runs/
 lightrag_data/
 chroma_db/
 *.db
@@ -52,10 +51,12 @@ openpi/
 runtime/node_modules/
 **/node_modules/
 
-# Runtime artifacts (regenerate via product run / gates)
-outputs/
-notes/
-papers/
+# Runtime artifacts — install/workdir ROOT only
+# (must not swallow demo/seed/**/{outputs,notes,papers,runs})
+/outputs/
+/notes/
+/papers/
+/runs/
 
 # Pi local runtime caches (keep .pi/agents + settings tracked)
 .pi/npm/
@@ -76,5 +77,7 @@ inbox/**
 # Hermes IDE workspace — local only (plans live in docs/archive/plans/)
 .hermes/
 
-# Optional local visual lab (not product source)
-demo/
+# Optional local visual lab — keep demo/seed for L1/L2 default face
+demo/*
+!demo/seed/
+!demo/seed/**

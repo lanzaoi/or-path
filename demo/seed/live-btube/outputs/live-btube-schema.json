@@ -1,0 +1,224 @@
+{
+  "problem_id": "b-tube-cut",
+  "problem_class": "cutting_stock",
+  "slug": "live-btube",
+  "title": "异形圆管工件下料优化问题",
+  "source": "2026 杭州电子科技大学 第27届大学生数学建模竞赛 B题",
+  "domain": "tube_cut",
+
+  "notes": "SCHEMA HAS NO OPTIMA. All numeric results come exclusively from solve tools + validate. Shell fixture 'tube_cut_b2026' is pipeline reference only; this schema describes the TRUE contest subproblems from intake. No objective/path/tour/routes/best_cost values anywhere in this file.",
+
+  "subproblems": [
+    {
+      "id": "Q1",
+      "title": "轴向占用长度计算与基础下料方案",
+      "description": "10种工件各50件。根据附件1点云计算各工件轴向占用长度。允许组合选用4种标准母材(9/10/11/12m)，设计下料方案。不考虑共切效应。",
+      "objective_hierarchy": [
+        {"priority": 1, "goal": "minimize", "target": "total_stock_length", "description": "所选母材总长度尽可能小"},
+        {"priority": 2, "goal": "minimize", "target": "type_switch_count", "description": "不同工件之间的切换次数尽可能少"}
+      ],
+      "demand": {"per_type": 50, "num_types": 10, "total_items": 500},
+      "stock_options_mm": [9000, 10000, 11000, 12000],
+      "co_cut_enabled": false,
+      "remnant_rule": null,
+      "deliverable": "result1.xlsx",
+      "notes": "母材利用率 = Σ(工件轴向占用长度) / Σ(所选母材总长度)"
+    },
+    {
+      "id": "Q2",
+      "title": "共切收益模型与固定分配重排序",
+      "description": "在Q1基础上考虑共切效应。建立4种端部拼接方式(LL/LR/RL/RR)的省料通用模型，计算10×10×4共切收益矩阵。保持Q1工件到母材的分配不变，仅在各母材内部对工件重新排序。",
+      "objective_hierarchy": [
+        {"priority": 1, "goal": "minimize", "target": "total_stock_length", "description": "母材总长度(固定自Q1)"},
+        {"priority": 2, "goal": "maximize", "target": "total_co_cut_benefit", "description": "总共切收益尽可能大"},
+        {"priority": 3, "goal": "minimize", "target": "type_switch_count", "description": "不同工件之间的切换次数尽可能少"}
+      ],
+      "demand": {"per_type": 50, "num_types": 10, "total_items": 500},
+      "stock_options_mm": [9000, 10000, 11000, 12000],
+      "co_cut_enabled": true,
+      "co_cut_splice_modes": ["LL", "LR", "RL", "RR"],
+      "remnant_rule": null,
+      "depends_on": "Q1",
+      "deliverable": "result2.xlsx",
+      "notes": "母材利用率 = [Σ(工件轴向占用长度) - 总共切收益] / Σ(所选母材总长度)。内部拼接(同型工件连续)不计入切换次数。"
+    },
+    {
+      "id": "Q3",
+      "title": "含共切收益的全新下料方案",
+      "description": "结合共切收益矩阵，重新制定所有工件的下料方案。综合考虑母材总长度、总共切收益、总切换次数。余料≥200mm可入库后续批次优先使用，<200mm为废料。",
+      "objective_hierarchy": [
+        {"priority": 1, "goal": "minimize", "target": "total_stock_length", "description": "母材总长度尽可能小"},
+        {"priority": 2, "goal": "maximize", "target": "total_co_cut_benefit", "description": "总共切收益尽可能大"},
+        {"priority": 3, "goal": "minimize", "target": "type_switch_count", "description": "不同工件之间的切换次数尽可能少"}
+      ],
+      "demand": {"per_type": 50, "num_types": 10, "total_items": 500},
+      "stock_options_mm": [9000, 10000, 11000, 12000],
+      "co_cut_enabled": true,
+      "co_cut_splice_modes": ["LL", "LR", "RL", "RR"],
+      "remnant_rule": {"min_usable_mm": 200, "description": "余料≥200mm可入库，后续批次优先使用；<200mm视为废料"},
+      "depends_on": ["Q1", "Q2"],
+      "deliverable": "result3.xlsx",
+      "notes": "联合优化：assignment + ordering + splice。CP-SAT规模较大，可能需要分解策略。"
+    },
+    {
+      "id": "Q4",
+      "title": "多批次连续加工与余料调用",
+      "description": "3个连续批次(B1/B2/B3)需求数据。每批次余料≥200mm入库供下一批次优先使用。多批次联合优化：余料调用、新母材选取、拼接方式、加工顺序。",
+      "objective_hierarchy": [
+        {"priority": 1, "goal": "minimize", "target": "total_new_stock_length_3_batches", "description": "3批次总共使用标准母材总长度尽可能小"},
+        {"priority": 2, "goal": "maximize", "target": "total_co_cut_benefit_3_batches", "description": "总共切收益尽可能高"},
+        {"priority": 3, "goal": "minimize", "target": "total_switch_count_3_batches", "description": "总切换次数尽可能少"}
+      ],
+      "demand": {
+        "batch_B1": {"工件1": 52, "工件2": 31, "工件3": 43, "工件4": 39, "工件5": 58, "工件6": 55, "工件7": 57, "工件8": 41, "工件9": 45, "工件10": 47, "total": 468},
+        "batch_B2": {"工件1": 46, "工件2": 28, "工件3": 40, "工件4": 35, "工件5": 57, "工件6": 50, "工件7": 51, "工件8": 37, "工件9": 44, "工件10": 45, "total": 433},
+        "batch_B3": {"工件1": 44, "工件2": 27, "工件3": 36, "工件4": 34, "工件5": 60, "工件6": 56, "工件7": 49, "工件8": 39, "工件9": 42, "工件10": 40, "total": 427},
+        "grand_total": 1328
+      },
+      "stock_options_mm": [9000, 10000, 11000, 12000],
+      "co_cut_enabled": true,
+      "co_cut_splice_modes": ["LL", "LR", "RL", "RR"],
+      "remnant_rule": {"min_usable_mm": 200, "priority_use": true, "description": "余料≥200mm入库；后续批次优先使用库存余料后再取新母材"},
+      "depends_on": ["Q1", "Q2", "Q3"],
+      "deliverable": "result4.xlsx",
+      "notes": "多期库存模型。B1无前期余料；B2/B3优先消耗前批次余料(≥200mm)后再采购新母材。"
+    }
+  ],
+
+  "decision_vars": [
+    "axial_length_per_type",
+    "end_classification_L_R_per_type",
+    "co_cut_benefit_matrix_10x10x4",
+    "stock_selection_per_stock",
+    "item_to_stock_assignment",
+    "block_formation",
+    "block_sequence_per_stock",
+    "splice_mode_between_blocks",
+    "remnant_inventory_state"
+  ],
+
+  "constraints": [
+    {"id": "C01", "description": "每种工件需求数量必须精确满足", "applies_to": ["Q1", "Q2", "Q3", "Q4"]},
+    {"id": "C02", "description": "每根母材上工件轴向占用总长度(考虑共切后) ≤ 母材长度", "applies_to": ["Q1", "Q2", "Q3", "Q4"]},
+    {"id": "C03", "description": "母材仅可选9m/10m/11m/12m四种标准长度", "applies_to": ["Q1", "Q2", "Q3", "Q4"]},
+    {"id": "C04", "description": "暂不考虑切割损耗与首尾夹持余量", "applies_to": ["Q1", "Q2", "Q3", "Q4"]},
+    {"id": "C05", "description": "共切仅发生在相邻加工工件之间(同母材内)", "applies_to": ["Q2", "Q3", "Q4"]},
+    {"id": "C06", "description": "共切端部组合限于LL/LR/RL/RR四种方式", "applies_to": ["Q2", "Q3", "Q4"]},
+    {"id": "C07", "description": "Q2工件到母材的分配固定为Q1方案", "applies_to": ["Q2"]},
+    {"id": "C08", "description": "余料≥200mm可入库供后续批次使用", "applies_to": ["Q3", "Q4"]},
+    {"id": "C09", "description": "余料<200mm视为废料，不可再利用", "applies_to": ["Q3", "Q4"]},
+    {"id": "C10", "description": "后续批次优先使用库存余料，再取新母材", "applies_to": ["Q4"]},
+    {"id": "C11", "description": "相同工件尽可能集中连续加工，减少切换", "applies_to": ["Q1", "Q2", "Q3", "Q4"]},
+    {"id": "C12", "description": "工件外半径20mm，内半径19mm，壁厚1mm; 横截面近似圆形", "applies_to": ["Q1", "Q2", "Q3", "Q4"]},
+    {"id": "C13", "description": "Q4各批次需求独立; B1总468件, B2总433件, B3总427件", "applies_to": ["Q4"]}
+  ],
+
+  "data_refs": {
+    "geometry_csv": [
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管1.csv",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管2.csv",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管3.csv",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管4.csv",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管5.csv",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管6.csv",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管7.csv",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管8.csv",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管9.csv",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管10.csv"
+    ],
+    "geometry_stp": [
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/1圆管.stp",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/2圆管.stp",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/3圆管.stp",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/4圆管.stp",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/5圆管.stp",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/6圆管.stp",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/7圆管.stp",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/8圆管.stp",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/9圆管.stp",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/10圆管.stp"
+    ],
+    "demand_table": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件2_三批次工件需求数据.xlsx",
+    "result_templates": [
+      "inbox/b-tube-live-once/assets/B题 附件/B题 结果/result1.xlsx",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 结果/result2.xlsx",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 结果/result3.xlsx",
+      "inbox/b-tube-live-once/assets/B题 附件/B题 结果/result4.xlsx"
+    ],
+    "result_format_spec": "inbox/b-tube-live-once/assets/B题 附件/B题 结果/结果填写说明.docx",
+    "source_pdf": "inbox/b-tube-live-once/problem.pdf",
+    "source_pdf_sha256": "9eaa64beb2922ebf6e5f8032e9a5ba84ae462fee0ab80a141393740bc50209ec"
+  },
+
+  "geometry_preprocessing": {
+    "required": true,
+    "method": "pca_axial_projection",
+    "steps": [
+      "Read CSV point cloud (X,Y,Z) for each of 10 workpiece types",
+      "Compute PCA; first principal component = axial direction",
+      "Project all points onto PCA axis; span = axial_length (max - min)",
+      "Identify end-zone neighborhoods; compute r_mean per end",
+      "Classify L end (smaller r_mean) and R end (larger r_mean)",
+      "If |r_mean_low - r_mean_high| < 0.01 mm → mark symmetric (L=R)"
+    ],
+    "output": "axial_lengths_per_type_mm + L/R end classification per type",
+    "notes": "Research suggests types G5-G9 may be L≈R symmetric. Axial lengths span ~75mm to ~400mm across types."
+  },
+
+  "co_cut_preprocessing": {
+    "required_for": ["Q2", "Q3", "Q4"],
+    "method": "radial_difference_heuristic",
+    "formula": "Δ_ij^ab = l_i + l_j - L_ij^ab",
+    "simplified_model": "Δ ≈ |r_end_i(mode_a) - r_end_j(mode_b)|",
+    "matrix_shape": "10 × 10 × 4 (workpiece_i × workpiece_j × splice_mode)",
+    "splice_modes": ["LL", "LR", "RL", "RR"],
+    "internal_splice": "Same-type consecutive workpieces use LR alternating for max benefit; (n-1) joints per block of n items",
+    "block_between_splice": "Different-type adjacent blocks; max over 4 modes; counts as 1 type switch",
+    "notes": "Simplified radial-difference model is a FEASIBLE heuristic, not proven optimal for co-cut benefit. STP CAD files available for precise cross-section matching if needed. For symmetric types (L=R), all splice modes yield Δ ≈ 0."
+  },
+
+  "result_format": {
+    "stock_sheet_columns": ["M_ID", "母材长度(mm)", "工件块序列", "轴向占用总长度(mm)", "剩余长度(mm)", "母材利用率"],
+    "splice_summary_columns": ["M_ID", "拼接类型", "前工件块", "后工件块", "拼接方式", "拼接次数", "单次共切收益(mm)", "共切收益小计(mm)"],
+    "block_convention": "Gk×n = n consecutive workpieces of type k forming one block",
+    "unit": "mm, results to thousandths (千分位)",
+    "batch_ids": ["B1", "B2", "B3"],
+    "stock_ids": "M1, M2, M3, ...",
+    "remnant_ids": "R1, R2, R3, ..."
+  },
+
+  "preferred_solve_mode": "cpsat",
+  "fallback_solve_mode": "highs",
+  "solve_mode_rationale": "Cutting stock is a discrete combinatorial optimization problem. CP-SAT (OR-Tools) suits bin-packing formulations with assignment variables. Can prove optimality for Q1 (pure 1D CSP at 500 items). Q2 (fixed-assignment reorder) is a small per-stock ordering problem. Q3/Q4 scale may require decomposition or heuristic fallback. HiGHS MIP is alternative exact approach. Note: solver stack (docs/solver-stack.md) has no dedicated cutting_stock entry; CP-SAT at L2 is recommended for discrete OR.",
+
+  "meta": {
+    "exact_expected": true,
+    "method_class": "exact",
+    "proven_optimal_achievable": "Q1 only (pure 1D cutting stock at 500 items via CP-SAT bin-packing). Q2-Q4 may require heuristic components for co-cut ordering at scale.",
+    "research_path": "notes/live-btube-research.md",
+    "intake_path": "outputs/live-btube-intake.json",
+    "brief_path": "notes/live-btube-problem-brief.md",
+    "ocr_raw_path": "notes/live-btube-ocr.raw.md",
+    "ocr_meta_path": "notes/live-btube-ocr.meta.json",
+    "geometry_required": true,
+    "co_cut_precompute_required": true,
+    "multi_batch": true,
+    "hierarchical_objectives": true,
+    "num_subproblems": 4,
+    "num_workpiece_types": 10,
+    "workpiece_spec": {
+      "outer_radius_mm": 20,
+      "inner_radius_mm": 19,
+      "wall_thickness_mm": 1
+    },
+    "no_kerf_no_clamping": true,
+    "open_questions": [
+      "Co-cut precision: is simplified |r_i - r_j| model sufficient, or parse STP CAD for precise end cross-section matching?",
+      "Q4 remnant strategy: does '优先被使用' mean remnants MUST be used before new stock, or just preferred?",
+      "Switch count definition: does switching G1→G3→G1 count as 2 switches? Are same-type blocks on different stocks counted?",
+      "CP-SAT scalability for Q3/Q4: 500 items × 4 stock types with co-cut variables may need decomposition",
+      "PCA axis sign convention consistency across all 10 types for L/R classification",
+      "Result template filling format per 结果填写说明.docx"
+    ]
+  }
+}

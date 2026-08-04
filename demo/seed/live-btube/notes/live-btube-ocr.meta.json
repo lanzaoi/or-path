@@ -1,0 +1,19 @@
+{
+  "slug": "live-btube",
+  "backend": "pdf_text",
+  "sources": [
+    {
+      "path": "inbox/b-tube-live-once/problem.pdf",
+      "kind": "pdf",
+      "backend": "pdf_text",
+      "pages": 3,
+      "sha256": "9eaa64beb2922ebf6e5f8032e9a5ba84ae462fee0ab80a141393740bc50209ec",
+      "char_count": 2272,
+      "warning": null
+    }
+  ],
+  "created_at": "2026-08-03T13:02:45.625730+00:00",
+  "warnings": [],
+  "raw_path": "notes/live-btube-ocr.raw.md",
+  "status": "ok"
+}

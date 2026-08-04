@@ -1,0 +1,57 @@
+{
+  "utc": "2026-08-03T13:49:03.404013+00:00",
+  "slug": "m0",
+  "live_requested": false,
+  "run_rc": 0,
+  "D0_v0_watch_gate": true,
+  "D1_entry": "orpath.bat demo-m0 / menu demo-m0",
+  "D2_solution_validate": true,
+  "D3_true_subagent": true,
+  "D4_timeline_optional": true,
+  "D5_counters_visible": true,
+  "D6_claim": "V0+M0 only (no memory/MCP/domain-bridge claim)",
+  "D7_no_secrets_check": "manual/git hygiene — not auto-scanned here",
+  "solution": {
+    "path": "outputs/m0-solution.json",
+    "objective": 42,
+    "status": "OPTIMAL",
+    "source": "fixtures/t1/shortest_path/solution.json"
+  },
+  "validate": {
+    "path": "outputs/m0-validate.json",
+    "ok": true,
+    "raw_keys": [
+      "checks",
+      "errors",
+      "ok",
+      "problem_class",
+      "problem_id"
+    ]
+  },
+  "watch": {
+    "status": "ok",
+    "stages": 15,
+    "shape_ok": true,
+    "shape_errs": [],
+    "counters": {
+      "solver_tune": 0,
+      "schema_repair": 0,
+      "validate_repair": 0,
+      "revise_count": 1
+    },
+    "cmd": "orpath.bat watch --slug m0"
+  },
+  "subagent": {
+    "slug": "test",
+    "ok": true,
+    "log": "outputs/.agents/test/model-lead-20260731T134916Z.log",
+    "evidence": [
+      "L79: {\"type\":\"agent_end\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"You are the OR-Path **stage lead** for `model` (slug=`test`).\\nYou run inside Pi with the **subagent** tool from pi-subagents.\\n\\n## Hard l"
+    ],
+    "detail": "detect_subagent_calls",
+    "source_slug": "test",
+    "from_primary": false
+  },
+  "pass_core": true,
+  "pass_full_m0_experience": true
+}

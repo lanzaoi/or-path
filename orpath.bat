@@ -76,6 +76,18 @@ if /i "%CMD%"=="help" goto :help
 
 if /i "%CMD%"=="menu" goto :menu
 
+if /i "%CMD%"=="setup" goto :setup
+
+if /i "%CMD%"=="bootstrap" goto :setup
+
+if /i "%CMD%"=="demo-seed" goto :demo_seed
+
+if /i "%CMD%"=="seed" goto :demo_seed
+
+if /i "%CMD%"=="l2-gate" goto :l2_gate
+
+if /i "%CMD%"=="pack-release" goto :pack_release
+
 if /i "%CMD%"=="doctor" goto :doctor
 
 if /i "%CMD%"=="gate" goto :gate
@@ -201,13 +213,21 @@ echo.
 
 echo  Usage:
 
-echo    orpath.bat menu                ^(preferred control plane^)
+echo    orpath.bat setup               ^(L1: venv + npm Pi + demo seed + doctor^)
 
 echo    orpath.bat doctor
 
+echo    orpath.bat demo-seed           ^(copy demo/seed into workdir^)
+
+echo    orpath.bat menu                ^(preferred control plane^)
+
 echo    orpath.bat watch [--slug SLUG] [--thread-id ID] [--port N] [--no-browser]
-echo    orpath.bat face                 ^(one-click Watch, default live-btube^)
-echo    START-WATCH.bat                 ^(double-click same^)
+echo    orpath.bat face                 ^(one-click Watch, default live-btube seed^)
+echo    START-WATCH.bat                 ^(double-click same; run setup first on fresh machine^)
+
+echo    orpath.bat pack-release        ^(L2 zip under dist/^)
+
+echo    orpath.bat l2-gate --zip PATH
 
 echo    orpath.bat watch-run [--slug SLUG] [--workdir DIR] [--live] [--keep-watch]   ^(P3/M1^)
 
@@ -280,6 +300,30 @@ echo  See ORPATH.md
 echo.
 
 exit /b 2
+
+:setup
+
+REM Prefer system Python to create venv when venv missing; bootstrap re-resolves.
+where python >nul 2>&1 && set "BOOT_PY=python"
+if exist "!ORPATH_HOME!\.venv-314\Scripts\python.exe" set "BOOT_PY=!ORPATH_HOME!\.venv-314\Scripts\python.exe"
+if not defined BOOT_PY set "BOOT_PY=%PY%"
+"%BOOT_PY%" "!ORPATH_HOME!\scripts\bootstrap_orpath.py" %2 %3 %4 %5 %6 %7 %8 %9
+exit /b %ERRORLEVEL%
+
+:demo_seed
+
+"%PY%" "!ORPATH_HOME!\scripts\install_demo_seed.py" %2 %3 %4 %5 %6 %7 %8 %9
+exit /b %ERRORLEVEL%
+
+:pack_release
+
+"%PY%" "!ORPATH_HOME!\scripts\pack_release.py" %2 %3 %4 %5 %6 %7 %8 %9
+exit /b %ERRORLEVEL%
+
+:l2_gate
+
+"%PY%" "!ORPATH_HOME!\scripts\l2_release_gate.py" %2 %3 %4 %5 %6 %7 %8 %9
+exit /b %ERRORLEVEL%
 
 :menu
 

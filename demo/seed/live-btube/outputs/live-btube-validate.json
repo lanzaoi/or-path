@@ -1,0 +1,91 @@
+{
+  "ok": true,
+  "problem_id": "b-tube-cut",
+  "problem_class": "tube_cut",
+  "checks": [
+    {
+      "name": "envelope",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "problem_class",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "tube_source",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "shape_questions",
+      "ok": true
+    },
+    {
+      "name": "shape_q1_stocks",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "status_q1",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "recompute_q1_stock_sum",
+      "ok": true,
+      "expected": 100000.0,
+      "got": 100000.0
+    },
+    {
+      "name": "shape_q2_stocks",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "status_q2",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "recompute_q2_stock_sum",
+      "ok": true,
+      "expected": 100000.0,
+      "got": 100000.0
+    },
+    {
+      "name": "shape_q3_stocks",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "status_q3",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "recompute_q3_stock_sum",
+      "ok": true,
+      "expected": 99000.0,
+      "got": 99000.0
+    },
+    {
+      "name": "shape_q4_batches",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "recompute_objective",
+      "ok": true,
+      "expected": 99000.0,
+      "got": 99000.0,
+      "detail": "primary=q3.total_stock_length_mm"
+    },
+    {
+      "name": "optimality_claim",
+      "ok": true
+    }
+  ],
+  "errors": []
+}

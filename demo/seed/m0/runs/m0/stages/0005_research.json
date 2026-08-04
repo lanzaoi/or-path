@@ -1,0 +1,23 @@
+{
+  "utc": "2026-08-03T13:49:00.751934+00:00",
+  "node": "research",
+  "stage": "model",
+  "thread_id": "m0",
+  "slug": "m0",
+  "human_required": false,
+  "gate_schema_ok": false,
+  "gate_validate_ok": false,
+  "solver_tune": 0,
+  "schema_repair": 0,
+  "validate_repair": 0,
+  "revise_count": 0,
+  "paths": {
+    "plan_path": "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\.plans\\m0.md",
+    "retrieval_path": "C:\\Users\\Lanzao\\Desktop\\agent\\notes\\m0-retrieval.json",
+    "research_path": "C:\\Users\\Lanzao\\Desktop\\agent\\notes\\m0-research.md"
+  },
+  "last_error": "",
+  "bridge_ok": true,
+  "bridge_skipped": true,
+  "orpath_checkpoint_id": ""
+}

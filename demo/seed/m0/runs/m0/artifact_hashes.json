@@ -1,0 +1,16 @@
+{
+  "utc": "2026-08-03T13:49:02.135825+00:00",
+  "files": {
+    "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\.plans\\m0.md": "2ebb8f6ac591d9cca8de8cb41e1cf4c2414d98122da5f8e6275303687c712f79",
+    "C:\\Users\\Lanzao\\Desktop\\agent\\notes\\m0-retrieval.json": "21ef947bbc3f0dfb1ef241307674b51179d588e7d756070aeed2cc94df0b75d7",
+    "C:\\Users\\Lanzao\\Desktop\\agent\\notes\\m0-research.md": "70a0ebf0cff8f171aef5379bfc056d2426f29c64337136cef7b02a2c0525c5a3",
+    "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\m0-schema.json": "17aec7b6ac4e9127d4531e45c2532e529fca88d511c8e47a3c7faefe59f2783b",
+    "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\m0-solution.json": "2365507f8b19c5532ec236f7abc38da9ef32383c86c6572ee0c90425d4ec9af6",
+    "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\m0-validate.json": "1b46c31bd62f54b7e9802ae91a19450b8fa23a9df40864d17923dcf2f379808a",
+    "C:\\Users\\Lanzao\\Desktop\\agent\\notes\\m0-explain.md": "80985ea28064492a650cfe676008f2dc6781eb5ee874dd8c1cf7ae6e203c0d16",
+    "C:\\Users\\Lanzao\\Desktop\\agent\\papers\\m0.md": "185363ad600424dc9bd7c2fc9c99ccdd871d41e074bbd9dc24d7fa2489de6a40",
+    "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\m0-review.md": "06e639141fab297d92a7ed25d2e8e3403d8bcafadc6910e7323d7ee4ccbfb412",
+    "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\m0.provenance.md": "117d8f42ee2f0450f9ccd054a707679e32aa6b424b56ad42abd1332d9970b36a",
+    "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\.drafts\\m0-cited.md": "ab98448858af42efe6f1e5f12452dcc6d3348fd8a41c433b32c42f969d560b55"
+  }
+}

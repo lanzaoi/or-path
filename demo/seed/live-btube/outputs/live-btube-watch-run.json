@@ -1,0 +1,30 @@
+{
+  "schema": "orpath.watch_run.v1",
+  "phase": "P3",
+  "generated_utc": "2026-08-03T12:53:14.833238+00:00",
+  "slug": "live-btube",
+  "thread_id": "live-btube",
+  "live": true,
+  "url": "http://127.0.0.1:8765/?slug=live-btube&thread=live-btube",
+  "port": 8765,
+  "stages_before": 0,
+  "stages_after": 2,
+  "stages_grew": true,
+  "run_exit": 1,
+  "run_skipped": false,
+  "snapshot_status": "running",
+  "process": {
+    "subagent_dispatches": 0,
+    "cosplay_dispatches": 0,
+    "children_count": 0,
+    "transcript_missing": false,
+    "event_kinds": {},
+    "lead_events": 0,
+    "sub_events": 0
+  },
+  "ok": true,
+  "notes": [
+    "product run exit=1",
+    "partial_ok: stages grew despite run non-zero"
+  ]
+}

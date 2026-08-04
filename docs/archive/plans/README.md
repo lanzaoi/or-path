@@ -13,6 +13,7 @@
 | `2026-07-31_openpi-boot-ma-ocr.md` | 入口/OCR（OpenPi 已删） |
 | `2026-08-03_182234-v0-m0-lcc-harness-plan.md` | V0/M0 |
 | `2026-08-03_220049-m1-workdir-watch-ux-five-parts.md` | M1 workdir |
+| `2026-08-04_l1-l2-release-parity.md` | **L1 setup + L2 Release 分发对等**（Feynman 式安装；未实施） |
 
 **优先级：** 计划可过期；与 `specs/` 冲突时以 specs + 门禁为准。  
 **上传边界：** 见 [`../repo-surface.md`](../repo-surface.md)。

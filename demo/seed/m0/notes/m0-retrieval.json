@@ -1,0 +1,530 @@
+{
+  "query": "OR shortest_path routing solver constraints",
+  "knowledge_mode": "seed",
+  "hits": [
+    {
+      "chunk_id": "s_ortools_routing",
+      "score": 3.0,
+      "backend": "seed",
+      "snippet": "Google OR-Tools Routing for TSP and capacitated VRP.",
+      "source_path": "knowledge/seed_graph/or_domain_seed.json"
+    },
+    {
+      "chunk_id": "s_ortools_routing",
+      "score": 3.0,
+      "backend": "seed",
+      "snippet": "Google OR-Tools Routing for TSP and capacitated VRP.",
+      "source_path": "knowledge/seed_graph/or_domain_seed.json"
+    },
+    {
+      "chunk_id": "pc_shortest_path",
+      "score": 2.0,
+      "backend": "seed",
+      "snippet": "Find a minimum-cost path between two nodes on a weighted graph.",
+      "source_path": "knowledge/seed_graph/or_domain_seed.json"
+    },
+    {
+      "chunk_id": "pc_assignment",
+      "score": 1.5,
+      "backend": "seed",
+      "snippet": "Assign agents to tasks at minimum cost (related routing building block).",
+      "source_path": "knowledge/seed_graph/or_domain_seed.json"
+    },
+    {
+      "chunk_id": "s_ortools_cpsat",
+      "score": 1.5,
+      "backend": "seed",
+      "snippet": "CP-SAT for discrete OR models; optional SP/assignment parity.",
+      "source_path": "knowledge/seed_graph/or_domain_seed.json"
+    }
+  ],
+  "seed_facts": [
+    {
+      "problem_class": "assignment",
+      "node_id": "pc_assignment",
+      "summary": "Assign agents to tasks at minimum cost (related routing building block).",
+      "nodes": [
+        {
+          "id": "pc_assignment",
+          "type": "ProblemClass",
+          "label": "assignment",
+          "props": {
+            "aliases": [
+              "bipartite matching"
+            ],
+            "summary": "Assign agents to tasks at minimum cost (related routing building block)."
+          }
+        },
+        {
+          "id": "s_ortools_cpsat",
+          "type": "Solver",
+          "label": "ortools_cpsat",
+          "props": {
+            "library": "ortools",
+            "api": "ortools.sat.python.cp_model",
+            "summary": "CP-SAT for discrete OR models; optional SP/assignment parity."
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e5",
+          "source": "pc_assignment",
+          "target": "s_ortools_cpsat",
+          "rel": "solved_by"
+        }
+      ],
+      "solvers": [
+        {
+          "id": "s_ortools_cpsat",
+          "type": "Solver",
+          "label": "ortools_cpsat",
+          "props": {
+            "library": "ortools",
+            "api": "ortools.sat.python.cp_model",
+            "summary": "CP-SAT for discrete OR models; optional SP/assignment parity."
+          }
+        }
+      ],
+      "constraints": [],
+      "cases": []
+    },
+    {
+      "problem_class": "shortest_path",
+      "node_id": "pc_shortest_path",
+      "summary": "Find a minimum-cost path between two nodes on a weighted graph.",
+      "nodes": [
+        {
+          "id": "pc_shortest_path",
+          "type": "ProblemClass",
+          "label": "shortest_path",
+          "props": {
+            "aliases": [
+              "sp",
+              "dijkstra",
+              "shortest path",
+              "shortest_path"
+            ],
+            "summary": "Find a minimum-cost path between two nodes on a weighted graph."
+          }
+        },
+        {
+          "id": "case_t1_shortest_path",
+          "type": "Case",
+          "label": "t1_shortest_path",
+          "props": {
+            "fixture": "fixtures/t1/shortest_path",
+            "problem_id": "shortest_path",
+            "gold_objective": 42,
+            "notes": "Classic SP smoke; objective only from solve tools."
+          }
+        },
+        {
+          "id": "s_networkx_dijkstra",
+          "type": "Solver",
+          "label": "networkx_dijkstra",
+          "props": {
+            "library": "networkx",
+            "api": "networkx.shortest_path / dijkstra_path",
+            "tool": "tools/solve_networkx.py",
+            "summary": "Exact shortest paths on non-negative weighted graphs via Dijkstra."
+          }
+        },
+        {
+          "id": "s_ortools_cpsat",
+          "type": "Solver",
+          "label": "ortools_cpsat",
+          "props": {
+            "library": "ortools",
+            "api": "ortools.sat.python.cp_model",
+            "summary": "CP-SAT for discrete OR models; optional SP/assignment parity."
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "source": "pc_shortest_path",
+          "target": "s_networkx_dijkstra",
+          "rel": "solved_by"
+        },
+        {
+          "id": "e2",
+          "source": "pc_shortest_path",
+          "target": "s_ortools_cpsat",
+          "rel": "solved_by_optional"
+        },
+        {
+          "id": "e12",
+          "source": "case_t1_shortest_path",
+          "target": "pc_shortest_path",
+          "rel": "instance_of"
+        },
+        {
+          "id": "e13",
+          "source": "case_t1_shortest_path",
+          "target": "s_networkx_dijkstra",
+          "rel": "uses_solver"
+        }
+      ],
+      "solvers": [
+        {
+          "id": "s_networkx_dijkstra",
+          "type": "Solver",
+          "label": "networkx_dijkstra",
+          "props": {
+            "library": "networkx",
+            "api": "networkx.shortest_path / dijkstra_path",
+            "tool": "tools/solve_networkx.py",
+            "summary": "Exact shortest paths on non-negative weighted graphs via Dijkstra."
+          }
+        },
+        {
+          "id": "s_ortools_cpsat",
+          "type": "Solver",
+          "label": "ortools_cpsat",
+          "props": {
+            "library": "ortools",
+            "api": "ortools.sat.python.cp_model",
+            "summary": "CP-SAT for discrete OR models; optional SP/assignment parity."
+          }
+        }
+      ],
+      "constraints": [],
+      "cases": [
+        {
+          "id": "case_t1_shortest_path",
+          "type": "Case",
+          "label": "t1_shortest_path",
+          "props": {
+            "fixture": "fixtures/t1/shortest_path",
+            "problem_id": "shortest_path",
+            "gold_objective": 42,
+            "notes": "Classic SP smoke; objective only from solve tools."
+          }
+        }
+      ]
+    },
+    {
+      "problem_class": "tsp",
+      "node_id": "pc_tsp",
+      "summary": "Visit each city once and return to start; minimize tour length.",
+      "nodes": [
+        {
+          "id": "c_triangle_inequality",
+          "type": "Constraint",
+          "label": "triangle_inequality",
+          "props": {
+            "summary": "Distance metrics often assume d(a,c) <= d(a,b)+d(b,c)."
+          }
+        },
+        {
+          "id": "case_t2_tsp_n8",
+          "type": "Case",
+          "label": "tsp_n8",
+          "props": {
+            "fixture": "fixtures/t2/tsp_n8",
+            "problem_id": "tsp_n8",
+            "n": 8,
+            "notes": "T2 TSP n=8; solve with ortools routing."
+          }
+        },
+        {
+          "id": "s_ortools_routing",
+          "type": "Solver",
+          "label": "ortools_routing",
+          "props": {
+            "library": "ortools",
+            "api": "ortools.constraint_solver.pywrapcp RoutingModel",
+            "tool": "tools/solve_ortools.py",
+            "summary": "Google OR-Tools Routing for TSP and capacitated VRP."
+          }
+        },
+        {
+          "id": "pc_tsp",
+          "type": "ProblemClass",
+          "label": "tsp",
+          "props": {
+            "aliases": [
+              "traveling salesman",
+              "tour",
+              "tsp"
+            ],
+            "summary": "Visit each city once and return to start; minimize tour length."
+          }
+        },
+        {
+          "id": "c_visit_once",
+          "type": "Constraint",
+          "label": "visit_once",
+          "props": {
+            "summary": "Each customer/city visited exactly once (TSP/VRP customer coverage)."
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e3",
+          "source": "pc_tsp",
+          "target": "s_ortools_routing",
+          "rel": "solved_by"
+        },
+        {
+          "id": "e8",
+          "source": "pc_tsp",
+          "target": "c_visit_once",
+          "rel": "has_constraint"
+        },
+        {
+          "id": "e10",
+          "source": "pc_tsp",
+          "target": "c_triangle_inequality",
+          "rel": "metric_assumption"
+        },
+        {
+          "id": "e14",
+          "source": "case_t2_tsp_n8",
+          "target": "pc_tsp",
+          "rel": "instance_of"
+        },
+        {
+          "id": "e15",
+          "source": "case_t2_tsp_n8",
+          "target": "s_ortools_routing",
+          "rel": "uses_solver"
+        }
+      ],
+      "solvers": [
+        {
+          "id": "s_ortools_routing",
+          "type": "Solver",
+          "label": "ortools_routing",
+          "props": {
+            "library": "ortools",
+            "api": "ortools.constraint_solver.pywrapcp RoutingModel",
+            "tool": "tools/solve_ortools.py",
+            "summary": "Google OR-Tools Routing for TSP and capacitated VRP."
+          }
+        }
+      ],
+      "constraints": [
+        {
+          "id": "c_triangle_inequality",
+          "type": "Constraint",
+          "label": "triangle_inequality",
+          "props": {
+            "summary": "Distance metrics often assume d(a,c) <= d(a,b)+d(b,c)."
+          }
+        },
+        {
+          "id": "c_visit_once",
+          "type": "Constraint",
+          "label": "visit_once",
+          "props": {
+            "summary": "Each customer/city visited exactly once (TSP/VRP customer coverage)."
+          }
+        }
+      ],
+      "cases": [
+        {
+          "id": "case_t2_tsp_n8",
+          "type": "Case",
+          "label": "tsp_n8",
+          "props": {
+            "fixture": "fixtures/t2/tsp_n8",
+            "problem_id": "tsp_n8",
+            "n": 8,
+            "notes": "T2 TSP n=8; solve with ortools routing."
+          }
+        }
+      ]
+    },
+    {
+      "problem_class": "vrp",
+      "node_id": "pc_vrp",
+      "summary": "Route multiple vehicles from a depot under capacity; cover all customers.",
+      "nodes": [
+        {
+          "id": "c_triangle_inequality",
+          "type": "Constraint",
+          "label": "triangle_inequality",
+          "props": {
+            "summary": "Distance metrics often assume d(a,c) <= d(a,b)+d(b,c)."
+          }
+        },
+        {
+          "id": "c_capacity",
+          "type": "Constraint",
+          "label": "capacity",
+          "props": {
+            "summary": "Vehicle load must not exceed capacity on any route segment."
+          }
+        },
+        {
+          "id": "pc_vrp",
+          "type": "ProblemClass",
+          "label": "vrp",
+          "props": {
+            "aliases": [
+              "vehicle routing",
+              "cvrp",
+              "capacitated vrp",
+              "vrp"
+            ],
+            "summary": "Route multiple vehicles from a depot under capacity; cover all customers."
+          }
+        },
+        {
+          "id": "s_ortools_routing",
+          "type": "Solver",
+          "label": "ortools_routing",
+          "props": {
+            "library": "ortools",
+            "api": "ortools.constraint_solver.pywrapcp RoutingModel",
+            "tool": "tools/solve_ortools.py",
+            "summary": "Google OR-Tools Routing for TSP and capacitated VRP."
+          }
+        },
+        {
+          "id": "c_time_window",
+          "type": "Constraint",
+          "label": "time_window",
+          "props": {
+            "summary": "Service must occur within customer time windows (stub; out of T2 VRP scope).",
+            "t2_status": "stub_only"
+          }
+        },
+        {
+          "id": "c_visit_once",
+          "type": "Constraint",
+          "label": "visit_once",
+          "props": {
+            "summary": "Each customer/city visited exactly once (TSP/VRP customer coverage)."
+          }
+        },
+        {
+          "id": "case_t2_vrp_tiny",
+          "type": "Case",
+          "label": "vrp_tiny",
+          "props": {
+            "fixture": "fixtures/t2/vrp_tiny",
+            "problem_id": "vrp_tiny",
+            "vehicle_count_min": 2,
+            "notes": "T2 CVRP multi-vehicle capacity; no time windows."
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e4",
+          "source": "pc_vrp",
+          "target": "s_ortools_routing",
+          "rel": "solved_by"
+        },
+        {
+          "id": "e6",
+          "source": "pc_vrp",
+          "target": "c_capacity",
+          "rel": "has_constraint"
+        },
+        {
+          "id": "e7",
+          "source": "pc_vrp",
+          "target": "c_time_window",
+          "rel": "has_constraint_optional"
+        },
+        {
+          "id": "e9",
+          "source": "pc_vrp",
+          "target": "c_visit_once",
+          "rel": "has_constraint"
+        },
+        {
+          "id": "e11",
+          "source": "pc_vrp",
+          "target": "c_triangle_inequality",
+          "rel": "metric_assumption"
+        },
+        {
+          "id": "e16",
+          "source": "case_t2_vrp_tiny",
+          "target": "pc_vrp",
+          "rel": "instance_of"
+        },
+        {
+          "id": "e17",
+          "source": "case_t2_vrp_tiny",
+          "target": "s_ortools_routing",
+          "rel": "uses_solver"
+        },
+        {
+          "id": "e18",
+          "source": "case_t2_vrp_tiny",
+          "target": "c_capacity",
+          "rel": "requires"
+        }
+      ],
+      "solvers": [
+        {
+          "id": "s_ortools_routing",
+          "type": "Solver",
+          "label": "ortools_routing",
+          "props": {
+            "library": "ortools",
+            "api": "ortools.constraint_solver.pywrapcp RoutingModel",
+            "tool": "tools/solve_ortools.py",
+            "summary": "Google OR-Tools Routing for TSP and capacitated VRP."
+          }
+        }
+      ],
+      "constraints": [
+        {
+          "id": "c_triangle_inequality",
+          "type": "Constraint",
+          "label": "triangle_inequality",
+          "props": {
+            "summary": "Distance metrics often assume d(a,c) <= d(a,b)+d(b,c)."
+          }
+        },
+        {
+          "id": "c_capacity",
+          "type": "Constraint",
+          "label": "capacity",
+          "props": {
+            "summary": "Vehicle load must not exceed capacity on any route segment."
+          }
+        },
+        {
+          "id": "c_time_window",
+          "type": "Constraint",
+          "label": "time_window",
+          "props": {
+            "summary": "Service must occur within customer time windows (stub; out of T2 VRP scope).",
+            "t2_status": "stub_only"
+          }
+        },
+        {
+          "id": "c_visit_once",
+          "type": "Constraint",
+          "label": "visit_once",
+          "props": {
+            "summary": "Each customer/city visited exactly once (TSP/VRP customer coverage)."
+          }
+        }
+      ],
+      "cases": [
+        {
+          "id": "case_t2_vrp_tiny",
+          "type": "Case",
+          "label": "vrp_tiny",
+          "props": {
+            "fixture": "fixtures/t2/vrp_tiny",
+            "problem_id": "vrp_tiny",
+            "vehicle_count_min": 2,
+            "notes": "T2 CVRP multi-vehicle capacity; no time windows."
+          }
+        }
+      ]
+    }
+  ]
+}

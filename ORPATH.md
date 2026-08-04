@@ -1,17 +1,21 @@
 # OR-Path：宿主无关主控（OpenPi 已移除）
 
-**Hermes 不是产品运行时。** OpenPi 桌面壳已删除（2026-07-31）。  
-控制面：`orpath.bat menu` · 过程脸：`START-WATCH` / `watch` · 路径 A：`START-CASE` · 对话：`pi.bat`。
+**Hermes 不是产品运行时。** **OpenPi 桌面壳已从本安装删除**（2026-07-31，方案 B）。  
+控制面：**`orpath.bat menu`**；**实时过程脸：双击 `START-WATCH.bat` / `orpath.bat face` / `watch`**；轻量对话：**`pi.bat` / `orpath.bat pi`**。
+
+**全新机器请先：** `orpath.bat setup` → `doctor`（说明见 **`docs/install.md`**）。
 
 ## 一键启动（推荐）
 
 | 方式 | 做什么 |
 |------|--------|
-| **双击 `START-CASE.bat`** | **路径 A**：本地案例文件夹 + slug；watch-run 或只看脸；可选题面；LIVE y/N |
-| **双击 `START-WATCH.bat`** | 清环境 → Watch → 浏览器；默认圆管 **`live-btube`**（安装根产物） |
-| **双击 `START-ORPATH.bat`** | 1 菜单 / 2 Watch（默认 2） |
-| `orpath.bat face` | 同 START-WATCH |
-| `START-WATCH.bat <slug>` | 看安装根下指定任务 |
+| **`orpath.bat setup`** | L1：venv + Pi npm + 释放 demo seed + doctor |
+| **双击 `START-WATCH.bat`** | 清环境 → 起 Watch → 开浏览器；默认 **圆管 seed `live-btube`** |
+| **双击 `START-CASE.bat`** | **路径 A**：指定**本地案例文件夹** + slug；可选 watch-run / 只看脸 / 题面路径 |
+| 双击 `START-ORPATH.bat` | 选 **1 菜单** / **2 Watch**（回车默认 2） |
+| `orpath.bat face` | 命令行同 START-WATCH 默认 |
+| `START-WATCH.bat 其它slug` | 看 workdir 下指定任务 |
+| `orpath.bat pack-release` | 打 L2 半肥 zip → `dist/` |
 
 - 路径**不要加引号**（脚本会剥引号，但易踩坑）。  
 - 结束 Watch：黑窗 **Ctrl+C** → 任意键。  

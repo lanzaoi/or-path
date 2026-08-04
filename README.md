@@ -10,13 +10,42 @@
 | 硬法 | **`specs/`**（门禁真输出 > specs > 本文件 > docs） |
 | 默认 | Live 多 Agent 可开；题面用 intake；**数字只认 solve+validate** |
 | 不是什么 | 不是 Hermes 产品运行时；裸聊天 ≠ 多 Agent；开文件夹 ≠ 实时可视 |
+| 安装 | **`docs/install.md`** · `orpath.bat setup` · L2 Release 半肥包 |
 
 ---
 
-## 30 秒上手（Windows）
+## 全新机器（L1）
 
 ```bat
-cd /d C:\Users\Lanzao\Desktop\agent
+git clone https://github.com/lanzaoi/or-path.git
+cd or-path
+orpath.bat setup
+orpath.bat doctor
+START-WATCH.bat
+:: 默认 live-btube 来自 demo/seed（回放，不是你机器上的旧 LIVE 私货）
+orpath.bat demo-m0 --slug m0
+orpath.bat watch --slug m0
+```
+
+前置：Python **3.11+**、Node **≥ 22.19**（详见 `docs/install.md`）。  
+LIVE 多 Agent：复制 `.env.example` → `.env`，填写 `DEEPSEEK_API_KEY`。
+
+### L2 Release（路人 / 一键）
+
+```powershell
+# 发布 tag 后：
+# irm https://github.com/lanzaoi/or-path/releases/download/v0.2.0/install.ps1 | iex
+# 作者打包：
+orpath.bat pack-release
+orpath.bat l2-gate --zip dist\orpath-0.2.0-win-x64.zip
+```
+
+---
+
+## 已装好后的 30 秒（Windows）
+
+```bat
+cd /d <ORPATH_HOME>
 set PYTHONPATH=
 set PYTHONNOUSERSITE=1
 
@@ -24,7 +53,7 @@ set PYTHONNOUSERSITE=1
 START-CASE.bat
 ::    选 2 → 贴案例目录（不要引号）→ slug → 可选题面 PDF → LIVE y/N
 
-:: 2) 只看过程脸（默认圆管 live-btube 演示）
+:: 2) 只看过程脸（默认圆管 live-btube seed）
 START-WATCH.bat
 
 :: 3) 命令行
@@ -36,7 +65,7 @@ orpath.bat watch --workdir D:\cases\demo1 --slug demo1
 | 双击 | 做什么 |
 |------|--------|
 | **`START-CASE.bat`** | 路径 A：指定本地文件夹；watch-run / 只看脸；题面可选；LIVE 可选 |
-| **`START-WATCH.bat`** | 一键 Watch 脸（默认 `live-btube`） |
+| **`START-WATCH.bat`** | 一键 Watch 脸（默认 `live-btube` seed） |
 | **`START-ORPATH.bat`** | 1 菜单 / 2 Watch |
 
 路径粘贴 **不要带引号**。页面旧样式 → **Ctrl+F5**。Watch 结束 → 黑窗 **Ctrl+C**。

@@ -1,0 +1,4 @@
+# Optional OCR stack (may not support newest Python yet)
+rapidocr-onnxruntime>=1.3
+opencv-python-headless>=4.8
+# Optional heavy: system Python311 paddleocr/ppocr via ORPATH_PADDLEOCR_PYTHON

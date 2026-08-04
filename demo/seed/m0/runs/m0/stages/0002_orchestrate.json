@@ -1,0 +1,21 @@
+{
+  "utc": "2026-08-03T13:49:00.624178+00:00",
+  "node": "orchestrate",
+  "stage": "retrieve",
+  "thread_id": "m0",
+  "slug": "m0",
+  "human_required": false,
+  "gate_schema_ok": false,
+  "gate_validate_ok": false,
+  "solver_tune": 0,
+  "schema_repair": 0,
+  "validate_repair": 0,
+  "revise_count": 0,
+  "paths": {
+    "plan_path": "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\.plans\\m0.md"
+  },
+  "last_error": "",
+  "bridge_ok": false,
+  "bridge_skipped": true,
+  "orpath_checkpoint_id": ""
+}

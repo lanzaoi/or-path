@@ -2,7 +2,7 @@
 REM ============================================================
 REM  OR-Path 一键启动 · 实时过程台（Watch）
 REM  双击本文件即可：清环境 → 起服务 → 打开浏览器
-REM  默认查看圆管 LIVE 产物 slug=live-btube
+REM  默认 slug=live-btube（依赖 demo seed；新机器先 orpath.bat setup）
 REM  用法：
 REM    START-WATCH.bat
 REM    START-WATCH.bat my-slug
@@ -43,9 +43,15 @@ if not defined PY (
   where python >nul 2>&1 && set "PY=python"
 )
 if not defined PY (
-  echo [ERROR] 找不到 Python。请先创建 .venv-314
+  echo [ERROR] 找不到 Python。请先: orpath.bat setup
   pause
   exit /b 1
+)
+if not exist "%~dp0outputs\live-btube-solution.json" (
+  if /i "!SLUG!"=="live-btube" (
+    echo [WARN] 未找到 live-btube 演示数据。新机器请先: orpath.bat setup
+    echo        或: orpath.bat demo-seed
+  )
 )
 
 if not exist "%~dp0scripts\orpath_watch.py" (

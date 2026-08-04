@@ -1,0 +1,239 @@
+{
+  "slug": "live-btube",
+  "schema_version": "1.1.0",
+  "status": "ok",
+  "sources": [
+    {
+      "path": "inbox/b-tube-live-once/problem.pdf",
+      "kind": "pdf",
+      "pages": 3,
+      "sha256": "9eaa64beb2922ebf6e5f8032e9a5ba84ae462fee0ab80a141393740bc50209ec"
+    }
+  ],
+  "subproblems": [
+    {
+      "id": "Q1",
+      "title": "设 10 种工件每种均需加工 50 件。请根据附件 1 计算各类工件的轴向占用长",
+      "must_deliver": [
+        "result1.xlsx"
+      ],
+      "data_refs": [
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/10圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/1圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/2圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/3圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/4圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/5圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/6圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/7圆管.stp"
+      ],
+      "notes": "度，并在允许组合选用 4 种标准母材的条件下，设计合理的下料方案，给出母材长度选取、\n\n\n工件在各根母材上的加工顺序、母材利用率及总切换次数，使所选母材总长度尽可能小，并\n将结果保存至附件 result1.xlsx 中。"
+    },
+    {
+      "id": "Q2",
+      "title": "在问题一的基础上，考虑相邻工件端部之间可能存在共切效应。任意两种工件",
+      "must_deliver": [
+        "result2.xlsx"
+      ],
+      "data_refs": [
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/10圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/1圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/2圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/3圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/4圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/5圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/6圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/7圆管.stp"
+      ],
+      "notes": "相邻加工时，可存在 4 种端部拼接方式。请根据 10种工件的几何形状，建立省料计算的通\n用模型，求出各工件对在不同端部组合下的共切收益。针对问题一的下料方案，保持各工件\n分配到各母材不变，仅在每根母材内部对各工件重新排序。给出工件新加工顺序以及拼接方\n式，计算总共切收益、总切换次数，并将结果保存至附件 result2.xlsx中。"
+    },
+    {
+      "id": "Q3",
+      "title": "在问题一、二的基础上，结合工件之间拼接的共切收益，制定所有工件的新下",
+      "must_deliver": [
+        "result3.xlsx"
+      ],
+      "data_refs": [
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/10圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/1圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/2圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/3圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/4圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/5圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/6圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/7圆管.stp"
+      ],
+      "notes": "料方案，综合考虑母材总长度、总共切收益、总切换次数，给出母材长度选取、工件拼接方\n式、加工顺序及母材利用率，将结果保存至附件 result3.xlsx中。\n由企业经验设定：若某批次加工后剩余母材长度不小于 0.2m，则该余料可入库，并在\n后续批次中优先被使用；否则视为废料。"
+    },
+    {
+      "id": "Q4",
+      "title": "附件 2 给出了 3 个连续加工批次中 10 种工件的需求数据。请在问题三的基础",
+      "must_deliver": [
+        "result4.xlsx"
+      ],
+      "data_refs": [
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/10圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/1圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/2圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/3圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/4圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/5圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/6圆管.stp",
+        "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/7圆管.stp"
+      ],
+      "notes": "上，保证每个批次内工件加工后的余料尽可能少并结合余料优先使用原则，建立多批次加工\n优化模型，确定各批次中的余料调用、新母材选取、工件拼接方式、加工顺序及母材利用率，\n使 3 个批次总共使用的标准母材总长度尽可能小，总共切收益尽可能高、总切换次数尽可能\n少，并将结果保存至附件 result4.xlsx中。\n附录 A：术语说明\n1.轴向占用长度\n工件的轴向占用长度是指该工件沿圆管轴线方向的投影长度，即工件在轴向上的最左\n切割位置与最右切割位置之间的距离。\n2.共切效应与共切收益\n共切效应：当两个工件在同一根母材上相邻加工，且其相邻端部进行拼接时，可减少中\n间多余切割而节约材料。\n共切收益：对每种工件，先确定其轴向方向，再将轴向投影值较小的一端记为 L 端，较\n大的一端记为 R 端。设工件i 和工件 j 的两个端部分别记为 L 和 R ，两工件相邻加工时可存\n在 4种端部拼接方式，即  LL L…"
+    }
+  ],
+  "data_assets": [
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/10圆管.stp",
+      "kind": "stp",
+      "role": "geometry"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/1圆管.stp",
+      "kind": "stp",
+      "role": "geometry"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/2圆管.stp",
+      "kind": "stp",
+      "role": "geometry"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/3圆管.stp",
+      "kind": "stp",
+      "role": "geometry"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/4圆管.stp",
+      "kind": "stp",
+      "role": "geometry"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/5圆管.stp",
+      "kind": "stp",
+      "role": "geometry"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/6圆管.stp",
+      "kind": "stp",
+      "role": "geometry"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/7圆管.stp",
+      "kind": "stp",
+      "role": "geometry"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/8圆管.stp",
+      "kind": "stp",
+      "role": "geometry"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/9圆管.stp",
+      "kind": "stp",
+      "role": "geometry"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管1.csv",
+      "kind": "csv",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管10.csv",
+      "kind": "csv",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管2.csv",
+      "kind": "csv",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管3.csv",
+      "kind": "csv",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管4.csv",
+      "kind": "csv",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管5.csv",
+      "kind": "csv",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管6.csv",
+      "kind": "csv",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管7.csv",
+      "kind": "csv",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管8.csv",
+      "kind": "csv",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件1_10种工件/圆管9.csv",
+      "kind": "csv",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 数据/附件2_三批次工件需求数据.xlsx",
+      "kind": "xlsx",
+      "role": "demand_table"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 结果/result1.xlsx",
+      "kind": "xlsx",
+      "role": "result_template"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 结果/result2.xlsx",
+      "kind": "xlsx",
+      "role": "result_template"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 结果/result3.xlsx",
+      "kind": "xlsx",
+      "role": "result_template"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 结果/result4.xlsx",
+      "kind": "xlsx",
+      "role": "result_template"
+    },
+    {
+      "path": "inbox/b-tube-live-once/assets/B题 附件/B题 结果/结果填写说明.docx",
+      "kind": "other",
+      "role": "unknown"
+    },
+    {
+      "path": "inbox/b-tube-live-once/problem.pdf",
+      "kind": "pdf",
+      "role": "unknown"
+    }
+  ],
+  "constraints_text": "See brief Constraints section (auto-extract sparse).",
+  "objectives_text": "同工件之间的切换次数尽可能少为再次目标。; 组合a,b 下，按最佳方式拼接后，两工件拼接加工所需的最小轴向占用长度。",
+  "deliverables": [
+    "result1.xlsx",
+    "result2.xlsx",
+    "result3.xlsx",
+    "result4.xlsx"
+  ],
+  "ambiguities": [],
+  "brief_path": "notes/live-btube-problem-brief.md",
+  "ocr_raw_path": "notes/live-btube-ocr.raw.md",
+  "ocr_meta_path": "notes/live-btube-ocr.meta.json",
+  "ocr_backend": "pdf_text",
+  "problem_class_hint": null,
+  "problem_id_hint": null
+}

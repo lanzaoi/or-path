@@ -1,0 +1,30 @@
+{
+  "utc": "2026-08-03T13:23:03.873579+00:00",
+  "node": "gate_validate",
+  "stage": "model",
+  "thread_id": "live-btube",
+  "slug": "live-btube",
+  "human_required": false,
+  "gate_schema_ok": true,
+  "gate_validate_ok": false,
+  "solver_tune": 0,
+  "schema_repair": 2,
+  "validate_repair": 2,
+  "revise_count": 0,
+  "paths": {
+    "plan_path": "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\.plans\\live-btube.md",
+    "retrieval_path": "C:\\Users\\Lanzao\\Desktop\\agent\\notes\\live-btube-retrieval.json",
+    "research_path": "C:\\Users\\Lanzao\\Desktop\\agent\\notes\\live-btube-research.md",
+    "schema_path": "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\live-btube-schema.json",
+    "solution_path": "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\live-btube-solution.json",
+    "validate_path": "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\live-btube-validate.json",
+    "ocr_raw_path": "C:\\Users\\Lanzao\\Desktop\\agent\\notes\\live-btube-ocr.raw.md",
+    "ocr_meta_path": "C:\\Users\\Lanzao\\Desktop\\agent\\notes\\live-btube-ocr.meta.json",
+    "intake_path": "C:\\Users\\Lanzao\\Desktop\\agent\\outputs\\live-btube-intake.json",
+    "brief_path": "C:\\Users\\Lanzao\\Desktop\\agent\\notes\\live-btube-problem-brief.md"
+  },
+  "last_error": "{\n  \"ok\": false,\n  \"problem_id\": \"b-tube-cut\",\n  \"problem_class\": \"tube_cut\",\n  \"checks\": [\n    {\n      \"name\": \"envelope\",\n      \"ok\": true,\n      \"detail\": null\n    },\n    {\n      \"name\": \"problem_class\",\n      \"ok\": false,\n      \"detail\": \"unknown class tube_cut\"\n    }\n  ],\n  \"errors\": [\n    \"unknown class tube_cut\"\n  ]\n}",
+  "bridge_ok": true,
+  "bridge_skipped": true,
+  "orpath_checkpoint_id": ""
+}

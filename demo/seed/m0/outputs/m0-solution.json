@@ -1,0 +1,18 @@
+{
+  "problem_id": "shortest_path",
+  "status": "OPTIMAL",
+  "objective": 42,
+  "path": [
+    "S",
+    "A",
+    "T"
+  ],
+  "solver": "fixture-mock",
+  "source": "fixtures/t1/shortest_path/solution.json",
+  "problem_class": "shortest_path",
+  "meta": {
+    "exact": false,
+    "method_class": "fixture",
+    "proven_optimal": false
+  }
+}
