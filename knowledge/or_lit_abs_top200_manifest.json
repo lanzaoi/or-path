@@ -1,0 +1,3275 @@
+{
+ "policy": "abstract_plus_modeling_sketch_only",
+ "target": 200,
+ "n": 200,
+ "with_public_abstract": 184,
+ "title_only_pad": 16,
+ "out_dir": "knowledge/corpus/papers/lit_abs",
+ "overflow_dir": "knowledge/archive/lit_abs_overflow",
+ "items": {
+  "t001": {
+   "top200_rank": 1,
+   "source_top500_rank": 3,
+   "title": "Distributed Optimization and Statistical Learning via the Alternating Direction Method of Multipliers",
+   "doi": "10.1561/2200000016",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t001_src003_10.1561_2200000016.md",
+   "year": 2011,
+   "cited_by_count": 14599,
+   "domains": [
+    "linear_programming",
+    "combinatorial_optimization",
+    "scheduling",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "ml_or_hybrid"
+   ]
+  },
+  "t002": {
+   "top200_rank": 2,
+   "source_top500_rank": 5,
+   "title": "Data-driven distributionally robust optimization using the Wasserstein metric: performance guarantees and tractable reformulations",
+   "doi": "10.1007/s10107-017-1172-1",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1121,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t002_src005_10.1007_s10107-017-1172-1.md",
+   "year": 2018,
+   "cited_by_count": 1472,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "constraint_programming"
+   ]
+  },
+  "t003": {
+   "top200_rank": 3,
+   "source_top500_rank": 8,
+   "title": "Benchmarking optimization software with performance profiles",
+   "doi": "10.1007/s101070100263",
+   "abstract_source": "existing_note",
+   "abstract_chars": 259,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t003_src008_10.1007_s101070100263.md",
+   "year": 2002,
+   "cited_by_count": 3577,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "constraint_programming",
+    "or_foundations_survey"
+   ]
+  },
+  "t004": {
+   "top200_rank": 4,
+   "source_top500_rank": 9,
+   "title": "Machine learning for combinatorial optimization: A methodological tour d’horizon",
+   "doi": "10.1016/j.ejor.2020.07.063",
+   "abstract_source": "existing_note",
+   "abstract_chars": 814,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t004_src009_10.1016_j.ejor.2020.07.063.md",
+   "year": 2021,
+   "cited_by_count": 1146,
+   "domains": [
+    "combinatorial_optimization",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "ml_or_hybrid"
+   ]
+  },
+  "t005": {
+   "top200_rank": 5,
+   "source_top500_rank": 10,
+   "title": "Optimization by Simulated Annealing",
+   "doi": "10.1126/science.220.4598.671",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t005_src010_10.1126_science.220.4598.671.md",
+   "year": 1983,
+   "cited_by_count": 33952,
+   "domains": [
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "ml_or_hybrid"
+   ]
+  },
+  "t006": {
+   "top200_rank": 6,
+   "source_top500_rank": 11,
+   "title": "Measuring the efficiency of decision making units",
+   "doi": "10.1016/0377-2217(78)90138-8",
+   "abstract_source": "existing_note",
+   "abstract_chars": 865,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t006_src011_10.1016_0377-2217_78_90138-8.md",
+   "year": 1978,
+   "cited_by_count": 21790,
+   "domains": [
+    "dynamic_programming",
+    "or_foundations_survey"
+   ]
+  },
+  "t007": {
+   "top200_rank": 7,
+   "source_top500_rank": 12,
+   "title": "OSQP: an operator splitting solver for quadratic programs",
+   "doi": "10.1007/s12532-020-00179-2",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1435,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t007_src012_10.1007_s12532-020-00179-2.md",
+   "year": 2020,
+   "cited_by_count": 1034,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "multiobjective",
+    "constraint_programming"
+   ]
+  },
+  "t008": {
+   "top200_rank": 8,
+   "source_top500_rank": 13,
+   "title": "A New Heuristic Optimization Algorithm: Harmony Search",
+   "doi": "10.1177/003754970107600201",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t008_src013_10.1177_003754970107600201.md",
+   "year": 2001,
+   "cited_by_count": 5189,
+   "domains": [
+    "combinatorial_optimization",
+    "network_flows",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "graph_or",
+    "cutting_packing",
+    "ml_or_hybrid"
+   ]
+  },
+  "t009": {
+   "top200_rank": 9,
+   "source_top500_rank": 14,
+   "title": "Pymoo: Multi-Objective Optimization in Python",
+   "doi": "10.1109/access.2020.2990567",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1455,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t009_src014_10.1109_access.2020.2990567.md",
+   "year": 2020,
+   "cited_by_count": 2116,
+   "domains": [
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "inventory_supply_chain",
+    "queuing_simulation"
+   ]
+  },
+  "t010": {
+   "top200_rank": 10,
+   "source_top500_rank": 15,
+   "title": "PlatEMO: A MATLAB Platform for Evolutionary Multi-Objective Optimization [Educational Forum]",
+   "doi": "10.1109/mci.2017.2742868",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1444,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t010_src015_10.1109_mci.2017.2742868.md",
+   "year": 2017,
+   "cited_by_count": 2644,
+   "domains": [
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "ml_or_hybrid"
+   ]
+  },
+  "t011": {
+   "top200_rank": 11,
+   "source_top500_rank": 16,
+   "title": "Optimization Approaches for the Traveling Salesman Problem with Drone",
+   "doi": "10.1287/trsc.2017.0791",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t011_src016_10.1287_trsc.2017.0791.md",
+   "year": 2018,
+   "cited_by_count": 909,
+   "domains": [
+    "tsp_routing",
+    "inventory_supply_chain",
+    "constraint_programming",
+    "cutting_packing"
+   ]
+  },
+  "t012": {
+   "top200_rank": 12,
+   "source_top500_rank": 17,
+   "title": "Decoding by Linear Programming",
+   "doi": "10.1109/tit.2005.858979",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1570,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t012_src017_10.1109_tit.2005.858979.md",
+   "year": 2005,
+   "cited_by_count": 5425,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "multiobjective",
+    "game_theory_or",
+    "queuing_simulation",
+    "constraint_programming",
+    "or_foundations_survey"
+   ]
+  },
+  "t013": {
+   "top200_rank": 13,
+   "source_top500_rank": 20,
+   "title": "Reinforcement learning for combinatorial optimization: A survey",
+   "doi": "10.1016/j.cor.2021.105400",
+   "abstract_source": "existing_note",
+   "abstract_chars": 696,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t013_src020_10.1016_j.cor.2021.105400.md",
+   "year": 2021,
+   "cited_by_count": 613,
+   "domains": [
+    "game_theory_or",
+    "or_foundations_survey"
+   ]
+  },
+  "t014": {
+   "top200_rank": 14,
+   "source_top500_rank": 25,
+   "title": "An Adaptive Large Neighborhood Search Heuristic for the Pickup and Delivery Problem with Time Windows",
+   "doi": "10.1287/trsc.1050.0135",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t014_src025_10.1287_trsc.1050.0135.md",
+   "year": 2006,
+   "cited_by_count": 2207,
+   "domains": [
+    "tsp_routing",
+    "metaheuristics",
+    "inventory_supply_chain",
+    "constraint_programming",
+    "graph_or",
+    "cutting_packing"
+   ]
+  },
+  "t015": {
+   "top200_rank": 15,
+   "source_top500_rank": 26,
+   "title": "Muiltiobjective Optimization Using Nondominated Sorting in Genetic Algorithms",
+   "doi": "10.1162/evco.1994.2.3.221",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t015_src026_10.1162_evco.1994.2.3.221.md",
+   "year": 1994,
+   "cited_by_count": 5686,
+   "domains": [
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "ml_or_hybrid"
+   ]
+  },
+  "t016": {
+   "top200_rank": 16,
+   "source_top500_rank": 31,
+   "title": "Algorithms for the Vehicle Routing and Scheduling Problems with Time Window Constraints",
+   "doi": "10.1287/opre.35.2.254",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t016_src031_10.1287_opre.35.2.254.md",
+   "year": 1987,
+   "cited_by_count": 3376,
+   "domains": [
+    "tsp_routing",
+    "scheduling",
+    "or_foundations_survey"
+   ]
+  },
+  "t017": {
+   "top200_rank": 17,
+   "source_top500_rank": 34,
+   "title": "Distributionally Robust Convex Optimization",
+   "doi": "10.1287/opre.2014.1314",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t017_src034_10.1287_opre.2014.1314.md",
+   "year": 2014,
+   "cited_by_count": 813,
+   "domains": [
+    "stochastic_or"
+   ]
+  },
+  "t018": {
+   "top200_rank": 18,
+   "source_top500_rank": 37,
+   "title": "Robust Convex Optimization",
+   "doi": "10.1287/moor.23.4.769",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t018_src037_10.1287_moor.23.4.769.md",
+   "year": 1998,
+   "cited_by_count": 1996,
+   "domains": [
+    "combinatorial_optimization"
+   ]
+  },
+  "t019": {
+   "top200_rank": 19,
+   "source_top500_rank": 40,
+   "title": "A Comprehensive Review on NSGA-II for Multi-Objective Combinatorial Optimization Problems",
+   "doi": "10.1109/access.2021.3070634",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1217,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t019_src040_10.1109_access.2021.3070634.md",
+   "year": 2021,
+   "cited_by_count": 925,
+   "domains": [
+    "metaheuristics",
+    "game_theory_or"
+   ]
+  },
+  "t020": {
+   "top200_rank": 20,
+   "source_top500_rank": 43,
+   "title": "Coordinate descent algorithms",
+   "doi": "10.1007/s10107-015-0892-3",
+   "abstract_source": "existing_note",
+   "abstract_chars": 910,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t020_src043_10.1007_s10107-015-0892-3.md",
+   "year": 2015,
+   "cited_by_count": 1119,
+   "domains": [
+    "nonlinear_convex"
+   ]
+  },
+  "t021": {
+   "top200_rank": 21,
+   "source_top500_rank": 44,
+   "title": "On the Douglas—Rachford splitting method and the proximal point algorithm for maximal monotone operators",
+   "doi": "10.1007/bf01581204",
+   "abstract_source": "existing_note",
+   "abstract_chars": 822,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t021_src044_10.1007_bf01581204.md",
+   "year": 1992,
+   "cited_by_count": 2170,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "multiobjective",
+    "constraint_programming"
+   ]
+  },
+  "t022": {
+   "top200_rank": 22,
+   "source_top500_rank": 45,
+   "title": "The method of moving asymptotes—a new method for structural optimization",
+   "doi": "10.1002/nme.1620240207",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 383,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t022_src045_10.1002_nme.1620240207.md",
+   "year": 1987,
+   "cited_by_count": 4900,
+   "domains": [
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "ml_or_hybrid"
+   ]
+  },
+  "t023": {
+   "top200_rank": 23,
+   "source_top500_rank": 46,
+   "title": "Information Distortion in a Supply Chain: The Bullwhip Effect",
+   "doi": "10.1287/mnsc.43.4.546",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t023_src046_10.1287_mnsc.43.4.546.md",
+   "year": 1997,
+   "cited_by_count": 3238,
+   "domains": [
+    "inventory_supply_chain"
+   ]
+  },
+  "t024": {
+   "top200_rank": 24,
+   "source_top500_rank": 48,
+   "title": "Adaptive Dynamic Programming for Control: A Survey and Recent Advances",
+   "doi": "10.1109/tsmc.2020.3042876",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1098,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t024_src048_10.1109_tsmc.2020.3042876.md",
+   "year": 2021,
+   "cited_by_count": 672,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "stochastic_or",
+    "nonlinear_convex",
+    "multiobjective",
+    "constraint_programming"
+   ]
+  },
+  "t025": {
+   "top200_rank": 25,
+   "source_top500_rank": 50,
+   "title": "Branch-and-Price: Column Generation for Solving Huge Integer Programs",
+   "doi": "10.1287/opre.46.3.316",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t025_src050_10.1287_opre.46.3.316.md",
+   "year": 1998,
+   "cited_by_count": 1519,
+   "domains": [
+    "integer_programming"
+   ]
+  },
+  "t026": {
+   "top200_rank": 26,
+   "source_top500_rank": 51,
+   "title": "Optimal Auction Design",
+   "doi": "10.1287/moor.6.1.58",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 442,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t026_src051_10.1287_moor.6.1.58.md",
+   "year": 1981,
+   "cited_by_count": 4106,
+   "domains": [
+    "game_theory_or"
+   ]
+  },
+  "t027": {
+   "top200_rank": 27,
+   "source_top500_rank": 52,
+   "title": "Machine learning at the service of meta-heuristics for solving combinatorial optimization problems: A state-of-the-art",
+   "doi": "10.1016/j.ejor.2021.04.032",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1365,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t027_src052_10.1016_j.ejor.2021.04.032.md",
+   "year": 2022,
+   "cited_by_count": 415,
+   "domains": [
+    "game_theory_or"
+   ]
+  },
+  "t028": {
+   "top200_rank": 28,
+   "source_top500_rank": 54,
+   "title": "Metaheuristics in combinatorial optimization",
+   "doi": "10.1145/937503.937505",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t028_src054_10.1145_937503.937505.md",
+   "year": 2003,
+   "cited_by_count": 2694,
+   "domains": [
+    "combinatorial_optimization",
+    "stochastic_or",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain"
+   ]
+  },
+  "t029": {
+   "top200_rank": 29,
+   "source_top500_rank": 57,
+   "title": "Tabu Search—Part I",
+   "doi": "10.1287/ijoc.1.3.190",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t029_src057_10.1287_ijoc.1.3.190.md",
+   "year": 1989,
+   "cited_by_count": 4967,
+   "domains": [
+    "metaheuristics"
+   ]
+  },
+  "t030": {
+   "top200_rank": 30,
+   "source_top500_rank": 60,
+   "title": "The vehicle routing problem: State of the art classification and review",
+   "doi": "10.1016/j.cie.2015.12.007",
+   "abstract_source": "existing_note",
+   "abstract_chars": 976,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t030_src060_10.1016_j.cie.2015.12.007.md",
+   "year": 2016,
+   "cited_by_count": 1044,
+   "domains": [
+    "tsp_routing",
+    "inventory_supply_chain",
+    "constraint_programming",
+    "cutting_packing"
+   ]
+  },
+  "t031": {
+   "top200_rank": 31,
+   "source_top500_rank": 61,
+   "title": "An Effective Heuristic Algorithm for the Traveling-Salesman Problem",
+   "doi": "10.1287/opre.21.2.498",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t031_src061_10.1287_opre.21.2.498.md",
+   "year": 1973,
+   "cited_by_count": 2837,
+   "domains": [
+    "tsp_routing",
+    "inventory_supply_chain",
+    "constraint_programming",
+    "graph_or",
+    "cutting_packing"
+   ]
+  },
+  "t032": {
+   "top200_rank": 32,
+   "source_top500_rank": 68,
+   "title": "The Lagrangian Relaxation Method for Solving Integer Programming Problems",
+   "doi": "10.1287/mnsc.27.1.1",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t032_src068_10.1287_mnsc.27.1.1.md",
+   "year": 1981,
+   "cited_by_count": 1519,
+   "domains": [
+    "integer_programming",
+    "stochastic_or",
+    "nonlinear_convex",
+    "multiobjective",
+    "constraint_programming"
+   ]
+  },
+  "t033": {
+   "top200_rank": 33,
+   "source_top500_rank": 70,
+   "title": "An adaptive large neighborhood search metaheuristic for the vehicle routing problem with drones",
+   "doi": "10.1016/j.trc.2019.02.018",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1799,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t033_src070_10.1016_j.trc.2019.02.018.md",
+   "year": 2019,
+   "cited_by_count": 526,
+   "domains": [
+    "tsp_routing"
+   ]
+  },
+  "t034": {
+   "top200_rank": 34,
+   "source_top500_rank": 72,
+   "title": "Comparison of Multiobjective Evolutionary Algorithms: Empirical Results",
+   "doi": "10.1162/106365600568202",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t034_src072_10.1162_106365600568202.md",
+   "year": 2000,
+   "cited_by_count": 4714,
+   "domains": [
+    "multiobjective"
+   ]
+  },
+  "t035": {
+   "top200_rank": 35,
+   "source_top500_rank": 74,
+   "title": "The multiple flying sidekicks traveling salesman problem: Parcel delivery with multiple drones",
+   "doi": "10.1016/j.trc.2019.11.003",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1138,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t035_src074_10.1016_j.trc.2019.11.003.md",
+   "year": 2020,
+   "cited_by_count": 519,
+   "domains": [
+    "tsp_routing"
+   ]
+  },
+  "t036": {
+   "top200_rank": 36,
+   "source_top500_rank": 78,
+   "title": "Design of Density Functionals by Combining the Method of Constraint Satisfaction with Parametrization for Thermochemistry, Thermochemical Kinetics, and Noncovalent Interactions",
+   "doi": "10.1021/ct0502763",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1793,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t036_src078_10.1021_ct0502763.md",
+   "year": 2006,
+   "cited_by_count": 3592,
+   "domains": [
+    "constraint_programming"
+   ]
+  },
+  "t037": {
+   "top200_rank": 37,
+   "source_top500_rank": 81,
+   "title": "Branch-and-Bound Methods: A Survey",
+   "doi": "10.1287/opre.14.4.699",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t037_src081_10.1287_opre.14.4.699.md",
+   "year": 1966,
+   "cited_by_count": 1328,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t038": {
+   "top200_rank": 38,
+   "source_top500_rank": 83,
+   "title": "Vehicle routing problem with drones",
+   "doi": "10.1016/j.trb.2019.03.005",
+   "abstract_source": "existing_note",
+   "abstract_chars": 969,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t038_src083_10.1016_j.trb.2019.03.005.md",
+   "year": 2019,
+   "cited_by_count": 519,
+   "domains": [
+    "tsp_routing"
+   ]
+  },
+  "t039": {
+   "top200_rank": 39,
+   "source_top500_rank": 84,
+   "title": "Technical Note—Convex Programming with Set-Inclusive Constraints and Applications to Inexact Linear Programming",
+   "doi": "10.1287/opre.21.5.1154",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t039_src084_10.1287_opre.21.5.1154.md",
+   "year": 1973,
+   "cited_by_count": 1682,
+   "domains": [
+    "integer_programming",
+    "stochastic_or",
+    "nonlinear_convex",
+    "multiobjective",
+    "constraint_programming"
+   ]
+  },
+  "t040": {
+   "top200_rank": 40,
+   "source_top500_rank": 87,
+   "title": "Synchronization in Vehicle Routing—A Survey of VRPs with Multiple Synchronization Constraints",
+   "doi": "10.1287/trsc.1110.0400",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t040_src087_10.1287_trsc.1110.0400.md",
+   "year": 2012,
+   "cited_by_count": 445,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t041": {
+   "top200_rank": 41,
+   "source_top500_rank": 88,
+   "title": "On the min-cost Traveling Salesman Problem with Drone",
+   "doi": "10.1016/j.trc.2017.11.015",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1683,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t041_src088_10.1016_j.trc.2017.11.015.md",
+   "year": 2018,
+   "cited_by_count": 551,
+   "domains": [
+    "tsp_routing"
+   ]
+  },
+  "t042": {
+   "top200_rank": 42,
+   "source_top500_rank": 89,
+   "title": "Selected Topics in Column Generation",
+   "doi": "10.1287/opre.1050.0234",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t042_src089_10.1287_opre.1050.0234.md",
+   "year": 2005,
+   "cited_by_count": 797,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t043": {
+   "top200_rank": 43,
+   "source_top500_rank": 92,
+   "title": "Collaborative vehicle routing: A survey",
+   "doi": "10.1016/j.ejor.2017.10.023",
+   "abstract_source": "existing_note",
+   "abstract_chars": 611,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t043_src092_10.1016_j.ejor.2017.10.023.md",
+   "year": 2018,
+   "cited_by_count": 288,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t044": {
+   "top200_rank": 44,
+   "source_top500_rank": 94,
+   "title": "Minimizing finite sums with the stochastic average gradient",
+   "doi": "10.1007/s10107-016-1030-6",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1798,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t044_src094_10.1007_s10107-016-1030-6.md",
+   "year": 2017,
+   "cited_by_count": 446,
+   "domains": [
+    "nonlinear_convex",
+    "multiobjective",
+    "constraint_programming"
+   ]
+  },
+  "t045": {
+   "top200_rank": 45,
+   "source_top500_rank": 99,
+   "title": "Adaptive Distributionally Robust Optimization",
+   "doi": "10.1287/mnsc.2017.2952",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t045_src099_10.1287_mnsc.2017.2952.md",
+   "year": 2019,
+   "cited_by_count": 296,
+   "domains": [
+    "stochastic_or"
+   ]
+  },
+  "t046": {
+   "top200_rank": 46,
+   "source_top500_rank": 102,
+   "title": "Theory and Applications of Robust Optimization",
+   "doi": "10.1137/080734510",
+   "abstract_source": "existing_note",
+   "abstract_chars": 578,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t046_src102_10.1137_080734510.md",
+   "year": 2011,
+   "cited_by_count": 1990,
+   "domains": [
+    "combinatorial_optimization"
+   ]
+  },
+  "t047": {
+   "top200_rank": 47,
+   "source_top500_rank": 105,
+   "title": "GPOPS-II",
+   "doi": "10.1145/2558904",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 475,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t047_src105_10.1145_2558904.md",
+   "year": 2014,
+   "cited_by_count": 1056,
+   "domains": [
+    "nonlinear_convex"
+   ]
+  },
+  "t048": {
+   "top200_rank": 48,
+   "source_top500_rank": 107,
+   "title": "A Survey of Machine Scheduling Problems with Blocking and No-Wait in Process",
+   "doi": "10.1287/opre.44.3.510",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t048_src107_10.1287_opre.44.3.510.md",
+   "year": 1996,
+   "cited_by_count": 689,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t049": {
+   "top200_rank": 49,
+   "source_top500_rank": 109,
+   "title": "A Greedy Heuristic for the Set-Covering Problem",
+   "doi": "10.1287/moor.4.3.233",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t049_src109_10.1287_moor.4.3.233.md",
+   "year": 1979,
+   "cited_by_count": 1904,
+   "domains": [
+    "tsp_routing",
+    "inventory_supply_chain"
+   ]
+  },
+  "t050": {
+   "top200_rank": 50,
+   "source_top500_rank": 110,
+   "title": "A Linear Programming Approach to the Cutting-Stock Problem",
+   "doi": "10.1287/opre.9.6.849",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t050_src110_10.1287_opre.9.6.849.md",
+   "year": 1961,
+   "cited_by_count": 1322,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t051": {
+   "top200_rank": 51,
+   "source_top500_rank": 111,
+   "title": "Automated generation of heuristics for biological sequence comparison",
+   "doi": "10.1186/1471-2105-6-31",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 452,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t051_src111_10.1186_1471-2105-6-31.md",
+   "year": 2005,
+   "cited_by_count": 2682,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t052": {
+   "top200_rank": 52,
+   "source_top500_rank": 112,
+   "title": "Robust structural identification via polyhedral template matching",
+   "doi": "10.1088/0965-0393/24/5/055007",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1272,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t052_src112_10.1088_0965-0393_24_5_05500.md",
+   "year": 2016,
+   "cited_by_count": 1071,
+   "domains": [
+    "queuing_simulation"
+   ]
+  },
+  "t053": {
+   "top200_rank": 53,
+   "source_top500_rank": 113,
+   "title": "The Complexity of Flowshop and Jobshop Scheduling",
+   "doi": "10.1287/moor.1.2.117",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t053_src113_10.1287_moor.1.2.117.md",
+   "year": 1976,
+   "cited_by_count": 2136,
+   "domains": [
+    "scheduling"
+   ]
+  },
+  "t054": {
+   "top200_rank": 54,
+   "source_top500_rank": 115,
+   "title": "Tabu Search—Part II",
+   "doi": "10.1287/ijoc.2.1.4",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t054_src115_10.1287_ijoc.2.1.4.md",
+   "year": 1990,
+   "cited_by_count": 2750,
+   "domains": [
+    "metaheuristics",
+    "multiobjective"
+   ]
+  },
+  "t055": {
+   "top200_rank": 55,
+   "source_top500_rank": 117,
+   "title": "Phase recovery, MaxCut and complex semidefinite programming",
+   "doi": "10.1007/s10107-013-0738-9",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1537,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t055_src117_10.1007_s10107-013-0738-9.md",
+   "year": 2015,
+   "cited_by_count": 403,
+   "domains": [
+    "nonlinear_convex"
+   ]
+  },
+  "t056": {
+   "top200_rank": 56,
+   "source_top500_rank": 122,
+   "title": "Ising machines as hardware solvers of combinatorial optimization problems",
+   "doi": "10.1038/s42254-022-00440-8",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1795,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t056_src122_10.1038_s42254-022-00440-8.md",
+   "year": 2022,
+   "cited_by_count": 526,
+   "domains": [
+    "game_theory_or"
+   ]
+  },
+  "t057": {
+   "top200_rank": 57,
+   "source_top500_rank": 123,
+   "title": "Incorporating chemical modification constraints into a dynamic programming algorithm for prediction of RNA secondary structure",
+   "doi": "10.1073/pnas.0401799101",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t057_src123_10.1073_pnas.0401799101.md",
+   "year": 2004,
+   "cited_by_count": 1439,
+   "domains": [
+    "integer_programming",
+    "nonlinear_convex",
+    "multiobjective",
+    "constraint_programming"
+   ]
+  },
+  "t058": {
+   "top200_rank": 58,
+   "source_top500_rank": 125,
+   "title": "A Survey of Scheduling Rules",
+   "doi": "10.1287/opre.25.1.45",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 285,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t058_src125_10.1287_opre.25.1.45.md",
+   "year": 1977,
+   "cited_by_count": 948,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t059": {
+   "top200_rank": 59,
+   "source_top500_rank": 128,
+   "title": "Combinatorial Auctions: A Survey",
+   "doi": "10.1287/ijoc.15.3.284.16077",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t059_src128_10.1287_ijoc.15.3.284.16077.md",
+   "year": 2003,
+   "cited_by_count": 626,
+   "domains": [
+    "game_theory_or"
+   ]
+  },
+  "t060": {
+   "top200_rank": 60,
+   "source_top500_rank": 133,
+   "title": "Tabu Search",
+   "doi": "10.1007/978-1-4615-6089-0",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1788,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t060_src133_10.1007_978-1-4615-6089-0.md",
+   "year": 1997,
+   "cited_by_count": 2963,
+   "domains": [
+    "metaheuristics"
+   ]
+  },
+  "t061": {
+   "top200_rank": 61,
+   "source_top500_rank": 138,
+   "title": "Technical Note—A Risk-Averse Newsvendor Model Under the CVaR Criterion",
+   "doi": "10.1287/opre.1080.0603",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t061_src138_10.1287_opre.1080.0603.md",
+   "year": 2009,
+   "cited_by_count": 310,
+   "domains": [
+    "inventory_supply_chain"
+   ]
+  },
+  "t062": {
+   "top200_rank": 62,
+   "source_top500_rank": 139,
+   "title": "Regret in the Newsvendor Model with Partial Information",
+   "doi": "10.1287/opre.1070.0486",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t062_src139_10.1287_opre.1070.0486.md",
+   "year": 2008,
+   "cited_by_count": 324,
+   "domains": [
+    "inventory_supply_chain"
+   ]
+  },
+  "t063": {
+   "top200_rank": 63,
+   "source_top500_rank": 142,
+   "title": "Decomposition Principle for Linear Programs",
+   "doi": "10.1287/opre.8.1.101",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t063_src142_10.1287_opre.8.1.101.md",
+   "year": 1960,
+   "cited_by_count": 1612,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t064": {
+   "top200_rank": 64,
+   "source_top500_rank": 145,
+   "title": "TSPLIB—A Traveling Salesman Problem Library",
+   "doi": "10.1287/ijoc.3.4.376",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t064_src145_10.1287_ijoc.3.4.376.md",
+   "year": 1991,
+   "cited_by_count": 2021,
+   "domains": [
+    "tsp_routing",
+    "inventory_supply_chain",
+    "constraint_programming"
+   ]
+  },
+  "t065": {
+   "top200_rank": 65,
+   "source_top500_rank": 147,
+   "title": "A self-learning genetic algorithm based on reinforcement learning for flexible job-shop scheduling problem",
+   "doi": "10.1016/j.cie.2020.106778",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1282,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t065_src147_10.1016_j.cie.2020.106778.md",
+   "year": 2020,
+   "cited_by_count": 519,
+   "domains": [
+    "tsp_routing"
+   ]
+  },
+  "t066": {
+   "top200_rank": 66,
+   "source_top500_rank": 149,
+   "title": "The Three-Dimensional Bin Packing Problem",
+   "doi": "10.1287/opre.48.2.256.12386",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t066_src149_10.1287_opre.48.2.256.12386.md",
+   "year": 2000,
+   "cited_by_count": 517,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t067": {
+   "top200_rank": 67,
+   "source_top500_rank": 154,
+   "title": "Combinatorial optimization of mRNA structure, stability, and translation for RNA-based therapeutics",
+   "doi": "10.1038/s41467-022-28776-w",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 482,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t067_src154_10.1038_s41467-022-28776-w.md",
+   "year": 2022,
+   "cited_by_count": 372,
+   "domains": [
+    "game_theory_or"
+   ]
+  },
+  "t068": {
+   "top200_rank": 68,
+   "source_top500_rank": 156,
+   "title": "Logic-based Benders decomposition",
+   "doi": "10.1007/s10107-003-0375-9",
+   "abstract_source": "existing_note",
+   "abstract_chars": 785,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t068_src156_10.1007_s10107-003-0375-9.md",
+   "year": 2003,
+   "cited_by_count": 473,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t069": {
+   "top200_rank": 69,
+   "source_top500_rank": 157,
+   "title": "Survey on blood supply chain management: Models and methods",
+   "doi": "10.1016/j.cor.2019.07.014",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1171,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t069_src157_10.1016_j.cor.2019.07.014.md",
+   "year": 2019,
+   "cited_by_count": 147,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t070": {
+   "top200_rank": 70,
+   "source_top500_rank": 160,
+   "title": "Quantum steering: a review with focus on semidefinite programming",
+   "doi": "10.1088/1361-6633/80/2/024001",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 482,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t070_src160_10.1088_1361-6633_80_2_02400.md",
+   "year": 2017,
+   "cited_by_count": 407,
+   "domains": [
+    "nonlinear_convex"
+   ]
+  },
+  "t071": {
+   "top200_rank": 71,
+   "source_top500_rank": 161,
+   "title": "Workload Equity in Vehicle Routing Problems: A Survey and Analysis",
+   "doi": "10.1287/trsc.2017.0744",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t071_src161_10.1287_trsc.2017.0744.md",
+   "year": 2018,
+   "cited_by_count": 134,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t072": {
+   "top200_rank": 72,
+   "source_top500_rank": 169,
+   "title": "A Faster Strongly Polynomial Minimum Cost Flow Algorithm",
+   "doi": "10.1287/opre.41.2.338",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t072_src169_10.1287_opre.41.2.338.md",
+   "year": 1993,
+   "cited_by_count": 306,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t073": {
+   "top200_rank": 73,
+   "source_top500_rank": 171,
+   "title": "Tabu Search: A Tutorial",
+   "doi": "10.1287/inte.20.4.74",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t073_src171_10.1287_inte.20.4.74.md",
+   "year": 1990,
+   "cited_by_count": 815,
+   "domains": [
+    "metaheuristics"
+   ]
+  },
+  "t074": {
+   "top200_rank": 74,
+   "source_top500_rank": 172,
+   "title": "The aircraft runway scheduling problem: A survey",
+   "doi": "10.1016/j.cor.2021.105336",
+   "abstract_source": "existing_note",
+   "abstract_chars": 862,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t074_src172_10.1016_j.cor.2021.105336.md",
+   "year": 2021,
+   "cited_by_count": 97,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t075": {
+   "top200_rank": 75,
+   "source_top500_rank": 173,
+   "title": "Parallel Branch-and-Branch Algorithms: Survey and Synthesis",
+   "doi": "10.1287/opre.42.6.1042",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t075_src173_10.1287_opre.42.6.1042.md",
+   "year": 1994,
+   "cited_by_count": 248,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t076": {
+   "top200_rank": 76,
+   "source_top500_rank": 176,
+   "title": "The Traveling Salesman Problem: A Survey",
+   "doi": "10.1287/opre.16.3.538",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 327,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t076_src176_10.1287_opre.16.3.538.md",
+   "year": 1968,
+   "cited_by_count": 365,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t077": {
+   "top200_rank": 77,
+   "source_top500_rank": 178,
+   "title": "Feature Article—The Ellipsoid Method: A Survey",
+   "doi": "10.1287/opre.29.6.1039",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t077_src178_10.1287_opre.29.6.1039.md",
+   "year": 1981,
+   "cited_by_count": 359,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t078": {
+   "top200_rank": 78,
+   "source_top500_rank": 180,
+   "title": "A branch-and-cut algorithm for mixed integer bilevel linear optimization problems and its implementation",
+   "doi": "10.1007/s12532-020-00183-6",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t078_src180_10.1007_s12532-020-00183-6.md",
+   "year": 2020,
+   "cited_by_count": 83,
+   "domains": [
+    "integer_programming"
+   ]
+  },
+  "t079": {
+   "top200_rank": 79,
+   "source_top500_rank": 181,
+   "title": "Combinatorial optimization by simulating adiabatic bifurcations in nonlinear Hamiltonian systems",
+   "doi": "10.1126/sciadv.aav2372",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 105,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t079_src181_10.1126_sciadv.aav2372.md",
+   "year": 2019,
+   "cited_by_count": 375,
+   "domains": [
+    "game_theory_or"
+   ]
+  },
+  "t080": {
+   "top200_rank": 80,
+   "source_top500_rank": 182,
+   "title": "Operations Research and Capacity Expansion Problems: A Survey",
+   "doi": "10.1287/opre.30.5.907",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t080_src182_10.1287_opre.30.5.907.md",
+   "year": 1982,
+   "cited_by_count": 342,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t081": {
+   "top200_rank": 81,
+   "source_top500_rank": 183,
+   "title": "Frameworks and Results in Distributionally Robust Optimization",
+   "doi": "10.5802/ojmo.15",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 459,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t081_src183_10.5802_ojmo.15.md",
+   "year": 2022,
+   "cited_by_count": 178,
+   "domains": [
+    "stochastic_or"
+   ]
+  },
+  "t082": {
+   "top200_rank": 82,
+   "source_top500_rank": 185,
+   "title": "Machine-Learning–Based Column Selection for Column Generation",
+   "doi": "10.1287/trsc.2021.1045",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t082_src185_10.1287_trsc.2021.1045.md",
+   "year": 2021,
+   "cited_by_count": 107,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t083": {
+   "top200_rank": 83,
+   "source_top500_rank": 192,
+   "title": "Online Vehicle Routing With Neural Combinatorial Optimization and Deep Reinforcement Learning",
+   "doi": "10.1109/tits.2019.2909109",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1641,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t083_src192_10.1109_tits.2019.2909109.md",
+   "year": 2019,
+   "cited_by_count": 278,
+   "domains": [
+    "game_theory_or"
+   ]
+  },
+  "t084": {
+   "top200_rank": 84,
+   "source_top500_rank": 196,
+   "title": "On Dantzig-Wolfe Decomposition in Integer Programming and ways to Perform Branching in a Branch-and-Price Algorithm",
+   "doi": "10.1287/opre.48.1.111.12453",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t084_src196_10.1287_opre.48.1.111.12453.md",
+   "year": 2000,
+   "cited_by_count": 201,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t085": {
+   "top200_rank": 85,
+   "source_top500_rank": 199,
+   "title": "A survey on kriging-based infill algorithms for multiobjective simulation optimization",
+   "doi": "10.1016/j.cor.2019.104869",
+   "abstract_source": "existing_note",
+   "abstract_chars": 723,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t085_src199_10.1016_j.cor.2019.104869.md",
+   "year": 2020,
+   "cited_by_count": 76,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t086": {
+   "top200_rank": 86,
+   "source_top500_rank": 202,
+   "title": "Nonlinear and Mixed-Integer Optimization",
+   "doi": "10.1093/oso/9780195100563.001.0001",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t086_src202_10.1093_oso_9780195100563.00.md",
+   "year": 1995,
+   "cited_by_count": 827,
+   "domains": [
+    "ml_or_hybrid"
+   ]
+  },
+  "t087": {
+   "top200_rank": 87,
+   "source_top500_rank": 207,
+   "title": "Distributionally Robust Optimization: A review on theory and applications",
+   "doi": "10.3934/naco.2021057",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 471,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t087_src207_10.3934_naco.2021057.md",
+   "year": 2022,
+   "cited_by_count": 123,
+   "domains": [
+    "stochastic_or"
+   ]
+  },
+  "t088": {
+   "top200_rank": 88,
+   "source_top500_rank": 212,
+   "title": "A Survey on the Electric Vehicle Routing Problem: Variants and Solution Approaches",
+   "doi": "10.1155/2019/5075671",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t088_src212_10.1155_2019_5075671.md",
+   "year": 2019,
+   "cited_by_count": 190,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t089": {
+   "top200_rank": 89,
+   "source_top500_rank": 214,
+   "title": "Resource-Constrained Project Scheduling with Time-Resource Tradeoffs: The Nonpreemptive Case",
+   "doi": "10.1287/mnsc.28.10.1197",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t089_src214_10.1287_mnsc.28.10.1197.md",
+   "year": 1982,
+   "cited_by_count": 326,
+   "domains": [
+    "scheduling"
+   ]
+  },
+  "t090": {
+   "top200_rank": 90,
+   "source_top500_rank": 215,
+   "title": "HEURISTICS FOR INTEGER PROGRAMMING USING SURROGATE CONSTRAINTS",
+   "doi": "10.1111/j.1540-5915.1977.tb01074.x",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t090_src215_10.1111_j.1540-5915.1977.tb0.md",
+   "year": 1977,
+   "cited_by_count": 1041,
+   "domains": [
+    "nonlinear_convex"
+   ]
+  },
+  "t091": {
+   "top200_rank": 91,
+   "source_top500_rank": 216,
+   "title": "A Minimal Algorithm for the 0-1 Knapsack Problem",
+   "doi": "10.1287/opre.45.5.758",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t091_src216_10.1287_opre.45.5.758.md",
+   "year": 1997,
+   "cited_by_count": 183,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t092": {
+   "top200_rank": 92,
+   "source_top500_rank": 217,
+   "title": "Quantitative Methods in Credit Management: A Survey",
+   "doi": "10.1287/opre.42.4.589",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t092_src217_10.1287_opre.42.4.589.md",
+   "year": 1994,
+   "cited_by_count": 139,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t093": {
+   "top200_rank": 93,
+   "source_top500_rank": 218,
+   "title": "A Survey of Recent Extended Variants of the Traveling Salesman and Vehicle Routing Problems for Unmanned Aerial Vehicles",
+   "doi": "10.3390/drones3030066",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t093_src218_10.3390_drones3030066.md",
+   "year": 2019,
+   "cited_by_count": 152,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t094": {
+   "top200_rank": 94,
+   "source_top500_rank": 225,
+   "title": "Combinatorial Optimization Problems and Metaheuristics: Review, Challenges, Design, and Development",
+   "doi": "10.3390/app11146449",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t094_src225_10.3390_app11146449.md",
+   "year": 2021,
+   "cited_by_count": 133,
+   "domains": [
+    "metaheuristics"
+   ]
+  },
+  "t095": {
+   "top200_rank": 95,
+   "source_top500_rank": 227,
+   "title": "Learning with Submodular Functions: A Convex Optimization Perspective",
+   "doi": "10.1561/2200000039",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t095_src227_10.1561_2200000039.md",
+   "year": 2013,
+   "cited_by_count": 161,
+   "domains": [
+    "combinatorial_optimization"
+   ]
+  },
+  "t096": {
+   "top200_rank": 96,
+   "source_top500_rank": 228,
+   "title": "Note: The Newsvendor Model with Endogenous Demand",
+   "doi": "10.1287/mnsc.47.11.1488.10252",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t096_src228_10.1287_mnsc.47.11.1488.1025.md",
+   "year": 2001,
+   "cited_by_count": 205,
+   "domains": [
+    "inventory_supply_chain"
+   ]
+  },
+  "t097": {
+   "top200_rank": 97,
+   "source_top500_rank": 230,
+   "title": "A Branch and Bound Algorithm for a Class of Biobjective Mixed Integer Programs",
+   "doi": "10.1287/mnsc.2013.1802",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t097_src230_10.1287_mnsc.2013.1802.md",
+   "year": 2014,
+   "cited_by_count": 93,
+   "domains": [
+    "ml_or_hybrid"
+   ]
+  },
+  "t098": {
+   "top200_rank": 98,
+   "source_top500_rank": 233,
+   "title": "Variable neighborhood search for large offshore wind farm layout optimization",
+   "doi": "10.1016/j.cor.2021.105588",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1791,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t098_src233_10.1016_j.cor.2021.105588.md",
+   "year": 2022,
+   "cited_by_count": 64,
+   "domains": [
+    "metaheuristics"
+   ]
+  },
+  "t099": {
+   "top200_rank": 99,
+   "source_top500_rank": 234,
+   "title": "Dantzig-Wolfe Decomposition for Solving Multistage Stochastic Capacity-Planning Problems",
+   "doi": "10.1287/opre.1080.0678",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t099_src234_10.1287_opre.1080.0678.md",
+   "year": 2009,
+   "cited_by_count": 84,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t100": {
+   "top200_rank": 100,
+   "source_top500_rank": 235,
+   "title": "A purely proactive scheduling procedure for the resource-constrained project scheduling problem with stochastic activity durations",
+   "doi": "10.1007/s10951-015-0423-3",
+   "abstract_source": "existing_note",
+   "abstract_chars": 648,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t100_src235_10.1007_s10951-015-0423-3.md",
+   "year": 2016,
+   "cited_by_count": 104,
+   "domains": [
+    "scheduling"
+   ]
+  },
+  "t101": {
+   "top200_rank": 101,
+   "source_top500_rank": 236,
+   "title": "Learning to Branch in Mixed Integer Programming",
+   "doi": "10.1609/aaai.v30i1.10080",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t101_src236_10.1609_aaai.v30i1.10080.md",
+   "year": 2016,
+   "cited_by_count": 165,
+   "domains": [
+    "ml_or_hybrid"
+   ]
+  },
+  "t102": {
+   "top200_rank": 102,
+   "source_top500_rank": 237,
+   "title": "AN OPTIMIZATION SPIKING NEURAL P SYSTEM FOR APPROXIMATELY SOLVING COMBINATORIAL OPTIMIZATION PROBLEMS",
+   "doi": "10.1142/s0129065714400061",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t102_src237_10.1142_s0129065714400061.md",
+   "year": 2014,
+   "cited_by_count": 293,
+   "domains": [
+    "ml_or_hybrid"
+   ]
+  },
+  "t103": {
+   "top200_rank": 103,
+   "source_top500_rank": 243,
+   "title": "Adaptive large neighborhood search for the commodity constrained split delivery VRP",
+   "doi": "10.1016/j.cor.2019.07.019",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1096,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t103_src243_10.1016_j.cor.2019.07.019.md",
+   "year": 2019,
+   "cited_by_count": 59,
+   "domains": [
+    "metaheuristics"
+   ]
+  },
+  "t104": {
+   "top200_rank": 104,
+   "source_top500_rank": 244,
+   "title": "Proactive and reactive strategies for resource-constrained project scheduling with uncertain resource availabilities",
+   "doi": "10.1007/s10951-007-0021-0",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1317,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t104_src244_10.1007_s10951-007-0021-0.md",
+   "year": 2008,
+   "cited_by_count": 159,
+   "domains": [
+    "scheduling"
+   ]
+  },
+  "t105": {
+   "top200_rank": 105,
+   "source_top500_rank": 248,
+   "title": "Distributionally robust optimization",
+   "doi": "10.1017/s0962492924000084",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t105_src248_10.1017_s0962492924000084.md",
+   "year": 2025,
+   "cited_by_count": 69,
+   "domains": [
+    "stochastic_or"
+   ]
+  },
+  "t106": {
+   "top200_rank": 106,
+   "source_top500_rank": 250,
+   "title": "The Pseudoflow Algorithm: A New Algorithm for the Maximum-Flow Problem",
+   "doi": "10.1287/opre.1080.0524",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t106_src250_10.1287_opre.1080.0524.md",
+   "year": 2008,
+   "cited_by_count": 148,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t107": {
+   "top200_rank": 107,
+   "source_top500_rank": 251,
+   "title": "Machine learning augmented branch and bound for mixed integer linear programming",
+   "doi": "10.1007/s10107-024-02130-y",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t107_src251_10.1007_s10107-024-02130-y.md",
+   "year": 2024,
+   "cited_by_count": 27,
+   "domains": [
+    "ml_or_hybrid"
+   ]
+  },
+  "t108": {
+   "top200_rank": 108,
+   "source_top500_rank": 254,
+   "title": "A survey of the parallel assembly lines balancing problem",
+   "doi": "10.1016/j.cor.2020.105061",
+   "abstract_source": "existing_note",
+   "abstract_chars": 768,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t108_src254_10.1016_j.cor.2020.105061.md",
+   "year": 2020,
+   "cited_by_count": 44,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t109": {
+   "top200_rank": 109,
+   "source_top500_rank": 256,
+   "title": "Feature Article—Mathematical Models in Farm Planning: A Survey",
+   "doi": "10.1287/opre.35.5.641",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t109_src256_10.1287_opre.35.5.641.md",
+   "year": 1987,
+   "cited_by_count": 135,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t110": {
+   "top200_rank": 110,
+   "source_top500_rank": 259,
+   "title": "A Survey of Network Reliability and Domination Theory",
+   "doi": "10.1287/opre.32.3.478",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t110_src259_10.1287_opre.32.3.478.md",
+   "year": 1984,
+   "cited_by_count": 141,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t111": {
+   "top200_rank": 111,
+   "source_top500_rank": 261,
+   "title": "Adaptive large neighborhood search for mixed integer programming",
+   "doi": "10.1007/s12532-021-00209-7",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t111_src261_10.1007_s12532-021-00209-7.md",
+   "year": 2022,
+   "cited_by_count": 31,
+   "domains": [
+    "metaheuristics"
+   ]
+  },
+  "t112": {
+   "top200_rank": 112,
+   "source_top500_rank": 262,
+   "title": "OR Practice—A Survey of Practical Applications of Examination Timetabling Algorithms",
+   "doi": "10.1287/opre.34.2.193",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 496,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t112_src262_10.1287_opre.34.2.193.md",
+   "year": 1986,
+   "cited_by_count": 161,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t113": {
+   "top200_rank": 113,
+   "source_top500_rank": 263,
+   "title": "The proactive and reactive resource-constrained project scheduling problem",
+   "doi": "10.1007/s10951-017-0553-x",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1693,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t113_src263_10.1007_s10951-017-0553-x.md",
+   "year": 2019,
+   "cited_by_count": 70,
+   "domains": [
+    "scheduling"
+   ]
+  },
+  "t114": {
+   "top200_rank": 114,
+   "source_top500_rank": 266,
+   "title": "Intersection Cuts—A New Type of Cutting Planes for Integer Programming",
+   "doi": "10.1287/opre.19.1.19",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t114_src266_10.1287_opre.19.1.19.md",
+   "year": 1971,
+   "cited_by_count": 229,
+   "domains": [
+    "integer_programming"
+   ]
+  },
+  "t115": {
+   "top200_rank": 115,
+   "source_top500_rank": 267,
+   "title": "Survey of Dynamic Resource-Constrained Reward Collection Problems: Unified Model and Analysis",
+   "doi": "10.1287/opre.2023.2441",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t115_src267_10.1287_opre.2023.2441.md",
+   "year": 2024,
+   "cited_by_count": 28,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t116": {
+   "top200_rank": 116,
+   "source_top500_rank": 272,
+   "title": "A Survey on the Vehicle Routing Problem and Its Variants",
+   "doi": "10.4236/iim.2012.43010",
+   "abstract_source": "existing_note",
+   "abstract_chars": 847,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t116_src272_10.4236_iim.2012.43010.md",
+   "year": 2012,
+   "cited_by_count": 201,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t117": {
+   "top200_rank": 117,
+   "source_top500_rank": 273,
+   "title": "A New Linear Programming Approach to the Cutting Stock Problem",
+   "doi": "10.1287/opre.29.6.1092",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t117_src273_10.1287_opre.29.6.1092.md",
+   "year": 1981,
+   "cited_by_count": 154,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t118": {
+   "top200_rank": 118,
+   "source_top500_rank": 275,
+   "title": "A Survey of Linear Cost Multicommodity Network Flows",
+   "doi": "10.1287/opre.26.2.209",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 125,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t118_src275_10.1287_opre.26.2.209.md",
+   "year": 1978,
+   "cited_by_count": 161,
+   "domains": [
+    "or_foundations_survey"
+   ]
+  },
+  "t119": {
+   "top200_rank": 119,
+   "source_top500_rank": 276,
+   "title": "The two-dimensional bin packing problem with variable bin sizes and costs",
+   "doi": "10.1016/j.disopt.2005.01.002",
+   "abstract_source": "existing_note",
+   "abstract_chars": 835,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t119_src276_10.1016_j.disopt.2005.01.002.md",
+   "year": 2005,
+   "cited_by_count": 134,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t120": {
+   "top200_rank": 120,
+   "source_top500_rank": 278,
+   "title": "An iterated local search algorithm for the time-dependent vehicle routing problem with time windows",
+   "doi": "10.1016/j.disopt.2007.05.004",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1346,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t120_src278_10.1016_j.disopt.2007.05.004.md",
+   "year": 2008,
+   "cited_by_count": 116,
+   "domains": [
+    "tsp_routing"
+   ]
+  },
+  "t121": {
+   "top200_rank": 121,
+   "source_top500_rank": 279,
+   "title": "A survey on exact algorithms for the maximum flow and minimum‐cost flow problems",
+   "doi": "10.1002/net.22169",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 427,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t121_src279_10.1002_net.22169.md",
+   "year": 2023,
+   "cited_by_count": 21,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t122": {
+   "top200_rank": 122,
+   "source_top500_rank": 281,
+   "title": "A generic view of Dantzig–Wolfe decomposition in mixed integer programming",
+   "doi": "10.1016/j.orl.2005.05.009",
+   "abstract_source": "existing_note",
+   "abstract_chars": 379,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t122_src281_10.1016_j.orl.2005.05.009.md",
+   "year": 2006,
+   "cited_by_count": 101,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t123": {
+   "top200_rank": 123,
+   "source_top500_rank": 288,
+   "title": "The node‐weighted steiner tree problem",
+   "doi": "10.1002/net.3230170102",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t123_src288_10.1002_net.3230170102.md",
+   "year": 1987,
+   "cited_by_count": 83,
+   "domains": [
+    "graph_or"
+   ]
+  },
+  "t124": {
+   "top200_rank": 124,
+   "source_top500_rank": 292,
+   "title": "On maximizing a monotone <mml:math xmlns:mml=\"http://www.w3.org/1998/Math/MathML\" altimg=\"si1.gif\" display=\"inline\" overflow=\"scroll\"><mml:mi>k</mml:mi></mml:math>-submodular function subject to a matroid constraint",
+   "doi": "10.1016/j.disopt.2017.01.003",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1409,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t124_src292_10.1016_j.disopt.2017.01.003.md",
+   "year": 2017,
+   "cited_by_count": 46,
+   "domains": [
+    "combinatorial_optimization"
+   ]
+  },
+  "t125": {
+   "top200_rank": 125,
+   "source_top500_rank": 293,
+   "title": "A Branch and Bound Algorithm for the Knapsack Problem",
+   "doi": "10.1287/mnsc.13.9.723",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 462,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t125_src293_10.1287_mnsc.13.9.723.md",
+   "year": 1967,
+   "cited_by_count": 120,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t126": {
+   "top200_rank": 126,
+   "source_top500_rank": 294,
+   "title": "Analysis of Dijkstra’s Algorithm and A* Algorithm in Shortest Path Problem",
+   "doi": "10.1088/1742-6596/1566/1/012061",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 485,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t126_src294_10.1088_1742-6596_1566_1_012.md",
+   "year": 2020,
+   "cited_by_count": 76,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t127": {
+   "top200_rank": 127,
+   "source_top500_rank": 302,
+   "title": "Δ-stepping: a parallelizable shortest path algorithm",
+   "doi": "10.1016/s0196-6774(03)00076-2",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1336,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t127_src302_10.1016_s0196-6774_03_00076-.md",
+   "year": 2003,
+   "cited_by_count": 250,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t128": {
+   "top200_rank": 128,
+   "source_top500_rank": 310,
+   "title": "A Fast and Simple Algorithm for the Maximum Flow Problem",
+   "doi": "10.1287/opre.37.5.748",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t128_src310_10.1287_opre.37.5.748.md",
+   "year": 1989,
+   "cited_by_count": 82,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t129": {
+   "top200_rank": 129,
+   "source_top500_rank": 312,
+   "title": "Branch-and-Bound for Biobjective Mixed-Integer Linear Programming",
+   "doi": "10.1287/ijoc.2021.1092",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t129_src312_10.1287_ijoc.2021.1092.md",
+   "year": 2022,
+   "cited_by_count": 17,
+   "domains": [
+    "ml_or_hybrid"
+   ]
+  },
+  "t130": {
+   "top200_rank": 130,
+   "source_top500_rank": 315,
+   "title": "Traveling Salesman Problem: an Overview of Applications, Formulations, and Solution Approaches",
+   "doi": "10.5772/12909",
+   "abstract_source": "existing_note",
+   "abstract_chars": 654,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t130_src315_10.5772_12909.md",
+   "year": 2010,
+   "cited_by_count": 168,
+   "domains": [
+    "tsp_routing"
+   ]
+  },
+  "t131": {
+   "top200_rank": 131,
+   "source_top500_rank": 316,
+   "title": "A shortest path algorithm for grid graphs",
+   "doi": "10.1002/net.3230070404",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t131_src316_10.1002_net.3230070404.md",
+   "year": 1977,
+   "cited_by_count": 95,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t132": {
+   "top200_rank": 132,
+   "source_top500_rank": 318,
+   "title": "On the online bin packing problem",
+   "doi": "10.1145/585265.585269",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t132_src318_10.1145_585265.585269.md",
+   "year": 2002,
+   "cited_by_count": 239,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t133": {
+   "top200_rank": 133,
+   "source_top500_rank": 322,
+   "title": "Random Walks on Polytopes and an Affine Interior Point Method for Linear Programming",
+   "doi": "10.1287/moor.1110.0519",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 399,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t133_src322_10.1287_moor.1110.0519.md",
+   "year": 2012,
+   "cited_by_count": 33,
+   "domains": [
+    "linear_programming"
+   ]
+  },
+  "t134": {
+   "top200_rank": 134,
+   "source_top500_rank": 328,
+   "title": "A Review: Machine Learning for Combinatorial Optimization Problems in Energy Areas",
+   "doi": "10.3390/a15060205",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t134_src328_10.3390_a15060205.md",
+   "year": 2022,
+   "cited_by_count": 43,
+   "domains": [
+    "ml_or_hybrid"
+   ]
+  },
+  "t135": {
+   "top200_rank": 135,
+   "source_top500_rank": 329,
+   "title": "k-Balanced Center Location problem: A new multi-objective facility location problem",
+   "doi": "10.1016/j.cor.2019.01.009",
+   "abstract_source": "existing_note",
+   "abstract_chars": 933,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t135_src329_10.1016_j.cor.2019.01.009.md",
+   "year": 2019,
+   "cited_by_count": 30,
+   "domains": [
+    "inventory_supply_chain"
+   ]
+  },
+  "t136": {
+   "top200_rank": 136,
+   "source_top500_rank": 337,
+   "title": "Submodular Optimization with Routing Constraints",
+   "doi": "10.1609/aaai.v30i1.10066",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t136_src337_10.1609_aaai.v30i1.10066.md",
+   "year": 2016,
+   "cited_by_count": 89,
+   "domains": [
+    "combinatorial_optimization"
+   ]
+  },
+  "t137": {
+   "top200_rank": 137,
+   "source_top500_rank": 340,
+   "title": "A Fractiles Perspective to the Joint Price/Quantity Newsvendor Model",
+   "doi": "10.1287/mnsc.1060.0584",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t137_src340_10.1287_mnsc.1060.0584.md",
+   "year": 2006,
+   "cited_by_count": 54,
+   "domains": [
+    "inventory_supply_chain"
+   ]
+  },
+  "t138": {
+   "top200_rank": 138,
+   "source_top500_rank": 343,
+   "title": "Convexity and the Steiner tree problem",
+   "doi": "10.1002/net.3230180108",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t138_src343_10.1002_net.3230180108.md",
+   "year": 1988,
+   "cited_by_count": 47,
+   "domains": [
+    "graph_or"
+   ]
+  },
+  "t139": {
+   "top200_rank": 139,
+   "source_top500_rank": 356,
+   "title": "Iterative Dynamic Programming",
+   "doi": "10.1201/9781420036022",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1167,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t139_src356_10.1201_9781420036022.md",
+   "year": 2019,
+   "cited_by_count": 86,
+   "domains": [
+    "dynamic_programming"
+   ]
+  },
+  "t140": {
+   "top200_rank": 140,
+   "source_top500_rank": 359,
+   "title": "An Efficient Algorithm for the 0-1 Knapsack Problem",
+   "doi": "10.1287/mnsc.23.1.27",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 340,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t140_src359_10.1287_mnsc.23.1.27.md",
+   "year": 1976,
+   "cited_by_count": 87,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t141": {
+   "top200_rank": 141,
+   "source_top500_rank": 365,
+   "title": "Branch and Price for Submodular Bin Packing",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t141_src365_nodoi.md",
+   "year": 2022,
+   "cited_by_count": 0,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t142": {
+   "top200_rank": 142,
+   "source_top500_rank": 366,
+   "title": "A Nested Decomposition Approach to a Three-Stage, Two-Dimensional Cutting-Stock Problem",
+   "doi": "10.1287/mnsc.47.6.864.9809",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t142_src366_10.1287_mnsc.47.6.864.9809.md",
+   "year": 2001,
+   "cited_by_count": 73,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t143": {
+   "top200_rank": 143,
+   "source_top500_rank": 371,
+   "title": "Erratum to “The Three-Dimensional Bin Packing Problem”: Robot-Packable and Orthogonal Variants of Packing Problems",
+   "doi": "10.1287/opre.1050.0210",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t143_src371_10.1287_opre.1050.0210.md",
+   "year": 2005,
+   "cited_by_count": 37,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t144": {
+   "top200_rank": 144,
+   "source_top500_rank": 379,
+   "title": "A column generation approach for solving generation expansion planning problems with high renewable energy penetration",
+   "doi": "10.1016/j.epsr.2016.02.011",
+   "abstract_source": "existing_note",
+   "abstract_chars": 990,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t144_src379_10.1016_j.epsr.2016.02.011.md",
+   "year": 2016,
+   "cited_by_count": 92,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t145": {
+   "top200_rank": 145,
+   "source_top500_rank": 381,
+   "title": "The Bin‐Packing Problem: A Problem Generator and Some Numerical Experiments with FFD Packing and MTP",
+   "doi": "10.1111/j.1475-3995.1997.tb00093.x",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t145_src381_10.1111_j.1475-3995.1997.tb0.md",
+   "year": 1997,
+   "cited_by_count": 58,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t146": {
+   "top200_rank": 146,
+   "source_top500_rank": 382,
+   "title": "A Closest Benders Cut Selection Scheme for Accelerating the Benders Decomposition Algorithm",
+   "doi": "10.1287/ijoc.2022.1207",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t146_src382_10.1287_ijoc.2022.1207.md",
+   "year": 2022,
+   "cited_by_count": 13,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t147": {
+   "top200_rank": 147,
+   "source_top500_rank": 383,
+   "title": "Dantzig-Wolfe decomposition for the facility location and production planning problem",
+   "doi": "10.1016/j.cor.2020.105068",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1225,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t147_src383_10.1016_j.cor.2020.105068.md",
+   "year": 2020,
+   "cited_by_count": 17,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t148": {
+   "top200_rank": 148,
+   "source_top500_rank": 384,
+   "title": "The skiving stock problem as a counterpart of the cutting stock problem",
+   "doi": "10.1111/1475-3995.00433",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t148_src384_10.1111_1475-3995.00433.md",
+   "year": 2003,
+   "cited_by_count": 28,
+   "domains": [
+    "cutting_packing"
+   ]
+  },
+  "t149": {
+   "top200_rank": 149,
+   "source_top500_rank": 392,
+   "title": "Hybrid Quantum Benders’ Decomposition For Mixed-integer Linear Programming",
+   "doi": "10.1109/wcnc51071.2022.9771632",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1111,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t149_src392_10.1109_wcnc51071.2022.97716.md",
+   "year": 2022,
+   "cited_by_count": 42,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t150": {
+   "top200_rank": 150,
+   "source_top500_rank": 397,
+   "title": "A Canceling Heuristic for the Directed Traveling Salesman Problem",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t150_src397_nodoi.md",
+   "year": 2026,
+   "cited_by_count": 0,
+   "domains": [
+    "tsp_routing"
+   ]
+  },
+  "t151": {
+   "top200_rank": 151,
+   "source_top500_rank": 398,
+   "title": "Optimal Solutions for the Moving Target Vehicle Routing Problem via Branch-and-Price with Relaxed Continuity",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t151_src398_nodoi.md",
+   "year": 2026,
+   "cited_by_count": 0,
+   "domains": [
+    "tsp_routing"
+   ]
+  },
+  "t152": {
+   "top200_rank": 152,
+   "source_top500_rank": 401,
+   "title": "Minimum cost flow problem with conflicts",
+   "doi": "10.1002/net.22021",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t152_src401_10.1002_net.22021.md",
+   "year": 2021,
+   "cited_by_count": 10,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t153": {
+   "top200_rank": 153,
+   "source_top500_rank": 408,
+   "title": "Linear Programming in a Markov Chain",
+   "doi": "10.1287/opre.10.5.702",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 493,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t153_src408_10.1287_opre.10.5.702.md",
+   "year": 1962,
+   "cited_by_count": 46,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t154": {
+   "top200_rank": 154,
+   "source_top500_rank": 414,
+   "title": "Distributionally robust chance constrained Markov decision process with Kullback-Leibler divergence",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t154_src414_nodoi.md",
+   "year": 2023,
+   "cited_by_count": 0,
+   "domains": [
+    "dynamic_programming"
+   ]
+  },
+  "t155": {
+   "top200_rank": 155,
+   "source_top500_rank": 418,
+   "title": "The Two-Machine Maximum Flow Time Problem with Series-Parallel Precedence Constraints: An Algorithm and Extensions",
+   "doi": "10.1287/opre.27.4.792",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 202,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t155_src418_10.1287_opre.27.4.792.md",
+   "year": 1979,
+   "cited_by_count": 34,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t156": {
+   "top200_rank": 156,
+   "source_top500_rank": 420,
+   "title": "Benders Decomposition",
+   "doi": "10.1002/9780470400531.eorms0104",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 490,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t156_src420_10.1002_9780470400531.eorms0.md",
+   "year": 2011,
+   "cited_by_count": 15,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t157": {
+   "top200_rank": 157,
+   "source_top500_rank": 421,
+   "title": "Mixed Integer Linear Programming Solver Using Benders Decomposition Assisted by Neutral Atom Quantum Processor",
+   "doi": "10.1103/PhysRevA.110.012434",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t157_src421_10.1103_PhysRevA.110.012434.md",
+   "year": 2024,
+   "cited_by_count": 0,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t158": {
+   "top200_rank": 158,
+   "source_top500_rank": 423,
+   "title": "Weighted Dantzig–Wolfe Decomposition for Linear Mixed‐integer Programming",
+   "doi": "10.1111/j.1475-3995.1997.tb00071.x",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t158_src423_10.1111_j.1475-3995.1997.tb0.md",
+   "year": 1997,
+   "cited_by_count": 17,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t159": {
+   "top200_rank": 159,
+   "source_top500_rank": 429,
+   "title": "Learning to Optimize at Scale: A Benders Decomposition-TransfORmers Framework for Stochastic Combinatorial Optimization",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t159_src429_nodoi.md",
+   "year": 2026,
+   "cited_by_count": 0,
+   "domains": [
+    "ml_or_hybrid",
+    "column_generation_decomp"
+   ]
+  },
+  "t160": {
+   "top200_rank": 160,
+   "source_top500_rank": 430,
+   "title": "The Improved Dijkstra's Shortest Path Algorithm and Its Application",
+   "doi": "10.1016/j.proeng.2012.01.110",
+   "abstract_source": "existing_note",
+   "abstract_chars": 682,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t160_src430_10.1016_j.proeng.2012.01.110.md",
+   "year": 2012,
+   "cited_by_count": 70,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t161": {
+   "top200_rank": 161,
+   "source_top500_rank": 435,
+   "title": "Minimum cost flow with set‐constraints",
+   "doi": "10.1002/net.3230120102",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 451,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t161_src435_10.1002_net.3230120102.md",
+   "year": 1982,
+   "cited_by_count": 42,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t162": {
+   "top200_rank": 162,
+   "source_top500_rank": 441,
+   "title": "Robust minimum cost flow problem under consistent flow constraints",
+   "doi": "10.1007/s10479-021-04426-0",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 430,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t162_src441_10.1007_s10479-021-04426-0.md",
+   "year": 2022,
+   "cited_by_count": 8,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t163": {
+   "top200_rank": 163,
+   "source_top500_rank": 444,
+   "title": "A lower bound for the steiner tree problem in directed graphs",
+   "doi": "10.1002/net.3230200606",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t163_src444_10.1002_net.3230200606.md",
+   "year": 1990,
+   "cited_by_count": 16,
+   "domains": [
+    "graph_or"
+   ]
+  },
+  "t164": {
+   "top200_rank": 164,
+   "source_top500_rank": 445,
+   "title": "Prediction-based Resource Allocation using LSTM and Minimum Cost and Maximum Flow Algorithm",
+   "doi": "10.1109/icpm.2019.00027",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1196,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t164_src445_10.1109_icpm.2019.00027.md",
+   "year": 2019,
+   "cited_by_count": 42,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t165": {
+   "top200_rank": 165,
+   "source_top500_rank": 446,
+   "title": "Integrating Schedule Risk Analysis with Multi-Skilled Resource Scheduling to Improve Resource-Constrained Project Scheduling Problems",
+   "doi": "10.3390/app11020650",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 499,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t165_src446_10.3390_app11020650.md",
+   "year": 2021,
+   "cited_by_count": 31,
+   "domains": [
+    "scheduling"
+   ]
+  },
+  "t166": {
+   "top200_rank": 166,
+   "source_top500_rank": 447,
+   "title": "Heuristic solutions for general concave minimum cost network flow problems",
+   "doi": "10.1002/net.20167",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t166_src447_10.1002_net.20167.md",
+   "year": 2007,
+   "cited_by_count": 28,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t167": {
+   "top200_rank": 167,
+   "source_top500_rank": 448,
+   "title": "Vehicle drivetrain design multi-objective optimization",
+   "doi": "10.1016/j.mechmachtheory.2020.104123",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1179,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t167_src448_10.1016_j.mechmachtheory.202.md",
+   "year": 2021,
+   "cited_by_count": 35,
+   "domains": [
+    "game_theory_or"
+   ]
+  },
+  "t168": {
+   "top200_rank": 168,
+   "source_top500_rank": 450,
+   "title": "Capacity inverse minimum cost flow problem",
+   "doi": "10.1007/s10878-008-9159-8",
+   "abstract_source": "existing_note",
+   "abstract_chars": 990,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t168_src450_10.1007_s10878-008-9159-8.md",
+   "year": 2010,
+   "cited_by_count": 17,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t169": {
+   "top200_rank": 169,
+   "source_top500_rank": 453,
+   "title": "A capacity scaling algorithm for the constrained maximum flow problem",
+   "doi": "10.1002/net.3230250207",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t169_src453_10.1002_net.3230250207.md",
+   "year": 1995,
+   "cited_by_count": 23,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t170": {
+   "top200_rank": 170,
+   "source_top500_rank": 454,
+   "title": "Bounding the Difference between the Values of Robust and Non-Robust Markov Decision Problems",
+   "doi": "10.1017/jpr.2024.88",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t170_src454_10.1017_jpr.2024.88.md",
+   "year": 2023,
+   "cited_by_count": 0,
+   "domains": [
+    "dynamic_programming"
+   ]
+  },
+  "t171": {
+   "top200_rank": 171,
+   "source_top500_rank": 455,
+   "title": "Linear programming for finite-horizon vector-valued Markov decision processes",
+   "doi": "10.61208/pjo-2025-028",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 472,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t171_src455_10.61208_pjo-2025-028.md",
+   "year": 2025,
+   "cited_by_count": 0,
+   "domains": [
+    "dynamic_programming"
+   ]
+  },
+  "t172": {
+   "top200_rank": 172,
+   "source_top500_rank": 458,
+   "title": "An Efficient Relax-and-Solve Algorithm for the Resource-Constrained Project Scheduling Problem",
+   "doi": "10.5220/0010772400003117",
+   "abstract_source": "existing_note",
+   "abstract_chars": 744,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t172_src458_10.5220_0010772400003117.md",
+   "year": 2022,
+   "cited_by_count": 9,
+   "domains": [
+    "scheduling"
+   ]
+  },
+  "t173": {
+   "top200_rank": 173,
+   "source_top500_rank": 459,
+   "title": "Road maintenance optimization through a discrete-time semi-Markov decision process",
+   "doi": "10.1016/j.ress.2012.03.011",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1701,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t173_src459_10.1016_j.ress.2012.03.011.md",
+   "year": 2012,
+   "cited_by_count": 54,
+   "domains": [
+    "dynamic_programming"
+   ]
+  },
+  "t174": {
+   "top200_rank": 174,
+   "source_top500_rank": 463,
+   "title": "Terminal Steiner tree problem : Complexity and Algorithms",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t174_src463_nodoi.md",
+   "year": 2026,
+   "cited_by_count": 0,
+   "domains": [
+    "graph_or"
+   ]
+  },
+  "t175": {
+   "top200_rank": 175,
+   "source_top500_rank": 468,
+   "title": "Reductions for the rectilinear steiner tree problem",
+   "doi": "10.1002/net.3230260404",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t175_src468_10.1002_net.3230260404.md",
+   "year": 1995,
+   "cited_by_count": 13,
+   "domains": [
+    "graph_or"
+   ]
+  },
+  "t176": {
+   "top200_rank": 176,
+   "source_top500_rank": 474,
+   "title": "Almost-Linear Time Algorithms for Incremental Graphs: Cycle Detection, SCCs, $s$-$t$ Shortest Path, and Minimum-Cost Flow",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t176_src474_nodoi.md",
+   "year": 2023,
+   "cited_by_count": 0,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t177": {
+   "top200_rank": 177,
+   "source_top500_rank": 475,
+   "title": "Knapsack: Connectedness, Path, and Shortest-Path",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t177_src475_nodoi.md",
+   "year": 2023,
+   "cited_by_count": 0,
+   "domains": [
+    "network_flows"
+   ]
+  },
+  "t178": {
+   "top200_rank": 178,
+   "source_top500_rank": 478,
+   "title": "The Impact of Information Structure on Strategic Behavior in Queueing Systems",
+   "doi": "10.1002/9781119755234.ch4",
+   "abstract_source": "existing_note",
+   "abstract_chars": 1561,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t178_src478_10.1002_9781119755234.ch4.md",
+   "year": 2021,
+   "cited_by_count": 23,
+   "domains": [
+    "queuing_simulation"
+   ]
+  },
+  "t179": {
+   "top200_rank": 179,
+   "source_top500_rank": 480,
+   "title": "Deep-Steiner: Learning to Solve the Euclidean Steiner Tree Problem",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t179_src480_nodoi.md",
+   "year": 2022,
+   "cited_by_count": 0,
+   "domains": [
+    "graph_or"
+   ]
+  },
+  "t180": {
+   "top200_rank": 180,
+   "source_top500_rank": 481,
+   "title": "Query-decision Regression between Shortest Path and Minimum Steiner Tree",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t180_src481_nodoi.md",
+   "year": 2024,
+   "cited_by_count": 0,
+   "domains": [
+    "graph_or"
+   ]
+  },
+  "t181": {
+   "top200_rank": 181,
+   "source_top500_rank": 484,
+   "title": "Solving the Steiner Tree Problem with few Terminals",
+   "doi": "",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t181_src484_nodoi.md",
+   "year": 2020,
+   "cited_by_count": 0,
+   "domains": [
+    "graph_or"
+   ]
+  },
+  "t182": {
+   "top200_rank": 182,
+   "source_top500_rank": 486,
+   "title": "A generalized implicit enumeration algorithm for graph coloring",
+   "doi": "10.1145/3341.3350",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 483,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t182_src486_10.1145_3341.3350.md",
+   "year": 1985,
+   "cited_by_count": 64,
+   "domains": [
+    "graph_or"
+   ]
+  },
+  "t183": {
+   "top200_rank": 183,
+   "source_top500_rank": 492,
+   "title": "An Augmented Lagrange Multiplier Based Method for Mixed Integer Discrete Continuous Optimization and its Applications to Mechanical Design",
+   "doi": "10.1115/detc1993-0382",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 484,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t183_src492_10.1115_detc1993-0382.md",
+   "year": 1993,
+   "cited_by_count": 40,
+   "domains": [
+    "game_theory_or"
+   ]
+  },
+  "t184": {
+   "top200_rank": 184,
+   "source_top500_rank": 500,
+   "title": "Combinatorial Auctions: Complexity and Algorithms",
+   "doi": "10.1002/9780470400531.eorms0066",
+   "abstract_source": "top500_snip",
+   "abstract_chars": 500,
+   "has_public_abstract": true,
+   "path": "knowledge/corpus/papers/lit_abs/t184_src500_10.1002_9780470400531.eorms0.md",
+   "year": 2011,
+   "cited_by_count": 3,
+   "domains": [
+    "game_theory_or"
+   ]
+  },
+  "t185": {
+   "top200_rank": 185,
+   "source_top500_rank": 1,
+   "title": "CasADi: a software framework for nonlinear optimization and optimal control",
+   "doi": "10.1007/s12532-018-0139-4",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t185_src001_10.1007_s12532-018-0139-4.md",
+   "year": 2019,
+   "cited_by_count": 3458,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "constraint_programming",
+    "ml_or_hybrid",
+    "or_foundations_survey"
+   ]
+  },
+  "t186": {
+   "top200_rank": 186,
+   "source_top500_rank": 2,
+   "title": "On the implementation of an interior-point filter line-search algorithm for large-scale nonlinear programming",
+   "doi": "10.1007/s10107-004-0559-y",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t186_src002_10.1007_s10107-004-0559-y.md",
+   "year": 2006,
+   "cited_by_count": 8115,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "network_flows",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "constraint_programming",
+    "graph_or",
+    "cutting_packing",
+    "or_foundations_survey"
+   ]
+  },
+  "t187": {
+   "top200_rank": 187,
+   "source_top500_rank": 4,
+   "title": "Differential Evolution – A Simple and Efficient Heuristic for global Optimization over Continuous Spaces",
+   "doi": "10.1023/a:1008202821328",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t187_src004_10.1023_a_1008202821328.md",
+   "year": 1997,
+   "cited_by_count": 24700,
+   "domains": [
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "ml_or_hybrid"
+   ]
+  },
+  "t188": {
+   "top200_rank": 188,
+   "source_top500_rank": 6,
+   "title": "On the limited memory BFGS method for large scale optimization",
+   "doi": "10.1007/bf01589116",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t188_src006_10.1007_bf01589116.md",
+   "year": 1989,
+   "cited_by_count": 6680,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "constraint_programming",
+    "ml_or_hybrid",
+    "or_foundations_survey"
+   ]
+  },
+  "t189": {
+   "top200_rank": 189,
+   "source_top500_rank": 7,
+   "title": "Convergence Properties of the Nelder--Mead Simplex Method in Low Dimensions",
+   "doi": "10.1137/s1052623496303470",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t189_src007_10.1137_s1052623496303470.md",
+   "year": 1998,
+   "cited_by_count": 5989,
+   "domains": [
+    "linear_programming",
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "ml_or_hybrid"
+   ]
+  },
+  "t190": {
+   "top200_rank": 190,
+   "source_top500_rank": 18,
+   "title": "Survey of multi-objective optimization methods for engineering",
+   "doi": "10.1007/s00158-003-0368-6",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t190_src018_10.1007_s00158-003-0368-6.md",
+   "year": 2004,
+   "cited_by_count": 3822,
+   "domains": [
+    "combinatorial_optimization",
+    "stochastic_or",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "or_foundations_survey"
+   ]
+  },
+  "t191": {
+   "top200_rank": 191,
+   "source_top500_rank": 19,
+   "title": "A slacks-based measure of efficiency in data envelopment analysis",
+   "doi": "10.1016/s0377-2217(99)00407-5",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t191_src019_10.1016_s0377-2217_99_00407-.md",
+   "year": 2001,
+   "cited_by_count": 5120,
+   "domains": [
+    "constraint_programming"
+   ]
+  },
+  "t192": {
+   "top200_rank": 192,
+   "source_top500_rank": 21,
+   "title": "How to make a decision: The analytic hierarchy process",
+   "doi": "10.1016/0377-2217(90)90057-i",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t192_src021_10.1016_0377-2217_90_90057-i.md",
+   "year": 1990,
+   "cited_by_count": 7219,
+   "domains": [
+    "dynamic_programming"
+   ]
+  },
+  "t193": {
+   "top200_rank": 193,
+   "source_top500_rank": 22,
+   "title": "Dynamic programming algorithm optimization for spoken word recognition",
+   "doi": "10.1109/tassp.1978.1163055",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t193_src022_10.1109_tassp.1978.1163055.md",
+   "year": 1978,
+   "cited_by_count": 5218,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "combinatorial_optimization",
+    "network_flows",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "game_theory_or",
+    "inventory_supply_chain",
+    "queuing_simulation",
+    "constraint_programming",
+    "graph_or",
+    "cutting_packing",
+    "ml_or_hybrid",
+    "or_foundations_survey"
+   ]
+  },
+  "t194": {
+   "top200_rank": 194,
+   "source_top500_rank": 23,
+   "title": "Future paths for integer programming and links to artificial intelligence",
+   "doi": "10.1016/0305-0548(86)90048-1",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t194_src023_10.1016_0305-0548_86_90048-1.md",
+   "year": 1986,
+   "cited_by_count": 3049,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "multiobjective",
+    "constraint_programming"
+   ]
+  },
+  "t195": {
+   "top200_rank": 195,
+   "source_top500_rank": 24,
+   "title": "The Benders decomposition algorithm: A literature review",
+   "doi": "10.1016/j.ejor.2016.12.005",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t195_src024_10.1016_j.ejor.2016.12.005.md",
+   "year": 2017,
+   "cited_by_count": 801,
+   "domains": [
+    "column_generation_decomp"
+   ]
+  },
+  "t196": {
+   "top200_rank": 196,
+   "source_top500_rank": 27,
+   "title": "An analysis of approximations for maximizing submodular set functions—I",
+   "doi": "10.1007/bf01588971",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t196_src027_10.1007_bf01588971.md",
+   "year": 1978,
+   "cited_by_count": 3005,
+   "domains": [
+    "linear_programming",
+    "integer_programming",
+    "combinatorial_optimization",
+    "stochastic_or",
+    "dynamic_programming",
+    "nonlinear_convex",
+    "multiobjective",
+    "constraint_programming"
+   ]
+  },
+  "t197": {
+   "top200_rank": 197,
+   "source_top500_rank": 28,
+   "title": "Proximal alternating linearized minimization for nonconvex and nonsmooth problems",
+   "doi": "10.1007/s10107-013-0701-9",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t197_src028_10.1007_s10107-013-0701-9.md",
+   "year": 2014,
+   "cited_by_count": 1316,
+   "domains": [
+    "integer_programming",
+    "nonlinear_convex",
+    "multiobjective",
+    "constraint_programming"
+   ]
+  },
+  "t198": {
+   "top200_rank": 198,
+   "source_top500_rank": 29,
+   "title": "Solving two-stage robust optimization problems using a column-and-constraint generation method",
+   "doi": "10.1016/j.orl.2013.05.003",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t198_src029_10.1016_j.orl.2013.05.003.md",
+   "year": 2013,
+   "cited_by_count": 1672,
+   "domains": [
+    "constraint_programming"
+   ]
+  },
+  "t199": {
+   "top200_rank": 199,
+   "source_top500_rank": 30,
+   "title": "Exact Matrix Completion via Convex Optimization",
+   "doi": "10.1007/s10208-009-9045-5",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t199_src030_10.1007_s10208-009-9045-5.md",
+   "year": 2009,
+   "cited_by_count": 3436,
+   "domains": [
+    "combinatorial_optimization",
+    "stochastic_or",
+    "nonlinear_convex",
+    "metaheuristics",
+    "multiobjective",
+    "inventory_supply_chain",
+    "queuing_simulation"
+   ]
+  },
+  "t200": {
+   "top200_rank": 200,
+   "source_top500_rank": 32,
+   "title": "The flying sidekick traveling salesman problem: Optimization of drone-assisted parcel delivery",
+   "doi": "10.1016/j.trc.2015.03.005",
+   "abstract_source": "unavailable",
+   "abstract_chars": 0,
+   "has_public_abstract": false,
+   "path": "knowledge/corpus/papers/lit_abs/t200_src032_10.1016_j.trc.2015.03.005.md",
+   "year": 2015,
+   "cited_by_count": 1554,
+   "domains": [
+    "tsp_routing"
+   ]
+  }
+ }
+}

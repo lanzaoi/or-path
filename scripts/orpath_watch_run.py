@@ -166,6 +166,8 @@ def _run_product(
         cmd.append("--live-subagent")
     else:
         cmd.append("--no-live-subagent")
+    # Product: always hybrid RAG unless caller overrides env ORPATH_KNOWLEDGE_MODE
+    cmd.extend(["--knowledge-mode", "hybrid"])
 
     intakes = [str(Path(p).expanduser().resolve()) for p in (intake_in or []) if str(p).strip()]
     if intakes:

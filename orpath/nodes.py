@@ -167,7 +167,7 @@ def node_retrieve(state: ORPathState) -> dict:
     root = _root(state)  # workdir / case root
     home = orpath_home()
     slug = state["slug"]
-    mode = state.get("knowledge_mode") or "seed"
+    mode = _resolve_knowledge_mode(state.get("knowledge_mode"))
     out = root / "notes" / f"{slug}-retrieval.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     pc = str(state.get("problem_class") or "")
@@ -270,7 +270,7 @@ def node_retrieve(state: ORPathState) -> dict:
             }
             out.write_text(json.dumps(art, indent=2) + "\n", encoding="utf-8")
 
-    upd = {"stage": "research", "retrieval_path": str(out), "last_error": ""}
+    upd = {"stage": "research", "retrieval_path": str(out), "last_error": "", "knowledge_mode": mode}
     if lessons_path:
         upd["lessons_path"] = lessons_path
     return upd
@@ -281,19 +281,53 @@ def _retrieval_query(problem_class: str, problem_id: str) -> str:
     pc = (problem_class or "").strip().lower()
     pid = (problem_id or "").strip()
     table = {
-        "shortest_path": "shortest path Dijkstra networkx solver",
-        "tsp": "TSP tour OR-Tools routing CP-SAT circuit",
-        "vrp": "CVRP capacity multi vehicle OR-Tools routing",
-        "polyomino_cover": "polyomino cover CP-SAT board schema placements",
-        "polyomino": "polyomino cover CP-SAT board schema",
-        "tube_cut": "tube cut packing optimization",
+        "shortest_path": "shortest path Dijkstra networkx solver label-setting",
+        "tsp": "TSP tour OR-Tools routing CP-SAT circuit MTZ subtour",
+        "vrp": "CVRP capacity multi vehicle column generation set covering OR-Tools",
+        "polyomino_cover": "polyomino cover CP-SAT exact cover dancing links board",
+        "polyomino": "polyomino cover CP-SAT exact cover board schema",
+        # cutting-stock / tube: force method vocabulary into RAG (CG, residual, co-cut…)
+        "tube_cut": (
+            "one-dimensional cutting stock column generation residual problem "
+            "irregular tube co-cut nesting bin packing pattern generation "
+            "sequence-dependent setup remnant reuse"
+        ),
+        "cutting_stock": (
+            "cutting stock column generation Gilmore Gomory residual knapsack "
+            "bin packing pattern generation remnant"
+        ),
+        "cut_stock": "cutting stock column generation residual knapsack bin packing",
     }
     base = table.get(pc) or (
-        f"OR {problem_class or pid or 'operations research'} solver constraints modeling"
+        f"operations research {problem_class or pid or 'optimization'} "
+        f"column generation branch and price heuristics modeling"
     )
     if pid and pid not in base:
         return f"{base} {pid}"
     return base
+
+
+def _resolve_knowledge_mode(raw: str | None) -> str:
+    """Product default = hybrid RAG (not empty seed). Env ORPATH_KNOWLEDGE_MODE overrides.
+
+    Set ORPATH_KNOWLEDGE_MODE=seed|off to opt out (CI smoke may still pass hybrid).
+    """
+    import os
+
+    env = (os.environ.get("ORPATH_KNOWLEDGE_MODE") or "").strip().lower()
+    if env in {"off", "seed", "hybrid"}:
+        return env
+    m = (raw or "").strip().lower()
+    if m in {"off", "seed", "hybrid"}:
+        # legacy CLI default was seed — promote bare seed to hybrid for product depth
+        if m == "seed" and (os.environ.get("ORPATH_KNOWLEDGE_FORCE_HYBRID") or "1").strip() not in {
+            "0",
+            "false",
+            "no",
+        }:
+            return "hybrid"
+        return m
+    return "hybrid"
 
 
 
@@ -302,7 +336,7 @@ def node_research(state: ORPathState) -> dict:
     slug = state["slug"]
     pid = state["problem_id"]
     pc = state.get("problem_class") or "shortest_path"
-    mode = state.get("knowledge_mode") or "off"
+    mode = _resolve_knowledge_mode(state.get("knowledge_mode"))
     fb = _fixture_base(root, pid)
     path = root / "notes" / f"{slug}-research.md"
     rp = state.get("retrieval_path")
@@ -363,9 +397,16 @@ def node_research(state: ORPathState) -> dict:
 
 ## Summary
 Research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode', mode)}.
+**Mandatory:** use retrieval hits for candidate methods (e.g. column generation, residual knapsack,
+branch-and-price, co-cut geometry). Do not invent optima; methods only.
 
 ## Problem class
 {pc}
+
+## Method candidates (from RAG / domain)
+- Prefer algorithms named in retrieval snippets (column generation, pattern generation, BFD, CP-SAT, ...).
+- Map each candidate to which subproblem (Q1-Q4 / SP / TSP / ...) it might serve.
+- If hits empty, say so explicitly and fall back to classical OR vocabulary for the class.
 
 ## Evidence table
 | # | Source | Path/URL | Key claim | Type | Confidence |
@@ -376,6 +417,7 @@ Research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode', m
 1. Use deterministic solvers (networkx/cpsat/highs/ortools); never LLM optima.
 2. Validate must recompute objective.
 3. Seed/retrieval chunk_ids when present must be cited in this table.
+4. Cutting-stock / tube: surface column generation / pattern gen / remnant policy from RAG when hits exist.
 
 ## Modeling recommendations
 - problem_class: {pc}
@@ -386,7 +428,7 @@ Research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode', m
 
 ## Process memory (lessons)
 `{state.get("lessons_path") or (root / "notes" / f"{slug}-lessons.md")}`
-(Process tips only — not authoritative optima.)
+(Process tips only - not authoritative optima.)
 
 ## Problem excerpt
 {problem[:800]}

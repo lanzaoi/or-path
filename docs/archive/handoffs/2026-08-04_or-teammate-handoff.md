@@ -104,16 +104,20 @@ validate_solution.py 重算 → validate.json（ok / checks[]）
 
 **你做算法时：** 改的是 `tools/solve_*.py`（或新 adapter），并保证 `validate` 仍能重算；**不要**只改论文散文。
 
-### 1.4 知识轨（RAG）在链路哪一环
+### 1.4 知识轨（RAG）在链路哪一环（**默认强制 hybrid**）
 
 ```text
-knowledge/corpus + lessons + skill 白名单副本
+knowledge/corpus/papers (+ skills/lessons 副本)
         │ knowledge-sync / ingest（BM25 + FTS + RRF ± live embed）
         ▼
-retrieve 节点 → notes/<slug>-retrieval.json
+retrieve 节点 **默认 hybrid** → notes/<slug>-retrieval.json（应有 hits）
         ▼
-research 读 hit（coverage / chunk_id）—— 提示建模，不是 optima
+research **必须**引用 hit 中的方法名/chunk_id（列生成、模式生成、共切…）
+        ▼
+model / solve —— 数字仍只来自求解器
 ```
+
+关强制：`ORPATH_KNOWLEDGE_MODE=seed|off`。书库清单见 **§12**。
 
 跑完题可：
 
@@ -410,6 +414,64 @@ orpath.bat tools-list
 > 改算法，走 dispatch+validate；用 skill/RAG 传战法，不传假最优。**
 
 ---
+
+
+
+---
+
+## 12. RAG 书库里有什么（已入库 / 2026-08-04 push）
+
+> 详细布局：`knowledge/CORPUS.md`
+
+| 内容 | 约量 | 说明 |
+|------|------|------|
+| `knowledge/corpus/papers/**/*.md` | **~419** | hybrid 主粮全文/笔记 |
+| 其中 `lit_abs/` | **~201** | 文献摘要+建模笔记（Top 清单物化） |
+| 其中 `_from_mineru/` | **~101** | PDF 预处理 md |
+| 根目录短笔记 | 其余 | CG、BFD、ALNS、VRP、TSP… 方法笔记 |
+| `or_papers_top200/500.json` | 书目 | 元数据清单，不是全文 |
+| `corpus/skills/` + `lessons/` | 少 | allowlist 战法/教训检索副本 |
+| `export_allowlist.txt` | — | 哪些 skill 可进 RAG |
+
+**本机可有但不强求进 git：** `inbox_pdf/` 大 PDF、chunks 运行索引、ingest 日志。
+
+### 检索会命中什么（tube 示例，本机冒烟）
+
+query 含 *cutting stock column generation residual co-cut…* 时，hybrid 可返回如：
+
+- lit_abs / MinerU 下的 cutting / COR / discrete opt 文献笔记  
+- 方法短文（column generation、bin packing…）
+
+→ research **必须**把 hit 写进 Evidence table，并在「Method candidates」里点名列生成等，避免只会 BFD。
+
+---
+
+## 13. 强制 RAG 流程（产品已改默认）
+
+| 项 | 行为 |
+|----|------|
+| 默认 `knowledge_mode` | **`hybrid`**（不再是空 seed） |
+| `watch-run` | 自动带 `--knowledge-mode hybrid` |
+| 查询词 | tube/cutting_stock **带入** column generation / residual / co-cut 等词 |
+| 关强制 | `set ORPATH_KNOWLEDGE_MODE=seed` 或 `off`；或 `ORPATH_KNOWLEDGE_FORCE_HYBRID=0` 保留字面 seed |
+| research 模板 | 增加 **Method candidates (from RAG)**；要求引用 retrieval chunk_id |
+
+```text
+retrieve (hybrid, install-home index)
+  → notes/<slug>-retrieval.json  (hits≥1 时才算吃到书库)
+  → research 必须引用 chunk_id / 方法名（列生成、模式生成…）
+  → model schema 仍无 optima
+  → solve_tube / ortools / …
+```
+
+**验收：** 再跑 B 题时 `notes/*-retrieval.json` 应为 `knowledge_mode=hybrid` 且 `hits>0`（本机索引需已 `knowledge-sync`）。
+
+```bat
+set ORPATH_KNOWLEDGE_PROFILE=research
+orpath.bat knowledge-sync
+orpath.bat watch-run --workdir ... --slug ... --live --knowledge 会由脚本强制 hybrid
+```
+
 
 ## 11. Suggested skills（下一会话）
 

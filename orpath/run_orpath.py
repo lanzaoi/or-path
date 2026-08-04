@@ -204,7 +204,11 @@ def cmd_run(args: argparse.Namespace) -> int:
             problem_id=args.problem_id,
             problem_class=args.problem_class or "",
             solve_mode=args.solve_mode,
-            knowledge_mode=args.knowledge_mode,
+            knowledge_mode=(
+                __import__("orpath.nodes", fromlist=["_resolve_knowledge_mode"])._resolve_knowledge_mode(
+                    args.knowledge_mode
+                )
+            ),
             live_pi=bool(args.live_pi),
             live_subagent=live_sa,
             thread_id=thread_id,
@@ -361,7 +365,8 @@ def main() -> int:
             default="mock",
         )
         sp.add_argument(
-            "--knowledge-mode", choices=("off", "seed", "hybrid"), default="seed"
+            "--knowledge-mode", choices=("off", "seed", "hybrid"), default="hybrid",
+            help="default hybrid RAG (force retrieval); seed/off via flag or ORPATH_KNOWLEDGE_MODE",
         )
         sp.add_argument("--live-pi", action="store_true")
         sp.add_argument(
@@ -479,7 +484,7 @@ def main() -> int:
             if args.solve_mode is None:
                 args.solve_mode = "mock"
             if args.knowledge_mode is None:
-                args.knowledge_mode = "seed"
+                args.knowledge_mode = "hybrid"
         else:
             if getattr(args, "problem_id", None) is None:
                 args.problem_id = "shortest_path"

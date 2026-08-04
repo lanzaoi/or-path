@@ -1,0 +1,216 @@
+# OR literature Top-200 — abstract + modeling only
+
+
+- kind: paper-note
+- title: OR literature Top-200 — abstract + modeling only
+- source: curated
+
+- kind: paper-note
+- content_class: index
+- n: 200
+- with_public_abstract: 184
+- title_only_pad: 16
+- fulltext: no
+
+## Notes
+
+- **T001** [ABS] (src R003) [t001_src003_10.1561_2200000016.md](t001_src003_10.1561_2200000016.md) — Distributed Optimization and Statistical Learning via the Alternating Direction Method of Multipliers
+- **T002** [ABS] (src R005) [t002_src005_10.1007_s10107-017-1172-1.md](t002_src005_10.1007_s10107-017-1172-1.md) — Data-driven distributionally robust optimization using the Wasserstein metric: performance guarantees and tractable reformulations
+- **T003** [ABS] (src R008) [t003_src008_10.1007_s101070100263.md](t003_src008_10.1007_s101070100263.md) — Benchmarking optimization software with performance profiles
+- **T004** [ABS] (src R009) [t004_src009_10.1016_j.ejor.2020.07.063.md](t004_src009_10.1016_j.ejor.2020.07.063.md) — Machine learning for combinatorial optimization: A methodological tour d’horizon
+- **T005** [ABS] (src R010) [t005_src010_10.1126_science.220.4598.671.md](t005_src010_10.1126_science.220.4598.671.md) — Optimization by Simulated Annealing
+- **T006** [ABS] (src R011) [t006_src011_10.1016_0377-2217_78_90138-8.md](t006_src011_10.1016_0377-2217_78_90138-8.md) — Measuring the efficiency of decision making units
+- **T007** [ABS] (src R012) [t007_src012_10.1007_s12532-020-00179-2.md](t007_src012_10.1007_s12532-020-00179-2.md) — OSQP: an operator splitting solver for quadratic programs
+- **T008** [ABS] (src R013) [t008_src013_10.1177_003754970107600201.md](t008_src013_10.1177_003754970107600201.md) — A New Heuristic Optimization Algorithm: Harmony Search
+- **T009** [ABS] (src R014) [t009_src014_10.1109_access.2020.2990567.md](t009_src014_10.1109_access.2020.2990567.md) — Pymoo: Multi-Objective Optimization in Python
+- **T010** [ABS] (src R015) [t010_src015_10.1109_mci.2017.2742868.md](t010_src015_10.1109_mci.2017.2742868.md) — PlatEMO: A MATLAB Platform for Evolutionary Multi-Objective Optimization [Educational Forum]
+- **T011** [ABS] (src R016) [t011_src016_10.1287_trsc.2017.0791.md](t011_src016_10.1287_trsc.2017.0791.md) — Optimization Approaches for the Traveling Salesman Problem with Drone
+- **T012** [ABS] (src R017) [t012_src017_10.1109_tit.2005.858979.md](t012_src017_10.1109_tit.2005.858979.md) — Decoding by Linear Programming
+- **T013** [ABS] (src R020) [t013_src020_10.1016_j.cor.2021.105400.md](t013_src020_10.1016_j.cor.2021.105400.md) — Reinforcement learning for combinatorial optimization: A survey
+- **T014** [ABS] (src R025) [t014_src025_10.1287_trsc.1050.0135.md](t014_src025_10.1287_trsc.1050.0135.md) — An Adaptive Large Neighborhood Search Heuristic for the Pickup and Delivery Problem with Time Windows
+- **T015** [ABS] (src R026) [t015_src026_10.1162_evco.1994.2.3.221.md](t015_src026_10.1162_evco.1994.2.3.221.md) — Muiltiobjective Optimization Using Nondominated Sorting in Genetic Algorithms
+- **T016** [ABS] (src R031) [t016_src031_10.1287_opre.35.2.254.md](t016_src031_10.1287_opre.35.2.254.md) — Algorithms for the Vehicle Routing and Scheduling Problems with Time Window Constraints
+- **T017** [ABS] (src R034) [t017_src034_10.1287_opre.2014.1314.md](t017_src034_10.1287_opre.2014.1314.md) — Distributionally Robust Convex Optimization
+- **T018** [ABS] (src R037) [t018_src037_10.1287_moor.23.4.769.md](t018_src037_10.1287_moor.23.4.769.md) — Robust Convex Optimization
+- **T019** [ABS] (src R040) [t019_src040_10.1109_access.2021.3070634.md](t019_src040_10.1109_access.2021.3070634.md) — A Comprehensive Review on NSGA-II for Multi-Objective Combinatorial Optimization Problems
+- **T020** [ABS] (src R043) [t020_src043_10.1007_s10107-015-0892-3.md](t020_src043_10.1007_s10107-015-0892-3.md) — Coordinate descent algorithms
+- **T021** [ABS] (src R044) [t021_src044_10.1007_bf01581204.md](t021_src044_10.1007_bf01581204.md) — On the Douglas—Rachford splitting method and the proximal point algorithm for maximal monotone operators
+- **T022** [ABS] (src R045) [t022_src045_10.1002_nme.1620240207.md](t022_src045_10.1002_nme.1620240207.md) — The method of moving asymptotes—a new method for structural optimization
+- **T023** [ABS] (src R046) [t023_src046_10.1287_mnsc.43.4.546.md](t023_src046_10.1287_mnsc.43.4.546.md) — Information Distortion in a Supply Chain: The Bullwhip Effect
+- **T024** [ABS] (src R048) [t024_src048_10.1109_tsmc.2020.3042876.md](t024_src048_10.1109_tsmc.2020.3042876.md) — Adaptive Dynamic Programming for Control: A Survey and Recent Advances
+- **T025** [ABS] (src R050) [t025_src050_10.1287_opre.46.3.316.md](t025_src050_10.1287_opre.46.3.316.md) — Branch-and-Price: Column Generation for Solving Huge Integer Programs
+- **T026** [ABS] (src R051) [t026_src051_10.1287_moor.6.1.58.md](t026_src051_10.1287_moor.6.1.58.md) — Optimal Auction Design
+- **T027** [ABS] (src R052) [t027_src052_10.1016_j.ejor.2021.04.032.md](t027_src052_10.1016_j.ejor.2021.04.032.md) — Machine learning at the service of meta-heuristics for solving combinatorial optimization problems: A state-of-the-art
+- **T028** [ABS] (src R054) [t028_src054_10.1145_937503.937505.md](t028_src054_10.1145_937503.937505.md) — Metaheuristics in combinatorial optimization
+- **T029** [ABS] (src R057) [t029_src057_10.1287_ijoc.1.3.190.md](t029_src057_10.1287_ijoc.1.3.190.md) — Tabu Search—Part I
+- **T030** [ABS] (src R060) [t030_src060_10.1016_j.cie.2015.12.007.md](t030_src060_10.1016_j.cie.2015.12.007.md) — The vehicle routing problem: State of the art classification and review
+- **T031** [ABS] (src R061) [t031_src061_10.1287_opre.21.2.498.md](t031_src061_10.1287_opre.21.2.498.md) — An Effective Heuristic Algorithm for the Traveling-Salesman Problem
+- **T032** [ABS] (src R068) [t032_src068_10.1287_mnsc.27.1.1.md](t032_src068_10.1287_mnsc.27.1.1.md) — The Lagrangian Relaxation Method for Solving Integer Programming Problems
+- **T033** [ABS] (src R070) [t033_src070_10.1016_j.trc.2019.02.018.md](t033_src070_10.1016_j.trc.2019.02.018.md) — An adaptive large neighborhood search metaheuristic for the vehicle routing problem with drones
+- **T034** [ABS] (src R072) [t034_src072_10.1162_106365600568202.md](t034_src072_10.1162_106365600568202.md) — Comparison of Multiobjective Evolutionary Algorithms: Empirical Results
+- **T035** [ABS] (src R074) [t035_src074_10.1016_j.trc.2019.11.003.md](t035_src074_10.1016_j.trc.2019.11.003.md) — The multiple flying sidekicks traveling salesman problem: Parcel delivery with multiple drones
+- **T036** [ABS] (src R078) [t036_src078_10.1021_ct0502763.md](t036_src078_10.1021_ct0502763.md) — Design of Density Functionals by Combining the Method of Constraint Satisfaction with Parametrization for Thermochemistry, Thermochemical Kinetics, and Noncovalent Interactions
+- **T037** [ABS] (src R081) [t037_src081_10.1287_opre.14.4.699.md](t037_src081_10.1287_opre.14.4.699.md) — Branch-and-Bound Methods: A Survey
+- **T038** [ABS] (src R083) [t038_src083_10.1016_j.trb.2019.03.005.md](t038_src083_10.1016_j.trb.2019.03.005.md) — Vehicle routing problem with drones
+- **T039** [ABS] (src R084) [t039_src084_10.1287_opre.21.5.1154.md](t039_src084_10.1287_opre.21.5.1154.md) — Technical Note—Convex Programming with Set-Inclusive Constraints and Applications to Inexact Linear Programming
+- **T040** [ABS] (src R087) [t040_src087_10.1287_trsc.1110.0400.md](t040_src087_10.1287_trsc.1110.0400.md) — Synchronization in Vehicle Routing—A Survey of VRPs with Multiple Synchronization Constraints
+- **T041** [ABS] (src R088) [t041_src088_10.1016_j.trc.2017.11.015.md](t041_src088_10.1016_j.trc.2017.11.015.md) — On the min-cost Traveling Salesman Problem with Drone
+- **T042** [ABS] (src R089) [t042_src089_10.1287_opre.1050.0234.md](t042_src089_10.1287_opre.1050.0234.md) — Selected Topics in Column Generation
+- **T043** [ABS] (src R092) [t043_src092_10.1016_j.ejor.2017.10.023.md](t043_src092_10.1016_j.ejor.2017.10.023.md) — Collaborative vehicle routing: A survey
+- **T044** [ABS] (src R094) [t044_src094_10.1007_s10107-016-1030-6.md](t044_src094_10.1007_s10107-016-1030-6.md) — Minimizing finite sums with the stochastic average gradient
+- **T045** [ABS] (src R099) [t045_src099_10.1287_mnsc.2017.2952.md](t045_src099_10.1287_mnsc.2017.2952.md) — Adaptive Distributionally Robust Optimization
+- **T046** [ABS] (src R102) [t046_src102_10.1137_080734510.md](t046_src102_10.1137_080734510.md) — Theory and Applications of Robust Optimization
+- **T047** [ABS] (src R105) [t047_src105_10.1145_2558904.md](t047_src105_10.1145_2558904.md) — GPOPS-II
+- **T048** [ABS] (src R107) [t048_src107_10.1287_opre.44.3.510.md](t048_src107_10.1287_opre.44.3.510.md) — A Survey of Machine Scheduling Problems with Blocking and No-Wait in Process
+- **T049** [ABS] (src R109) [t049_src109_10.1287_moor.4.3.233.md](t049_src109_10.1287_moor.4.3.233.md) — A Greedy Heuristic for the Set-Covering Problem
+- **T050** [ABS] (src R110) [t050_src110_10.1287_opre.9.6.849.md](t050_src110_10.1287_opre.9.6.849.md) — A Linear Programming Approach to the Cutting-Stock Problem
+- **T051** [ABS] (src R111) [t051_src111_10.1186_1471-2105-6-31.md](t051_src111_10.1186_1471-2105-6-31.md) — Automated generation of heuristics for biological sequence comparison
+- **T052** [ABS] (src R112) [t052_src112_10.1088_0965-0393_24_5_05500.md](t052_src112_10.1088_0965-0393_24_5_05500.md) — Robust structural identification via polyhedral template matching
+- **T053** [ABS] (src R113) [t053_src113_10.1287_moor.1.2.117.md](t053_src113_10.1287_moor.1.2.117.md) — The Complexity of Flowshop and Jobshop Scheduling
+- **T054** [ABS] (src R115) [t054_src115_10.1287_ijoc.2.1.4.md](t054_src115_10.1287_ijoc.2.1.4.md) — Tabu Search—Part II
+- **T055** [ABS] (src R117) [t055_src117_10.1007_s10107-013-0738-9.md](t055_src117_10.1007_s10107-013-0738-9.md) — Phase recovery, MaxCut and complex semidefinite programming
+- **T056** [ABS] (src R122) [t056_src122_10.1038_s42254-022-00440-8.md](t056_src122_10.1038_s42254-022-00440-8.md) — Ising machines as hardware solvers of combinatorial optimization problems
+- **T057** [ABS] (src R123) [t057_src123_10.1073_pnas.0401799101.md](t057_src123_10.1073_pnas.0401799101.md) — Incorporating chemical modification constraints into a dynamic programming algorithm for prediction of RNA secondary structure
+- **T058** [ABS] (src R125) [t058_src125_10.1287_opre.25.1.45.md](t058_src125_10.1287_opre.25.1.45.md) — A Survey of Scheduling Rules
+- **T059** [ABS] (src R128) [t059_src128_10.1287_ijoc.15.3.284.16077.md](t059_src128_10.1287_ijoc.15.3.284.16077.md) — Combinatorial Auctions: A Survey
+- **T060** [ABS] (src R133) [t060_src133_10.1007_978-1-4615-6089-0.md](t060_src133_10.1007_978-1-4615-6089-0.md) — Tabu Search
+- **T061** [ABS] (src R138) [t061_src138_10.1287_opre.1080.0603.md](t061_src138_10.1287_opre.1080.0603.md) — Technical Note—A Risk-Averse Newsvendor Model Under the CVaR Criterion
+- **T062** [ABS] (src R139) [t062_src139_10.1287_opre.1070.0486.md](t062_src139_10.1287_opre.1070.0486.md) — Regret in the Newsvendor Model with Partial Information
+- **T063** [ABS] (src R142) [t063_src142_10.1287_opre.8.1.101.md](t063_src142_10.1287_opre.8.1.101.md) — Decomposition Principle for Linear Programs
+- **T064** [ABS] (src R145) [t064_src145_10.1287_ijoc.3.4.376.md](t064_src145_10.1287_ijoc.3.4.376.md) — TSPLIB—A Traveling Salesman Problem Library
+- **T065** [ABS] (src R147) [t065_src147_10.1016_j.cie.2020.106778.md](t065_src147_10.1016_j.cie.2020.106778.md) — A self-learning genetic algorithm based on reinforcement learning for flexible job-shop scheduling problem
+- **T066** [ABS] (src R149) [t066_src149_10.1287_opre.48.2.256.12386.md](t066_src149_10.1287_opre.48.2.256.12386.md) — The Three-Dimensional Bin Packing Problem
+- **T067** [ABS] (src R154) [t067_src154_10.1038_s41467-022-28776-w.md](t067_src154_10.1038_s41467-022-28776-w.md) — Combinatorial optimization of mRNA structure, stability, and translation for RNA-based therapeutics
+- **T068** [ABS] (src R156) [t068_src156_10.1007_s10107-003-0375-9.md](t068_src156_10.1007_s10107-003-0375-9.md) — Logic-based Benders decomposition
+- **T069** [ABS] (src R157) [t069_src157_10.1016_j.cor.2019.07.014.md](t069_src157_10.1016_j.cor.2019.07.014.md) — Survey on blood supply chain management: Models and methods
+- **T070** [ABS] (src R160) [t070_src160_10.1088_1361-6633_80_2_02400.md](t070_src160_10.1088_1361-6633_80_2_02400.md) — Quantum steering: a review with focus on semidefinite programming
+- **T071** [ABS] (src R161) [t071_src161_10.1287_trsc.2017.0744.md](t071_src161_10.1287_trsc.2017.0744.md) — Workload Equity in Vehicle Routing Problems: A Survey and Analysis
+- **T072** [ABS] (src R169) [t072_src169_10.1287_opre.41.2.338.md](t072_src169_10.1287_opre.41.2.338.md) — A Faster Strongly Polynomial Minimum Cost Flow Algorithm
+- **T073** [ABS] (src R171) [t073_src171_10.1287_inte.20.4.74.md](t073_src171_10.1287_inte.20.4.74.md) — Tabu Search: A Tutorial
+- **T074** [ABS] (src R172) [t074_src172_10.1016_j.cor.2021.105336.md](t074_src172_10.1016_j.cor.2021.105336.md) — The aircraft runway scheduling problem: A survey
+- **T075** [ABS] (src R173) [t075_src173_10.1287_opre.42.6.1042.md](t075_src173_10.1287_opre.42.6.1042.md) — Parallel Branch-and-Branch Algorithms: Survey and Synthesis
+- **T076** [ABS] (src R176) [t076_src176_10.1287_opre.16.3.538.md](t076_src176_10.1287_opre.16.3.538.md) — The Traveling Salesman Problem: A Survey
+- **T077** [ABS] (src R178) [t077_src178_10.1287_opre.29.6.1039.md](t077_src178_10.1287_opre.29.6.1039.md) — Feature Article—The Ellipsoid Method: A Survey
+- **T078** [ABS] (src R180) [t078_src180_10.1007_s12532-020-00183-6.md](t078_src180_10.1007_s12532-020-00183-6.md) — A branch-and-cut algorithm for mixed integer bilevel linear optimization problems and its implementation
+- **T079** [ABS] (src R181) [t079_src181_10.1126_sciadv.aav2372.md](t079_src181_10.1126_sciadv.aav2372.md) — Combinatorial optimization by simulating adiabatic bifurcations in nonlinear Hamiltonian systems
+- **T080** [ABS] (src R182) [t080_src182_10.1287_opre.30.5.907.md](t080_src182_10.1287_opre.30.5.907.md) — Operations Research and Capacity Expansion Problems: A Survey
+- **T081** [ABS] (src R183) [t081_src183_10.5802_ojmo.15.md](t081_src183_10.5802_ojmo.15.md) — Frameworks and Results in Distributionally Robust Optimization
+- **T082** [ABS] (src R185) [t082_src185_10.1287_trsc.2021.1045.md](t082_src185_10.1287_trsc.2021.1045.md) — Machine-Learning–Based Column Selection for Column Generation
+- **T083** [ABS] (src R192) [t083_src192_10.1109_tits.2019.2909109.md](t083_src192_10.1109_tits.2019.2909109.md) — Online Vehicle Routing With Neural Combinatorial Optimization and Deep Reinforcement Learning
+- **T084** [ABS] (src R196) [t084_src196_10.1287_opre.48.1.111.12453.md](t084_src196_10.1287_opre.48.1.111.12453.md) — On Dantzig-Wolfe Decomposition in Integer Programming and ways to Perform Branching in a Branch-and-Price Algorithm
+- **T085** [ABS] (src R199) [t085_src199_10.1016_j.cor.2019.104869.md](t085_src199_10.1016_j.cor.2019.104869.md) — A survey on kriging-based infill algorithms for multiobjective simulation optimization
+- **T086** [ABS] (src R202) [t086_src202_10.1093_oso_9780195100563.00.md](t086_src202_10.1093_oso_9780195100563.00.md) — Nonlinear and Mixed-Integer Optimization
+- **T087** [ABS] (src R207) [t087_src207_10.3934_naco.2021057.md](t087_src207_10.3934_naco.2021057.md) — Distributionally Robust Optimization: A review on theory and applications
+- **T088** [ABS] (src R212) [t088_src212_10.1155_2019_5075671.md](t088_src212_10.1155_2019_5075671.md) — A Survey on the Electric Vehicle Routing Problem: Variants and Solution Approaches
+- **T089** [ABS] (src R214) [t089_src214_10.1287_mnsc.28.10.1197.md](t089_src214_10.1287_mnsc.28.10.1197.md) — Resource-Constrained Project Scheduling with Time-Resource Tradeoffs: The Nonpreemptive Case
+- **T090** [ABS] (src R215) [t090_src215_10.1111_j.1540-5915.1977.tb0.md](t090_src215_10.1111_j.1540-5915.1977.tb0.md) — HEURISTICS FOR INTEGER PROGRAMMING USING SURROGATE CONSTRAINTS
+- **T091** [ABS] (src R216) [t091_src216_10.1287_opre.45.5.758.md](t091_src216_10.1287_opre.45.5.758.md) — A Minimal Algorithm for the 0-1 Knapsack Problem
+- **T092** [ABS] (src R217) [t092_src217_10.1287_opre.42.4.589.md](t092_src217_10.1287_opre.42.4.589.md) — Quantitative Methods in Credit Management: A Survey
+- **T093** [ABS] (src R218) [t093_src218_10.3390_drones3030066.md](t093_src218_10.3390_drones3030066.md) — A Survey of Recent Extended Variants of the Traveling Salesman and Vehicle Routing Problems for Unmanned Aerial Vehicles
+- **T094** [ABS] (src R225) [t094_src225_10.3390_app11146449.md](t094_src225_10.3390_app11146449.md) — Combinatorial Optimization Problems and Metaheuristics: Review, Challenges, Design, and Development
+- **T095** [ABS] (src R227) [t095_src227_10.1561_2200000039.md](t095_src227_10.1561_2200000039.md) — Learning with Submodular Functions: A Convex Optimization Perspective
+- **T096** [ABS] (src R228) [t096_src228_10.1287_mnsc.47.11.1488.1025.md](t096_src228_10.1287_mnsc.47.11.1488.1025.md) — Note: The Newsvendor Model with Endogenous Demand
+- **T097** [ABS] (src R230) [t097_src230_10.1287_mnsc.2013.1802.md](t097_src230_10.1287_mnsc.2013.1802.md) — A Branch and Bound Algorithm for a Class of Biobjective Mixed Integer Programs
+- **T098** [ABS] (src R233) [t098_src233_10.1016_j.cor.2021.105588.md](t098_src233_10.1016_j.cor.2021.105588.md) — Variable neighborhood search for large offshore wind farm layout optimization
+- **T099** [ABS] (src R234) [t099_src234_10.1287_opre.1080.0678.md](t099_src234_10.1287_opre.1080.0678.md) — Dantzig-Wolfe Decomposition for Solving Multistage Stochastic Capacity-Planning Problems
+- **T100** [ABS] (src R235) [t100_src235_10.1007_s10951-015-0423-3.md](t100_src235_10.1007_s10951-015-0423-3.md) — A purely proactive scheduling procedure for the resource-constrained project scheduling problem with stochastic activity durations
+- **T101** [ABS] (src R236) [t101_src236_10.1609_aaai.v30i1.10080.md](t101_src236_10.1609_aaai.v30i1.10080.md) — Learning to Branch in Mixed Integer Programming
+- **T102** [ABS] (src R237) [t102_src237_10.1142_s0129065714400061.md](t102_src237_10.1142_s0129065714400061.md) — AN OPTIMIZATION SPIKING NEURAL P SYSTEM FOR APPROXIMATELY SOLVING COMBINATORIAL OPTIMIZATION PROBLEMS
+- **T103** [ABS] (src R243) [t103_src243_10.1016_j.cor.2019.07.019.md](t103_src243_10.1016_j.cor.2019.07.019.md) — Adaptive large neighborhood search for the commodity constrained split delivery VRP
+- **T104** [ABS] (src R244) [t104_src244_10.1007_s10951-007-0021-0.md](t104_src244_10.1007_s10951-007-0021-0.md) — Proactive and reactive strategies for resource-constrained project scheduling with uncertain resource availabilities
+- **T105** [ABS] (src R248) [t105_src248_10.1017_s0962492924000084.md](t105_src248_10.1017_s0962492924000084.md) — Distributionally robust optimization
+- **T106** [ABS] (src R250) [t106_src250_10.1287_opre.1080.0524.md](t106_src250_10.1287_opre.1080.0524.md) — The Pseudoflow Algorithm: A New Algorithm for the Maximum-Flow Problem
+- **T107** [ABS] (src R251) [t107_src251_10.1007_s10107-024-02130-y.md](t107_src251_10.1007_s10107-024-02130-y.md) — Machine learning augmented branch and bound for mixed integer linear programming
+- **T108** [ABS] (src R254) [t108_src254_10.1016_j.cor.2020.105061.md](t108_src254_10.1016_j.cor.2020.105061.md) — A survey of the parallel assembly lines balancing problem
+- **T109** [ABS] (src R256) [t109_src256_10.1287_opre.35.5.641.md](t109_src256_10.1287_opre.35.5.641.md) — Feature Article—Mathematical Models in Farm Planning: A Survey
+- **T110** [ABS] (src R259) [t110_src259_10.1287_opre.32.3.478.md](t110_src259_10.1287_opre.32.3.478.md) — A Survey of Network Reliability and Domination Theory
+- **T111** [ABS] (src R261) [t111_src261_10.1007_s12532-021-00209-7.md](t111_src261_10.1007_s12532-021-00209-7.md) — Adaptive large neighborhood search for mixed integer programming
+- **T112** [ABS] (src R262) [t112_src262_10.1287_opre.34.2.193.md](t112_src262_10.1287_opre.34.2.193.md) — OR Practice—A Survey of Practical Applications of Examination Timetabling Algorithms
+- **T113** [ABS] (src R263) [t113_src263_10.1007_s10951-017-0553-x.md](t113_src263_10.1007_s10951-017-0553-x.md) — The proactive and reactive resource-constrained project scheduling problem
+- **T114** [ABS] (src R266) [t114_src266_10.1287_opre.19.1.19.md](t114_src266_10.1287_opre.19.1.19.md) — Intersection Cuts—A New Type of Cutting Planes for Integer Programming
+- **T115** [ABS] (src R267) [t115_src267_10.1287_opre.2023.2441.md](t115_src267_10.1287_opre.2023.2441.md) — Survey of Dynamic Resource-Constrained Reward Collection Problems: Unified Model and Analysis
+- **T116** [ABS] (src R272) [t116_src272_10.4236_iim.2012.43010.md](t116_src272_10.4236_iim.2012.43010.md) — A Survey on the Vehicle Routing Problem and Its Variants
+- **T117** [ABS] (src R273) [t117_src273_10.1287_opre.29.6.1092.md](t117_src273_10.1287_opre.29.6.1092.md) — A New Linear Programming Approach to the Cutting Stock Problem
+- **T118** [ABS] (src R275) [t118_src275_10.1287_opre.26.2.209.md](t118_src275_10.1287_opre.26.2.209.md) — A Survey of Linear Cost Multicommodity Network Flows
+- **T119** [ABS] (src R276) [t119_src276_10.1016_j.disopt.2005.01.002.md](t119_src276_10.1016_j.disopt.2005.01.002.md) — The two-dimensional bin packing problem with variable bin sizes and costs
+- **T120** [ABS] (src R278) [t120_src278_10.1016_j.disopt.2007.05.004.md](t120_src278_10.1016_j.disopt.2007.05.004.md) — An iterated local search algorithm for the time-dependent vehicle routing problem with time windows
+- **T121** [ABS] (src R279) [t121_src279_10.1002_net.22169.md](t121_src279_10.1002_net.22169.md) — A survey on exact algorithms for the maximum flow and minimum‐cost flow problems
+- **T122** [ABS] (src R281) [t122_src281_10.1016_j.orl.2005.05.009.md](t122_src281_10.1016_j.orl.2005.05.009.md) — A generic view of Dantzig–Wolfe decomposition in mixed integer programming
+- **T123** [ABS] (src R288) [t123_src288_10.1002_net.3230170102.md](t123_src288_10.1002_net.3230170102.md) — The node‐weighted steiner tree problem
+- **T124** [ABS] (src R292) [t124_src292_10.1016_j.disopt.2017.01.003.md](t124_src292_10.1016_j.disopt.2017.01.003.md) — On maximizing a monotone <mml:math xmlns:mml="http://www.w3.org/1998/Math/MathML" altimg="si1.gif" display="inline" overflow="scroll"><mml:mi>k</mml:mi></mml:math>-submodular function subject to a matroid constraint
+- **T125** [ABS] (src R293) [t125_src293_10.1287_mnsc.13.9.723.md](t125_src293_10.1287_mnsc.13.9.723.md) — A Branch and Bound Algorithm for the Knapsack Problem
+- **T126** [ABS] (src R294) [t126_src294_10.1088_1742-6596_1566_1_012.md](t126_src294_10.1088_1742-6596_1566_1_012.md) — Analysis of Dijkstra’s Algorithm and A* Algorithm in Shortest Path Problem
+- **T127** [ABS] (src R302) [t127_src302_10.1016_s0196-6774_03_00076-.md](t127_src302_10.1016_s0196-6774_03_00076-.md) — Δ-stepping: a parallelizable shortest path algorithm
+- **T128** [ABS] (src R310) [t128_src310_10.1287_opre.37.5.748.md](t128_src310_10.1287_opre.37.5.748.md) — A Fast and Simple Algorithm for the Maximum Flow Problem
+- **T129** [ABS] (src R312) [t129_src312_10.1287_ijoc.2021.1092.md](t129_src312_10.1287_ijoc.2021.1092.md) — Branch-and-Bound for Biobjective Mixed-Integer Linear Programming
+- **T130** [ABS] (src R315) [t130_src315_10.5772_12909.md](t130_src315_10.5772_12909.md) — Traveling Salesman Problem: an Overview of Applications, Formulations, and Solution Approaches
+- **T131** [ABS] (src R316) [t131_src316_10.1002_net.3230070404.md](t131_src316_10.1002_net.3230070404.md) — A shortest path algorithm for grid graphs
+- **T132** [ABS] (src R318) [t132_src318_10.1145_585265.585269.md](t132_src318_10.1145_585265.585269.md) — On the online bin packing problem
+- **T133** [ABS] (src R322) [t133_src322_10.1287_moor.1110.0519.md](t133_src322_10.1287_moor.1110.0519.md) — Random Walks on Polytopes and an Affine Interior Point Method for Linear Programming
+- **T134** [ABS] (src R328) [t134_src328_10.3390_a15060205.md](t134_src328_10.3390_a15060205.md) — A Review: Machine Learning for Combinatorial Optimization Problems in Energy Areas
+- **T135** [ABS] (src R329) [t135_src329_10.1016_j.cor.2019.01.009.md](t135_src329_10.1016_j.cor.2019.01.009.md) — k-Balanced Center Location problem: A new multi-objective facility location problem
+- **T136** [ABS] (src R337) [t136_src337_10.1609_aaai.v30i1.10066.md](t136_src337_10.1609_aaai.v30i1.10066.md) — Submodular Optimization with Routing Constraints
+- **T137** [ABS] (src R340) [t137_src340_10.1287_mnsc.1060.0584.md](t137_src340_10.1287_mnsc.1060.0584.md) — A Fractiles Perspective to the Joint Price/Quantity Newsvendor Model
+- **T138** [ABS] (src R343) [t138_src343_10.1002_net.3230180108.md](t138_src343_10.1002_net.3230180108.md) — Convexity and the Steiner tree problem
+- **T139** [ABS] (src R356) [t139_src356_10.1201_9781420036022.md](t139_src356_10.1201_9781420036022.md) — Iterative Dynamic Programming
+- **T140** [ABS] (src R359) [t140_src359_10.1287_mnsc.23.1.27.md](t140_src359_10.1287_mnsc.23.1.27.md) — An Efficient Algorithm for the 0-1 Knapsack Problem
+- **T141** [ABS] (src R365) [t141_src365_nodoi.md](t141_src365_nodoi.md) — Branch and Price for Submodular Bin Packing
+- **T142** [ABS] (src R366) [t142_src366_10.1287_mnsc.47.6.864.9809.md](t142_src366_10.1287_mnsc.47.6.864.9809.md) — A Nested Decomposition Approach to a Three-Stage, Two-Dimensional Cutting-Stock Problem
+- **T143** [ABS] (src R371) [t143_src371_10.1287_opre.1050.0210.md](t143_src371_10.1287_opre.1050.0210.md) — Erratum to “The Three-Dimensional Bin Packing Problem”: Robot-Packable and Orthogonal Variants of Packing Problems
+- **T144** [ABS] (src R379) [t144_src379_10.1016_j.epsr.2016.02.011.md](t144_src379_10.1016_j.epsr.2016.02.011.md) — A column generation approach for solving generation expansion planning problems with high renewable energy penetration
+- **T145** [ABS] (src R381) [t145_src381_10.1111_j.1475-3995.1997.tb0.md](t145_src381_10.1111_j.1475-3995.1997.tb0.md) — The Bin‐Packing Problem: A Problem Generator and Some Numerical Experiments with FFD Packing and MTP
+- **T146** [ABS] (src R382) [t146_src382_10.1287_ijoc.2022.1207.md](t146_src382_10.1287_ijoc.2022.1207.md) — A Closest Benders Cut Selection Scheme for Accelerating the Benders Decomposition Algorithm
+- **T147** [ABS] (src R383) [t147_src383_10.1016_j.cor.2020.105068.md](t147_src383_10.1016_j.cor.2020.105068.md) — Dantzig-Wolfe decomposition for the facility location and production planning problem
+- **T148** [ABS] (src R384) [t148_src384_10.1111_1475-3995.00433.md](t148_src384_10.1111_1475-3995.00433.md) — The skiving stock problem as a counterpart of the cutting stock problem
+- **T149** [ABS] (src R392) [t149_src392_10.1109_wcnc51071.2022.97716.md](t149_src392_10.1109_wcnc51071.2022.97716.md) — Hybrid Quantum Benders’ Decomposition For Mixed-integer Linear Programming
+- **T150** [ABS] (src R397) [t150_src397_nodoi.md](t150_src397_nodoi.md) — A Canceling Heuristic for the Directed Traveling Salesman Problem
+- **T151** [ABS] (src R398) [t151_src398_nodoi.md](t151_src398_nodoi.md) — Optimal Solutions for the Moving Target Vehicle Routing Problem via Branch-and-Price with Relaxed Continuity
+- **T152** [ABS] (src R401) [t152_src401_10.1002_net.22021.md](t152_src401_10.1002_net.22021.md) — Minimum cost flow problem with conflicts
+- **T153** [ABS] (src R408) [t153_src408_10.1287_opre.10.5.702.md](t153_src408_10.1287_opre.10.5.702.md) — Linear Programming in a Markov Chain
+- **T154** [ABS] (src R414) [t154_src414_nodoi.md](t154_src414_nodoi.md) — Distributionally robust chance constrained Markov decision process with Kullback-Leibler divergence
+- **T155** [ABS] (src R418) [t155_src418_10.1287_opre.27.4.792.md](t155_src418_10.1287_opre.27.4.792.md) — The Two-Machine Maximum Flow Time Problem with Series-Parallel Precedence Constraints: An Algorithm and Extensions
+- **T156** [ABS] (src R420) [t156_src420_10.1002_9780470400531.eorms0.md](t156_src420_10.1002_9780470400531.eorms0.md) — Benders Decomposition
+- **T157** [ABS] (src R421) [t157_src421_10.1103_PhysRevA.110.012434.md](t157_src421_10.1103_PhysRevA.110.012434.md) — Mixed Integer Linear Programming Solver Using Benders Decomposition Assisted by Neutral Atom Quantum Processor
+- **T158** [ABS] (src R423) [t158_src423_10.1111_j.1475-3995.1997.tb0.md](t158_src423_10.1111_j.1475-3995.1997.tb0.md) — Weighted Dantzig–Wolfe Decomposition for Linear Mixed‐integer Programming
+- **T159** [ABS] (src R429) [t159_src429_nodoi.md](t159_src429_nodoi.md) — Learning to Optimize at Scale: A Benders Decomposition-TransfORmers Framework for Stochastic Combinatorial Optimization
+- **T160** [ABS] (src R430) [t160_src430_10.1016_j.proeng.2012.01.110.md](t160_src430_10.1016_j.proeng.2012.01.110.md) — The Improved Dijkstra's Shortest Path Algorithm and Its Application
+- **T161** [ABS] (src R435) [t161_src435_10.1002_net.3230120102.md](t161_src435_10.1002_net.3230120102.md) — Minimum cost flow with set‐constraints
+- **T162** [ABS] (src R441) [t162_src441_10.1007_s10479-021-04426-0.md](t162_src441_10.1007_s10479-021-04426-0.md) — Robust minimum cost flow problem under consistent flow constraints
+- **T163** [ABS] (src R444) [t163_src444_10.1002_net.3230200606.md](t163_src444_10.1002_net.3230200606.md) — A lower bound for the steiner tree problem in directed graphs
+- **T164** [ABS] (src R445) [t164_src445_10.1109_icpm.2019.00027.md](t164_src445_10.1109_icpm.2019.00027.md) — Prediction-based Resource Allocation using LSTM and Minimum Cost and Maximum Flow Algorithm
+- **T165** [ABS] (src R446) [t165_src446_10.3390_app11020650.md](t165_src446_10.3390_app11020650.md) — Integrating Schedule Risk Analysis with Multi-Skilled Resource Scheduling to Improve Resource-Constrained Project Scheduling Problems
+- **T166** [ABS] (src R447) [t166_src447_10.1002_net.20167.md](t166_src447_10.1002_net.20167.md) — Heuristic solutions for general concave minimum cost network flow problems
+- **T167** [ABS] (src R448) [t167_src448_10.1016_j.mechmachtheory.202.md](t167_src448_10.1016_j.mechmachtheory.202.md) — Vehicle drivetrain design multi-objective optimization
+- **T168** [ABS] (src R450) [t168_src450_10.1007_s10878-008-9159-8.md](t168_src450_10.1007_s10878-008-9159-8.md) — Capacity inverse minimum cost flow problem
+- **T169** [ABS] (src R453) [t169_src453_10.1002_net.3230250207.md](t169_src453_10.1002_net.3230250207.md) — A capacity scaling algorithm for the constrained maximum flow problem
+- **T170** [ABS] (src R454) [t170_src454_10.1017_jpr.2024.88.md](t170_src454_10.1017_jpr.2024.88.md) — Bounding the Difference between the Values of Robust and Non-Robust Markov Decision Problems
+- **T171** [ABS] (src R455) [t171_src455_10.61208_pjo-2025-028.md](t171_src455_10.61208_pjo-2025-028.md) — Linear programming for finite-horizon vector-valued Markov decision processes
+- **T172** [ABS] (src R458) [t172_src458_10.5220_0010772400003117.md](t172_src458_10.5220_0010772400003117.md) — An Efficient Relax-and-Solve Algorithm for the Resource-Constrained Project Scheduling Problem
+- **T173** [ABS] (src R459) [t173_src459_10.1016_j.ress.2012.03.011.md](t173_src459_10.1016_j.ress.2012.03.011.md) — Road maintenance optimization through a discrete-time semi-Markov decision process
+- **T174** [ABS] (src R463) [t174_src463_nodoi.md](t174_src463_nodoi.md) — Terminal Steiner tree problem : Complexity and Algorithms
+- **T175** [ABS] (src R468) [t175_src468_10.1002_net.3230260404.md](t175_src468_10.1002_net.3230260404.md) — Reductions for the rectilinear steiner tree problem
+- **T176** [ABS] (src R474) [t176_src474_nodoi.md](t176_src474_nodoi.md) — Almost-Linear Time Algorithms for Incremental Graphs: Cycle Detection, SCCs, $s$-$t$ Shortest Path, and Minimum-Cost Flow
+- **T177** [ABS] (src R475) [t177_src475_nodoi.md](t177_src475_nodoi.md) — Knapsack: Connectedness, Path, and Shortest-Path
+- **T178** [ABS] (src R478) [t178_src478_10.1002_9781119755234.ch4.md](t178_src478_10.1002_9781119755234.ch4.md) — The Impact of Information Structure on Strategic Behavior in Queueing Systems
+- **T179** [ABS] (src R480) [t179_src480_nodoi.md](t179_src480_nodoi.md) — Deep-Steiner: Learning to Solve the Euclidean Steiner Tree Problem
+- **T180** [ABS] (src R481) [t180_src481_nodoi.md](t180_src481_nodoi.md) — Query-decision Regression between Shortest Path and Minimum Steiner Tree
+- **T181** [ABS] (src R484) [t181_src484_nodoi.md](t181_src484_nodoi.md) — Solving the Steiner Tree Problem with few Terminals
+- **T182** [ABS] (src R486) [t182_src486_10.1145_3341.3350.md](t182_src486_10.1145_3341.3350.md) — A generalized implicit enumeration algorithm for graph coloring
+- **T183** [ABS] (src R492) [t183_src492_10.1115_detc1993-0382.md](t183_src492_10.1115_detc1993-0382.md) — An Augmented Lagrange Multiplier Based Method for Mixed Integer Discrete Continuous Optimization and its Applications to Mechanical Design
+- **T184** [ABS] (src R500) [t184_src500_10.1002_9780470400531.eorms0.md](t184_src500_10.1002_9780470400531.eorms0.md) — Combinatorial Auctions: Complexity and Algorithms
+- **T185** [TITLE] (src R001) [t185_src001_10.1007_s12532-018-0139-4.md](t185_src001_10.1007_s12532-018-0139-4.md) — CasADi: a software framework for nonlinear optimization and optimal control
+- **T186** [TITLE] (src R002) [t186_src002_10.1007_s10107-004-0559-y.md](t186_src002_10.1007_s10107-004-0559-y.md) — On the implementation of an interior-point filter line-search algorithm for large-scale nonlinear programming
+- **T187** [TITLE] (src R004) [t187_src004_10.1023_a_1008202821328.md](t187_src004_10.1023_a_1008202821328.md) — Differential Evolution – A Simple and Efficient Heuristic for global Optimization over Continuous Spaces
+- **T188** [TITLE] (src R006) [t188_src006_10.1007_bf01589116.md](t188_src006_10.1007_bf01589116.md) — On the limited memory BFGS method for large scale optimization
+- **T189** [TITLE] (src R007) [t189_src007_10.1137_s1052623496303470.md](t189_src007_10.1137_s1052623496303470.md) — Convergence Properties of the Nelder--Mead Simplex Method in Low Dimensions
+- **T190** [TITLE] (src R018) [t190_src018_10.1007_s00158-003-0368-6.md](t190_src018_10.1007_s00158-003-0368-6.md) — Survey of multi-objective optimization methods for engineering
+- **T191** [TITLE] (src R019) [t191_src019_10.1016_s0377-2217_99_00407-.md](t191_src019_10.1016_s0377-2217_99_00407-.md) — A slacks-based measure of efficiency in data envelopment analysis
+- **T192** [TITLE] (src R021) [t192_src021_10.1016_0377-2217_90_90057-i.md](t192_src021_10.1016_0377-2217_90_90057-i.md) — How to make a decision: The analytic hierarchy process
+- **T193** [TITLE] (src R022) [t193_src022_10.1109_tassp.1978.1163055.md](t193_src022_10.1109_tassp.1978.1163055.md) — Dynamic programming algorithm optimization for spoken word recognition
+- **T194** [TITLE] (src R023) [t194_src023_10.1016_0305-0548_86_90048-1.md](t194_src023_10.1016_0305-0548_86_90048-1.md) — Future paths for integer programming and links to artificial intelligence
+- **T195** [TITLE] (src R024) [t195_src024_10.1016_j.ejor.2016.12.005.md](t195_src024_10.1016_j.ejor.2016.12.005.md) — The Benders decomposition algorithm: A literature review
+- **T196** [TITLE] (src R027) [t196_src027_10.1007_bf01588971.md](t196_src027_10.1007_bf01588971.md) — An analysis of approximations for maximizing submodular set functions—I
+- **T197** [TITLE] (src R028) [t197_src028_10.1007_s10107-013-0701-9.md](t197_src028_10.1007_s10107-013-0701-9.md) — Proximal alternating linearized minimization for nonconvex and nonsmooth problems
+- **T198** [TITLE] (src R029) [t198_src029_10.1016_j.orl.2013.05.003.md](t198_src029_10.1016_j.orl.2013.05.003.md) — Solving two-stage robust optimization problems using a column-and-constraint generation method
+- **T199** [TITLE] (src R030) [t199_src030_10.1007_s10208-009-9045-5.md](t199_src030_10.1007_s10208-009-9045-5.md) — Exact Matrix Completion via Convex Optimization
+- **T200** [TITLE] (src R032) [t200_src032_10.1016_j.trc.2015.03.005.md](t200_src032_10.1016_j.trc.2015.03.005.md) — The flying sidekick traveling salesman problem: Optimization of drone-assisted parcel delivery

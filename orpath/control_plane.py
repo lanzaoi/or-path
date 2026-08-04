@@ -68,7 +68,7 @@ def default_initial(
     problem_id: str,
     problem_class: str = "",
     solve_mode: str = "mock",
-    knowledge_mode: str = "seed",
+    knowledge_mode: str = "hybrid",
     live_pi: bool = False,
     live_subagent: bool | None = None,
     thread_id: str,

@@ -1,88 +1,36 @@
-# Knowledge corpus index (Pi RAG) — v3 Phase 2
+# CORPUS layout (Pi RAG bookcase)
 
-**Consumer:** Pi research via hybrid retrieve — not a human website.  
-**Rebuild:** `orpath.bat knowledge-sync`  
-**Law:** numbers only from solve+validate; corpus never authoritative optima.
+**Status:** living inventory · 2026-08-04 push
 
-## Scale snapshot
+| Path | Role | Approx count |
+|------|------|--------------|
+| `knowledge/corpus/papers/**/*.md` | Main text for hybrid retrieve | **419** md |
+| `.../papers/lit_abs/` | Literature abstracts + modeling notes (top list) | **201** |
+| `.../papers/_from_mineru/` | PDF preprocess sidecars | **101** |
+| `.../papers/*.md` (root notes) | Short OR method notes (CG, BFD, ALNS, …) | **117** |
+| `knowledge/corpus/skills/` | Allowlisted skill **search copies** | export via allowlist |
+| `knowledge/corpus/lessons/` | Lesson search copies | seeds + promote |
+| `knowledge/lessons/*.json` | Canonical lessons (`orpath.lesson.v1`) | tracked seeds |
+| `knowledge/or_papers_top500.json` | Bibliography checklist (not fulltext) | meta |
+| `knowledge/export_allowlist.txt` | Which skills may enter RAG | — |
 
-| Metric | Target | Notes |
-|--------|--------|-------|
-| `papers/**/*.md` | ≥50 | includes lit/ + `_from_mineru/` |
-| with `- title:` + `- source:` | ≥50 | metadata gate |
-| `papers/lit/` | shortlist notes | from `or_papers_top*.json` |
-| `_from_mineru/` | preprocess outputs | real PDF or fixture |
-| chunks after ingest | ≥150 | |
+## Rules
 
-Re-count after `knowledge-sync` / `phase2-real-corpus-gate`.
+1. RAG is for **Pi research method hints** — not authoritative optima.  
+2. Do not put `solution.json` / objective tours into corpus.  
+3. Product default retrieve mode = **hybrid** (see `ORPATH_KNOWLEDGE_MODE`).  
+4. Indexes live under install home (`knowledge_svc`); cases only get `notes/*-retrieval.json`.
 
-## Tables
-
-### A. Literature shortlist (`papers/lit/`)
-
-Materialized by:
-
-```bat
-.venv-314\Scripts\python.exe scripts\materialize_or_literature_corpus.py --top 45 --clear-lit --normalize-existing
-```
-
-Source: `knowledge/or_papers_top500.json` (Crossref/arXiv shortlist — **metadata notes, not full PDF text**).  
-Each file has `kind/title/source/domain/doi`.
-
-### B. Curated paper-notes (`papers/*.md`)
-
-Teaching notes: SP/TSP/VRP/poly/HiGHS/CP-SAT/heuristics/…  
-Normalized with `title` + `source: curated` when missing.
-
-### C. MinerU path (`papers/_from_mineru/`)
-
-| Kind | Meaning |
-|------|---------|
-| `or_sample_01.md` | Phase1 sample PDF preprocess |
-| `fixture_*.md` | Offline fixture |
-| `mineru_lecture_*.md` | Scale seeds (synthetic preprocess shape) |
-
-### D. skills/ · lessons/
-
-From `knowledge-export` / `knowledge-sync` (allowlist).
-
-## Not in corpus
-
-- Contest PDF binaries (use `inbox_pdf/` + preprocess)
-- `*-solution.json` / validate optima dumps
-- `README.md` (skipped by ingest)
-
-## Commands
+## Rebuild
 
 ```bat
-orpath.bat knowledge-lit-materialize
+set ORPATH_KNOWLEDGE_PROFILE=research
 orpath.bat knowledge-sync
-orpath.bat phase2-real-corpus-gate
+orpath.bat knowledge-retrieve --query "cutting stock column generation" --mode hybrid --topk 5
 ```
 
-## Fulltext OA batch (2026-08-04)
+## Not in git (optional local)
 
-| Item | Path / count |
-|------|----------------|
-| OA PDF inbox | `knowledge/inbox_pdf/or_fulltext/` (~87 PDFs) |
-| Extracted md | `knowledge/corpus/papers/_from_mineru/r*.md` |
-| Download manifest | `knowledge/or_fulltext_download_manifest.json` |
-| Script | `scripts/download_or_fulltexts.py` |
-
-Attempted all Top500 via Unpaywall/OpenAlex/S2/arXiv. **Paywalled → not downloaded** (no piracy). Then `knowledge-preprocess --no-cloud` + `knowledge-sync`/ingest.
-
-## lit_abs — abstract + modeling only (copyright-minimizing)
-
-| Path | Role |
-|------|------|
-| `corpus/papers/lit_abs/*.md` | Top500 abstract + core modeling sketch |
-| `archive/oa_fulltext_hold/` | Prior OA fulltext extracts held out of active corpus |
-
-No paywalled body text. Numbers still only from solve+validate.
-
-## lit_abs Top-200 (active)
-
-Active set: **200** notes in `corpus/papers/lit_abs/` (~184 with public abstract; rest title+modeling pad).
-Overflow: `archive/lit_abs_overflow/`.
-Manifest: `knowledge/or_lit_abs_top200_manifest.json`.
-
+- `knowledge/inbox_pdf/` large PDFs  
+- `knowledge/chunks/*.jsonl` runtime index lines  
+- build/ingest logs  

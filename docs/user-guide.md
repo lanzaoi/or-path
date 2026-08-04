@@ -186,12 +186,17 @@ orpath.bat watch-run --workdir D:\cases\b --slug b1 --live --keep-watch ^
 
 ## 6. 知识库 RAG（给 Pi，不是网站）
 
+**产品默认已强制 hybrid 检索**（不再空 seed）。关：`set ORPATH_KNOWLEDGE_MODE=seed`。
+
 ```bat
-:: 研究档
+:: 研究档 + 重建索引（本机一次）
 set ORPATH_KNOWLEDGE_PROFILE=research
 set ORPATH_KNOWLEDGE_EMBED=auto
 orpath.bat knowledge-sync
 orpath.bat phase5-v3-gate
+
+:: 书库清单
+:: knowledge/CORPUS.md  （~400+ papers md 已入库）
 
 :: PDF → 预处理
 :: 文件放入 knowledge\inbox_pdf\
