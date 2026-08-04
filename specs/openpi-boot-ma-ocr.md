@@ -91,5 +91,5 @@ menu 项 6 打开目录；M0 后应有 **生成时间线** 项或 run 结束自�
 
 ## 8. 历史
 
-计划：`.hermes/plans/2026-07-31_openpi-boot-ma-ocr.md`  
-Feynman 对齐大改计划：`.hermes/plans/2026-07-31_feynman-style-orpath-rearch.md`（**未等于已实现**）  
+计划：`docs/archive/plans/2026-07-31_openpi-boot-ma-ocr.md`  
+Feynman 对齐大改计划：`docs/archive/plans/2026-07-31_feynman-style-orpath-rearch.md`（**未等于已实现**）  

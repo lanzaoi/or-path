@@ -59,4 +59,4 @@ scripts/t1_gate.py → PASS
 
 ## Specs / plan
 
-- `specs/` · `.hermes/plans/2026-07-29_105620-t2-thick-full-stack.md`
+- `specs/` · `docs/archive/plans/2026-07-29_105620-t2-thick-full-stack.md`

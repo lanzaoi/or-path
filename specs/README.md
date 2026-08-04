@@ -13,11 +13,12 @@
 3. specs/process-visibility.md   ← 过程 / sub 思考可视化合同（与总流程配套）
 4. specs/** 其它分册             ← 字段、阈值、adapter、历史 DoD；不得推翻 (2)(3)
 5. AGENTS.md
-6. .hermes/plans/*
+6. docs/archive/plans/*（历史施工单；可过期）
 7. docs/**（活文档 docs/README.md；历史 docs/archive/）
 8. IDEA.md / README 叙事
 9. 聊天记录
 ```
+（`.hermes/` 整棵本机-only，见 `docs/repo-surface.md`。）
 
 Hermes `MEMORY.md` **不是**产品法。
 
@@ -74,8 +75,8 @@ Hermes `MEMORY.md` **不是**产品法。
 | 层 | 路径 | 内容 |
 |----|------|------|
 | **Specs** | `specs/` | 稳定约束、DoD、非目标 |
-| **Plans** | `.hermes/plans/` | 本次切片（可过期） |
-| **Docs** | `docs/` | smoke / ADR / closeout；不发明新法 |
+| **Plans** | `docs/archive/plans/` | 历史切片（可过期）；新计划本地写完再归档 |
+| **Docs** | `docs/` | smoke / ADR / closeout；上传边界 `repo-surface.md` |
 | **Code** | `orpath/` `tools/` `knowledge_svc/` | 实现 |
 | **Harness 元** | 不建仓库 `.agents/` 当 T2 法（产物在 `outputs/.agents`） | — |
 

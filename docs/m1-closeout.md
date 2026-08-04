@@ -1,7 +1,7 @@
 # M1 Closeout — workdir + Watch 加厚
 
 **日期：** 2026-08-03  
-**切片：** M1 Parts 1–5（计划 `.hermes/plans/2026-08-03_220049-m1-workdir-watch-ux-five-parts.md`）  
+**切片：** M1 Parts 1–5（计划 `docs/archive/plans/2026-08-03_220049-m1-workdir-watch-ux-five-parts.md`）  
 **法：** `specs/product-flow-sdd.md` §14 · `specs/process-visibility.md`
 
 ---

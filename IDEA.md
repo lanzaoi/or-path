@@ -119,7 +119,7 @@ LangGraph（老板：阶段 + 重试 + checkpoint）
 | **非产品** | Hermes `MEMORY.md` | 仅导航 Agent 笔记，**不是** OR-Path 运行时记忆 |
 | **非 T1** | Hindsight | 与 Cognee 重叠；默认不上 |
 
-T1 计划：`.hermes/plans/2026-07-29_093802-t1-pi-multiagent.md`  
+T1 计划：`docs/archive/plans/2026-07-29_093802-t1-pi-multiagent.md`  
 **壳决策（2026-07-29）：** 主开发 = 本仓 + Pi + LG（OpenPi 已删）。**不以 Feynman 为主开发**；`vendor/feynman` 仅参考/可后置论文侧车。
 
 ## 工作区

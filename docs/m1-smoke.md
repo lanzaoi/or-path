@@ -1,6 +1,6 @@
 # M1 smoke（workdir + Watch 加厚）
 
-**法：** `specs/product-flow-sdd.md` §14 M1 · 计划 `.hermes/plans/2026-08-03_220049-m1-workdir-watch-ux-five-parts.md`
+**法：** `specs/product-flow-sdd.md` §14 M1 · 计划 `docs/archive/plans/2026-08-03_220049-m1-workdir-watch-ux-five-parts.md`
 
 ## 快速门禁
 

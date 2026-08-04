@@ -10,7 +10,8 @@ Durable project law for Pi sessions. Product runtime is **this repo + Pi** (`orp
 2. **`specs/process-visibility.md`** — 时间线 · **sub 思考过程**怎么看见  
 3. `specs/README.md` — 全册索引  
 
-冲突优先级：`门禁真实输出` > **`product-flow-sdd.md`** ≥ **`process-visibility.md`** ≥ `specs/**` 其它分册 > 本文件 > `.hermes/plans/*` > `docs/**` > chat。
+冲突优先级：`门禁真实输出` > **`product-flow-sdd.md`** ≥ **`process-visibility.md`** ≥ `specs/**` 其它分册 > 本文件 > `docs/archive/plans/*` > `docs/**` > chat。  
+（`.hermes/` 为本机 IDE 区，**不入库**；历史计划在 `docs/archive/plans/`。）
 
 **当前产品最高优先级：**
 

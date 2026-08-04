@@ -35,6 +35,7 @@ knowledge/chunks/*.jsonl
 *.swp
 Thumbs.db
 Desktop.ini
+nul
 
 # Docker
 docker-compose.override.yml
@@ -43,34 +44,37 @@ docker-compose.override.yml
 models/
 mineru_models/
 
-# Upstream mirrors
+# Upstream mirrors / heavy trees
 vendor/
-
-# Generated T1 artifacts (regenerate via gates / Pi)
-outputs/
-notes/
-papers/
-# Heavy / generated
-.pi/npm/
-.pi/memory/
-.pi-subagents/
-nul
-*.png
-!docs/archive/evidence/t2-live-evidence-board.png
-!docs/archive/evidence/t2-openpi-screenshot.png
-
-# Heavy nested trees
 pi-main/
-# openpi/ removed from disk 2026-07-31; keep ignore to block accidental re-add
+# openpi removed 2026-07-31; keep ignore
 openpi/
 runtime/node_modules/
 **/node_modules/
 
-# Keep launchers and runtime package manifests
-# (runtime/package.json is tracked; node_modules is not)
+# Runtime artifacts (regenerate via product run / gates)
+outputs/
+notes/
+papers/
 
-# contest bulk attachments (local only)
+# Pi local runtime caches (keep .pi/agents + settings tracked)
+.pi/npm/
+.pi/memory/
+.pi/orpath_model.json
+.pi-subagents/
+
+# Screenshots default-ignore (allow listed evidence)
+*.png
+!docs/archive/evidence/t2-live-evidence-board.png
+!docs/archive/evidence/t2-openpi-screenshot.png
+
+# Contest bulk / local case drops — NEVER publish
 fixtures/t3/tube_cut_b2026/raw/
+inbox/**
+!inbox/README.md
 
-# Hermes desktop drops — never commit
-.hermes/desktop-attachments/
+# Hermes IDE workspace — local only (plans live in docs/archive/plans/)
+.hermes/
+
+# Optional local visual lab (not product source)
+demo/

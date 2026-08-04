@@ -174,7 +174,7 @@ docs/                                                 活文档（m1/m2/v0 smoke
 2. **真多 Agent** = 磁盘 `outputs/.agents/<slug>/` 有 subagent 轨迹；裸 `pi -p` 不算。  
 3. **schema 禁 objective**；paper R2 数字 ⊆ solution.json。  
 4. **路径 A**：HOME≠WORKDIR；agent 定义读安装根，产物写案例目录。  
-5. **勿提交** contest PDF、`inbox/`、`.hermes/desktop-attachments/`、密钥。
+5. **勿提交** contest PDF、`inbox/*`、整棵 **`.hermes/`**、密钥。细则：`docs/repo-surface.md`。
 
 ---
 

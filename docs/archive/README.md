@@ -9,6 +9,7 @@
 | `portfolio/` | 作品集口播 |
 | `design-notes/` | 阶段性设计笔记（M1–M3 等；产品策略已沉淀到 ADR） |
 | `ops/` | 运维/隔离/可搬迁说明 |
+| **`plans/`** | 历史施工单（原 `.hermes/plans`，可公开） |
 
 **活文档入口：** [`../README.md`](../README.md)  
 **产品法：** `../../specs/README.md`

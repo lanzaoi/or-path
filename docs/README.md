@@ -11,6 +11,8 @@
 | **`../START-WATCH.bat`** | 一键过程脸（默认 live-btube） |
 | **`../ORPATH.md`** | 操作主说明 |
 | **`../README.md`** | 仓库总览 |
+| **`repo-surface.md`** | **可上传 / 禁上传边界（.hermes 等）** |
+| **`archive/plans/`** | 历史施工单（原 `.hermes/plans`） |
 
 ## 活文档（Living）
 
