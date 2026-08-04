@@ -1,6 +1,19 @@
 {
   "slug": "m0",
-  "source_workdir": "C:\\Users\\Lanzao\\Desktop\\agent",
-  "files": 29,
-  "bytes": 42099
+  "kind": "demo-seed-replay",
+  "source_workdir": ".",
+  "files": 23,
+  "bytes": 33617,
+  "lean_stages": {
+    "kept": 15,
+    "removed": 0,
+    "skipped": true,
+    "polish": {
+      "applied": true,
+      "cut": "0009_gate_validate.json",
+      "removed_after": 6,
+      "objective": 42
+    }
+  },
+  "honesty": "Replay snapshot for Watch face — not a live Pi run on the end-user machine."
 }

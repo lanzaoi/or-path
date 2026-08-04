@@ -1,0 +1,9 @@
+{
+  "stage": "end",
+  "human_required": false,
+  "last_error": "",
+  "gate_validate_ok": true,
+  "seed_face_note": "demo seed ends after validate (numbers truth); not a full paper LIVE close",
+  "objective": 42,
+  "slug": "m0"
+}

@@ -75,6 +75,8 @@ echo   线程:  !THREAD!
 echo   端口:  !PORT!
 echo   地址:  http://127.0.0.1:!PORT!/?slug=!SLUG!^&thread=!THREAD!
 echo  ----------------------------------------
+echo   默认 live-btube = demo/seed 回放（非本机刚跑完的 LIVE）
+echo   新机器请先: orpath.bat setup
 echo   浏览器会自动打开；关掉服务请 Ctrl+C
 echo   若页面是旧样式请 Ctrl+F5 强制刷新
 echo  ========================================

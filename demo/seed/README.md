@@ -10,7 +10,7 @@
 | slug | 用途 |
 |------|------|
 | `m0/` | mock shortest_path 证据（solution + validate + runs stages） |
-| `live-btube/` | 圆管演示回放（瘦身：outputs/runs/notes/papers，**无**全量 `.agents` 日志） |
+| `live-btube/` | 圆管演示回放（**数字 spine**：validate 绿为止；已 lean 掉 repair/paper 噪音；**无**全量 `.agents`） |
 
 ## 不含什么
 

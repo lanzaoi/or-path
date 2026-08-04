@@ -1,6 +1,19 @@
 {
   "slug": "live-btube",
-  "source_workdir": "C:\\Users\\Lanzao\\Desktop\\agent",
-  "files": 73,
-  "bytes": 630695
+  "kind": "demo-seed-replay",
+  "source_workdir": ".",
+  "files": 31,
+  "bytes": 552631,
+  "lean_stages": {
+    "kept": 16,
+    "removed": 35,
+    "skipped": false,
+    "polish": {
+      "applied": true,
+      "cut": "0010_gate_validate.json",
+      "removed_after": 6,
+      "objective": 99000.0
+    }
+  },
+  "honesty": "Replay snapshot for Watch face — not a live Pi run on the end-user machine."
 }
