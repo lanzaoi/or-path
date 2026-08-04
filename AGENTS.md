@@ -76,4 +76,6 @@ Durable project law for Pi sessions. Product runtime is **this repo + Pi** (`orp
 - T1–T2 / 1.0 / 1.1 CLOSED — `docs/archive/closeouts/`  
 - V0/M0/M1/M2 engineering closed — living smoke/closeout under `docs/`  
 - L2 public pack v0.2.0 — GitHub Releases  
+- Knowledge RAG v1–v3 CLOSED (~88–92%)
+- promote-run + tube LIVE green (heuristic)
 - M3/M4 not open  

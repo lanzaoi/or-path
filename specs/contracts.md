@@ -51,7 +51,7 @@ tour, routes, path   # 作为「解答」禁止
 - depot、locations/matrix、demands  
 - vehicle_count ≥2（T2）  
 - capacities  
-- T2 无 TW；TW 见 t3-vrp-tw / fixture 级 time_windows  
+- T2 无 TW；TW 见 solvers-and-validate.md §11 / fixture 级 time_windows  
 
 ### 2.6 扩展 class
 

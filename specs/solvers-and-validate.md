@@ -135,4 +135,26 @@ python tools/validate_solution.py --problem-id <id> --solution path.json
 
 ## 10. 参考
 
-`docs/solver-stack.md` · `contracts.md` · ADR-0002  
+`docs/solver-stack.md` · `contracts.md` · ADR-0002
+
+---
+
+## 11. CVRPTW 叶（原 `t3-vrp-tw.md`）
+
+| 项 | 值 |
+|----|-----|
+| Fixture | `fixtures/t3/vrp_tw/` |
+| class | 仍为 `vrp`；TW 在 fixture 级 |
+| Gold objective | **58**（仅 solver+validate） |
+| Solve | `tools/solve_ortools.py` Time dimension；目标仍为距离 |
+| Validate | 有 TW：仿真到达与服务开始 |
+| 门禁 | 含于 `scripts/t3_gate.py` |
+| 非目标 | 新枚举名 `vrp_tw` 当整 T3 故事 |
+
+fixture_dir 解析顺序：**t3 → t2 → t1**。
+
+```bat
+.venv-314\Scripts\python.exe scripts	3_gate.py
+.venv-314\Scripts\python.exe tools\solve_ortools.py vrp_tw --class vrp
+```
+

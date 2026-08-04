@@ -140,4 +140,24 @@ CI 可无 live；**不得**用 CI 绿宣称 live MA demo 完成。
 - `product-flow-sdd.md`  
 - `process-visibility.md`  
 - ADR-0001…0006  
-- `docs/archive/design-notes/IDEA.md`（叙事；冲突以 specs 为准）  
+- `docs/archive/design-notes/IDEA.md`（叙事；冲突以 specs 为准）
+
+---
+
+## 10. 启动与 OCR 默认（原 openpi 分册精华）
+
+| 入口 | 角色 |
+|------|------|
+| `orpath.bat` / menu | **主控制面** |
+| `START-CASE` / `START-WATCH` | 路径 A · 过程脸 |
+| `openpi` | **已删** tombstone |
+
+| 项 | 默认 |
+|----|------|
+| Live MA | ON（`--live` / env）；关：`--no-live-subagent` |
+| Intake | 有文件才开 |
+| OCR | pdf_text → ppocr → api → rapidocr（写实 backend 名） |
+
+证据：`notes/*-ocr*` · `outputs/*-intake.json` · `outputs/.agents/*` · `runs/*/stages`。  
+过程脸 → `process-visibility.md`。
+
