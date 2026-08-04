@@ -19,6 +19,31 @@ OBJECTIVE_CLAIM_RE = re.compile(
     r"([+-]?(?:\d+\.\d+|\d+))"
 )
 BIG_NUM_RE = re.compile(r"(?<![A-Za-z0-9_/])([+-]?(?:\d+\.\d+|\d{2,}))(?![A-Za-z0-9_])")
+# Process/meta counters in paper verification logs must not bind as result numerics.
+# e.g. "claims_recorded: 309" is claim-map size, not a stock length.
+META_COUNTER_RE = re.compile(
+    r"(?im)^[^\n]*\b("
+    r"claims_recorded|claim_count|claims?\s+recorded|"
+    r"lead_events|sub_events|tool_count|event_count|event_kinds|"
+    r"duration_ms|log_size|log_truncated|children_count|subagent_dispatches|"
+    r"stage_seq|revise_count|schema_repair|validate_repair|solver_tune|"
+    r"labelIndex|prev_events|n_stages"
+    r")\b[^\n]*$"
+)
+
+
+def mask_non_result_numbers(text: str) -> str:
+    """Blank arxiv/doi and process-meta lines before numeric binding scans."""
+    masked = ARXIV_ID_RE.sub(" ARXIV ", text or "")
+    masked = DOI_NUM_RE.sub(" DOI ", masked)
+    masked = META_COUNTER_RE.sub(" META_COUNTER_LINE ", masked)
+    # also inline "claims_recorded: 309" mid-line
+    masked = re.sub(
+        r"(?i)\b(claims_recorded|claim_count)\s*[:=]\s*\d+\b",
+        r"\1=N",
+        masked,
+    )
+    return masked
 
 
 def _collect_solution_tokens(obj: Any, out: set[str]) -> None:
@@ -60,8 +85,7 @@ def check_draft(draft: str, solution: dict) -> list[str]:
         allowed.add(str(i))
     errors: list[str] = []
 
-    masked = ARXIV_ID_RE.sub(" ARXIV ", draft)
-    masked = DOI_NUM_RE.sub(" DOI ", masked)
+    masked = mask_non_result_numbers(draft)
 
     for m in OBJECTIVE_CLAIM_RE.finditer(masked):
         claim = m.group(1).lstrip("+")

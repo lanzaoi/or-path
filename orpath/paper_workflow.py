@@ -244,7 +244,7 @@ Finding: exactness flags are exact=`{exact}` proven_optimal=`{proven}`.
 
 ## Limitations
 - Fixture or declared scale only.
-- If `proven_optimal` is not true, do not claim global optimality.
+- If `proven_optimal` is not true, report FEASIBLE / best-found only — never market a proven global optimum.
 - Live multi-agent prose quality is separate from gate-green numerics.
 
 ## Sources
@@ -323,11 +323,9 @@ def gate_research_text(
 
 
 def ensure_research_coverage_section(body: str, retrieval: dict[str, Any]) -> str:
-    if "Coverage Status" in body:
-        return body
+    """Ensure Coverage Status reflects current retrieval ids (refresh if stale)."""
     ids = extract_retrieval_ids(retrieval)
-    extra = f"""
-
+    section = f"""
 ## Coverage Status
 - knowledge_mode: {retrieval.get("knowledge_mode")}
 - hits: {len(retrieval.get("hits") or [])}
@@ -337,7 +335,21 @@ def ensure_research_coverage_section(body: str, retrieval: dict[str, Any]) -> st
 - checked_directly: retrieval artifact + fixture problem.md
 - uncertain: full-text of non-local URLs not fetched in CI stand-in
 """
-    return body.rstrip() + extra + "\n"
+    if "## Coverage Status" in body or "Coverage Status" in body:
+        # Replace existing section (from heading to EOF or next ##)
+        import re
+
+        refreshed, n = re.subn(
+            r"## Coverage Status\n(?:.*\n)*?(?=\n## |\Z)",
+            section.lstrip() + "\n",
+            body,
+            count=1,
+        )
+        if n:
+            return refreshed.rstrip() + "\n"
+        # fallback: drop old block loosely
+        return body.rstrip() + "\n" + section + "\n"
+    return body.rstrip() + section + "\n"
 
 
 # ---------------------------------------------------------------------------
@@ -390,8 +402,31 @@ def build_review_markdown(
     if validate_ok is False:
         majors.append("Validate gate was not green earlier in pipeline")
 
-    # honesty: claim global opt without proven
-    if re.search(r"global(?:ly)?\s+optimal|保证全局最优|数学证明最优", paper_text, re.I):
+    # honesty: affirmative global-opt marketing without proven (ignore disclaimers)
+    try:
+        from tools.r1_claim_map import affirmative_global_opt_hits  # type: ignore
+    except Exception:  # noqa: BLE001
+        try:
+            import sys
+            from pathlib import Path as _P
+
+            _td = _P(__file__).resolve().parents[1] / "tools"
+            if str(_td) not in sys.path:
+                sys.path.insert(0, str(_td))
+            from r1_claim_map import affirmative_global_opt_hits  # type: ignore
+        except Exception:  # noqa: BLE001
+            affirmative_global_opt_hits = None  # type: ignore
+    if affirmative_global_opt_hits is not None:
+        if affirmative_global_opt_hits(paper_text):
+            if not re.search(
+                r"proven_optimal[`\s:=]+true|proven_optimal\s*=\s*true", paper_text, re.I
+            ):
+                majors.append("Uses global-opt language without proven_optimal=true in prose")
+                inlines.append(
+                    "> (optimality wording)\n"
+                    "**[W-H] MAJOR:** Avoid marketing global optimality unless solution.meta.proven_optimal is true."
+                )
+    elif re.search(r"global(?:ly)?\s+optim(?:al|um)\w*|保证全局最优|数学证明最优", paper_text, re.I):
         if not re.search(r"proven_optimal[`\s:=]+true|proven_optimal\s*=\s*true", paper_text, re.I):
             majors.append("Uses global-opt language without proven_optimal=true in prose")
             inlines.append(

@@ -27,6 +27,9 @@ knowledge/fts/
 knowledge/corpus/*.pdf
 knowledge/chunks/*.jsonl
 !knowledge/chunks/.gitkeep
+# process memory local drafts (seeds under knowledge/lessons are tracked)
+memory/lessons/
+!knowledge/lessons/
 
 # IDE / OS
 .vscode/
@@ -80,3 +83,6 @@ inbox/**
 demo/*
 !demo/seed/
 !demo/seed/**
+
+# pulled npm modules
+third_party/**/node_modules/

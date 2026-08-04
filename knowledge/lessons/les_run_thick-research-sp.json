@@ -1,0 +1,48 @@
+{
+  "id": "les_run_thick-research-sp",
+  "schema": "orpath.lesson.v1",
+  "slug": "thick-research-sp",
+  "problem_class": "shortest_path",
+  "created": "2026-08-04T12:20:30Z",
+  "summary": "Promoted method from run `thick-research-sp` class=shortest_path mode=networkx: validate OK. Skill `or-method-shortest-path-thick-research-sp` + 5 paper hit(s).",
+  "key_decisions": [
+    "solve_mode_used=networkx",
+    "problem_class=shortest_path",
+    "preferred_solve_mode=networkx",
+    "schema_field source present",
+    "schema_field target present",
+    "schema_field weight_key present",
+    "schema must not carry path/tour/routes/objective as answers",
+    "Research for `shortest_path` / `shortest_path`. Retrieval mode=hybrid.",
+    "2. Validate must recompute objective.",
+    "3. Seed/retrieval chunk_ids when present must be cited in this table."
+  ],
+  "pitfalls": [
+    "1. Use deterministic solvers (networkx/cpsat/highs/ortools); never LLM optima.",
+    "Do not invent objective/path in prose or skill text"
+  ],
+  "skills_used": [
+    "or-numbers-truth",
+    "or-solver-select",
+    "or-method-shortest-path-thick-research-sp"
+  ],
+  "artifact_paths": [
+    "notes/thick-research-sp-research.md",
+    "notes/thick-research-sp-retrieval.json",
+    "outputs/thick-research-sp-schema.json",
+    "outputs/thick-research-sp-validate.json",
+    "outputs/thick-research-sp-solution.json",
+    "knowledge/corpus/papers/lit_abs/r329_10.1016_j.cor.2019.01.009.md",
+    "knowledge/corpus/papers/lit_abs/r305_10.1007_978-0-387-77778-8_5.md",
+    "knowledge/corpus/papers/lit_abs/r169_10.1287_opre.41.2.338.md",
+    "knowledge/corpus/papers/lit_abs/r233_10.1016_j.cor.2021.105588.md",
+    "knowledge/corpus/papers/lit_abs/r313_10.1016_0377-2217_95_00023-j.md"
+  ],
+  "tags": [
+    "shortest_path",
+    "promoted",
+    "method_skill",
+    "validate_ok",
+    "networkx"
+  ]
+}

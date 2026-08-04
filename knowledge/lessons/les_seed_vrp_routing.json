@@ -1,0 +1,20 @@
+{
+  "id": "les_seed_vrp_routing",
+  "schema": "orpath.lesson.v1",
+  "slug": "seed",
+  "problem_class": "vrp",
+  "created": "2026-08-04T00:00:00Z",
+  "summary": "VRP/CVRPTW product path: OR-Tools Routing for feasible multi-vehicle solutions; claim ladder stays non-proven; validate capacity/TW.",
+  "key_decisions": [
+    "default mode=ortools",
+    "schema must include capacity / vehicle / demand fields when needed",
+    "paper wording: feasible + recompute, not global optimum"
+  ],
+  "pitfalls": [
+    "Missing distance_matrix or capacity often fails validate",
+    "Do not upgrade Routing OPTIMAL label to MIP proven in prose"
+  ],
+  "skills_used": ["or-solver-select", "or-model-discipline", "or-validate-repair"],
+  "artifact_paths": ["tools/solve_ortools.py", "docs/solver-stack.md"],
+  "tags": ["vrp", "ortools", "routing", "seed"]
+}

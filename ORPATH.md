@@ -86,6 +86,63 @@ orpath.bat m2-gate
 orpath.bat tube-live-gate
 ```
 
+## Skills · 过程记忆 · Tools · MCP（已接入产品）
+
+| 能力 | 位置 / 命令 | 自动？ |
+|------|-------------|--------|
+| **Skills** | `.pi/skills/` **19+**（上游拉取，见 `third_party/PULLED.md`） | Pi 按需 |
+| **Process memory** | `knowledge/lessons/` 种子；retrieve → `notes/<slug>-lessons.*` | **是** |
+| **RAG（给 Pi）** | `knowledge/corpus` → hybrid BM25/FTS/RRF；`notes/*-retrieval.json` | research 读路径 |
+| **Solvers / tools** | 默认 `tools/solve_*`；可选 pyvrp/pyjobshop/ALNS/pulp/vrplib | 流水线默认轨已有 |
+| **MCP** | `mcp` · `mcp-highs` · `mcp-ortools` | Host 连接 |
+
+```bat
+orpath.bat memory-search --query "VRP capacity" --class vrp
+orpath.bat memory-list
+:: Pi 参考书库（不是人用网站；不是训练权重）
+orpath.bat knowledge-rebuild
+orpath.bat knowledge-export
+orpath.bat knowledge-ingest
+orpath.bat knowledge-retrieve --query "polyomino CP-SAT" --mode hybrid --topk 5
+orpath.bat knowledge-smoke --step all
+:: Phase 3：产品 run 里 Pi 吃 retrieval（mock SP + hybrid，无 LIVE）
+orpath.bat phase3-hybrid-gate
+:: Phase 4：allowlist 导出 skill/lesson 副本 + 重建索引
+orpath.bat knowledge-sync
+orpath.bat knowledge-eval
+:: v2 Phase1：PDF 预处理（inbox → corpus/papers/_from_mineru）
+orpath.bat knowledge-preprocess
+orpath.bat phase1-mineru-gate
+orpath.bat phase1-mineru-cloud-gate
+orpath.bat phase2-embed-gate
+orpath.bat knowledge-lit-materialize
+orpath.bat phase2-real-corpus-gate
+orpath.bat phase3-live-default-gate
+orpath.bat product-research-gate
+orpath.bat phase5-v3-gate
+:: set ORPATH_KNOWLEDGE_PROFILE=research
+orpath.bat phase3-scale-gate
+orpath.bat thick-hybrid-gate
+orpath.bat phase5-thick-gate
+:: set ORPATH_KNOWLEDGE_EMBED=auto|live|stub  (default auto)
+orpath.bat phase3-hybrid-gate
+
+orpath.bat phase5-knowledge-gate
+:: optional: run_t2.py --knowledge-mode hybrid --solve-mode mock --no-live-subagent --slug my-hybrid
+orpath.bat tools-list
+orpath.bat mcp
+orpath.bat mcp-highs
+orpath.bat mcp-ortools
+```
+
+记忆 = **以前怎么解/关键点**；Skill = **解题/领域手册**；RAG = **运行时给 Pi 的论文/战法副本**。  
+数字权威仍只在 solve+validate（可选引擎不改 claim ladder）。  
+计划 v1：`docs/archive/plans/2026-08-04_knowledge-rag-thicken.md` · 关单 v1：`docs/archive/closeouts/knowledge-rag-v1-closeout.md`。  
+计划 v2 厚栈：`docs/archive/plans/2026-08-04_knowledge-rag-v2-thick.md` · **关单 v2：** `docs/archive/closeouts/knowledge-rag-v2-thick-closeout.md`。  
+hybrid 默认可用 **stub embed**；有硅基 key 时 `ORPATH_KNOWLEDGE_EMBED=live`（或 auto）走 bge-m3。  
+验证：`orpath.bat phase2-embed-gate`。  
+PDF：放 `knowledge/inbox_pdf/` 后 `knowledge-preprocess`。
+
 ## 环境
 
 ```bat
@@ -100,3 +157,28 @@ set PYTHONNOUSERSITE=1
 - 总览：[`README.md`](README.md)  
 - 法条：[`specs/README.md`](specs/README.md)  
 - docs：[`docs/README.md`](docs/README.md)
+
+
+## 研究档四步（v3 Phase 4）
+
+```bat
+cd /d C:\Users\Lanzao\Desktop\agent
+set PYTHONPATH=
+set PYTHONNOUSERSITE=1
+set ORPATH_KNOWLEDGE_PROFILE=research
+set ORPATH_KNOWLEDGE_EMBED=auto
+
+orpath.bat knowledge-sync
+orpath.bat product-research-gate
+```
+
+证据：`notes/thick-research-evidence.md` · `notes/thick-research-sp-retrieval.json`  
+可选回归：`orpath.bat thick-hybrid-gate`
+
+
+**RAG v3 关单：** `docs/archive/closeouts/knowledge-rag-v3-prod-closeout.md`
+
+
+## promote-run
+
+`orpath.bat promote-run --slug <slug>` → skill + lesson + RAG.

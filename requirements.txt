@@ -12,3 +12,14 @@ pi-py-sdk>=0.2
 python-dotenv>=1.0
 # 1.1 intake OCR — PDF text layer (image OCR is optional; see requirements-ocr.txt)
 pypdf>=4
+# Modeling API (pulled industry standard; solvers remain networkx/cpsat/highs/ortools)
+pulp>=2.8
+# Optional VRP SOTA engine (github.com/PyVRP/PyVRP) — not default claim ladder
+# pyvrp>=0.9
+
+# --- optional OR engines (pulled; not default claim ladder) ---
+# pyvrp>=0.9
+# pyjobshop>=0.0.9
+# ALNS>=7
+# vrplib
+# stockpyl  # heavy docs deps; install with --no-deps if needed

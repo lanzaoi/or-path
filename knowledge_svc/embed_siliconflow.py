@@ -6,7 +6,7 @@ import hashlib
 import math
 import os
 from pathlib import Path
-from typing import Sequence
+from typing import Callable, Literal, Sequence
 
 # Never print secrets.
 
@@ -14,6 +14,9 @@ DEFAULT_MODEL = "BAAI/bge-m3"
 DEFAULT_DIM = 1024
 DEFAULT_BASE_URL = "https://api.siliconflow.cn/v1"
 ROOT = Path(__file__).resolve().parents[1]
+
+EmbedMode = Literal["live", "stub"]
+EmbedFn = Callable[[Sequence[str]], list[list[float]]]
 
 
 def load_env(root: Path | None = None) -> None:
@@ -26,7 +29,6 @@ def load_env(root: Path | None = None) -> None:
         _load(env_path, override=False)
 
 
-# alias used by mineru/cognee clients
 def load_dotenv(root: Path | None = None) -> None:
     load_env(root)
 
@@ -43,6 +45,98 @@ def get_base_url() -> str:
     if base.endswith("/embeddings"):
         base = base[: -len("/embeddings")].rstrip("/")
     return base
+
+
+def resolve_knowledge_profile(requested: str | None = None) -> tuple[str, dict]:
+    """Resolve ORPATH_KNOWLEDGE_PROFILE=demo|research → (profile, meta)."""
+    load_env()
+    raw = (
+        requested
+        if requested is not None
+        else (os.environ.get("ORPATH_KNOWLEDGE_PROFILE") or "demo")
+    )
+    raw = str(raw).strip().lower() or "demo"
+    if raw not in {"demo", "research"}:
+        meta = {"requested": raw, "resolved": "demo", "unknown_profile": True}
+        return "demo", meta
+    return raw, {"requested": raw, "resolved": raw}
+
+
+def resolve_embed_mode(
+    requested: str | None = None,
+    *,
+    profile: str | None = None,
+) -> tuple[EmbedMode, dict]:
+    """Resolve ORPATH_KNOWLEDGE_EMBED=live|stub|auto → (mode, meta).
+
+    auto: live if SILICONFLOW_API_KEY else stub.
+    live without key: degrade to stub (meta.degraded=True).
+    profile=research + embed unset/auto: prefer live (same as auto when key present).
+    """
+    load_env()
+    prof, prof_meta = resolve_knowledge_profile(profile)
+    raw_env = (os.environ.get("ORPATH_KNOWLEDGE_EMBED") or "").strip().lower()
+    if requested is not None:
+        raw = str(requested).strip().lower() or "auto"
+    elif raw_env:
+        raw = raw_env
+    elif prof == "research":
+        # research profile defaults to auto (→ live with key)
+        raw = "auto"
+    else:
+        raw = "auto"
+    raw = raw or "auto"
+    has_key = bool(get_api_key())
+    meta: dict = {
+        "requested": raw,
+        "has_api_key": has_key,
+        "profile": prof,
+        "profile_meta": prof_meta,
+    }
+    if raw == "stub":
+        meta["resolved"] = "stub"
+        return "stub", meta
+    if raw == "live":
+        if has_key:
+            meta["resolved"] = "live"
+            return "live", meta
+        meta["resolved"] = "stub"
+        meta["degraded"] = True
+        meta["reason"] = "live_requested_but_SILICONFLOW_API_KEY_missing"
+        return "stub", meta
+    # auto (and research default)
+    if has_key:
+        meta["resolved"] = "live"
+        if prof == "research":
+            meta["research_prefer_live"] = True
+        return "live", meta
+    meta["resolved"] = "stub"
+    if prof == "research":
+        meta["research_prefer_live"] = True
+        meta["degraded"] = True
+        meta["reason"] = "research_profile_but_no_api_key"
+    return "stub", meta
+
+
+def make_embed_fn(mode: EmbedMode, *, allow_live_fallback_to_mock: bool = True) -> EmbedFn:
+    """Return embed_fn for the resolved mode."""
+    if mode == "stub":
+        mock = MockEmbedder()
+
+        def _stub(texts: Sequence[str]) -> list[list[float]]:
+            return mock.embed_texts(texts)
+
+        return _stub
+
+    def _live(texts: Sequence[str]) -> list[list[float]]:
+        try:
+            return embed_texts(texts, allow_mock=False)
+        except Exception:
+            if allow_live_fallback_to_mock:
+                return MockEmbedder().embed_texts(texts)
+            raise
+
+    return _live
 
 
 def cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
@@ -155,7 +249,8 @@ def embed_query(text: str, **kwargs) -> list[float]:
 
 def embed_probe(text: str = "OR-Tools VRP capacity") -> dict:
     """Smoke helper returning metadata (for t2_gate_cloud)."""
-    if get_api_key():
+    mode, meta = resolve_embed_mode()
+    if mode == "live":
         vecs = embed_texts([text], allow_mock=False)
         mock = False
     else:
@@ -167,4 +262,6 @@ def embed_probe(text: str = "OR-Tools VRP capacity") -> dict:
         "n": len(vecs),
         "model": DEFAULT_MODEL,
         "mock": mock,
+        "embed_mode": mode,
+        "embed_meta": meta,
     }

@@ -26,6 +26,8 @@ class ORPathState(TypedDict):
     validate_path: str
     research_path: str
     retrieval_path: str
+    lessons_path: NotRequired[str]
+    lesson_draft_path: NotRequired[str]
     explain_path: str
     paper_path: str
     review_path: str

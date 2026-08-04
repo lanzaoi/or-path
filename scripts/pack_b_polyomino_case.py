@@ -25,8 +25,13 @@ def main() -> int:
         help="OR-Path install root",
     )
     args = ap.parse_args()
-    root: Path = args.root.resolve()
-    case: Path = args.case.expanduser().resolve()
+    # Normalize git-bash/MSYS paths (avoid C:\c\Users\... dumps)
+    try:
+        from orpath.paths import normalize_fs_path
+    except ImportError:  # pragma: no cover
+        normalize_fs_path = lambda p: Path(p)  # type: ignore[assignment, misc]
+    root: Path = normalize_fs_path(args.root).expanduser().resolve()
+    case: Path = normalize_fs_path(args.case).expanduser().resolve()
     src = root / "outputs" / "b-polyomino"
     src_full = root / "outputs" / "b-polyomino-full-solution.json"
     if not src.is_dir() or not src_full.is_file():

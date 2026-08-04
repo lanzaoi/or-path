@@ -95,13 +95,32 @@ Skill ≠ 自动 episodic 记忆：流水账仍在 L0；**可复用教训经人/
 - `.pi/agents/or-*.md` = 站内角色薄设定（Skill 族近亲）  
 - 仓级 OR skills（若有）与 specs 冲突时以 **specs** 为准  
 
-### 4.5 沉淀流程（理想）
+### 4.5 RAG 副本 ≠ 运行时 Skill 加载（Phase 4）
+
+| | 运行时 Skill | RAG 导出副本 |
+|--|--------------|--------------|
+| 路径 | `.pi/skills/<name>/SKILL.md` | `knowledge/corpus/skills/skill-*.md` |
+| 谁读 | Pi **skill 加载 / skill_view** | hybrid **retrieve**（research） |
+| 白名单 | 全部可安装 skill | **`knowledge/export_allowlist.txt` 仅列出者** |
+| 权威 | 程序步骤 | **仅检索提示**；不得冒充 L0 数字 |
+
+```bat
+orpath.bat knowledge-sync
+:: = export --clear-exports（读 allowlist）+ ingest --clear
+orpath.bat phase4-knowledge-gate
+```
+
+Lesson 入 RAG：**仅** `schema=orpath.lesson.v1`；拒绝顶层 `objective` / solution 形字段。  
+完整 solution **禁止** 当 skill 或 lesson 权威库。
+
+### 4.6 沉淀流程（理想）
 
 ```text
 run 落 L0/L1
   → 可复用教训被识别
   → 升格 Skill 或 agent md / 种子图边（人工或受控流程）
-  → 下次 research/model 按需加载
+  → （可选）allowlist 后 knowledge-sync 进 hybrid 检索
+  → 下次 research/model：skill 按需加载 + retrieval 可命中副本
 ```
 
 ---

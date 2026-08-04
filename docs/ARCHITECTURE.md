@@ -18,8 +18,11 @@
 安装根 ORPATH_HOME（本仓库）
   ├─ orpath/          LG 节点 · watch · control_plane
   ├─ tools/           solve_* · validate · intake OCR
-  ├─ scripts/         doctor · gates · pack · watch-run
+  ├─ knowledge_svc/   Pi 用 hybrid 检索（BM25/FTS/RRF；非人用站）
+  ├─ knowledge/       corpus · seed · lessons · export_allowlist
+  ├─ scripts/         doctor · gates · pack · watch-run · knowledge-*
   ├─ .pi/agents/      角色定义（Pi 读这里）
+  ├─ .pi/skills/      运行时 Skill（RAG 只拷白名单副本进 corpus）
   ├─ demo/seed/       默认脸回放数据
   ├─ fixtures/        金标 / 冒烟
   ├─ specs/           硬法
@@ -35,6 +38,7 @@
 | **真多 Agent** | 磁盘 `outputs/.agents/<slug>/` 有 sub 轨迹；裸 `pi -p` 不算 |
 | **Watch** | 无 LLM 聚合；读 workdir 快照；默认 seed = **回放** |
 | **schema 门** | 模型 JSON 禁止 objective/解形状键 |
+| **RAG（Pi）** | `knowledge_mode=hybrid` → `notes/*-retrieval.json` → research；`embed_mode` live/stub；厚路径证据 `orpath.bat thick-hybrid-gate`（slug `thick-hybrid-sp`）；**非** fine-tune；v1 关单 `knowledge-rag-v1-closeout.md` · v2 计划 `2026-08-04_knowledge-rag-v2-thick.md` |
 
 ## 主链路（节点）
 
@@ -66,10 +70,16 @@
 - M3 真 launch 注入、M4 记忆/MCP 史诗（未开）  
 - Docker 主路径（可选后置）  
 - 把 contest PDF / `.hermes/` / `.env` 推进 public git  
+- RAG 人用网页 / 用论文 fine-tune 模型（**禁止**话术）  
 
 ## 延伸阅读
 
 - 法：`specs/product-flow-sdd.md` · `specs/process-visibility.md`  
 - ADR：`docs/adr/`  
 - 上传边界：`docs/repo-surface.md`  
-- 操作：`ORPATH.md`
+- 操作：`ORPATH.md`  
+- RAG v1 关单：`docs/archive/closeouts/knowledge-rag-v1-closeout.md`  
+- RAG v2 厚栈关单：`docs/archive/closeouts/knowledge-rag-v2-thick-closeout.md` · v3 `docs/archive/closeouts/knowledge-rag-v3-prod-closeout.md`  
+- 法：知识 `specs/knowledge-and-retrieval.md`
+
+- RAG v3 厚栈关单：`docs/archive/closeouts/knowledge-rag-v3-prod-closeout.md`（research profile · product-research-gate）

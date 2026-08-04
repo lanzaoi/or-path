@@ -1,9 +1,10 @@
-"""LightRAG adapter with file-based semantic stub fallback.
+"""LightRAG adapter with file-based semantic index (stub or live embed).
 
 If `lightrag` import or init fails, uses cosine similarity over stored
 embeddings so hybrid retrieval still works offline/with mock embedder.
-"""
 
+embed_mode: live | stub  (from ORPATH_KNOWLEDGE_EMBED=auto|live|stub)
+"""
 from __future__ import annotations
 
 import json
@@ -15,8 +16,8 @@ from knowledge_svc.chunk_schema import Chunk, RetrievalHit, knowledge_dir, snipp
 from knowledge_svc.embed_siliconflow import (
     MockEmbedder,
     cosine_similarity,
-    embed_texts,
-    get_api_key,
+    make_embed_fn,
+    resolve_embed_mode,
 )
 
 log = logging.getLogger(__name__)
@@ -32,8 +33,10 @@ class SemanticStubIndex:
         self.work_dir.mkdir(parents=True, exist_ok=True)
         self.chunks_path = work_dir / "stub_chunks.jsonl"
         self.vectors_path = work_dir / "stub_vectors.json"
+        self.meta_path = work_dir / "embed_meta.json"
         self._chunks: dict[str, dict[str, Any]] = {}
         self._vectors: dict[str, list[float]] = {}
+        self.last_embed_mode: str = "stub"
         self._load()
 
     def _load(self) -> None:
@@ -46,46 +49,63 @@ class SemanticStubIndex:
                 self._chunks[d["chunk_id"]] = d
         if self.vectors_path.is_file():
             self._vectors = json.loads(self.vectors_path.read_text(encoding="utf-8"))
+        if self.meta_path.is_file():
+            try:
+                meta = json.loads(self.meta_path.read_text(encoding="utf-8"))
+                self.last_embed_mode = str(meta.get("embed_mode") or "stub")
+            except Exception:
+                pass
 
-    def _persist(self) -> None:
+    def _persist(self, *, embed_mode: str | None = None) -> None:
         with self.chunks_path.open("w", encoding="utf-8") as f:
             for d in self._chunks.values():
                 f.write(json.dumps(d, ensure_ascii=False) + "\n")
         write_json(self.vectors_path, self._vectors)
+        if embed_mode:
+            self.last_embed_mode = embed_mode
+        write_json(
+            self.meta_path,
+            {
+                "embed_mode": self.last_embed_mode,
+                "n_chunks": len(self._chunks),
+                "n_vectors": len(self._vectors),
+            },
+        )
 
     def clear(self) -> None:
         self._chunks.clear()
         self._vectors.clear()
-        if self.chunks_path.is_file():
-            self.chunks_path.unlink()
-        if self.vectors_path.is_file():
-            self.vectors_path.unlink()
+        self.last_embed_mode = "stub"
+        for p in (self.chunks_path, self.vectors_path, self.meta_path):
+            if p.is_file():
+                p.unlink()
 
     def add_chunks(
         self,
         chunks: Iterable[Chunk],
         *,
         embed_fn: EmbedFn | None = None,
+        embed_mode: str = "stub",
     ) -> int:
         chunk_list = list(chunks)
         if not chunk_list:
             return 0
         texts = [c.text for c in chunk_list]
         if embed_fn is None:
-            if get_api_key():
-                try:
-                    vectors = embed_texts(texts)
-                except Exception as e:
-                    log.warning("live embed failed, using MockEmbedder: %s", e)
-                    vectors = MockEmbedder().embed_texts(texts)
-            else:
-                vectors = MockEmbedder().embed_texts(texts)
-        else:
+            embed_fn = make_embed_fn("stub" if embed_mode != "live" else "live")
+        used_mode = embed_mode
+        try:
             vectors = embed_fn(texts)
+            # if live fn fell back to mock vectors silently, still label requested mode;
+            # callers set embed_mode honestly before call when using make_embed_fn.
+        except Exception as e:
+            log.warning("embed failed, MockEmbedder: %s", e)
+            vectors = MockEmbedder().embed_texts(texts)
+            used_mode = "stub"
         for c, vec in zip(chunk_list, vectors):
             self._chunks[c.chunk_id] = c.to_dict()
             self._vectors[c.chunk_id] = list(vec)
-        self._persist()
+        self._persist(embed_mode=used_mode)
         return len(chunk_list)
 
     def search(
@@ -94,21 +114,20 @@ class SemanticStubIndex:
         topk: int = 5,
         *,
         embed_fn: EmbedFn | None = None,
+        embed_mode: str = "stub",
     ) -> list[RetrievalHit]:
         if not self._chunks:
             self._load()
         if not self._vectors:
             return []
         if embed_fn is None:
-            if get_api_key():
-                try:
-                    qv = embed_texts([query])[0]
-                except Exception:
-                    qv = MockEmbedder().embed_query(query)
-            else:
-                qv = MockEmbedder().embed_query(query)
-        else:
+            embed_fn = make_embed_fn("stub" if embed_mode != "live" else "live")
+        try:
             qv = embed_fn([query])[0]
+            self.last_embed_mode = embed_mode
+        except Exception:
+            qv = MockEmbedder().embed_query(query)
+            self.last_embed_mode = "stub"
         scored: list[tuple[str, float]] = []
         for cid, vec in self._vectors.items():
             scored.append((cid, cosine_similarity(qv, vec)))
@@ -136,16 +155,34 @@ class LightRAGAdapter:
         root: Path | None = None,
         work_dir: Path | None = None,
         *,
-        force_stub: bool = False,
+        force_stub: bool | None = None,
         embed_fn: EmbedFn | None = None,
+        embed_mode: str | None = None,
     ) -> None:
         self.work_dir = work_dir or (knowledge_dir(root) / "lightrag_ws")
         self.work_dir.mkdir(parents=True, exist_ok=True)
-        self.embed_fn = embed_fn
+
+        if embed_mode is not None:
+            resolved = embed_mode if embed_mode in ("live", "stub") else "stub"
+            meta = {"requested": embed_mode, "resolved": resolved}
+        else:
+            req = "stub" if force_stub is True else None
+            if force_stub is False:
+                req = "live"
+            resolved, meta = resolve_embed_mode(req)
+
+        # force_stub=True wins
+        if force_stub is True:
+            resolved = "stub"
+            meta = {**meta, "resolved": "stub", "forced_stub": True}
+
+        self.embed_mode: str = resolved
+        self.embed_meta: dict[str, Any] = meta
+        self.embed_fn = embed_fn or make_embed_fn(resolved)  # type: ignore[arg-type]
         self.mode = "stub"
         self._rag: Any = None
         self.stub = SemanticStubIndex(self.work_dir / "semantic_stub")
-        if not force_stub:
+        if force_stub is not True:
             self._try_init_lightrag()
 
     def _try_init_lightrag(self) -> None:
@@ -155,14 +192,8 @@ class LightRAGAdapter:
             log.info("lightrag import failed; using semantic stub: %s", e)
             self.mode = "stub"
             return
-        # LightRAG typically needs LLM+embedding callbacks and async workspace.
-        # Full graph mode is environment-sensitive; keep stub as reliable default
-        # while recording that package is importable.
         self.mode = "stub_with_lightrag_importable"
-        # Optionally attempt construct; if anything fails stay on stub.
         try:
-            # Prefer not to require full LightRAG runtime (LLM keys) for unit path.
-            # Document that production can extend here.
             self._rag = None
             log.info(
                 "lightrag package importable; dual-write uses semantic stub "
@@ -176,12 +207,13 @@ class LightRAGAdapter:
         self.stub.clear()
 
     def add_chunks(self, chunks: Iterable[Chunk]) -> int:
-        n = self.stub.add_chunks(chunks, embed_fn=self.embed_fn)
-        # Place-holder hook for real LightRAG insert when _rag is configured.
+        n = self.stub.add_chunks(
+            chunks, embed_fn=self.embed_fn, embed_mode=self.embed_mode
+        )
+        self.embed_mode = self.stub.last_embed_mode or self.embed_mode
         if self._rag is not None:
             try:
                 for c in chunks:
-                    # Best-effort; API varies by lightrag version
                     insert = getattr(self._rag, "insert", None) or getattr(
                         self._rag, "ainsert", None
                     )
@@ -192,4 +224,8 @@ class LightRAGAdapter:
         return n
 
     def search(self, query: str, topk: int = 5) -> list[RetrievalHit]:
-        return self.stub.search(query, topk=topk, embed_fn=self.embed_fn)
+        hits = self.stub.search(
+            query, topk=topk, embed_fn=self.embed_fn, embed_mode=self.embed_mode
+        )
+        self.embed_mode = self.stub.last_embed_mode or self.embed_mode
+        return hits

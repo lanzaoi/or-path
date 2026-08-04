@@ -28,6 +28,35 @@ FAKE_CITE_RE = re.compile(
     r"(?<![/\w])([A-Z][\u4e00-\u9fffA-Za-z]{1,12})\s*[（(]?(20\d{2})[)）]?"
 )
 CHUNK_RE = re.compile(r"\bchunk[_-]?id\b|\b[a-f0-9]{8,}\b", re.I)
+# Affirmative global-opt marketing only — honesty disclaimers must not trip the gate.
+GLOBAL_OPT_RE = re.compile(
+    r"global(?:ly)?\s+optim(?:al|um)\w*|保证全局最优|数学证明最优",
+    re.I,
+)
+_NEG_LEFT_RE = re.compile(
+    r"(?:"
+    r"\bnot\b|\bnever\b|\bno\b|\bwithout\b|\bavoid\b|\bunless\b|"
+    r"\bdo\s+not\b|\bdon'?t\b|\bnon-?|"
+    r"禁止|不要|勿|未|非|并非|不|非证明|未证明|无法保证"
+    r").{0,48}$",
+    re.I | re.S,
+)
+
+
+def affirmative_global_opt_hits(text: str) -> list[str]:
+    """Return matched phrases that claim global opt (not negated honesty wording)."""
+    hits: list[str] = []
+    for m in GLOBAL_OPT_RE.finditer(text or ""):
+        left = (text or "")[max(0, m.start() - 56) : m.start()]
+        # "not proven global optimum" / "do not claim global optimality" / "if proven_optimal is not true"
+        if _NEG_LEFT_RE.search(left):
+            continue
+        if re.search(r"proven_optimal[`\s:=]*false|proven_optimal[`\s:=]*`?False", left[-40:], re.I):
+            continue
+        if re.search(r"is\s+not\s+true|is\s+false", left[-36:], re.I):
+            continue
+        hits.append(m.group(0))
+    return hits
 
 
 def _collect_solution_tokens(obj: Any, out: set[str]) -> None:
@@ -122,8 +151,20 @@ def build_claim_map(
     claims: list[dict[str, Any]] = []
     errors: list[str] = []
 
+    # Mask process-meta counters (claims_recorded: N, duration_ms, …) before numeric scan.
+    try:
+        from r2_numeric_check import mask_non_result_numbers  # same tools/ dir
+    except Exception:  # noqa: BLE001
+        try:
+            from tools.r2_numeric_check import mask_non_result_numbers  # type: ignore
+        except Exception:  # noqa: BLE001
+            def mask_non_result_numbers(text: str) -> str:  # type: ignore
+                return text or ""
+
+    draft_scan = mask_non_result_numbers(draft)
+
     # objective-like
-    for m in OBJECTIVE_CLAIM_RE.finditer(draft):
+    for m in OBJECTIVE_CLAIM_RE.finditer(draft_scan):
         num = m.group(1)
         ok = num in allowed or _allowed_float(allowed, float(num))
         claims.append(
@@ -139,7 +180,7 @@ def build_claim_map(
             errors.append(f"objective-like claim not in solution: {num}")
 
     # large nums (skip years handled loosely)
-    for m in BIG_NUM_RE.finditer(draft):
+    for m in BIG_NUM_RE.finditer(draft_scan):
         raw = m.group(1)
         try:
             f = float(raw)
@@ -164,7 +205,7 @@ def build_claim_map(
             )
         else:
             # non-result context markers
-            span = draft[max(0, m.start() - 40) : m.end() + 40].lower()
+            span = draft_scan[max(0, m.start() - 48) : m.end() + 40].lower()
             if any(
                 k in span
                 for k in (
@@ -175,6 +216,13 @@ def build_claim_map(
                     "port",
                     "http",
                     "line",
+                    "claims_recorded",
+                    "claim_count",
+                    "duration_ms",
+                    "log_size",
+                    "tool_count",
+                    "event_count",
+                    "meta_counter",
                 )
             ):
                 claims.append(
@@ -251,13 +299,14 @@ def build_claim_map(
         if not ok:
             errors.append(f"area impossible: pieces*{4} < cells ({pcn}*4 < {cn})")
 
-    # honesty: global opt without proven flag in solution meta
-    if re.search(r"global(?:ly)?\s+optimal|保证全局最优", draft, re.I):
+    # honesty: affirmative global-opt marketing without proven flag
+    opt_hits = affirmative_global_opt_hits(draft)
+    if opt_hits:
         proven = bool((solution.get("meta") or {}).get("proven_optimal"))
         claims.append(
             {
                 "type": "optimality_language",
-                "text": "global optimal language",
+                "text": "global optimal language: " + "; ".join(opt_hits[:5]),
                 "mapped_to": "solution.meta.proven_optimal",
                 "ok": proven,
             }

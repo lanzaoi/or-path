@@ -157,56 +157,144 @@ def node_orchestrate(state: ORPathState) -> dict:
 
 
 def node_retrieve(state: ORPathState) -> dict:
-    root = _root(state)
+    """Write notes/<slug>-retrieval.json for research.
+
+    Indexes always load from **install home** (knowledge_svc corpus).
+    Artifacts always write under **case root/workdir** notes/.
+    """
+    from orpath.paths import orpath_home
+
+    root = _root(state)  # workdir / case root
+    home = orpath_home()
     slug = state["slug"]
     mode = state.get("knowledge_mode") or "seed"
     out = root / "notes" / f"{slug}-retrieval.json"
-    query = f"OR {state.get('problem_class')} routing solver constraints"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    pc = str(state.get("problem_class") or "")
+    pid = str(state.get("problem_id") or "")
+    query = _retrieval_query(pc, pid)
+
+    # Process memory (auto): past solve process / key points → notes/*-lessons.*
+    lessons_path = ""
+    try:
+        from orpath.process_memory import write_retrieve_artifacts
+
+        _j, mpath, _hits = write_retrieve_artifacts(
+            root,
+            slug,
+            query=query,
+            problem_class=str(pc) if pc else None,
+            topk=5,
+        )
+        lessons_path = str(mpath)
+    except Exception:  # noqa: BLE001
+        lessons_path = ""
+
     if mode == "off":
-        art = {"query": query, "knowledge_mode": "off", "hits": [], "seed_facts": []}
-        out.write_text(json.dumps(art, indent=2) + "\n", encoding="utf-8")
-        return {"stage": "research", "retrieval_path": str(out)}
-
-    # Prefer knowledge_svc CLI when present
-    import subprocess
-    import sys
-
-    cmd = [
-        sys.executable,
-        "-m",
-        "knowledge_svc.retrieve",
-        "--query",
-        query,
-        "--mode",
-        mode,
-        "--topk",
-        "5",
-        "--out",
-        str(out),
-    ]
-    r = subprocess.run(cmd, cwd=root, text=True, encoding="utf-8", errors="replace", capture_output=True)
-    if r.returncode != 0 or not out.is_file():
-        # fallback seed-only inline
-        seed_path = root / "knowledge" / "seed_graph" / "or_domain_seed.json"
-        facts = []
-        if seed_path.is_file():
-            seed = json.loads(seed_path.read_text(encoding="utf-8"))
-            pc = state.get("problem_class")
-            for n in seed.get("nodes") or []:
-                if n.get("type") == "ProblemClass" and n.get("id") == pc:
-                    facts.append(n)
-                if n.get("type") == "Solver":
-                    facts.append(n)
         art = {
             "query": query,
-            "knowledge_mode": mode,
+            "knowledge_mode": "off",
             "hits": [],
-            "seed_facts": facts,
-            "fallback": True,
-            "cli_err": (r.stderr or r.stdout)[:500],
+            "seed_facts": [],
+            "index_home": str(home),
         }
         out.write_text(json.dumps(art, indent=2) + "\n", encoding="utf-8")
-    return {"stage": "research", "retrieval_path": str(out), "last_error": ""}
+        upd: dict = {"stage": "research", "retrieval_path": str(out)}
+        if lessons_path:
+            upd["lessons_path"] = lessons_path
+        return upd
+
+    # Prefer in-process knowledge_svc (same as CLI) with home indexes
+    try:
+        from knowledge_svc.retrieve import retrieve as ks_retrieve
+        from knowledge_svc.retrieve import artifact_to_payload
+        from knowledge_svc.chunk_schema import write_json
+
+        art_obj = ks_retrieve(
+            query,
+            mode=mode if mode in {"seed", "hybrid", "off"} else "seed",  # type: ignore[arg-type]
+            topk=5,
+            root=home,
+            problem_class=pc or None,
+            force_stub=None,  # ORPATH_KNOWLEDGE_EMBED=auto|live|stub
+        )
+        payload = artifact_to_payload(art_obj)
+        payload["index_home"] = str(home)
+        payload["workdir_notes"] = str(out)
+        write_json(out, payload)
+    except Exception as exc:  # noqa: BLE001
+        import subprocess
+        import sys
+
+        cmd = [
+            sys.executable,
+            "-m",
+            "knowledge_svc.retrieve",
+            "--query",
+            query,
+            "--mode",
+            mode,
+            "--topk",
+            "5",
+            "--out",
+            str(out),
+        ]
+        if pc:
+            cmd.extend(["--class", pc])
+        r = subprocess.run(
+            cmd,
+            cwd=str(home),
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+        )
+        if r.returncode != 0 or not out.is_file():
+            seed_path = home / "knowledge" / "seed_graph" / "or_domain_seed.json"
+            facts = []
+            if seed_path.is_file():
+                seed = json.loads(seed_path.read_text(encoding="utf-8"))
+                for n in seed.get("nodes") or []:
+                    if n.get("type") == "ProblemClass" and n.get("id") == pc:
+                        facts.append(n)
+                    if n.get("type") == "Solver":
+                        facts.append(n)
+            art = {
+                "query": query,
+                "knowledge_mode": mode,
+                "hits": [],
+                "seed_facts": facts,
+                "fallback": True,
+                "index_home": str(home),
+                "cli_err": (r.stderr or r.stdout or str(exc))[:500],
+            }
+            out.write_text(json.dumps(art, indent=2) + "\n", encoding="utf-8")
+
+    upd = {"stage": "research", "retrieval_path": str(out), "last_error": ""}
+    if lessons_path:
+        upd["lessons_path"] = lessons_path
+    return upd
+
+
+def _retrieval_query(problem_class: str, problem_id: str) -> str:
+    """Class-aware hybrid query so Pi research gets relevant corpus hits."""
+    pc = (problem_class or "").strip().lower()
+    pid = (problem_id or "").strip()
+    table = {
+        "shortest_path": "shortest path Dijkstra networkx solver",
+        "tsp": "TSP tour OR-Tools routing CP-SAT circuit",
+        "vrp": "CVRP capacity multi vehicle OR-Tools routing",
+        "polyomino_cover": "polyomino cover CP-SAT board schema placements",
+        "polyomino": "polyomino cover CP-SAT board schema",
+        "tube_cut": "tube cut packing optimization",
+    }
+    base = table.get(pc) or (
+        f"OR {problem_class or pid or 'operations research'} solver constraints modeling"
+    )
+    if pid and pid not in base:
+        return f"{base} {pid}"
+    return base
+
 
 
 def node_research(state: ORPathState) -> dict:
@@ -295,6 +383,10 @@ Research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode', m
 
 ## Retrieval artifact
 `{rp}`
+
+## Process memory (lessons)
+`{state.get("lessons_path") or (root / "notes" / f"{slug}-lessons.md")}`
+(Process tips only — not authoritative optima.)
 
 ## Problem excerpt
 {problem[:800]}
@@ -457,6 +549,63 @@ def node_model(state: ORPathState) -> dict:
                 schema["rows"] = 4
                 schema["cols"] = 4
                 schema["pieces"] = [{"id": "M"}, {"id": "D"}, {"id": "L3"}]
+        elif (
+            pc_n in {"tube_cut", "tube", "cutting_stock", "cut_stock"}
+            or "tube" in str(pc or "").lower()
+            or "tube" in str(pid or "").lower()
+        ):
+            # Path A / no-live: write structural schema so gate_schema → solve(tube).
+            # Numbers only from tools/solve_tube_cut_b2026.py — never in schema.
+            pid_t = str(pid or "tube_cut_b2026").strip() or "tube_cut_b2026"
+            schema = {
+                "slug": slug,
+                "problem_class": "tube_cut",
+                "problem_id": pid_t,
+                "preferred_solve_mode": "tube",
+                "constraints": [],
+                "notes": (
+                    "tube_cut deterministic modeler — structural only; "
+                    "no optima; solve via tools/solve_tube_cut_b2026.py"
+                ),
+                "stock_lengths": [9000, 10000, 11000, 12000],
+                "workpiece_specs": [{"id": f"G{i}"} for i in range(1, 11)],
+                "geometry_preprocessing": {
+                    "method": "pca_axial_length",
+                    "cocut": "end_envelope_rotation_search",
+                },
+                "questions": ["q1", "q2", "q3", "q4"],
+                "subproblems": [
+                    "single_batch",
+                    "cocut",
+                    "optimized_layout",
+                    "multi_batch",
+                ],
+            }
+            if fb is not None:
+                schema["fixture_ref"] = _rel_under(fb, root)
+                if (fb / "schema.json").is_file():
+                    try:
+                        base = json.loads((fb / "schema.json").read_text(encoding="utf-8"))
+                    except (OSError, json.JSONDecodeError):
+                        base = {}
+                    if isinstance(base, dict):
+                        for k, v in base.items():
+                            kl = str(k).lower()
+                            if kl in {
+                                "objective",
+                                "path",
+                                "tour",
+                                "routes",
+                                "optimal",
+                                "optimal_value",
+                            }:
+                                continue
+                            if k not in schema or k in {"decision_vars", "notes"}:
+                                schema[k] = v
+                        schema["slug"] = slug
+                        schema["problem_class"] = "tube_cut"
+                        schema["problem_id"] = pid_t
+                        schema["preferred_solve_mode"] = "tube"
         else:
             if fb is None or not (fb / "locations.json").is_file():
                 return {
@@ -478,6 +627,7 @@ def node_model(state: ORPathState) -> dict:
                 "constraints": ["capacity"],
                 "notes": "T2 multi-vehicle VRP modeler (not proven global opt)",
             }
+
         sp.parent.mkdir(parents=True, exist_ok=True)
         sp.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
 
@@ -757,12 +907,24 @@ def node_gate_validate(state: ORPathState) -> dict:
         root, state["problem_id"], Path(state["solution_path"]), vpath
     )
     if ok:
-        return {
+        lesson_path = ""
+        try:
+            from orpath.process_memory import auto_draft_after_validate
+
+            p = auto_draft_after_validate(root, dict(state), gate_ok=True)
+            if p is not None:
+                lesson_path = str(p)
+        except Exception:  # noqa: BLE001
+            lesson_path = ""
+        out_ok: dict = {
             "stage": "explain",
             "validate_path": str(vpath),
             "gate_validate_ok": True,
             "last_error": "",
         }
+        if lesson_path:
+            out_ok["lesson_draft_path"] = lesson_path
+        return out_ok
 
     # Q12-C: param retune then model
     tune = int(state.get("solver_tune") or 0)
@@ -1367,13 +1529,35 @@ def node_revise_or_done(state: ORPathState) -> dict:
         allowed_urls=allowed,
         solution_path=state["solution_path"],
     )
-    # strip global-opt marketing if not proven
+    # strip affirmative global-opt marketing if not proven (keep honesty disclaimers)
     if not (sol.get("meta") or {}).get("proven_optimal"):
-        fixed = re.sub(
-            r"(?i)global(?:ly)?\s+optimal|保证全局最优|数学证明最优",
-            "best-found / validated feasible",
-            fixed,
-        )
+        try:
+            from tools.r1_claim_map import GLOBAL_OPT_RE, _NEG_LEFT_RE
+        except Exception:  # noqa: BLE001
+            import sys
+            from pathlib import Path as _P
+
+            _td = _P(__file__).resolve().parents[1] / "tools"
+            if str(_td) not in sys.path:
+                sys.path.insert(0, str(_td))
+            from r1_claim_map import GLOBAL_OPT_RE, _NEG_LEFT_RE  # type: ignore
+
+        parts: list[str] = []
+        last = 0
+        for m in GLOBAL_OPT_RE.finditer(fixed):
+            chunk_left = fixed[max(0, m.start() - 56) : m.start()]
+            parts.append(fixed[last : m.start()])
+            if _NEG_LEFT_RE.search(chunk_left) or re.search(
+                r"is\s+not\s+true|proven_optimal[`\s:=]*false",
+                chunk_left[-40:],
+                re.I,
+            ):
+                parts.append(m.group(0))
+            else:
+                parts.append("best-found / validated feasible")
+            last = m.end()
+        parts.append(fixed[last:])
+        fixed = "".join(parts)
     paths["revised"].write_text(fixed, encoding="utf-8")
     paper.write_text(fixed, encoding="utf-8")
 

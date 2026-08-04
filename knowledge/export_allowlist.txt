@@ -1,0 +1,19 @@
+# knowledge/export_allowlist.txt
+# Skills under .pi/skills/<name>/SKILL.md that may be copied into
+# knowledge/corpus/skills/ for Pi hybrid RAG.
+#
+# Rules:
+# - One skill folder name per line
+# - # comments and blank lines ignored
+# - Runtime skill loading still uses .pi/skills (RAG is a SEARCH COPY only)
+# - Oversized files still skipped by export (MAX_SKILL_BYTES)
+# - Never list skills that embed authoritative optima as "the answer"
+
+or-numbers-truth
+or-solver-select
+or-process-memory
+or-modeling
+operations-research-algorithm-developer
+
+# promoted run methods (auto)
+or-method-shortest-path-thick-research-sp

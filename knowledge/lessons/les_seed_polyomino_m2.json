@@ -1,0 +1,20 @@
+{
+  "id": "les_seed_polyomino_m2",
+  "schema": "orpath.lesson.v1",
+  "slug": "seed",
+  "problem_class": "polyomino_cover",
+  "created": "2026-08-04T00:00:00Z",
+  "summary": "Polyomino domain bridge: use polyomino solve mode via dispatch; schema uses board/pieces fields; validate recompute coverage.",
+  "key_decisions": [
+    "problem_class=polyomino_cover",
+    "solve_mode=polyomino",
+    "register via domain_registry + solve_dispatch"
+  ],
+  "pitfalls": [
+    "Do not fake SP fixture as polyomino success",
+    "Large boards may need specialized q3 solver path"
+  ],
+  "skills_used": ["or-solver-select", "or-model-discipline"],
+  "artifact_paths": ["tools/solve_polyomino.py", "docs/m2-polyomino.md"],
+  "tags": ["polyomino", "m2", "seed"]
+}

@@ -1,0 +1,28 @@
+flowchart TD
+  START --> intake_ocr
+  intake_ocr -->|skip or no sources| orchestrate
+  intake_ocr -->|has sources| intake_parse
+  intake_parse -->|ok| orchestrate
+  intake_parse -->|needs_human or gate fail| human_stop
+  orchestrate -->|before_retrieve| bridge_pi
+  orchestrate -->|default| retrieve
+  bridge_pi -->|before_retrieve| retrieve
+  bridge_pi -->|before_research| research
+  retrieve -->|before_research| bridge_pi
+  retrieve -->|before_retrieve done| research
+  research --> model --> gate_schema
+  gate_schema -->|ok| solve
+  gate_schema -->|repair| model
+  gate_schema -->|ceiling| human_stop
+  solve --> gate_validate
+  gate_validate -->|ok| explain
+  gate_validate -->|tune| solve
+  gate_validate -->|model repair| model
+  gate_validate -->|ceiling| human_stop
+  human_stop --> provenance
+  explain --> draft_paper --> cite_pack --> review_pack --> revise_or_done
+  revise_or_done -->|revise| draft_paper
+  revise_or_done -->|re-cite| cite_pack
+  revise_or_done -->|done| provenance
+  revise_or_done -->|HUMAN| human_stop
+  provenance --> END

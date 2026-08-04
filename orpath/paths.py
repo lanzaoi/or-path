@@ -23,10 +23,45 @@ when env is unset (single-tree developer layout).
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 
 # Package lives at <home>/orpath/paths.py → parents[1] == install root
 _DEFAULT_HOME = Path(__file__).resolve().parents[1]
+
+# Git-bash / MSYS often mangles Windows paths into:
+#   /c/Users/...  or  C:\c\Users\...  (double drive)
+_MSYS_POSIX = re.compile(r"^[/\\]([A-Za-z])[/\\](.*)$")
+_DOUBLE_DRIVE = re.compile(
+    r"^([A-Za-z]:)[/\\]+[A-Za-z][/\\]+((?:Users|users|home)[/\\].+)$"
+)
+
+
+def normalize_fs_path(path: Path | str) -> Path:
+    """Normalize user/CLI paths from cmd, PowerShell, or git-bash/MSYS.
+
+    Fixes the common agent footgun where bash passes ``/c/Users/...`` and the
+    Windows process ends up writing under ``C:\\c\\Users\\...``.
+    """
+    s = str(path).strip().strip('"').strip("'")
+    if not s:
+        return Path(s)
+    s = s.replace("/", "\\") if "\\" in s or re.match(r"^[A-Za-z]:", s) else s
+    # Prefer explicit POSIX-MSYS form first: /c/Users/foo or \c\Users\foo
+    m = _MSYS_POSIX.match(s.replace("\\", "/"))
+    if m and not re.match(r"^[A-Za-z]:", s):
+        drive, rest = m.group(1).upper(), m.group(2).replace("/", "\\")
+        s = f"{drive}:\\{rest}"
+    else:
+        # C:\c\Users\... → C:\Users\...
+        m2 = _DOUBLE_DRIVE.match(s.replace("/", "\\"))
+        if m2:
+            s = f"{m2.group(1)}\\{m2.group(2).replace('/', chr(92))}"
+    return Path(s)
+
+
+def _resolve_user_path(raw: str | Path) -> Path:
+    return normalize_fs_path(raw).expanduser().resolve()
 
 # Relative dirs that must exist under a case workdir
 ARTIFACT_DIR_RELS: tuple[str, ...] = (
@@ -44,7 +79,7 @@ def orpath_home() -> Path:
     """Install root: env ORPATH_HOME, else directory containing this package."""
     raw = (os.environ.get("ORPATH_HOME") or "").strip().strip('"')
     if raw:
-        return Path(raw).expanduser().resolve()
+        return _resolve_user_path(raw)
     return _DEFAULT_HOME
 
 
@@ -52,7 +87,7 @@ def orpath_workdir() -> Path:
     """Case data directory (notes, outputs, papers, runs). Defaults to home."""
     raw = (os.environ.get("ORPATH_WORKDIR") or "").strip().strip('"')
     if raw:
-        return Path(raw).expanduser().resolve()
+        return _resolve_user_path(raw)
     return orpath_home()
 
 
@@ -60,10 +95,10 @@ def resolve_workdir(path: Path | str | None = None) -> Path:
     """Resolve an explicit path or fall back to ``orpath_workdir()``."""
     if path is None:
         return orpath_workdir()
-    s = str(path).strip().strip('"')
+    s = str(path).strip().strip('"').strip("'")
     if not s:
         return orpath_workdir()
-    return Path(s).expanduser().resolve()
+    return _resolve_user_path(s)
 
 
 def ensure_workdir_layout(workdir: Path | None = None) -> Path:

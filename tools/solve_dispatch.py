@@ -72,22 +72,46 @@ def _build_args(
     return [problem_id, *extra]
 
 
+def _tube_out_dirs(root: Path) -> list[Path]:
+    """Candidate dirs for tube q*-solution.json (workdir first, then install home).
+
+    solve_tube_cut_b2026.py hardcodes OUT under the package install root; product
+    runs often pass case workdir as ``root`` — must not miss install-home outputs.
+    """
+    root = Path(root).resolve()
+    install = _ROOT.resolve()
+    dirs: list[Path] = [root / "outputs" / "b-tube-cut"]
+    alt = install / "outputs" / "b-tube-cut"
+    if alt not in dirs:
+        dirs.append(alt)
+    return dirs
+
+
 def _tube_envelope_from_outputs(root: Path, problem_id: str) -> dict[str, Any]:
     """Load q*-solution.json written by solve_tube_cut_b2026 into one envelope."""
-    out_dir = root / "outputs" / "b-tube-cut"
     questions: dict[str, Any] = {}
     primary_obj = None
     status = "FEASIBLE"
+    out_dir: Path | None = None
+    for cand in _tube_out_dirs(root):
+        if any((cand / f"{n}-solution.json").is_file() for n in ("q1", "q2", "q3", "q4")):
+            out_dir = cand
+            break
+    if out_dir is None:
+        out_dir = _tube_out_dirs(root)[0]
     for name in ("q1", "q2", "q3", "q4"):
         p = out_dir / f"{name}-solution.json"
         if not p.is_file():
             continue
         q = json.loads(p.read_text(encoding="utf-8"))
         questions[name] = q
-        if name == "q3" and "total_stock_length_mm" in q:
-            primary_obj = q["total_stock_length_mm"]
-        elif name == "q1" and primary_obj is None and "total_stock_length_mm" in q:
-            primary_obj = q["total_stock_length_mm"]
+        # prefer total_stock_length or total_stock_length_mm
+        for key in ("total_stock_length_mm", "total_stock_length", "total_new_standard_stock_mm"):
+            if name == "q3" and key in q and q[key] is not None:
+                primary_obj = q[key]
+                break
+            if name == "q1" and primary_obj is None and key in q and q[key] is not None:
+                primary_obj = q[key]
         st = str(q.get("status", status)).upper()
         if st in ("FEASIBLE", "OPTIMAL"):
             status = st
@@ -101,25 +125,41 @@ def _tube_envelope_from_outputs(root: Path, problem_id: str) -> dict[str, Any]:
                     questions["summary"] = blob
                     break
     if primary_obj is None:
+        tried = ", ".join(str(d) for d in _tube_out_dirs(root))
         raise FileNotFoundError(
-            f"tube outputs missing under {out_dir}; run tools/solve_tube_cut_b2026.py first"
+            f"tube outputs missing under [{tried}]; run tools/solve_tube_cut_b2026.py first"
         )
     env = {
-        "problem_id": problem_id or "tube_cut_b2026",
-        "problem_class": "tube_cut",
-        "status": status,
-        "objective": primary_obj,
-        "source": "tools/solve_tube_cut_b2026.py",
-        "solver": "tube-bfd",
-        "questions": questions,
-        "outputs_dir": str(out_dir),
-        "meta": {
-            "exact": False,
-            "proven_optimal": False,
-            "method_class": "heuristic",
-            "claim": "FEASIBLE BFD/heuristic; not proven OPTIMAL",
-        },
-    }
+            "problem_id": problem_id or "tube_cut_b2026",
+            "problem_class": "tube_cut",
+            "status": status,
+            "objective": primary_obj,
+            "source": "tools/solve_tube_cut_b2026.py",
+            "solver": "tube-bfd",
+            "questions": questions,
+            "outputs_dir": str(out_dir),
+            # Policy constants used by paper/R2 (not invented optima)
+            "remnant_min_mm": 200.0,
+            "stock_lengths_mm": [9000.0, 10000.0, 11000.0, 12000.0],
+            "metrics": {
+                "remnant_min_mm": 200.0,
+                "stock_lengths_mm": [9000.0, 10000.0, 11000.0, 12000.0],
+                "q1_total_stock_mm": (questions.get("q1") or {}).get("total_stock_length_mm")
+                or (questions.get("q1") or {}).get("total_stock_length"),
+                "q3_total_stock_mm": (questions.get("q3") or {}).get("total_stock_length_mm")
+                or (questions.get("q3") or {}).get("total_stock_length"),
+                "q4_total_stock_mm": (questions.get("q4") or {}).get("total_new_standard_stock_mm")
+                or (questions.get("q4") or {}).get("total_stock_length_mm"),
+            },
+            "meta": {
+                "exact": False,
+                "proven_optimal": False,
+                "method_class": "heuristic",
+                "claim": "FEASIBLE BFD/heuristic; not proven OPTIMAL",
+                "remnant_min_mm": 200.0,
+                "stock_lengths_mm": [9000.0, 10000.0, 11000.0, 12000.0],
+            },
+        }
     return normalize_solution(env, mode="tube")
 
 
@@ -171,7 +211,8 @@ def solve(
     args = _build_args(mode_l, problem_id, problem_class, extra_args)
 
     if mode_l in ("tube", "tube_bfd"):
-        code, out, err = _run_py(script, args, root)
+        # Adapter uses install-root paths for CSV/OUT — run with install cwd.
+        code, out, err = _run_py(script, args, _ROOT)
         raw = (out + "\n" + err).strip()
         if code != 0:
             return False, {}, raw or f"tube solver exit {code}"

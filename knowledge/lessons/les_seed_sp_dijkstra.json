@@ -1,0 +1,20 @@
+{
+  "id": "les_seed_sp_dijkstra",
+  "schema": "orpath.lesson.v1",
+  "slug": "seed",
+  "problem_class": "shortest_path",
+  "created": "2026-08-04T00:00:00Z",
+  "summary": "SP runs: use networkx Dijkstra as default exact track; mock only for CI fixtures.",
+  "key_decisions": [
+    "preferred_solve_mode=networkx for non-negative weights",
+    "schema must not contain path/objective",
+    "always validate recompute after solve"
+  ],
+  "pitfalls": [
+    "Do not use Routing/ortools as SP propaganda track",
+    "Do not invent path length in research notes"
+  ],
+  "skills_used": ["or-solver-select", "or-numbers-truth", "or-model-discipline"],
+  "artifact_paths": ["docs/solver-stack.md", "tools/solve_networkx.py"],
+  "tags": ["shortest_path", "networkx", "exact", "seed"]
+}

@@ -16,8 +16,12 @@ class FTSIndex:
 
     def _connect(self) -> sqlite3.Connection:
         self.index_dir.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(str(self.db_path))
+        conn = sqlite3.connect(str(self.db_path), timeout=60.0)
         conn.row_factory = sqlite3.Row
+        try:
+            conn.execute("PRAGMA busy_timeout=60000")
+        except sqlite3.Error:
+            pass
         return conn
 
     def ensure_schema(self, conn: sqlite3.Connection | None = None) -> None:
@@ -53,13 +57,23 @@ class FTSIndex:
                 c.close()
 
     def clear(self) -> None:
-        if self.db_path.is_file():
-            self.db_path.unlink()
-        # also remove sidecar files if any
-        for suf in ("-wal", "-shm", "-journal"):
-            p = Path(str(self.db_path) + suf)
-            if p.is_file():
-                p.unlink()
+        """Clear rows without unlinking DB (Windows file-lock safe)."""
+        if not self.db_path.is_file():
+            return
+        conn = self._connect()
+        try:
+            self.ensure_schema(conn)
+            try:
+                conn.execute("DELETE FROM chunks_fts")
+            except sqlite3.Error:
+                pass
+            try:
+                conn.execute("DELETE FROM chunks_meta")
+            except sqlite3.Error:
+                pass
+            conn.commit()
+        finally:
+            conn.close()
 
     def add_chunks(self, chunks: Iterable[Chunk]) -> int:
         conn = self._connect()

@@ -1,0 +1,20 @@
+{
+  "id": "les_seed_tsp_cpsat",
+  "schema": "orpath.lesson.v1",
+  "slug": "seed",
+  "problem_class": "tsp",
+  "created": "2026-08-04T00:00:00Z",
+  "summary": "Small TSP (e.g. n=8): CP-SAT circuit is default proven track; HiGHS dual optional; Routing is expansion only.",
+  "key_decisions": [
+    "default mode=cpsat for portfolio TSP",
+    "meta.exact=true and proven_optimal only on exact solvers",
+    "validate must recompute tour cost"
+  ],
+  "pitfalls": [
+    "Never claim ortools Routing as MIP proven optimal",
+    "Do not put tour into schema JSON"
+  ],
+  "skills_used": ["or-solver-select", "or-numbers-truth"],
+  "artifact_paths": ["tools/solve_cpsat.py", "docs/solver-stack.md"],
+  "tags": ["tsp", "cpsat", "exact", "seed"]
+}

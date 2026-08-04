@@ -28,6 +28,30 @@ docs/papers
 | seed | 种子图查询 |
 | hybrid | semantic + lexical + RRF |
 
+### 2.1 embed_mode（v2 Phase 2）
+
+### 2.2 knowledge profile + incremental（v3 Phase 3）
+
+| 变量 | 含义 |
+|------|------|
+| `ORPATH_KNOWLEDGE_PROFILE=demo\|research` | `research` 时 embed 默认 auto→live（有 key） |
+| 增量 ingest | corpus 指纹未变则 skip；`--clear` 全量 |
+| 制品 | `index_fingerprint` · `profile` 可出现在 retrieval JSON |
+
+验证：`orpath.bat phase3-live-default-gate`。
+
+### 2.1 embed_mode（v2 Phase 2）
+
+| `ORPATH_KNOWLEDGE_EMBED` | 行为 |
+|--------------------------|------|
+| `auto`（默认） | 有 `SILICONFLOW_API_KEY` → **live** bge-m3；否则 **stub** |
+| `live` | 真 embed；无 key 时降级 stub 并在 meta 标明 |
+| `stub` | MockEmbedder / 哈希向量（CI 与无网） |
+
+retrieval / ingest 制品字段：`embed_mode` · `embed_meta` · `semantic_mode`。  
+验证：`orpath.bat phase2-embed-gate`。  
+**无 key 不得宣称「真语义生产就绪」。**
+
 Research **必须能读** retrieval 制品路径（mode≠off 时）。
 
 ---
@@ -84,6 +108,17 @@ RRF 默认权重类：`w_semantic` / `w_lexical`（实现默认以代码为准�
 | retrieval | `notes/<slug>-retrieval.json` |
 | research | `notes/<slug>-research.md` |
 | 索引缓存 | gitignore 目录 |
+| skill 白名单 | `knowledge/export_allowlist.txt` |
+| skill/lesson RAG 副本 | `knowledge/corpus/skills/` · `knowledge/corpus/lessons/` |
+
+### 8.1 Skill / Lesson → RAG（Phase 4）
+
+- **命令：** `orpath.bat knowledge-sync`（= allowlist export + ingest --clear）  
+- **Skill：** 仅 allowlist 中的 `.pi/skills/<name>`；超大文件跳过  
+- **Lesson：** 仅 `orpath.lesson.v1`；拒绝 authoritative objective 字段  
+- **硬边界：** RAG 副本 **≠** 运行时 skill 加载；数字权威仍 L0 solve+validate  
+
+详见 `memory.md` §4.5。
 
 ---
 
@@ -99,6 +134,8 @@ M0 可用 `knowledge_mode=seed` 或 off；**不**以 hybrid 云调用为 M0 硬�
 ```bat
 .venv-314\Scripts\python.exe scripts\knowledge_smoke.py --step all
 pytest knowledge_svc/test_knowledge_unit.py -q
+orpath.bat phase3-hybrid-gate
+orpath.bat phase4-knowledge-gate
 ```
 
 ---
