@@ -718,6 +718,21 @@ if /i "%CMD%"=="pack-release" goto :pack_release
 
 
 
+if /i "%CMD%"=="dialogue-gate" (
+  set "ORPATH_LIVE_SUBAGENT=0"
+  set "ORPATH_PI_SESSION=0"
+  set "ORPATH_APPLY_STEER=1"
+  "%PY%" "%~dp0scripts\dialogue_steer_gate.py"
+  exit /b %ERRORLEVEL%
+)
+if /i "%CMD%"=="steer-gate" (
+  set "ORPATH_LIVE_SUBAGENT=0"
+  set "ORPATH_PI_SESSION=0"
+  set "ORPATH_APPLY_STEER=1"
+  "%PY%" "%~dp0scripts\dialogue_steer_gate.py"
+  exit /b %ERRORLEVEL%
+)
+if /i "%CMD%"=="p4-gate" goto :p4_gate
 if /i "%CMD%"=="doctor" goto :doctor
 
 
@@ -2710,6 +2725,8 @@ set "ORPATH_PI_SESSION=0"
 
 
 exit /b %ERRORLEVEL%
+
+
 
 
 

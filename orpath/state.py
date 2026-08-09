@@ -69,6 +69,15 @@ class ORPathState(TypedDict):
     gate_intake_ok: NotRequired[bool]
     human_confirm_intake: NotRequired[bool]
     intake_confirmed: NotRequired[bool]
+    # D2 human-steer (Watch dialogue → LG/Pi)
+    human_steer_path: NotRequired[str]
+    human_steer_applied: NotRequired[bool]
+    human_steer_lg: NotRequired[dict[str, Any]]
+    human_steer_pi: NotRequired[dict[str, Any]]
+    human_steer_at_stage: NotRequired[str]
+    human_steer_utc: NotRequired[str]
+    human_steer_fresh: NotRequired[bool]
+    steer_pause: NotRequired[bool]
 
 
 # Nodes allowed to create/overwrite solution.json content (numbers truth).

@@ -152,6 +152,21 @@ def cmd_run(args: argparse.Namespace) -> int:
     thread_id = args.thread_id or f"{args.slug or args.problem_id}-{uuid.uuid4().hex[:8]}"
     slug = args.slug or f"orpath-{args.problem_id}"
 
+    # D2: human-steer resume_from when CLI --from-stage empty
+    from orpath.human_steer import apply_steer_to_state, resume_from_steer
+
+    if not getattr(args, "from_stage", None):
+        rf = resume_from_steer(root, slug)
+        if rf:
+            args.from_stage = rf
+            print(
+                json.dumps(
+                    {"info": "human_steer_resume_from", "from_stage": rf, "slug": slug},
+                    ensure_ascii=False,
+                ),
+                flush=True,
+            )
+
     saver, conn = open_sqlite_checkpointer(_db_path(root))
     app = build_graph(checkpointer=saver)
     cfg = _config(thread_id)
@@ -219,6 +234,22 @@ def cmd_run(args: argparse.Namespace) -> int:
             human_confirm_intake=bool(getattr(args, "human_confirm_intake", False)),
             intake_confirmed=bool(getattr(args, "intake_confirmed", False)),
         )
+        # D2: merge human-steer into seed (solve_mode / pi fields)
+        steer_seed = apply_steer_to_state(initial, workdir=root, boundary=None)
+        if steer_seed:
+            initial = {**initial, **{k: v for k, v in steer_seed.items() if k not in {"stage", "human_required", "steer_pause"}}}
+            if steer_seed.get("solve_mode"):
+                print(
+                    json.dumps(
+                        {
+                            "info": "human_steer_solve_mode",
+                            "solve_mode": steer_seed.get("solve_mode"),
+                            "path": steer_seed.get("human_steer_path"),
+                        },
+                        ensure_ascii=False,
+                    ),
+                    flush=True,
+                )
         if args.from_stage and not args.fresh:
             existing = _load_state_from_checkpoint(app, thread_id)
             if existing is None:
@@ -278,7 +309,9 @@ def cmd_run(args: argparse.Namespace) -> int:
         "stage": final.get("stage"),
         "human_required": final.get("human_required"),
         "problem_class": final.get("problem_class"),
-        "solve_mode": args.solve_mode,
+        "solve_mode": final.get("solve_mode") or args.solve_mode,
+        "human_steer_applied": final.get("human_steer_applied"),
+        "human_steer_path": final.get("human_steer_path"),
         "gate_validate_ok": final.get("gate_validate_ok"),
         "gate_r1_ok": final.get("gate_r1_ok"),
         "gate_r2_ok": final.get("gate_r2_ok"),

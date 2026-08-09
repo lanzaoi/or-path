@@ -53,3 +53,14 @@ orpath.bat mcp-ortools
 ```
 
 Read `ORPATH.md` for GUI-primary workflow. Live multi-agent defaults ON (`ORPATH_LIVE_SUBAGENT=1`); set 0 for cheap runs.
+
+## Pi guidance packages (project-local)
+
+Installed under `.pi/settings.json` → `.pi/npm/` (optional Tier-2, not product face):
+- `pi-kanban` — `/kanban start` (needs sessions; product LIVE: `ORPATH_PI_SESSION=1`)
+- `pi-supervisor` — `/supervise <outcome>`; rules in `.pi/SUPERVISOR.md`
+- `@juicesharp/rpiv-ask-user-question` — structured questions to the human
+- Built-in: Enter=steer, Alt+Enter=follow-up while agent runs
+
+Product face remains Watch. Control-plane routing stays LangGraph. Numbers only from solve+validate.
+Law: `specs/human-steer-and-pi-guidance.md`.

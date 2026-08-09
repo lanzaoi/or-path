@@ -113,18 +113,32 @@ def node_orchestrate(state: ORPathState) -> dict:
     root = _root(state)
     _ensure_dirs(root)
     slug = state["slug"]
-    pc = _infer_class(root, state["problem_id"], state.get("problem_class"))
+    # D2: merge human-steer at control-plane entry
+    from orpath.human_steer import apply_steer_to_state
+
+    steer_upd = apply_steer_to_state(dict(state), workdir=root, boundary="orchestrate")
+    merged = {**dict(state), **steer_upd}
+    pc = _infer_class(root, merged["problem_id"], merged.get("problem_class"))
+    solve_mode = merged.get("solve_mode") or state.get("solve_mode")
     plan = root / "outputs" / ".plans" / f"{slug}.md"
+    steer_line = ""
+    if steer_upd.get("human_steer_applied"):
+        steer_line = (
+            f"- human_steer: applied path={steer_upd.get('human_steer_path')} "
+            f"mode={solve_mode} at={steer_upd.get('human_steer_at_stage')}\n"
+        )
+    elif steer_upd.get("human_steer_path"):
+        steer_line = f"- human_steer: none at {steer_upd.get('human_steer_path')}\n"
     plan.write_text(
         f"""# Plan {slug}
 
-- problem_id: {state["problem_id"]}
+- problem_id: {merged["problem_id"]}
 - problem_class: {pc}
-- solve_mode: {state["solve_mode"]}
-- knowledge_mode: {state.get("knowledge_mode")}
+- solve_mode: {solve_mode}
+- knowledge_mode: {merged.get("knowledge_mode")}
 - started: {datetime.now(timezone.utc).isoformat()}
 - paper_template: or (P1)
-
+{steer_line}
 ## Task ledger
 - [ ] retrieve
 - [ ] research
@@ -139,21 +153,37 @@ def node_orchestrate(state: ORPathState) -> dict:
 
 ## Decision log
 - Numbers only from solve+validate; paper drafts layered under outputs/.drafts/
+- Human steer (if any): control→solve_mode; cognitive→Pi briefs only
 
 ## Verification log
 """,
         encoding="utf-8",
     )
-    append_plan_log(root, slug, stage="orchestrate", status="done", detail="plan created", plan_file=plan)
-    return {
+    append_plan_log(
+        root, slug, stage="orchestrate", status="done", detail="plan created", plan_file=plan
+    )
+    out = {
         "stage": "retrieve",
         "plan_path": str(plan),
         "problem_class": pc,
-        "schema_repair": int(state.get("schema_repair") or 0),
-        "validate_repair": int(state.get("validate_repair") or 0),
-        "solver_tune": int(state.get("solver_tune") or 0),
-        "last_error": "",
+        "schema_repair": int(merged.get("schema_repair") or 0),
+        "validate_repair": int(merged.get("validate_repair") or 0),
+        "solver_tune": int(merged.get("solver_tune") or 0),
+        "last_error": str(steer_upd.get("last_error") or ""),
+        "solve_mode": solve_mode,
     }
+    for k in (
+        "human_steer_path",
+        "human_steer_applied",
+        "human_steer_lg",
+        "human_steer_pi",
+        "human_steer_at_stage",
+        "human_steer_utc",
+        "human_steer_fresh",
+    ):
+        if k in steer_upd:
+            out[k] = steer_upd[k]
+    return out
 
 
 def node_retrieve(state: ORPathState) -> dict:
@@ -333,13 +363,20 @@ def _resolve_knowledge_mode(raw: str | None) -> str:
 
 def node_research(state: ORPathState) -> dict:
     root = _root(state)
-    slug = state["slug"]
-    pid = state["problem_id"]
-    pc = state.get("problem_class") or "shortest_path"
-    mode = _resolve_knowledge_mode(state.get("knowledge_mode"))
+    # D2: re-merge steer + optional pause before research
+    from orpath.human_steer import apply_steer_to_state, format_pi_steer_block
+
+    steer_upd = apply_steer_to_state(dict(state), workdir=root, boundary="research")
+    if steer_upd.get("steer_pause"):
+        return steer_upd
+    state_m = {**dict(state), **steer_upd}
+    slug = state_m["slug"]
+    pid = state_m["problem_id"]
+    pc = state_m.get("problem_class") or "shortest_path"
+    mode = _resolve_knowledge_mode(state_m.get("knowledge_mode"))
     fb = _fixture_base(root, pid)
     path = root / "notes" / f"{slug}-research.md"
-    rp = state.get("retrieval_path")
+    rp = state_m.get("retrieval_path")
     retrieval = load_retrieval(rp)
 
     # M3: live research fan-out via or-researcher subagent(s)
@@ -347,7 +384,7 @@ def node_research(state: ORPathState) -> dict:
     try:
         sub_meta = run_research_subagent_lead(
             root,
-            dict(state),
+            dict(state_m),
             research_path=path,
             retrieval_path=Path(rp) if rp else None,
             fixture_dir=fb,
@@ -358,16 +395,17 @@ def node_research(state: ORPathState) -> dict:
             "gate_subagent_ok": False,
             "error": f"research subagent failed: {exc}",
         }
-        if live_subagent_enabled(dict(state)) and mode in {"seed", "hybrid"}:
+        if live_subagent_enabled(dict(state_m)) and mode in {"seed", "hybrid"}:
             append_plan_log(
                 root,
                 slug,
                 stage="research",
                 status="fail",
                 detail=str(exc)[:300],
-                plan_file=state.get("plan_path"),
+                plan_file=state_m.get("plan_path"),
             )
             return {
+                **{k: steer_upd[k] for k in steer_upd if k.startswith("human_steer") or k == "solve_mode"},
                 "stage": "human_stop",
                 "human_required": True,
                 "research_path": str(path) if path.is_file() else "",
@@ -377,7 +415,7 @@ def node_research(state: ORPathState) -> dict:
 
     # Deterministic scaffold if no live research file yet
     if not path.is_file() or path.stat().st_size < 40:
-        problem = (fb / "problem.md").read_text(encoding="utf-8")
+        problem = (fb / "problem.md").read_text(encoding="utf-8") if fb and (fb / "problem.md").is_file() else ""
         hits = retrieval.get("hits") or []
         seed_facts = retrieval.get("seed_facts") or []
         cite_rows = []
@@ -387,19 +425,21 @@ def node_research(state: ORPathState) -> dict:
             )
         if not cite_rows:
             cite_rows.append(
-                f"| 1 | Problem | {fb.as_posix()}/problem.md | fixture primary | primary | high |"
+                f"| 1 | Problem | {(fb.as_posix() + '/problem.md') if fb else 'n/a'} | fixture primary | primary | high |"
             )
         for j, s in enumerate(seed_facts[:3], len(cite_rows) + 1):
             cite_rows.append(
                 f"| {j} | seed | {s.get('id')} | {s.get('label', s.get('name', ''))} | seed | high |"
             )
+        steer_block = format_pi_steer_block(state_m)
+        steer_section = f"\n## Human steer\n{steer_block}\n" if steer_block else ""
         body = f"""# Research: {slug}
 
 ## Summary
 Research for `{pc}` / `{pid}`. Retrieval mode={retrieval.get('knowledge_mode', mode)}.
 **Mandatory:** use retrieval hits for candidate methods (e.g. column generation, residual knapsack,
 branch-and-price, co-cut geometry). Do not invent optima; methods only.
-
+{steer_section}
 ## Problem class
 {pc}
 
@@ -422,12 +462,13 @@ branch-and-price, co-cut geometry). Do not invent optima; methods only.
 ## Modeling recommendations
 - problem_class: {pc}
 - no objective/tour/routes/path answers in schema
+- preferred_solve_mode hint: {state_m.get("solve_mode") or "n/a"}
 
 ## Retrieval artifact
 `{rp}`
 
 ## Process memory (lessons)
-`{state.get("lessons_path") or (root / "notes" / f"{slug}-lessons.md")}`
+`{state_m.get("lessons_path") or (root / "notes" / f"{slug}-lessons.md")}`
 (Process tips only - not authoritative optima.)
 
 ## Problem excerpt
@@ -439,13 +480,17 @@ branch-and-price, co-cut geometry). Do not invent optima; methods only.
     body = path.read_text(encoding="utf-8")
     # ensure coverage section even for live merges
     body2 = ensure_research_coverage_section(body, retrieval or {"knowledge_mode": mode})
+    # inject steer section if missing
+    sb = format_pi_steer_block(state_m)
+    if sb and "## Human steer" not in body2:
+        body2 = body2.rstrip() + "\n\n## Human steer\n" + sb + "\n"
     if body2 != body:
         path.write_text(body2, encoding="utf-8")
         body = body2
 
     ok, errs = gate_research_text(body, knowledge_mode=mode, retrieval=retrieval)
     sub_ok = sub_meta.get("gate_subagent_ok")
-    live_req = live_subagent_enabled(dict(state)) and mode in {"seed", "hybrid"}
+    live_req = live_subagent_enabled(dict(state_m)) and mode in {"seed", "hybrid"}
     if live_req and sub_ok is False:
         ok = False
         errs = list(errs) + [f"subagent={sub_meta.get('error') or 'failed'}"]
@@ -459,10 +504,16 @@ branch-and-price, co-cut geometry). Do not invent optima; methods only.
             ("; ".join(errs) if errs else "evidence+coverage ok")
             + f" subagent={sub_ok} scale={sub_meta.get('scale')}"
         ),
-        plan_file=state.get("plan_path"),
+        plan_file=state_m.get("plan_path"),
     )
+    base_out = {
+        k: steer_upd[k]
+        for k in steer_upd
+        if k.startswith("human_steer") or k in {"solve_mode"}
+    }
     if not ok and mode in {"seed", "hybrid"}:
         return {
+            **base_out,
             "stage": "human_stop",
             "human_required": True,
             "research_path": str(path),
@@ -470,6 +521,7 @@ branch-and-price, co-cut geometry). Do not invent optima; methods only.
             "last_error": "research_gate: " + "; ".join(errs),
         }
     return {
+        **base_out,
         "stage": "model",
         "research_path": str(path),
         "gate_subagent_ok": sub_ok,
@@ -479,6 +531,12 @@ branch-and-price, co-cut geometry). Do not invent optima; methods only.
 
 def node_model(state: ORPathState) -> dict:
     root = _root(state)
+    from orpath.human_steer import apply_steer_to_state
+
+    steer_upd = apply_steer_to_state(dict(state), workdir=root, boundary="model")
+    if steer_upd.get("steer_pause"):
+        return steer_upd
+    state = {**dict(state), **steer_upd}  # type: ignore[assignment]
     slug = state["slug"]
     pid = state["problem_id"]
     pc = state.get("problem_class") or "shortest_path"
@@ -673,6 +731,20 @@ def node_model(state: ORPathState) -> dict:
         sp.parent.mkdir(parents=True, exist_ok=True)
         sp.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
 
+    # D2: if human steer set solve_mode, align preferred_solve_mode on disk schema
+    sm = str(state.get("solve_mode") or "").strip()
+    if sm and sp.is_file() and state.get("human_steer_applied"):
+        try:
+            data = json.loads(sp.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                data["preferred_solve_mode"] = sm
+                notes = str(data.get("notes") or "")
+                if "human_steer" not in notes:
+                    data["notes"] = (notes + " human_steer_mode=" + sm).strip()
+                sp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        except (OSError, json.JSONDecodeError):
+            pass
+
     append_plan_log(
         root,
         slug,
@@ -681,12 +753,26 @@ def node_model(state: ORPathState) -> dict:
         detail=f"schema={sp.name} subagent={sub_ok}",
         plan_file=state.get("plan_path"),
     )
-    return {
+    out_m: dict = {
         "stage": "gate_schema",
         "schema_path": str(sp),
         "gate_subagent_ok": sub_ok if sub_ok is not None else state.get("gate_subagent_ok"),
         "last_error": "",
     }
+    if sm:
+        out_m["solve_mode"] = sm
+    for k in (
+        "human_steer_path",
+        "human_steer_applied",
+        "human_steer_lg",
+        "human_steer_pi",
+        "human_steer_at_stage",
+        "human_steer_utc",
+        "human_steer_fresh",
+    ):
+        if state.get(k) is not None:
+            out_m[k] = state.get(k)
+    return out_m
 
 
 def node_gate_schema(state: ORPathState) -> dict:
@@ -800,6 +886,15 @@ def _paper_whitelist_path(
 
 def node_solve(state: ORPathState) -> dict:
     root = _root(state)
+    from orpath.human_steer import apply_steer_to_state
+
+    steer_upd = apply_steer_to_state(dict(state), workdir=root, boundary="solve")
+    if steer_upd.get("steer_pause"):
+        return steer_upd
+    if steer_upd.get("solve_mode"):
+        state = {**dict(state), **steer_upd}  # type: ignore[assignment]
+    elif steer_upd:
+        state = {**dict(state), **{k: v for k, v in steer_upd.items() if k != "stage"}}  # type: ignore[assignment]
     pc = state.get("problem_class") or "shortest_path"
     mode = state["solve_mode"]
     out = root / "outputs" / f"{state['slug']}-solution.json"

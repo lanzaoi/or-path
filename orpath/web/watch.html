@@ -259,7 +259,11 @@
       grid-row: 6;
       min-height: 0;
       display: grid;
-      grid-template-columns: minmax(220px, 0.95fr) minmax(280px, 1.35fr) minmax(220px, 1fr);
+      grid-template-columns:
+        minmax(180px, 0.85fr)
+        minmax(280px, 1.25fr)
+        minmax(220px, 1.05fr)
+        minmax(200px, 0.9fr);
       gap: 0;
       background: var(--bg);
       overflow: hidden;
@@ -278,6 +282,115 @@
       font-size: 12px; font-weight: 600; padding: 10px 12px 6px;
       color: var(--ink-48); letter-spacing: .02em;
     }
+    main h2 .hint {
+      font-weight: 500; color: var(--ink-48); opacity: .85; margin-left: 6px;
+      font-size: 10px;
+    }
+
+    /* Dialogue module (D0/D1) */
+    #dialogueSection {
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      background: linear-gradient(180deg, #fafbfd 0%, #fff 40%);
+    }
+    #dlgBubbles {
+      min-height: 0;
+      overflow: auto;
+      padding: 4px 10px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .bubble {
+      max-width: 96%;
+      padding: 8px 10px;
+      border-radius: 14px;
+      font-size: 12px;
+      line-height: 1.4;
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(0,0,0,.04);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .bubble .b-meta {
+      font-size: 10px; font-weight: 700; letter-spacing: .04em;
+      color: var(--ink-48); margin-bottom: 3px; text-transform: uppercase;
+    }
+    .bubble.system { align-self: center; max-width: 100%; background: var(--bg); color: var(--ink-48); }
+    .bubble.research, .bubble.pi { align-self: flex-start; border-color: rgba(0,113,227,.2); }
+    .bubble.model { align-self: flex-start; border-color: rgba(88,86,214,.25); }
+    .bubble.solve { align-self: flex-start; background: #f0faf4; border-color: rgba(52,199,89,.35); }
+    .bubble.validate { align-self: flex-start; background: #f3f9ff; border-color: rgba(0,113,227,.25); }
+    .bubble.human {
+      align-self: flex-end;
+      background: #0071e3;
+      color: #fff;
+      border-color: transparent;
+    }
+    .bubble.human .b-meta { color: rgba(255,255,255,.75); }
+    #dlgForm {
+      border-top: 1px solid var(--border);
+      padding: 8px 10px 10px;
+      background: #fff;
+      display: grid;
+      gap: 6px;
+    }
+    #dlgForm .row {
+      display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    }
+    #dlgForm label {
+      font-size: 11px; color: var(--ink-48); display: flex; flex-direction: column; gap: 2px;
+      min-width: 0;
+    }
+    #dlgForm select, #dlgForm input, #dlgForm textarea {
+      font: inherit; font-size: 12px;
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 5px 8px; background: var(--bg); color: var(--ink);
+      min-width: 0;
+    }
+    #dlgForm textarea {
+      width: 100%; min-height: 52px; resize: vertical;
+      font-family: inherit;
+    }
+    #dlgForm .grow { flex: 1 1 140px; }
+    #dlgForm .actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    #dlgForm button {
+      font: inherit; font-size: 12px; font-weight: 600;
+      border-radius: 980px; border: 1px solid var(--border);
+      padding: 6px 12px; background: #fff; cursor: pointer; color: var(--ink);
+    }
+    #dlgForm button.primary {
+      background: var(--blue); color: #fff; border-color: var(--blue);
+    }
+    #dlgForm button:hover { border-color: var(--blue); }
+    #dlgForm button.primary:hover { filter: brightness(1.05); }
+    #dlgForm .note {
+      font-size: 10px; color: var(--ink-48); line-height: 1.35;
+    }
+    #dlgForm .note strong { color: var(--fail); font-weight: 600; }
+    #dlgToast {
+      font-size: 11px; color: var(--ok); min-height: 14px;
+    }
+    #dlgToast.err { color: var(--fail); }
+    #dlgCta {
+      display: none; margin-top: 4px; padding: 6px 8px;
+      background: var(--bg); border-radius: 8px; font-size: 11px;
+    }
+    #dlgCta.show { display: block; }
+    #dlgCta .cta-item { margin: 4px 0; }
+    #dlgCta code {
+      display: block; font-family: var(--mono); font-size: 10px;
+      white-space: pre-wrap; word-break: break-all;
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px 6px; margin-top: 2px;
+    }
+    #dlgCta button {
+      font-size: 11px; margin-top: 2px; padding: 3px 8px;
+      border-radius: 6px; border: 1px solid var(--border);
+      background: #fff; cursor: pointer;
+    }
+
     .scroll {
       min-height: 0;
       overflow: auto;
@@ -366,6 +479,45 @@
       background: #fff9eb; border: 1px solid rgba(255,159,10,.25);
       font-size: 11px; color: var(--ink-80); line-height: 1.4;
     }
+    /* D3 Tier-2 deep link panel */
+    #tier2Panel {
+      margin-top: 10px; padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,113,227,.2);
+      background: linear-gradient(180deg, #f5f9ff 0%, #fff 70%);
+      font-size: 12px;
+    }
+    #tier2Panel h3 {
+      margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--ink-80);
+    }
+    #tier2Panel .t2-meta { color: var(--ink-48); font-size: 11px; margin-bottom: 6px; word-break: break-all; }
+    #tier2Panel .t2-badges { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+    #tier2Panel .t2-badges span {
+      font-size: 10px; padding: 2px 8px; border-radius: 980px;
+      border: 1px solid var(--border); background: #fff;
+    }
+    #tier2Panel .t2-badges span.on { border-color: rgba(52,199,89,.45); color: var(--ok); }
+    #tier2Panel .t2-badges span.off { color: var(--ink-48); }
+    #tier2Panel .t2-link {
+      margin: 6px 0; padding: 6px 8px; border-radius: 8px;
+      background: #fff; border: 1px solid var(--border);
+    }
+    #tier2Panel .t2-link strong { display: block; font-size: 12px; }
+    #tier2Panel .t2-link .why { color: var(--ink-48); font-size: 10px; margin: 2px 0 4px; }
+    #tier2Panel .t2-link pre {
+      margin: 0; font-family: var(--mono); font-size: 10px;
+      white-space: pre-wrap; word-break: break-all;
+      max-height: 72px; overflow: auto;
+    }
+    #tier2Panel .t2-link button {
+      margin-top: 4px; font-size: 11px; padding: 3px 8px;
+      border-radius: 6px; border: 1px solid var(--border);
+      background: #fff; cursor: pointer;
+    }
+    #tier2Panel .t2-recent {
+      margin-top: 6px; font-family: var(--mono); font-size: 10px;
+      max-height: 80px; overflow: auto; color: var(--ink-80);
+    }
     footer {
       grid-row: 7;
       padding: 6px 14px; font-size: 11px; color: var(--ink-48);
@@ -377,8 +529,18 @@
     .toolbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
 
     /* Responsive */
+    @media (max-width: 1280px) {
+      main {
+        grid-template-columns:
+          minmax(160px, 0.8fr)
+          minmax(260px, 1.2fr)
+          minmax(0, 1fr);
+      }
+      main > section:last-child { grid-column: 1 / -1; max-height: 26vh; border-top: 1px solid var(--border); }
+    }
     @media (max-width: 1100px) {
-      main { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+      main { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); }
+      main > #dialogueSection { grid-column: 1 / -1; max-height: 42vh; order: -1; border-bottom: 1px solid var(--border); }
       main > section:last-child { grid-column: 1 / -1; max-height: 28vh; border-top: 1px solid var(--border); }
     }
     @media (max-width: 900px) {
@@ -389,10 +551,12 @@
       }
       main > section {
         max-height: none;
-        min-height: 240px;
+        min-height: 220px;
         border-right: 0;
         border-bottom: 1px solid var(--border);
+        order: 0;
       }
+      main > #dialogueSection { max-height: none; min-height: 320px; order: -1; }
       main > section:last-child { max-height: none; }
       .ctrl input[type="text"] { width: 110px; }
       .ctrl select { min-width: 160px; max-width: 200px; }
@@ -479,6 +643,69 @@
       <div class="scroll" id="stages"></div>
       <div id="stageDetail" data-m1-stage-detail="1"></div>
     </section>
+    <section id="dialogueSection" data-orpath-dialogue="1">
+      <h2>协作对话 <span class="hint">阶段精要 · 人导 · 非 LLM 编造</span></h2>
+      <div id="dlgBubbles" aria-live="polite"></div>
+      <div id="dlgForm" data-orpath-steer-form="1">
+        <div class="note">控制字段 → 调度重跑 · 认知备注 → 下一站 Pi · <strong>禁止填写 objective / 最优值</strong> · 不会自动续跑</div>
+        <div class="row">
+          <label>求解模式 (LG)
+            <select id="dlgMode" aria-label="solve_mode">
+              <option value="">— 不改 —</option>
+              <option value="networkx">networkx</option>
+              <option value="cpsat">cpsat</option>
+              <option value="highs">highs</option>
+              <option value="ortools">ortools</option>
+              <option value="polyomino">polyomino</option>
+              <option value="tube">tube</option>
+              <option value="mock">mock</option>
+            </select>
+          </label>
+          <label>续跑提示 (LG)
+            <select id="dlgResume" aria-label="resume_from">
+              <option value="">—</option>
+              <option value="research">research</option>
+              <option value="model">model</option>
+              <option value="solve">solve</option>
+              <option value="gate_validate">gate_validate</option>
+              <option value="explain">explain</option>
+            </select>
+          </label>
+          <label class="grow" style="flex-direction:row;align-items:center;gap:6px;margin-top:14px">
+            <input type="checkbox" id="dlgFresh" />
+            强制 --fresh
+          </label>
+        </div>
+        <div class="row">
+          <label>暂停边界 (LG)
+            <select id="dlgAtStage" aria-label="at_stage">
+              <option value="manual">manual（不按站暂停）</option>
+              <option value="after_research">after_research → model 前</option>
+              <option value="research">research 前</option>
+              <option value="model">model 前</option>
+              <option value="solve">solve 前</option>
+              <option value="after_validate">after_validate → explain 前</option>
+            </select>
+          </label>
+          <label class="grow" style="flex-direction:row;align-items:center;gap:6px;margin-top:14px">
+            <input type="checkbox" id="dlgPause" />
+            下一边界暂停 (pause_next)
+          </label>
+        </div>
+        <label class="grow">方法偏好 (Pi，逗号分隔)
+          <input type="text" id="dlgMethods" placeholder="cpsat, column_generation, …" autocomplete="off" />
+        </label>
+        <label>引导备注 (Pi)
+          <textarea id="dlgNotes" placeholder="例如：Q2 共切优先四模式包络；不要只 BFD"></textarea>
+        </label>
+        <div class="actions">
+          <button type="button" class="primary" id="dlgSubmit">写入人导</button>
+          <button type="button" id="dlgClear">清空表单</button>
+          <span id="dlgToast"></span>
+        </div>
+        <div id="dlgCta"></div>
+      </div>
+    </section>
     <section>
       <h2>派工与事件 · L1 / L2 / L3</h2>
       <div class="scroll" id="mid">
@@ -490,6 +717,7 @@
     <section>
       <h2>产物与说明 · L4</h2>
       <div class="scroll art" id="artifacts"></div>
+      <div id="tier2Panel" data-orpath-tier2="1" data-m1-tier2="1" hidden></div>
     </section>
   </main>
 
@@ -499,7 +727,10 @@
     <span id="genInfo"></span>
     <!-- gate markers: auto-resume never; ORPATH_LANGFUSE is optional observability only -->
     <!-- P5: tier3 pulse · Demo checklist · ORPATH_LANGFUSE -->
-    <span style="display:none" aria-hidden="true">auto-resume disabled · ORPATH_LANGFUSE optional · tier3 pulse · Demo checklist · P5</span>
+    <!-- D0/D1: dialogue module · human-steer · data-orpath-dialogue -->
+    <!-- D3: Tier-2 deep link · kanban · supervise · ORPATH_PI_SESSION · data-orpath-tier2 -->
+    <!-- D4: pause_next · at_stage · e2e · dialogue-gate -->
+    <span style="display:none" aria-hidden="true">auto-resume disabled · ORPATH_LANGFUSE optional · tier3 pulse · Demo checklist · P5 · dialogue · human-steer · Copy cmd · tier2 · ORPATH_PI_SESSION · pi-kanban · /supervise · data-orpath-tier2 · pause_next · at_stage · dlgPause · dlgAtStage · dialogue-gate</span>
   </footer>
 
   <script>
@@ -520,6 +751,8 @@
     let autoJumpedError = false;
     let copyToastTimer = null;
     let modelPresets = [];
+    let dlgFollow = true;
+    let lastDlgCount = 0;
 
     const $ = (id) => document.getElementById(id);
 
@@ -999,6 +1232,150 @@
       if (followTail) box.scrollTop = box.scrollHeight;
     }
 
+    function renderDialogue(s) {
+      const box = $("dlgBubbles");
+      if (!box) return;
+      const d = (s && s.dialogue) || {};
+      const bubbles = d.bubbles || [];
+      if (!bubbles.length) {
+        box.innerHTML = `<div class="empty">暂无阶段精要 · 跑产品任务后这里会按磁盘生成对话气泡（无 LLM）</div>`;
+        lastDlgCount = 0;
+        return;
+      }
+      const roleTitle = {
+        system: "系统",
+        research: "调研",
+        model: "建模",
+        solve: "求解",
+        validate: "校验",
+        human: "人导",
+        pi: "会话",
+      };
+      box.innerHTML = bubbles.map((b) => {
+        const role = esc(b.role || "system");
+        const title = esc(b.title || roleTitle[b.role] || role);
+        const text = esc(b.text || "");
+        return `<div class="bubble ${role}"><div class="b-meta">${title}</div>${text}</div>`;
+      }).join("");
+      if (dlgFollow && (bubbles.length !== lastDlgCount || followTail)) {
+        box.scrollTop = box.scrollHeight;
+      }
+      lastDlgCount = bubbles.length;
+
+      // Prefill form from existing steer once if empty
+      const st = d.steer;
+      if (st && typeof st === "object") {
+        const lg = st.lg || {};
+        const pi = st.pi || {};
+        if ($("dlgMode") && !$("dlgMode").dataset.touched && lg.solve_mode) {
+          $("dlgMode").value = lg.solve_mode;
+        }
+        if ($("dlgResume") && !$("dlgResume").dataset.touched && lg.resume_from) {
+          $("dlgResume").value = lg.resume_from;
+        }
+        if ($("dlgAtStage") && !$("dlgAtStage").dataset.touched && st.at_stage) {
+          $("dlgAtStage").value = st.at_stage;
+        }
+        if ($("dlgPause") && !$("dlgPause").dataset.touched && lg.pause_next) {
+          $("dlgPause").checked = !!lg.pause_next;
+        }
+        if ($("dlgMethods") && !$("dlgMethods").dataset.touched && pi.prefer_methods) {
+          $("dlgMethods").value = (pi.prefer_methods || []).join(", ");
+        }
+        if ($("dlgNotes") && !$("dlgNotes").dataset.touched && pi.notes) {
+          $("dlgNotes").value = pi.notes;
+        }
+      }
+    }
+
+    function renderDlgCta(acts) {
+      const el = $("dlgCta");
+      if (!el) return;
+      if (!acts || !acts.length) {
+        el.classList.remove("show");
+        el.innerHTML = "";
+        return;
+      }
+      el.classList.add("show");
+      el.innerHTML =
+        `<div class="na-label">人导已写入 · 复制命令到终端（不会自动续跑）· Copy cmd</div>` +
+        acts.map((a, i) => {
+          const title = esc(a.title || "action");
+          const cmd = esc(a.command || "");
+          const reason = esc(a.reason || "");
+          return `<div class="cta-item"><strong>${title}</strong>` +
+            (reason ? `<div style="color:var(--ink-48)">${reason}</div>` : "") +
+            `<code id="dlgCmd${i}">${cmd}</code>` +
+            `<button type="button" data-dlg-copy="${i}">Copy cmd</button></div>`;
+        }).join("");
+      el.querySelectorAll("[data-dlg-copy]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const i = btn.getAttribute("data-dlg-copy");
+          const code = $("dlgCmd" + i);
+          const t = code ? code.textContent : "";
+          try {
+            await navigator.clipboard.writeText(t);
+            btn.textContent = "已复制";
+            setTimeout(() => { btn.textContent = "Copy cmd"; }, 1200);
+          } catch (_) {
+            btn.textContent = "复制失败";
+          }
+        });
+      });
+    }
+
+    async function submitSteer() {
+      const toast = $("dlgToast");
+      toast.classList.remove("err");
+      toast.textContent = "提交中…";
+      const slug = ($("slug").value || "").trim() || "test";
+      const body = {
+        slug,
+        source: "watch_form",
+        at_stage: ($("dlgAtStage") && $("dlgAtStage").value) || "manual",
+        pause_next: !!($("dlgPause") && $("dlgPause").checked),
+        lg: {
+          solve_mode: ($("dlgMode").value || "").trim(),
+          resume_from: ($("dlgResume").value || "").trim(),
+          fresh: !!($("dlgFresh") && $("dlgFresh").checked),
+          pause_next: !!($("dlgPause") && $("dlgPause").checked),
+        },
+        pi: {
+          prefer_methods: ($("dlgMethods").value || "").trim(),
+          notes: ($("dlgNotes").value || "").trim(),
+        },
+      };
+      // strip empty lg keys for cleaner file
+      if (!body.lg.solve_mode) delete body.lg.solve_mode;
+      if (!body.lg.resume_from) delete body.lg.resume_from;
+      if (!body.lg.fresh) delete body.lg.fresh;
+      if (!body.lg.pause_next) delete body.lg.pause_next;
+      if (!body.pause_next) delete body.pause_next;
+      try {
+        const r = await fetch("/api/steer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const j = await r.json();
+        if (!r.ok || !j.ok) {
+          const errs = (j.errors || [j.error || "failed"]).join("; ");
+          toast.classList.add("err");
+          toast.textContent = errs;
+          renderDlgCta([]);
+          return;
+        }
+        toast.textContent = "已写入 " + (j.path || "human-steer.json");
+        renderDlgCta(j.next_actions || []);
+        // force refresh bubbles
+        lastFp = null;
+        fetchSnapshot(true);
+      } catch (err) {
+        toast.classList.add("err");
+        toast.textContent = String(err.message || err);
+      }
+    }
+
     function renderArtifacts(s) {
       const box = $("artifacts");
       const a = s.artifacts || {};
@@ -1019,12 +1396,91 @@
         if (!a[k]) return;
         html += `<div class="k">${esc(labels[k] || k)}</div><span class="path">${esc(a[k])}</span>`;
       });
+      const dlg = s.dialogue || {};
+      if (dlg.steer_path) {
+        html += `<div class="k">人导单</div><span class="path">${esc(dlg.steer_path)}${dlg.steer_exists ? "" : " （尚未写入）"}</span>`;
+      }
       const honest = (s.honesty && s.honesty.messages) || [];
       if (honest.length) {
         html += `<div class="honesty"><strong>说明</strong><br/>${honest.map(esc).join("<br/>")}</div>`;
       }
       if (!html) html = `<div class="empty">暂无产物路径</div>`;
       box.innerHTML = html;
+      renderTier2(s);
+    }
+
+    function renderTier2(s) {
+      const panel = $("tier2Panel");
+      if (!panel) return;
+      const t2 = (s && s.tier2) || {};
+      panel.hidden = false;
+      const ps = t2.package_status || {};
+      const badge = (name, on) =>
+        `<span class="${on ? "on" : "off"}">${esc(name)} ${on ? "✓" : "—"}</span>`;
+      const links = t2.deep_links || [];
+      const recent = t2.recent || [];
+      let linksHtml = links.map((L, i) => {
+        const ready = L.ready === false ? " · 包未声明" : (L.ready === true ? " · 已声明" : "");
+        return `<div class="t2-link">
+          <strong>${esc(L.title || L.id || ("link-" + i))}${ready}</strong>
+          <div class="why">${esc(L.reason || "")}</div>
+          <pre id="t2Cmd${i}">${esc(L.command || "")}</pre>
+          <button type="button" data-t2-copy="${i}">Copy cmd</button>
+        </div>`;
+      }).join("");
+      if (!linksHtml) {
+        linksHtml = `<div class="empty">暂无深链（snapshot.tier2.deep_links）</div>`;
+      }
+      const recentHtml = recent.length
+        ? `<div class="k">最近 session</div><div class="t2-recent">${recent.slice(0, 6).map((r) =>
+            esc((r.name || "") + " · " + (r.parent || "").slice(0, 48))
+          ).join("<br/>")}</div>`
+        : `<div class="k">最近 session</div><div class="t2-meta">无（交互 pi.bat 或 SESSION=1 LIVE 后才会出现）</div>`;
+
+      panel.innerHTML = `
+        <h3>Tier-2 深链 · Pi session / kanban / supervise</h3>
+        <div class="t2-meta">
+          ORPATH_PI_SESSION ${t2.pi_session_env ? "开" : "关"} ·
+          sessions_root: ${esc(t2.sessions_root || "—")}
+          ${t2.sessions_root_exists ? "" : " （目录尚无）"}
+        </div>
+        <div class="t2-badges">
+          ${badge("pi-kanban", !!ps["pi-kanban"])}
+          ${badge("pi-supervisor", !!ps["pi-supervisor"])}
+          ${badge("ask-user", !!ps["rpiv-ask-user-question"])}
+          ${badge("pi-subagents", !!ps["pi-subagents"])}
+          <span class="${t2.pi_session_env ? "on" : "off"}">会话 ${t2.pi_session_env ? "on" : "off"}</span>
+        </div>
+        <div class="t2-meta">文档: ${esc(t2.docs || "docs/d3-tier2-deep-link.md")} · ${esc(t2.docs_p4 || "docs/p4-tier2-deep-look.md")}</div>
+        <div class="t2-meta">${esc(t2.kanban_hint || "")} · ${esc(t2.supervise_hint || "")}</div>
+        ${recentHtml}
+        <div class="k" style="margin-top:8px">可复制命令（不会自动执行）</div>
+        ${linksHtml}
+      `;
+      panel.querySelectorAll("[data-t2-copy]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const i = btn.getAttribute("data-t2-copy");
+          const pre = document.getElementById("t2Cmd" + i);
+          const text = pre ? pre.textContent : "";
+          if (!text) return;
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(text);
+            } else {
+              const ta = document.createElement("textarea");
+              ta.value = text;
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand("copy");
+              ta.remove();
+            }
+            btn.textContent = "已复制";
+            setTimeout(() => { btn.textContent = "Copy cmd"; }, 1000);
+          } catch (err) {
+            $("fetchErr").textContent = "复制失败: " + err.message;
+          }
+        });
+      });
     }
 
     function renderAll(s) {
@@ -1032,6 +1488,7 @@
       renderBadges(s);
       renderSwim(s);
       renderStages(s);
+      renderDialogue(s);
       renderTree(s);
       renderThinking(s);
       renderEvents(s);
@@ -1114,6 +1571,26 @@
       });
       $("btnModelApply").addEventListener("click", applyModel);
       $("modelSelect").addEventListener("change", () => { /* wait for 切换 */ });
+      const markTouch = (id) => {
+        const el = $(id);
+        if (el) el.addEventListener("change", () => { el.dataset.touched = "1"; });
+        if (el) el.addEventListener("input", () => { el.dataset.touched = "1"; });
+      };
+      ["dlgMode", "dlgResume", "dlgMethods", "dlgNotes", "dlgFresh", "dlgAtStage", "dlgPause"].forEach(markTouch);
+      if ($("dlgSubmit")) $("dlgSubmit").addEventListener("click", submitSteer);
+      if ($("dlgClear")) $("dlgClear").addEventListener("click", () => {
+        ["dlgMode", "dlgResume", "dlgMethods", "dlgNotes", "dlgAtStage"].forEach((id) => {
+          const el = $(id);
+          if (!el) return;
+          el.value = id === "dlgAtStage" ? "manual" : "";
+          delete el.dataset.touched;
+        });
+        if ($("dlgFresh")) $("dlgFresh").checked = false;
+        if ($("dlgPause")) { $("dlgPause").checked = false; delete $("dlgPause").dataset.touched; }
+        $("dlgToast").textContent = "";
+        $("dlgToast").classList.remove("err");
+        renderDlgCta([]);
+      });
       loadModel();
       applyControls();
       timer = setInterval(() => fetchSnapshot(false), POLL_MS);

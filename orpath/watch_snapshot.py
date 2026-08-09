@@ -19,6 +19,7 @@ Contract (schema_version=1) — fields for GET /api/snapshot consumers:
 }
 
 Law: specs/process-visibility.md — never invent collaboration stories.
+Dialogue: specs/human-steer-and-pi-guidance.md — rule digests only (no LLM).
 """
 from __future__ import annotations
 
@@ -31,6 +32,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from orpath.human_steer import build_dialogue
 from orpath.paths import orpath_home, orpath_workdir
 from orpath.subagent_dispatch import detect_subagent_calls
 
@@ -844,26 +846,111 @@ def discover_pi_sessions(
     *,
     workdir: Path,
     limit: int = 12,
+    home: Path | None = None,
 ) -> dict[str, Any]:
     """List recent Pi session JSONL under ~/.pi/agent/sessions (Tier-2).
 
     Read-only. Does not require ORPATH_PI_SESSION=1 (may show sessions from
     interactive `orpath.bat pi` even when product leads use --no-session).
+
+    D3: also reports project package install status + copyable deep-link commands.
     """
     from orpath.subagent_runtime import pi_session_enabled, pi_sessions_root
 
     root = pi_sessions_root()
     enabled = pi_session_enabled()
+    home_p = Path(home) if home else orpath_home()
+    packages = _read_pi_packages(home_p)
+    pkg_names = " ".join(packages).lower()
+    has_kanban = "pi-kanban" in pkg_names
+    has_supervisor = "pi-supervisor" in pkg_names
+    has_ask = "rpiv-ask-user-question" in pkg_names or "ask-user-question" in pkg_names
+
+    deep_links = [
+        {
+            "id": "session_on",
+            "title": "产品 LIVE 写 session（供 kanban）",
+            "command": (
+                "set ORPATH_PI_SESSION=1\n"
+                "set ORPATH_LIVE_SUBAGENT=1\n"
+                "orpath.bat watch-run --live --keep-watch --slug tier2-demo"
+            ),
+            "reason": "默认 SESSION=0 时 lead 带 --no-session，kanban 看不到产品 lead",
+        },
+        {
+            "id": "pi_interactive",
+            "title": "打开交互 Pi（Tier-2 主场）",
+            "command": "pi.bat",
+            "reason": "Enter=steer · Alt+Enter=follow-up",
+        },
+        {
+            "id": "kanban",
+            "title": "启动 pi-kanban",
+            "command": (
+                "pi.bat\n"
+                ":: then inside Pi:\n"
+                "/kanban start\n"
+                "/kanban open web"
+            ),
+            "reason": "需 npm:pi-kanban；读 ~/.pi/agent/sessions",
+            "ready": has_kanban,
+        },
+        {
+            "id": "supervise",
+            "title": "启动 pi-supervisor 目标监督",
+            "command": (
+                "pi.bat\n"
+                ":: then inside Pi:\n"
+                "/supervise Prefer exact solve tracks; never invent objective; "
+                "use tools/solve_dispatch + validate\n"
+                "/supervise sensitivity medium\n"
+                "/supervise status"
+            ),
+            "reason": "需 npm:pi-supervisor + .pi/SUPERVISOR.md；交互会话用",
+            "ready": has_supervisor,
+        },
+        {
+            "id": "install_pkgs",
+            "title": "项目本地安装引导插件（若 list 缺包）",
+            "command": (
+                "pi.bat install npm:pi-kanban -l --approve\n"
+                "pi.bat install npm:pi-supervisor -l --approve\n"
+                "pi.bat install npm:@juicesharp/rpiv-ask-user-question -l --approve\n"
+                "pi.bat list"
+            ),
+            "reason": "写入 .pi/settings.json + .pi/npm/",
+        },
+    ]
+
     out: dict[str, Any] = {
         "pi_session_env": enabled,
         "sessions_root": str(root),
         "sessions_root_exists": root.is_dir(),
         "recent": [],
         "kanban_hint": "pi install npm:pi-kanban  then  /kanban start",
+        "supervise_hint": "pi.bat → /supervise <outcome>  (npm:pi-supervisor)",
         "fleet_hint": "inside Pi TUI: /subagents-fleet (package-dependent)",
-        "docs": "docs/p4-tier2-deep-look.md",
+        "docs": "docs/d3-tier2-deep-link.md",
+        "docs_p4": "docs/p4-tier2-deep-look.md",
+        "packages": packages,
+        "package_status": {
+            "pi-kanban": has_kanban,
+            "pi-supervisor": has_supervisor,
+            "rpiv-ask-user-question": has_ask,
+            "pi-subagents": "pi-subagents" in pkg_names,
+        },
+        "deep_links": deep_links,
+        "honesty": (
+            []
+            if enabled
+            else [
+                "tier2_session_off: set ORPATH_PI_SESSION=1 before LIVE product lead "
+                "if kanban must see product sessions"
+            ]
+        ),
     }
     if not root.is_dir():
+        out["workdir_hint"] = str(workdir.resolve())
         return out
 
     # Prefer dirs that look like this workdir (Pi encodes cwd in folder name)
@@ -877,6 +964,7 @@ def discover_pi_sessions(
                 continue
             candidates.append((st.st_mtime, p))
     except OSError:
+        out["workdir_hint"] = str(workdir.resolve())
         return out
     candidates.sort(key=lambda x: -x[0])
     recent = []
@@ -887,7 +975,9 @@ def discover_pi_sessions(
         except ValueError:
             rel_parent = str(p.parent)
         score = 1.0
-        if wd_key and any(part and part in rel_parent for part in wd_key.split("-") if len(part) > 4):
+        if wd_key and any(
+            part and part in rel_parent for part in wd_key.split("-") if len(part) > 4
+        ):
             score += 5.0
         # path tokens like Users-Lanzao-Desktop-agent
         if "agent" in rel_parent.lower() and "desktop" in rel_parent.lower():
@@ -906,6 +996,21 @@ def discover_pi_sessions(
     out["recent"] = recent[:limit]
     out["workdir_hint"] = str(workdir.resolve())
     return out
+
+
+def _read_pi_packages(home: Path) -> list[str]:
+    """Project .pi/settings.json packages (best-effort)."""
+    settings = Path(home) / ".pi" / "settings.json"
+    if not settings.is_file():
+        return []
+    try:
+        data = json.loads(settings.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    pkgs = data.get("packages") if isinstance(data, dict) else None
+    if not isinstance(pkgs, list):
+        return []
+    return [str(x) for x in pkgs]
 
 
 def build_dispatches(
@@ -1611,7 +1716,7 @@ def build_snapshot(
         "sub_events": sub_event_count,
     }
 
-    tier2 = discover_pi_sessions(workdir=wd, limit=10)
+    tier2 = discover_pi_sessions(workdir=wd, limit=10, home=home)
     if not tier2.get("pi_session_env"):
         msgs = list(honesty.get("messages") or [])
         if not any("tier2_session_off" in str(m) for m in msgs):
@@ -1620,6 +1725,10 @@ def build_snapshot(
                 "kanban may only see interactive pi sessions"
             )
         honesty["messages"] = msgs
+        # also fold tier2.honesty
+        for m in tier2.get("honesty") or []:
+            if m not in honesty["messages"]:
+                honesty["messages"].append(m)
 
     # P5 Tier-3 optional Langfuse — surface only; does not replace Watch
     lf_raw = (os.environ.get("ORPATH_LANGFUSE") or os.environ.get("LANGFUSE_ENABLED") or "0").strip().lower()
@@ -1635,6 +1744,18 @@ def build_snapshot(
         "host": (os.environ.get("LANGFUSE_HOST") or os.environ.get("LANGFUSE_BASE_URL") or ""),
         "replaces_watch": False,
     }
+
+    dialogue = build_dialogue(
+        workdir=wd,
+        slug=slug,
+        stages=stages if isinstance(stages, list) else [],
+        current=current if isinstance(current, dict) else {},
+        status=str(status or ""),
+        artifacts=artifacts if isinstance(artifacts, dict) else {},
+        honesty_messages=list(honesty.get("messages") or [])
+        if isinstance(honesty, dict)
+        else [],
+    )
 
     snap: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -1654,7 +1775,8 @@ def build_snapshot(
         "process": process,
         "tier2": tier2,
         "tier3": tier3,
-        "ui": {"phase": "P5", "event_cap_server": MAX_EVENTS},
+        "dialogue": dialogue,
+        "ui": {"phase": "P5", "event_cap_server": MAX_EVENTS, "dialogue": True},
         # M1 path contract: root alias = workdir (case data); home = install
         "root": str(wd),
         "workdir": str(wd),

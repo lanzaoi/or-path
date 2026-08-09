@@ -1,7 +1,7 @@
 # OR-Path `specs/` — 规范索引（SDD 全册）
 
 **地位：** 本目录是产品与工程的 **硬法（living law）**。  
-**索引更新：** 2026-08-04（合并 hygiene；openpi/t3-vrp-tw 并入主册）
+**索引更新：** 2026-08-09（+ human-steer / Pi 引导插件规格）
 
 ---
 
@@ -42,6 +42,7 @@ Hermes MEMORY **不是**产品法。`.hermes/` 本机-only → `docs/repo-surfac
 | `t3-lg-skeleton.md` | 产品图骨架 freeze | 改 checkpointer 前 |
 | `1.2-architecture-soak.md` | soak 与 BLOCKED 诚实 | 真题无 adapter 前 |
 | **`engineering-hygiene.md`** | 编码 + Git + AI 卫生 | 写代码/提交前 |
+| **`human-steer-and-pi-guidance.md`** | Watch 对话层 · LG/Pi 人导分流 · Pi 社区引导插件 | 做人导/对话框/装 Pi 插件前 |
 
 **已合并删除（2026-08-04）：**  
 `coding-conventions.md` · `git-and-ai-hygiene.md` → `engineering-hygiene.md`  
@@ -62,7 +63,8 @@ Hermes MEMORY **不是**产品法。`.hermes/` 本机-only → `docs/repo-surfac
 6. memory.md · knowledge-and-retrieval.md
 7. product-scope.md · gates-and-dod.md
 8. engineering-hygiene.md
-9. t3-lg-skeleton / 1.2-soak（按需）
+9. human-steer-and-pi-guidance.md（人导/Pi 插件）
+10. t3-lg-skeleton / 1.2-soak（按需）
 ```
 
 ---

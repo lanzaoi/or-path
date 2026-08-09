@@ -28,6 +28,19 @@ def _retry_limit() -> int:
         return 2
 
 
+def _research_steer_section(state: dict[str, Any]) -> str:
+    """Optional human-steer block for researcher task briefs (D2)."""
+    try:
+        from orpath.human_steer import format_pi_steer_block
+
+        block = format_pi_steer_block(state)
+    except Exception:  # noqa: BLE001
+        return ""
+    if not block:
+        return ""
+    return f"## Human steer\n{block}\n"
+
+
 def _timeout_s() -> int:
     try:
         return max(60, int(os.environ.get("ORPATH_SUBAGENT_TIMEOUT", "1200")))
@@ -144,6 +157,7 @@ def run_research_subagent_lead(
             f"- retrieval: `{ret}`\n"
             f"- output: `{out_rel}`\n\n"
             f"## Focus\n{focus}\n\n"
+            f"{_research_steer_section(state)}"
             "## Integrity\n"
             "- No optimal objective/path/tour/routes.\n"
             "- Evidence table with paths.\n"
@@ -308,6 +322,13 @@ def run_model_subagent_lead(
     else:
         surface = f"- fixture: `{fixture_dir}`\n"
         mode_note = "Include preferred_solve_mode consistent with claim ladder."
+    from orpath.human_steer import format_pi_steer_block
+
+    steer_md = format_pi_steer_block(state)
+    steer_section = f"\n## Human steer\n{steer_md}\n" if steer_md else ""
+    sm = str(state.get("solve_mode") or "").strip()
+    if sm:
+        mode_note += f" preferred_solve_mode should align with human/control solve_mode=`{sm}` when set."
     brief_body = f"""# Model brief `{slug}`
 
 ## Role
@@ -320,7 +341,7 @@ Lead has NO write/edit. Call `subagent` → `or-modeler`.
 - problem_id: `{pid}`
 - problem_class: `{pc}`
 {surface}- research: `{research_path or "n/a"}`
-
+{steer_section}
 ## Hard forbid
 No objective/path/tour/routes solved values in schema.
 {mode_note}
@@ -328,6 +349,8 @@ No objective/path/tour/routes solved values in schema.
     extra = "Schema JSON only. No optima keys."
     if intake_on:
         extra += " Intake primary; shell fixture secondary."
+    if steer_md:
+        extra += " Honor human steer methods/notes; still no optima."
     detail = run_forced_subagent_stage(
         root,
         slug=slug,

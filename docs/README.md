@@ -9,6 +9,9 @@
 |------|------|
 | **[`install.md`](install.md)** | L1 setup · L2 Release 安装 |
 | **[`user-guide.md`](user-guide.md)** | **详细使用教程**（路径 A · LIVE · 求解 · RAG） |
+| **[`d3-tier2-deep-link.md`](d3-tier2-deep-link.md)** | Tier-2 深链手测（session·kanban·supervise） |
+| **[`d4-dialogue-e2e.md`](d4-dialogue-e2e.md)** | 人导对话 D4 E2E 收口（pause·gate） |
+| **[`p4-tier2-deep-look.md`](p4-tier2-deep-look.md)** | P4 session 短说明 |
 | **[`../ORPATH.md`](../ORPATH.md)** | 日常命令速查 |
 | **[`../README.md`](../README.md)** | 仓库总览 |
 | **[`../START-CASE.bat`](../START-CASE.bat)** | 路径 A 一键 |

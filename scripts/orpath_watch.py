@@ -8,6 +8,8 @@
   GET  /api/stream
   GET  /api/model                → current Pi model + presets
   POST /api/model                → {provider, model} set preference
+  GET  /api/steer?slug=          → load notes/<slug>-human-steer.json
+  POST /api/steer                → write human steer (lg/pi split; no objective)
 
 Bind 127.0.0.1 only.
 """
@@ -28,6 +30,13 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from orpath.human_steer import (  # noqa: E402
+    build_steer_cta,
+    load_human_steer,
+    normalize_steer_payload,
+    save_human_steer,
+    steer_path,
+)
 from orpath.paths import orpath_home, orpath_workdir  # noqa: E402
 from orpath.watch_snapshot import (  # noqa: E402
     build_snapshot,
@@ -91,9 +100,6 @@ class WatchHandler(SimpleHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path or "/"
-        if path != "/api/model":
-            self.send_error(404, "not found")
-            return
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length) if length > 0 else b"{}"
         try:
@@ -103,6 +109,38 @@ class WatchHandler(SimpleHTTPRequestHandler):
             return
         if not isinstance(body, dict):
             self._send_json(400, {"ok": False, "error": "body must be object"})
+            return
+
+        if path == "/api/steer":
+            slug = str(body.get("slug") or "").strip()
+            if not slug:
+                qs = parse_qs(parsed.query or "")
+                slug = (qs.get("slug") or ["test"])[0].strip() or "test"
+            doc, errs = normalize_steer_payload(
+                body, slug=slug, source=str(body.get("source") or "watch_form")
+            )
+            if errs or doc is None:
+                self._send_json(400, {"ok": False, "errors": errs or ["invalid steer"]})
+                return
+            try:
+                path_out = save_human_steer(self._workdir, slug, doc)
+                ctas = build_steer_cta(doc, workdir=self._workdir)
+                self._send_json(
+                    200,
+                    {
+                        "ok": True,
+                        "path": str(path_out),
+                        "steer": doc,
+                        "next_actions": ctas,
+                        "note": "manual CTA only — browser never auto-resume",
+                    },
+                )
+            except Exception as exc:  # noqa: BLE001
+                self._send_json(500, {"ok": False, "error": str(exc)})
+            return
+
+        if path != "/api/model":
+            self.send_error(404, "not found")
             return
         provider = str(body.get("provider") or "").strip()
         model = str(body.get("model") or "").strip()
@@ -150,7 +188,27 @@ class WatchHandler(SimpleHTTPRequestHandler):
                         "/api/snapshot",
                         "/api/stream",
                         "/api/model",
+                        "/api/steer",
                     ],
+                    "dialogue": True,
+                },
+            )
+            return
+
+        if path == "/api/steer":
+            slug, _thread = self._qs_slug_thread(qs)
+            doc = load_human_steer(self._workdir, slug)
+            self._send_json(
+                200,
+                {
+                    "ok": True,
+                    "slug": slug,
+                    "exists": doc is not None,
+                    "path": str(steer_path(self._workdir, slug)),
+                    "steer": doc,
+                    "next_actions": build_steer_cta(doc, workdir=self._workdir)
+                    if doc
+                    else [],
                 },
             )
             return
