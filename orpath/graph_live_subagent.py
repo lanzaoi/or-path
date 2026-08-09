@@ -265,10 +265,36 @@ Call the Pi tool **subagent** once with parallel tasks (failFast: false).
             encoding="utf-8",
         )
 
-    kids_ok = all(Path(t["output"]).is_file() for t in tasks_meta) or (
+    kids_ok = all(Path(t["output"]).is_file() and Path(t["output"]).stat().st_size > 20 for t in tasks_meta) or (
         research_path.is_file() and research_path.stat().st_size > 50
     )
-    ok = bool(last and last.subagent_calls_detected and kids_ok and last.exit_code == 0)
+    # Salvage: lead wall-clock timeout (-9) after real subagent work + usable research
+    # is common on wide fan-out (4 researchers + merge). Prefer artifacts over exit code.
+    research_ok_size = research_path.is_file() and research_path.stat().st_size > 200
+    timeout_salvage = bool(
+        last
+        and int(last.exit_code or 0) == -9
+        and last.subagent_calls_detected
+        and kids_ok
+        and research_ok_size
+    )
+    if timeout_salvage and chunks and research_path.is_file():
+        # If lead timed out mid-merge, refresh from children when research looks thin
+        # or lacks Evidence table (keep good lead merges).
+        body = research_path.read_text(encoding="utf-8", errors="ignore")
+        if "Evidence" not in body or len(body) < 400:
+            research_path.write_text(
+                f"# Research: {slug} (merged after lead timeout)\n\n"
+                + "\n\n---\n\n".join(chunks)
+                + "\n",
+                encoding="utf-8",
+            )
+    ok = bool(
+        last
+        and last.subagent_calls_detected
+        and kids_ok
+        and (last.exit_code == 0 or timeout_salvage)
+    )
     detail = {
         "skipped": False,
         "gate_subagent_ok": ok,
@@ -277,7 +303,10 @@ Call the Pi tool **subagent** once with parallel tasks (failFast: false).
         "log_path": last.log_path if last else "",
         "subagent_calls_detected": bool(last and last.subagent_calls_detected),
         "attempts": len(results),
-        "error": "" if ok else (last.error if last else "research subagent failed"),
+        "timeout_salvage": timeout_salvage,
+        "error": ""
+        if ok
+        else (last.error if last else "research subagent failed"),
         "lead": lead_result_to_json(last) if last else {},
     }
     rep = root / "outputs" / ".agents" / slug / "research-subagent.json"

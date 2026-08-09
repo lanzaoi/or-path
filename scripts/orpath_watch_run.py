@@ -82,7 +82,9 @@ def _clean_env(*, live: bool, workdir: Path) -> dict[str, str]:
     env["ORPATH_LIVE_SUBAGENT"] = "1" if live else "0"
     # Path-A LIVE: cap each Pi lead so cite/review cannot hang 20min+ per stage
     if live and not (env.get("ORPATH_SUBAGENT_TIMEOUT") or "").strip():
-        env["ORPATH_SUBAGENT_TIMEOUT"] = "360"
+        # Wide research = multiple or-researcher children + lead merge.
+        # 360s was killing healthy polyomino/tube LIVE leads (exit_code=-9 TIMEOUT).
+        env["ORPATH_SUBAGENT_TIMEOUT"] = "1800"
     return env
 
 

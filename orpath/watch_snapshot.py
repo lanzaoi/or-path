@@ -1266,6 +1266,122 @@ def _overall_status(
     return "ok"
 
 
+def _explain_error(
+    *,
+    last_err: str,
+    node: str | None,
+    stage: str | None,
+    status: str,
+    human: bool,
+) -> dict[str, str]:
+    """Human-facing Chinese explanation of machine last_error (no LLM)."""
+    raw = (last_err or "").strip()
+    low = raw.lower()
+    node_s = str(node or "").strip()
+    stage_s = str(stage or "").strip()
+
+    node_zh = {
+        "intake_ocr": "题面识别",
+        "intake_parse": "题面解析",
+        "orchestrate": "编排",
+        "retrieve": "检索",
+        "bridge_pi": "桥接",
+        "research": "调研",
+        "model": "建模",
+        "gate_schema": "结构门禁",
+        "solve": "求解",
+        "gate_validate": "校验",
+        "human_stop": "人工确认",
+        "explain": "解释",
+        "draft_paper": "写稿",
+        "cite_pack": "引用打包",
+        "review_pack": "审稿",
+        "revise_or_done": "修订/完成",
+        "provenance": "溯源",
+        "end": "结束",
+    }
+    where = node_zh.get(node_s) or node_zh.get(stage_s) or (node_s or stage_s or "未知阶段")
+
+    headline = "需要你看一下" if human else "运行出错"
+    what = f"卡在「{where}」这一步。"
+    why = "系统记录了一条技术错误（下面有原文）。"
+    do = "把下方「建议操作」里的命令复制到终端执行。本页面不会自动继续跑。"
+    icon = "hand" if human else "warn"
+
+    if "exit_code=-9" in low or "exit_code = -9" in low or "timeout after" in low:
+        headline = "调研超时被打断（不是算错）"
+        what = (
+            f"停在「{where}」。多路子智能体往往已经写完笔记，"
+            "但负责汇总的主会话超过时限被强制结束。"
+        )
+        why = (
+            "技术码 exit_code=-9 在本产品里表示「超时」（Timeout），"
+            "不是乱码。常见于 LIVE 时限过短，或宽调研（多子任务）合并太慢。"
+        )
+        do = (
+            "若 notes 里已有调研文稿：优先从「建模」续跑；"
+            "并设 ORPATH_SUBAGENT_TIMEOUT=1800。"
+            "按下面中文操作卡片复制命令即可。"
+        )
+        icon = "clock"
+    elif "research_gate" in low or (node_s == "research" and "subagent" in low):
+        headline = "调研门禁没过"
+        what = f"「{where}」要求：调研文稿合格 +（LIVE 时）子智能体链路成功。"
+        why = raw or "research_gate 失败"
+        do = "先打开 notes/*-research.md 看是否已有内容；有则从建模续，没有则加长超时后重跑调研。"
+        icon = "gate"
+    elif "schema" in low or "forbidden key" in low or node_s in {"gate_schema", "model"}:
+        headline = "建模/结构门禁失败"
+        what = f"问题结构（schema）不合格，卡在「{where}」。"
+        why = raw or "schema gate"
+        do = "从建模或结构门禁续跑；不要手填 objective。"
+        icon = "schema"
+    elif "validate" in low or node_s in {"gate_validate", "solve"}:
+        headline = "求解或校验失败"
+        what = f"卡在「{where}」。数字必须以求解器 JSON + 校验为准。"
+        why = raw or "validate/solve"
+        do = "从求解或校验续跑；禁止改 objective 散文蒙混。"
+        icon = "solve"
+    elif any(k in low for k in ("cite", "claim", "r1", "r2", "whitelist", "unmapped")):
+        headline = "论文引用/数字主张检查失败"
+        what = f"卡在「{where}」（引用或 claim 门禁）。"
+        why = raw
+        do = "从引用打包或写稿续跑；数字只能来自 solution。"
+        icon = "paper"
+    elif "intake" in low or node_s in {"intake_ocr", "intake_parse"}:
+        headline = "题面入口失败"
+        what = "OCR/解析题面没过。"
+        why = raw
+        do = "检查 PDF/图片路径后从题面解析或编排续跑。"
+        icon = "intake"
+    elif raw == "human_required":
+        headline = "流程要求人工确认"
+        what = f"停在「{where}」，等待你决定下一步。"
+        why = "控制面设置了需要人工确认（例如暂停边界或门禁）。"
+        do = "看建议操作；复制命令到终端。页面不会自动续跑。"
+        icon = "hand"
+
+    status_zh = {
+        "ok": "正常",
+        "fail": "失败",
+        "blocked": "受阻",
+        "running": "运行中",
+        "idle": "空闲",
+        "no_product_run": "尚无产品跑次",
+    }.get(status, status)
+
+    return {
+        "headline": headline,
+        "what": what,
+        "why": why,
+        "do": do,
+        "where": where,
+        "status_zh": status_zh,
+        "icon": icon,
+        "raw": raw,
+    }
+
+
 def _build_error_block(
     *,
     current: dict[str, Any],
@@ -1284,6 +1400,16 @@ def _build_error_block(
             if not last_err and st_err:
                 last_err = st_err
             break
+    empty_explain = {
+        "headline": "",
+        "what": "",
+        "why": "",
+        "do": "",
+        "where": "",
+        "status_zh": "",
+        "icon": "",
+        "raw": "",
+    }
     if not last_err and fail_stage is None and status not in {"fail", "blocked"}:
         return {
             "has_error": False,
@@ -1294,6 +1420,7 @@ def _build_error_block(
             "human_required": human,
             "status": status,
             "copy_text": "",
+            "explain": empty_explain,
         }
     if not last_err and human:
         last_err = "human_required"
@@ -1302,7 +1429,22 @@ def _build_error_block(
     seq = fail_stage.get("seq") if fail_stage else current.get("error_stage_seq")
     node = (fail_stage or {}).get("node") or current.get("node")
     stage_name = (fail_stage or {}).get("stage") or current.get("stage")
+    explain = _explain_error(
+        last_err=last_err,
+        node=str(node) if node else None,
+        stage=str(stage_name) if stage_name else None,
+        status=status,
+        human=human,
+    )
     copy_lines = [
+        f"【{explain.get('headline') or '错误'}】",
+        f"状态: {explain.get('status_zh') or status}",
+        f"位置: {explain.get('where') or node or stage_name}",
+        f"怎么了: {explain.get('what')}",
+        f"为什么: {explain.get('why')}",
+        f"怎么做: {explain.get('do')}",
+        "",
+        "—— 技术原文（排障用）——",
         f"status={status}",
         f"node={node or ''}",
         f"stage={stage_name or ''}",
@@ -1319,6 +1461,7 @@ def _build_error_block(
         "human_required": human,
         "status": status,
         "copy_text": "\n".join(copy_lines),
+        "explain": explain,
     }
 
 
@@ -1453,14 +1596,14 @@ def _build_next_actions(
         cmd_m = from_stage("model")
         if schema_repair >= 2:
             add(
-                "Re-run model (schema repair exhausted)",
+                "重新建模（结构修复次数已用尽）",
                 cmd_m,
-                "schema_repair high — regenerate schema then gate",
+                "结构字段多次不过 → 让建模节点重写 schema，再过门禁",
             )
-            add("Retry gate_schema only", cmd_g, "if schema.json already fixed on disk")
+            add("只重跑结构门禁", cmd_g, "若你已在磁盘上修好 schema.json")
         else:
-            add("Resume at gate_schema", cmd_g, "schema gate failed / repair available")
-            add("Resume at model", cmd_m, "regenerate problem schema")
+            add("从结构门禁继续", cmd_g, "schema 不合格 / 还可自动修一次")
+            add("从建模继续", cmd_m, "重新生成问题结构（schema）")
 
     # 2) validate / solve
     if (
@@ -1471,14 +1614,38 @@ def _build_next_actions(
         or "polyomino" in last_err
     ):
         add(
-            "Resume at gate_validate",
+            "从校验继续",
             from_stage("gate_validate"),
-            "re-check solution envelope",
+            "重新检查求解结果是否自洽",
         )
         add(
-            "Resume at solve",
+            "从求解继续",
             from_stage("solve"),
-            "re-run solver then validate",
+            "重跑求解器，再用校验重算",
+        )
+
+    # 2b) research timeout / research gate — prefer model if research text likely exists
+    if (
+        "exit_code=-9" in last_err
+        or "research_gate" in last_err
+        or node == "research"
+        or "timeout" in last_err
+    ):
+        research_p = wd / "notes" / f"{slug_s}-research.md"
+        has_research = research_p.is_file() and research_p.stat().st_size > 200
+        if has_research:
+            add(
+                "调研稿已在 → 从建模继续（推荐）",
+                from_stage("model"),
+                "notes 里已有调研文稿；超时多半是汇总超时，不必整段重做调研",
+            )
+        add(
+            "加长超时后重跑调研",
+            (
+                f"set ORPATH_SUBAGENT_TIMEOUT=1800&& orpath.bat run --live --resume --force "
+                f"--slug {slug_s} --thread-id {tid_s}{wd_flag}{run_flags} --from-stage research"
+            ),
+            "子任务多/合并慢时把 lead 时限调到 1800 秒再跑调研",
         )
 
     # 3) paper / cite / claim
@@ -1487,39 +1654,39 @@ def _build_next_actions(
         for k in ("cite", "claim", "r1", "r2", "paper", "numeric claim", "unmapped", "whitelist")
     ) or node in {"cite_pack", "review_pack", "draft_paper", "revise_or_done"}:
         add(
-            "Resume at cite_pack",
+            "从引用打包继续",
             from_stage("cite_pack"),
-            "citation / claim map failure",
+            "引用白名单或数字主张对不上",
         )
         add(
-            "Resume at draft_paper",
+            "从写稿继续",
             from_stage("draft_paper"),
-            "rewrite draft from solution numbers only",
+            "只用 solution 里的数字重写草稿",
         )
 
     # 4) intake
     if "intake" in last_err or node in {"intake_ocr", "intake_parse"}:
         add(
-            "Resume at intake_parse",
+            "从题面解析继续",
             from_stage("intake_parse"),
-            "intake front-door blocked",
+            "题面入口被挡住",
         )
         add(
-            "Resume at orchestrate",
+            "从编排继续",
             from_stage("orchestrate"),
-            "skip re-OCR if brief already ok",
+            "若 brief 已 OK，可跳过重新 OCR",
         )
 
     # 5) generic resume + always watch face
     add(
-        "Resume product run",
+        "从断点继续整条产品链",
         f"orpath.bat run --resume --force --slug {slug_s} --thread-id {tid_s}{wd_flag}{run_flags}",
-        "continue from last checkpoint",
+        "接着上次检查点往下走（不会在网页里自动点）",
     )
     add(
-        "Open Live Watch",
+        "只打开过程台（看脸）",
         f"orpath.bat watch --slug {slug_s} --thread-id {tid_s}{wd_flag}",
-        "product face — not folder open",
+        "只看进度，不自动开跑",
     )
 
     return actions[:8]

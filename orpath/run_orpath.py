@@ -198,6 +198,25 @@ def cmd_run(args: argparse.Namespace) -> int:
             conn.close()
             return 3
 
+    # BUG-1 fix: block implicit reuse of an existing thread without --fresh
+    if not args.fresh and not args.resume and not getattr(args, "force", False):
+        stages_dir = root / "runs" / thread_id / "stages"
+        if stages_dir.is_dir() and any(stages_dir.iterdir()):
+            print(
+                json.dumps(
+                    {
+                        "error": "dirty_artifacts",
+                        "detail": f"thread {thread_id!r} already has stages under {stages_dir}",
+                        "hint": "pass --fresh to start over, --resume to continue, or --force to overwrite",
+                    },
+                    indent=2,
+                    ensure_ascii=False,
+                ),
+                file=sys.stderr,
+            )
+            conn.close()
+            return 3
+
     if args.fresh or not args.resume:
         live_sa = _resolve_live_subagent(args)
         intake_sources, skip_intake = _resolve_intake_sources(root, args)

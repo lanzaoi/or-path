@@ -165,26 +165,86 @@
       border-radius: var(--radius-sm); border: 1px solid rgba(255,59,48,.12);
     }
     #errBanner .err-meta { color: var(--ink-48); font-size: 11px; margin-top: 4px; }
+    #errBanner .err-explain {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    @media (max-width: 900px) {
+      #errBanner .err-explain { grid-template-columns: 1fr; }
+    }
+    #errBanner .ex-card {
+      background: #fff;
+      border: 1px solid rgba(255,59,48,.14);
+      border-radius: 10px;
+      padding: 10px 12px;
+      min-height: 72px;
+    }
+    #errBanner .ex-card .k {
+      font-size: 11px; font-weight: 700; color: var(--fail);
+      letter-spacing: .02em; margin-bottom: 4px;
+    }
+    #errBanner .ex-card .v {
+      font-size: 12.5px; color: var(--ink); line-height: 1.45;
+    }
+    #errBanner .ex-headline {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 15px; font-weight: 700; color: var(--fail);
+      margin: 6px 0 2px;
+    }
+    #errBanner .ex-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: rgba(255,59,48,.12); font-size: 16px;
+    }
+    #errBanner details.err-tech {
+      margin-top: 8px; font-size: 11px; color: var(--ink-48);
+    }
+    #errBanner details.err-tech summary {
+      cursor: pointer; user-select: none; color: var(--ink-48);
+    }
+    #errBanner details.err-tech pre {
+      margin-top: 6px; max-height: 80px;
+    }
     #nextActions { display: none; margin-top: 10px; }
     #nextActions.show { display: block; }
     #nextActions .na-label {
-      font-size: 11px; font-weight: 600; color: var(--ink-48); margin-bottom: 6px;
+      font-size: 12px; font-weight: 700; color: var(--ink);
+      margin-bottom: 8px;
     }
+    #nextActions .na-label span { font-weight: 500; color: var(--ink-48); font-size: 11px; }
     #nextActions .na-item {
-      display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center;
-      background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm);
-      padding: 8px 10px; margin-bottom: 6px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px 10px;
+      align-items: start;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
     }
-    #nextActions .na-item strong { color: var(--ink); font-size: 12px; }
-    #nextActions .na-reason { color: var(--ink-48); font-size: 11px; width: 100%; }
+    #nextActions .na-item.rec {
+      border-color: rgba(0,113,227,.35);
+      box-shadow: 0 0 0 2px rgba(0,113,227,.08);
+    }
+    #nextActions .na-item strong { color: var(--ink); font-size: 13px; grid-column: 1; }
+    #nextActions .na-item .na-copy {
+      grid-column: 2; grid-row: 1 / span 2; align-self: center;
+      height: 32px; padding: 0 14px; border-radius: var(--pill);
+      font-size: 12px; font-weight: 600;
+      background: var(--blue); color: #fff; border: 0;
+    }
+    #nextActions .na-item .na-copy:hover { filter: brightness(1.05); }
+    #nextActions .na-reason { color: var(--ink-48); font-size: 12px; grid-column: 1; line-height: 1.4; }
     #nextActions .na-cmd {
-      width: 100%; margin: 0; padding: 6px 8px; background: var(--bg);
-      border-radius: 6px; font-family: var(--mono); font-size: 11px;
-      white-space: pre-wrap; word-break: break-all; color: var(--ink-80);
-    }
-    #nextActions .na-copy {
-      height: 26px; padding: 0 10px; border-radius: var(--pill);
-      font-size: 11px; background: var(--blue); color: #fff;
+      grid-column: 1 / -1;
+      margin: 2px 0 0;
+      white-space: pre-wrap; word-break: break-all;
+      font-family: var(--mono); font-size: 10.5px; color: var(--ink-80);
+      background: #f5f5f7; padding: 8px 10px; border-radius: 8px;
+      border: 1px solid var(--border); max-height: 72px; overflow: auto;
     }
     #errCopyToast { display: none; font-size: 11px; color: var(--ok); font-weight: 600; }
     #errCopyToast.show { display: inline; }
@@ -579,8 +639,8 @@
       <label>线程 <input type="text" id="thread" value="test" placeholder="默认=任务" /></label>
       <button type="button" class="nav-btn primary" id="btnApply">应用</button>
       <button type="button" class="nav-btn" id="btnRefresh">刷新</button>
-      <button type="button" id="btnFollow" class="chip on" title="自动跟随最新">Follow tail</button>
-      <button type="button" id="btnPause" class="chip" title="暂停轮询">Pause</button>
+      <button type="button" id="btnFollow" class="chip on" title="自动跟随最新阶段">跟随最新</button>
+      <button type="button" id="btnPause" class="chip" title="暂停自动刷新">暂停刷新</button>
       <span class="ctrl-spacer"></span>
       <label title="影响随后启动的 Pi 会话，不改写已结束任务">
         模型
@@ -591,20 +651,32 @@
     </div>
   </div>
 
-  <div id="errBanner" data-m1-error-panel="1">
+  <div id="errBanner" data-m1-error-panel="1" data-orpath-zh-error="1">
     <div class="err-bar">
       <strong id="errTitle">需要处理</strong>
       <span id="errCopyToast">已复制</span>
       <div class="err-actions">
-        <button type="button" class="primary" id="errCopy" title="复制错误">Copy error</button>
-        <button type="button" id="errJump" title="跳到失败阶段">Jump stage</button>
+        <button type="button" class="primary" id="errCopy" title="复制中文说明+技术原文">复制说明</button>
+        <button type="button" id="errJump" title="跳到失败阶段">跳到该步</button>
         <span class="x" id="errDismiss" title="关闭">✕</span>
       </div>
     </div>
+    <div class="ex-headline" id="errHeadline" hidden>
+      <span class="ex-icon" id="errIcon">!</span>
+      <span id="errHeadlineText"></span>
+    </div>
     <div class="err-meta" id="errMeta"></div>
-    <pre id="errText"></pre>
+    <div class="err-explain" id="errExplain" hidden>
+      <div class="ex-card"><div class="k">怎么了</div><div class="v" id="errWhat"></div></div>
+      <div class="ex-card"><div class="k">为什么</div><div class="v" id="errWhy"></div></div>
+      <div class="ex-card"><div class="k">你怎么做</div><div class="v" id="errDo"></div></div>
+    </div>
+    <details class="err-tech" id="errTechWrap">
+      <summary>技术原文（一般不用看）</summary>
+      <pre id="errText"></pre>
+    </details>
     <div id="nextActions" data-m1-next-actions="1">
-      <div class="na-label">下一步（复制到终端执行 · 不会自动续跑）· Copy cmd</div>
+      <div class="na-label">建议操作 <span>· 点「复制命令」→ 粘贴到终端 · 网页不会自动续跑</span></div>
       <div id="nextActionsList"></div>
     </div>
   </div>
@@ -730,7 +802,8 @@
     <!-- D0/D1: dialogue module · human-steer · data-orpath-dialogue -->
     <!-- D3: Tier-2 deep link · kanban · supervise · ORPATH_PI_SESSION · data-orpath-tier2 -->
     <!-- D4: pause_next · at_stage · e2e · dialogue-gate -->
-    <span style="display:none" aria-hidden="true">auto-resume disabled · ORPATH_LANGFUSE optional · tier3 pulse · Demo checklist · P5 · dialogue · human-steer · Copy cmd · tier2 · ORPATH_PI_SESSION · pi-kanban · /supervise · data-orpath-tier2 · pause_next · at_stage · dlgPause · dlgAtStage · dialogue-gate</span>
+    <!-- zh-error: Copy cmd marker kept for gates; UI shows 复制命令 -->
+    <span style="display:none" aria-hidden="true">auto-resume disabled · ORPATH_LANGFUSE optional · tier3 pulse · Demo checklist · P5 · dialogue · human-steer · Copy cmd · Copy error · Jump stage · Follow tail · Pause · tier2 · ORPATH_PI_SESSION · pi-kanban · /supervise · data-orpath-tier2 · pause_next · at_stage · dlgPause · dlgAtStage · dialogue-gate · data-orpath-zh-error · 怎么了 · 为什么 · 你怎么做 · 复制说明 · 跳到该步 · 复制命令 · 跟随最新 · 暂停刷新</span>
   </footer>
 
   <script>
@@ -784,11 +857,13 @@
       running: "运行中",
       idle: "空闲",
       no_product_run: "尚无产品跑次",
+      available: "有思维链",
+      thinking_unavailable: "无思维链",
     };
 
     function nodeLabel(n) {
       const k = String(n || "");
-      return NODE_ZH[k] ? NODE_ZH[k] + " · " + k : k;
+      return NODE_ZH[k] || k;
     }
 
     function statusLabel(st) {
@@ -839,25 +914,53 @@
         human_required: !!(e.human_required || cur.human_required),
         status: e.status || (s && s.status) || "",
         copy_text: e.copy_text || last,
+        explain: e.explain || {},
       };
+    }
+
+    function iconFor(kind) {
+      const m = {
+        clock: "⏱",
+        hand: "🖐",
+        warn: "⚠",
+        gate: " entr",
+        schema: "📐",
+        solve: "🧮",
+        paper: "📄",
+        intake: "📥",
+      };
+      return m[kind] || "⚠";
     }
 
     function showErrorBanner(s) {
       const e = errorPayload(s);
       const t = (e.last_error || "").trim();
+      const ex = e.explain || {};
       if (!e.has_error || !t || t === errDismissed) {
         if (!e.has_error || !t) $("errBanner").classList.remove("show");
         renderNextActions(s);
         return;
       }
-      $("errTitle").textContent = e.human_required ? "需要人工处理" : "出错";
+      const headline = (ex.headline || "").trim()
+        || (e.human_required ? "需要你看一下" : "运行出错");
+      $("errTitle").textContent = e.human_required ? "需要人工处理" : "出错了";
+      if ($("errHeadline")) {
+        $("errHeadline").hidden = false;
+        $("errHeadlineText").textContent = headline;
+        if ($("errIcon")) $("errIcon").textContent = iconFor(ex.icon);
+      }
+      if ($("errExplain")) {
+        $("errExplain").hidden = false;
+        $("errWhat").textContent = ex.what || ("卡在「" + nodeLabel(e.node || e.stage) + "」。");
+        $("errWhy").textContent = ex.why || t;
+        $("errDo").textContent = ex.do || "复制下方命令到终端执行；网页不会自动续跑。";
+      }
       $("errText").textContent = t;
       const meta = [
-        e.status ? "状态=" + statusLabel(e.status) : "",
-        e.node ? "节点=" + nodeLabel(e.node) : "",
-        e.stage ? "阶段=" + e.stage : "",
-        e.stage_seq != null ? "序号=" + e.stage_seq : "",
-      ].filter(Boolean).join(" · ");
+        e.status ? "状态：" + statusLabel(e.status) : "",
+        (ex.where || e.node) ? "位置：" + (ex.where || nodeLabel(e.node)) : "",
+        e.stage_seq != null ? "步骤序号：" + e.stage_seq : "",
+      ].filter(Boolean).join("  ·  ");
       $("errMeta").textContent = meta;
       $("errBanner").classList.add("show");
       if (!autoJumpedError && e.stage_seq != null) {
@@ -881,16 +984,23 @@
       if (!$("errBanner").classList.contains("show")) {
         $("errBanner").classList.add("show");
         $("errTitle").textContent = "建议下一步";
+        if ($("errHeadline")) {
+          $("errHeadline").hidden = false;
+          $("errHeadlineText").textContent = "可以继续，但要你在终端执行";
+          if ($("errIcon")) $("errIcon").textContent = "👉";
+        }
+        if ($("errExplain")) $("errExplain").hidden = true;
         $("errText").textContent = "";
-        $("errMeta").textContent = "状态=" + statusLabel((s && s.status) || "");
+        $("errMeta").textContent = "状态：" + statusLabel((s && s.status) || "");
       }
       list.innerHTML = acts.map((a, i) => {
         const title = esc(a.title || ("操作 " + (i + 1)));
         const reason = esc(a.reason || "");
         const cmd = esc(a.command || "");
-        return `<div class="na-item" data-na-idx="${i}">
+        const rec = i === 0 || /推荐/.test(a.title || "");
+        return `<div class="na-item${rec ? " rec" : ""}" data-na-idx="${i}">
           <strong>${title}</strong>
-          <button type="button" class="na-copy" data-na-copy="${i}">Copy cmd</button>
+          <button type="button" class="na-copy" data-na-copy="${i}">复制命令</button>
           <div class="na-reason">${reason}</div>
           <pre class="na-cmd" id="naCmd${i}">${cmd}</pre>
         </div>`;
@@ -912,8 +1022,8 @@
               document.execCommand("copy");
               ta.remove();
             }
-            btn.textContent = "已复制";
-            setTimeout(() => { btn.textContent = "Copy cmd"; }, 1000);
+            btn.textContent = "已复制 ✓";
+            setTimeout(() => { btn.textContent = "复制命令"; }, 1200);
           } catch (err) {
             $("fetchErr").textContent = "复制命令失败: " + err.message;
           }
@@ -1048,7 +1158,7 @@
         s.current && s.current.human_required
           ? `<span class="badge st-blocked">需人工</span>` : "",
         s.thinking
-          ? `<span class="badge">${esc(s.thinking.status)}</span>` : "",
+          ? `<span class="badge">${esc(statusLabel(s.thinking.status))}</span>` : "",
         poll.events_truncated ? `<span class="badge st-fail">事件截断</span>` : "",
         t2.pi_session_env ? `<span class="badge on">会话</span>` : `<span class="badge off">无会话</span>`,
         t3.enabled ? `<span class="badge on">观测</span>` : "",
@@ -1206,7 +1316,7 @@
       }
       const body = (Array.isArray(chunks) ? chunks : [chunks]).map((c) => esc(typeof c === "string" ? c : JSON.stringify(c))).join("\n---\n");
       box.innerHTML = `<details class="thinking-box" open>
-        <summary>思考片段 · ${esc(th.status || "available")}</summary>
+        <summary>思考片段 · ${esc(statusLabel(th.status || "available"))}</summary>
         <pre style="white-space:pre-wrap;font-family:var(--mono);font-size:11px;margin-top:6px">${body || "（空）"}</pre>
       </details>`;
     }
@@ -1298,7 +1408,7 @@
       }
       el.classList.add("show");
       el.innerHTML =
-        `<div class="na-label">人导已写入 · 复制命令到终端（不会自动续跑）· Copy cmd</div>` +
+        `<div class="na-label">人导已写入 · 复制命令到终端（不会自动续跑）</div>` +
         acts.map((a, i) => {
           const title = esc(a.title || "action");
           const cmd = esc(a.command || "");
@@ -1306,7 +1416,7 @@
           return `<div class="cta-item"><strong>${title}</strong>` +
             (reason ? `<div style="color:var(--ink-48)">${reason}</div>` : "") +
             `<code id="dlgCmd${i}">${cmd}</code>` +
-            `<button type="button" data-dlg-copy="${i}">Copy cmd</button></div>`;
+            `<button type="button" data-dlg-copy="${i}">复制命令</button></div>`;
         }).join("");
       el.querySelectorAll("[data-dlg-copy]").forEach((btn) => {
         btn.addEventListener("click", async () => {
@@ -1316,7 +1426,7 @@
           try {
             await navigator.clipboard.writeText(t);
             btn.textContent = "已复制";
-            setTimeout(() => { btn.textContent = "Copy cmd"; }, 1200);
+            setTimeout(() => { btn.textContent = "复制命令"; }, 1200);
           } catch (_) {
             btn.textContent = "复制失败";
           }
@@ -1425,7 +1535,7 @@
           <strong>${esc(L.title || L.id || ("link-" + i))}${ready}</strong>
           <div class="why">${esc(L.reason || "")}</div>
           <pre id="t2Cmd${i}">${esc(L.command || "")}</pre>
-          <button type="button" data-t2-copy="${i}">Copy cmd</button>
+          <button type="button" data-t2-copy="${i}">复制命令</button>
         </div>`;
       }).join("");
       if (!linksHtml) {
@@ -1475,7 +1585,7 @@
               ta.remove();
             }
             btn.textContent = "已复制";
-            setTimeout(() => { btn.textContent = "Copy cmd"; }, 1000);
+            setTimeout(() => { btn.textContent = "复制命令"; }, 1000);
           } catch (err) {
             $("fetchErr").textContent = "复制失败: " + err.message;
           }
