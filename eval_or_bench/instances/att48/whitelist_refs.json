@@ -1,0 +1,8 @@
+{
+  "problem_id": "att48",
+  "dimension": 48,
+  "edge_weight_type": "ATT",
+  "reference_type": "optimal",
+  "optimal_value": 10628,
+  "citation": "Padberg, M., & Rinaldi, G. (1987). Optimization of a 532-city symmetric traveling salesman problem by branch-and-cut. Operations Research Letters, 6(1), 1-7."
+}

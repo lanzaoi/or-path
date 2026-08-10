@@ -1,0 +1,8 @@
+{
+  "problem_id": "swiss42",
+  "dimension": 42,
+  "edge_weight_type": "EXPLICIT",
+  "reference_type": "optimal",
+  "optimal_value": 1273,
+  "citation": "TSPLIB Benchmark Database, Heidelberg University (1991)."
+}

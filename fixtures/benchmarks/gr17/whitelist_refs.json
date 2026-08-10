@@ -1,0 +1,8 @@
+{
+  "problem_id": "gr17",
+  "dimension": 17,
+  "edge_weight_type": "EXPLICIT",
+  "reference_type": "optimal",
+  "optimal_value": 2085,
+  "citation": "Gr\u00f6tschel, M. (1980). On the symmetric traveling salesman problem: Solution of a 120-city problem. Mathematical Programming Study, 12, 61-77."
+}

@@ -733,6 +733,7 @@ if /i "%CMD%"=="steer-gate" (
   exit /b %ERRORLEVEL%
 )
 if /i "%CMD%"=="p4-gate" goto :p4_gate
+if /i "%CMD%"=="bench" goto :bench
 if /i "%CMD%"=="doctor" goto :doctor
 
 
@@ -1707,6 +1708,29 @@ echo [OR-Path] OR-Tools MCP (vendored Jacck/mcp-ortools)
 exit /b %ERRORLEVEL%
 
 
+
+:bench
+echo [OR-Path] Running TSPLIB Benchmark Suite...
+echo.
+echo ==============================================
+echo 1. Running Contract Probe (burma14)
+echo ==============================================
+"%PY%" "!ORPATH_HOME!\eval_or_bench\contract_probe.py"
+if errorlevel 1 exit /b %ERRORLEVEL%
+
+echo.
+echo ==============================================
+echo 2. Running Converter Stress Test
+echo ==============================================
+"%PY%" "!ORPATH_HOME!\eval_or_bench\test_converter_stress.py"
+if errorlevel 1 exit /b %ERRORLEVEL%
+
+echo.
+echo ==============================================
+echo 3. Running Full TSPLIB Benchmark
+echo ==============================================
+"%PY%" "!ORPATH_HOME!\eval_or_bench\run_full_benchmark.py"
+exit /b %ERRORLEVEL%
 
 :doctor
 

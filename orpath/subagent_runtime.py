@@ -445,6 +445,13 @@ def resolve_no_session(no_session: bool | None = None) -> bool:
     return not pi_session_enabled()
 
 
+def _pi_thinking_level() -> str:
+    """Harness default low — user ~/.pi settings may be high and stall LIVE."""
+    raw = (os.environ.get("ORPATH_PI_THINKING") or "low").strip().lower()
+    allowed = {"off", "minimal", "low", "medium", "high", "xhigh", "max"}
+    return raw if raw in allowed else "low"
+
+
 def build_pi_command(
     root: Path,
     *,
@@ -462,10 +469,12 @@ def build_pi_command(
     ep, em = _effective_defaults()
     provider = (provider or ep).strip() or ep
     model = (model or em).strip() or em
+    # Absolute path: avoid MSYS/Cygwin rewriting node argv to C:\\c\\Users\\...
     if cli.endswith(".js"):
+        cli_path = str(Path(cli).resolve())
         cmd = [
             "node",
-            cli,
+            cli_path,
             "-p",
             "--provider",
             provider,
@@ -481,6 +490,8 @@ def build_pi_command(
     # JSON event stream so tool_call / subagent names appear in logs (detection)
     if json_mode:
         cmd.extend(["--mode", "json"])
+    # Override interactive defaultThinkingLevel=high for non-interactive harness
+    cmd.extend(["--thinking", _pi_thinking_level()])
     # Ruthless harness: strip write/edit from lead so it cannot cosplay
     if tools:
         cmd.extend(["--tools", tools])
@@ -574,56 +585,109 @@ def spawn_lead(
             error="dry_run",
         )
 
+    # Sync project or-* agent defs into user Pi dir (Pi discovers agents globally)
+    try:
+        sync_agents_to_user_dir(root)
+    except Exception:  # noqa: BLE001
+        pass
+
+    # Load .env explicitly so child Node inherits DEEPSEEK_API_KEY
+    try:
+        import dotenv  # type: ignore
+
+        for env_file in (root / ".env", Path.cwd() / ".env"):
+            if env_file.is_file():
+                dotenv.load_dotenv(env_file, override=False)
+    except Exception:  # noqa: BLE001
+        # Minimal fallback parser if python-dotenv missing
+        for env_file in (root / ".env", Path.cwd() / ".env"):
+            if not env_file.is_file():
+                continue
+            try:
+                for line in env_file.read_text(encoding="utf-8", errors="replace").splitlines():
+                    s = line.strip()
+                    if not s or s.startswith("#") or "=" not in s:
+                        continue
+                    k, v = s.split("=", 1)
+                    k, v = k.strip(), v.strip().strip('"').strip("'")
+                    if k and k not in os.environ:
+                        os.environ[k] = v
+            except Exception:  # noqa: BLE001
+                pass
+
     env = os.environ.copy()
     env["PYTHONNOUSERSITE"] = "1"
-    # Prefer project agent dir for packages/settings
-    env.setdefault("PI_CODING_AGENT_DIR", str(Path.home() / ".pi" / "agent"))
-    # Windows: Pi/node may emit UTF-8; default text mode uses GBK and crashes reader threads.
+    # Isolate from host PYTHONPATH (Hermes etc.) breaking child tooling
+    env["PYTHONPATH"] = ""
+    env.pop("PYTHONHOME", None)
+    # Prefer user Pi agent dir (packages + synced or-* agents)
+    env["PI_CODING_AGENT_DIR"] = str(Path.home() / ".pi" / "agent")
+    # Non-interactive / Windows pipe hygiene
+    env.setdefault("CI", "1")
+    env.setdefault("NO_COLOR", "1")
+    env.setdefault("TERM", "dumb")
     env.setdefault("PYTHONIOENCODING", "utf-8")
     env.setdefault("PYTHONUTF8", "1")
 
-    try:
-        proc = subprocess.run(
-            cmd,
-            cwd=str(root),
-            env=env,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            capture_output=True,
-            timeout=timeout_s,
-            shell=bool(cmd and str(cmd[0]).lower().endswith((".bat", ".cmd"))),
-        )
-        out = (proc.stdout or "") + "\n---STDERR---\n" + (proc.stderr or "")
-        exit_code = proc.returncode
-    except subprocess.TimeoutExpired as exc:
-        # Timeout may still hold partial bytes; never assume GBK.
-        partial_out = ""
-        try:
-            if exc.stdout:
-                partial_out += exc.stdout if isinstance(exc.stdout, str) else exc.stdout.decode("utf-8", "replace")
-            if exc.stderr:
-                partial_out += "\n---STDERR---\n"
-                partial_out += exc.stderr if isinstance(exc.stderr, str) else exc.stderr.decode("utf-8", "replace")
-        except Exception:  # noqa: BLE001
-            partial_out = ""
-        out = f"TIMEOUT after {timeout_s}s\n{exc}\n{partial_out}"
-        exit_code = -9
-    except Exception as exc:  # noqa: BLE001
-        out = f"SPAWN_ERROR: {exc}"
-        exit_code = -1
-
     header = (
         f"stage={stage}\nslug={slug}\nstarted={started_utc}\n"
-        f"cmd={cmd[:12]!r}\nrequire_subagent_call={require_subagent_call}\n"
+        f"cmd={cmd[:14]!r}\nrequire_subagent_call={require_subagent_call}\n"
         f"tools={tools!r}\n"
+        f"thinking={_pi_thinking_level()!r}\n"
         f"pi_session={'off' if sess_off else 'on'}\n"
         f"no_session_flag={sess_off}\n"
         f"sessions_root={pi_sessions_root()}\n"
+        f"PI_CODING_AGENT_DIR={env.get('PI_CODING_AGENT_DIR')!r}\n"
         f"ORPATH_PI_SESSION={os.environ.get('ORPATH_PI_SESSION', '')!r}\n"
+        f"api_key_present={api_key_present()}\n"
         f"---\n"
     )
-    log_path.write_text(header + out, encoding="utf-8")
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(header, encoding="utf-8")
+
+    # Stream to log file (not capture_output): avoids silent hangs + enables live tail
+    out = ""
+    exit_code: int | None = -1
+    try:
+        with log_path.open("a", encoding="utf-8", errors="replace") as logf:
+            proc = subprocess.Popen(
+                cmd,
+                cwd=str(root),
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=logf,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                shell=bool(cmd and str(cmd[0]).lower().endswith((".bat", ".cmd"))),
+            )
+            try:
+                exit_code = proc.wait(timeout=timeout_s)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                try:
+                    proc.wait(timeout=15)
+                except Exception:  # noqa: BLE001
+                    pass
+                with log_path.open("a", encoding="utf-8", errors="replace") as logf2:
+                    logf2.write(f"\nTIMEOUT after {timeout_s}s (process killed)\n")
+                exit_code = -9
+        out = log_path.read_text(encoding="utf-8", errors="replace")
+        # Drop header for detection if needed — full file is fine
+        if "---\n" in out:
+            out_body = out.split("---\n", 1)[-1]
+        else:
+            out_body = out
+        out = out_body
+    except Exception as exc:  # noqa: BLE001
+        out = f"SPAWN_ERROR: {exc}"
+        exit_code = -1
+        try:
+            with log_path.open("a", encoding="utf-8", errors="replace") as logf:
+                logf.write(out + "\n")
+        except Exception:  # noqa: BLE001
+            pass
     hit, evidence = detect_subagent_calls(out)
     hit2, ev2 = detect_subagent_calls(log_path.read_text(encoding="utf-8", errors="ignore"))
     if hit2:

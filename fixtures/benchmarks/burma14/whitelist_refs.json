@@ -1,0 +1,8 @@
+{
+  "problem_id": "burma14",
+  "dimension": 14,
+  "edge_weight_type": "GEO",
+  "reference_type": "optimal",
+  "optimal_value": 3323,
+  "citation": "Reinelt, G. (1991). TSPLIB\u2014A Traveling Salesman Problem Library. ORSA Journal on Computing, 3(4), 376-384."
+}

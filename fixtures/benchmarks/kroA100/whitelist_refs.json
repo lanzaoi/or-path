@@ -1,0 +1,8 @@
+{
+  "problem_id": "kroA100",
+  "dimension": 100,
+  "edge_weight_type": "EUC_2D",
+  "reference_type": "optimal",
+  "optimal_value": 21282,
+  "citation": "Krolak, P., Felts, W., & Marble, G. (1971). A man-machine approach to the traveling salesman problem. CACM, 14(5), 327-334."
+}

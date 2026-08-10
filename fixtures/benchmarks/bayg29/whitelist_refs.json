@@ -1,0 +1,8 @@
+{
+  "problem_id": "bayg29",
+  "dimension": 29,
+  "edge_weight_type": "EXPLICIT",
+  "reference_type": "optimal",
+  "optimal_value": 1610,
+  "citation": "Reinelt, G. (1991). TSPLIB Repository, Heidelberg University."
+}

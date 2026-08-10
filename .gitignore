@@ -86,3 +86,8 @@ demo/*
 
 # pulled npm modules
 third_party/**/node_modules/
+
+# eval bench caches
+eval_or_bench/__pycache__/
+eval_or_bench/**/__pycache__/
+eval_or_bench/__pycache__/

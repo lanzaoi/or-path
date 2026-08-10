@@ -27,6 +27,8 @@ ROOT = root()
 def fixture_dir(problem_id: str) -> Path:
     base_root = root()
     for base in (
+        base_root / "eval_or_bench" / "instances",
+        base_root / "fixtures" / "benchmarks",
         base_root / "fixtures" / "t3",
         base_root / "fixtures" / "t2",
         base_root / "fixtures" / "t1",

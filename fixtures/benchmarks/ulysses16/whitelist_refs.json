@@ -1,0 +1,8 @@
+{
+  "problem_id": "ulysses16",
+  "dimension": 16,
+  "edge_weight_type": "GEO",
+  "reference_type": "optimal",
+  "optimal_value": 6859,
+  "citation": "Gr\u00f6tschel, M., & Padberg, M. (1985). Polyhedral Theory. The Traveling Salesman Problem, 251-305."
+}

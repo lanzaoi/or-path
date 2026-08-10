@@ -6,6 +6,9 @@ instead of hard-coding tools/solve_*.py names.
 """
 from __future__ import annotations
 
+import contextlib
+import importlib
+import io
 import json
 import subprocess
 import sys
@@ -42,6 +45,21 @@ def _run_py(script: Path, args: list[str], cwd: Path) -> tuple[int, str, str]:
         cmd, cwd=cwd, text=True, encoding="utf-8", errors="replace", capture_output=True
     )
     return r.returncode, r.stdout, r.stderr
+
+
+def _try_in_proc(script_name: str, args: list[str]) -> tuple[bool, int, str, str]:
+    mod_name = script_name.replace(".py", "")
+    try:
+        mod = importlib.import_module(mod_name)
+        if hasattr(mod, "main"):
+            buf_out = io.StringIO()
+            buf_err = io.StringIO()
+            with contextlib.redirect_stdout(buf_out), contextlib.redirect_stderr(buf_err):
+                code = mod.main(args)
+            return True, code, buf_out.getvalue(), buf_err.getvalue()
+    except Exception:
+        pass
+    return False, -1, "", ""
 
 
 def _build_args(
@@ -225,9 +243,9 @@ def solve(
         ok_e, e_errs = validate_envelope(data)
         if not ok_e:
             return False, data, "envelope: " + "; ".join(e_errs)
-        return True, data, raw
-
-    code, out, err = _run_py(script, args, root)
+    handled, code, out, err = _try_in_proc(script_name, args)
+    if not handled:
+        code, out, err = _run_py(script, args, root)
     if code != 0:
         return False, {}, (err or out).strip()
     try:

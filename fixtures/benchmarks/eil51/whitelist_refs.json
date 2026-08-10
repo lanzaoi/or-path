@@ -1,0 +1,8 @@
+{
+  "problem_id": "eil51",
+  "dimension": 51,
+  "edge_weight_type": "EUC_2D",
+  "reference_type": "optimal",
+  "optimal_value": 426,
+  "citation": "Eilon, S., Watson-Gandy, C. D. T., & Christofides, N. (1971). Distribution Management: Mathematical Modelling and Practical Analysis."
+}
