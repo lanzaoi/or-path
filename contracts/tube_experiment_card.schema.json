@@ -1,0 +1,21 @@
+{
+  "schema": "orpath.tube_experiment_card.v1",
+  "required": [
+    "experiment_id",
+    "domain",
+    "owner_agent",
+    "hypothesis",
+    "baseline_artifact",
+    "changed_factor",
+    "frozen_factors",
+    "seed_set",
+    "budget",
+    "acceptance",
+    "output_path",
+    "status"
+  ],
+  "domains": ["geometry", "q1_q2", "q3", "q4"],
+  "allowed_status": ["PLANNED", "RUNNING", "ACCEPTED", "REJECTED", "ERROR"],
+  "changed_factors_per_card": 1,
+  "numeric_authority": "local_solver_and_independent_validator"
+}

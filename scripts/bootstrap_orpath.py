@@ -38,6 +38,19 @@ def _parse_node_version(text: str) -> tuple[int, ...] | None:
     return tuple(int(x) for x in m.groups())
 
 
+def _find_node_tool(name: str) -> str | None:
+    found = shutil.which(name)
+    if found:
+        return found
+    if os.name == "nt":
+        program_files = Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
+        filename = "node.exe" if name == "node" else "npm.cmd"
+        fallback = program_files / "nodejs" / filename
+        if fallback.is_file():
+            return str(fallback)
+    return None
+
+
 def check_python(py: str) -> None:
     r = subprocess.run([py, "-c", "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}')"], capture_output=True, text=True)
     if r.returncode != 0:
@@ -51,7 +64,7 @@ def check_python(py: str) -> None:
 
 
 def check_node(*, require_strict: bool) -> str | None:
-    node = shutil.which("node")
+    node = _find_node_tool("node")
     if not node:
         if require_strict:
             print("[ERROR] node not found on PATH. Install Node.js >= 22.19.0")
@@ -128,7 +141,7 @@ def ensure_npm(home: Path, skip: bool) -> None:
     runtime = home / "runtime"
     if not (runtime / "package.json").is_file():
         raise SystemExit(f"[ERROR] missing {runtime / 'package.json'}")
-    npm = shutil.which("npm")
+    npm = _find_node_tool("npm")
     if not npm:
         raise SystemExit("[ERROR] npm not found (need Node.js)")
     code = _run([npm, "ci"], cwd=runtime)

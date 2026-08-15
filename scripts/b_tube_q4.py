@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""B题异形圆管下料 — Q4 跨批次余料（Hermes 修 Pi：装箱 4^n → 多仓 BFD）"""
+"""LEGACY helper: superseded by solve_tube_cut_b2026 + tube_optimization beam search.
+
+Kept only for historical reproducibility. Product commands must use solve_dispatch.
+"""
 import json
 import os
 from collections import Counter

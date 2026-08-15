@@ -58,7 +58,7 @@ def main() -> int:
     paper = f"""# 2026 杭电数模校赛 B 题 · 异形圆管下料优化问题
 
 > **数字权威：** 全部指标来自 `tools/solve_tube_cut_b2026.py` → `outputs/b-tube-cut/q*-solution.json` + `validate.json`。  
-> **状态：** FEASIBLE（BFD/启发式 + 共切包络），**非** proven OPTIMAL。  
+> **状态：** FEASIBLE（混合母材列生成/CP-SAT + 共切轮廓 + ALNS/束搜索），**非** proven OPTIMAL。
 > **生成：** {ts} UTC · OR-Path 管线打包（监控侧不手改 objective）
 
 ---
@@ -68,7 +68,7 @@ def main() -> int:
 针对异形圆管（10 种工件）在多规格母材上的下料优化，建立：
 
 1. **几何层：** 点云 PCA 轴向长度 + 端部包络共切收益；  
-2. **下料层：** 多规格母材 BFD/启发式排样 + 切换次数；  
+2. **下料层：** 多规格母材列生成/CP-SAT排样 + 字典序共切/切换搜索；
 3. **共切层：** 相邻工件端部嵌套旋转搜索；  
 4. **多批次层：** 余料 ≥200mm 跨批复用。
 
@@ -102,7 +102,7 @@ def main() -> int:
 
 ### 2.3 下料
 
-多规格母材上 BFD/启发式装箱；记录 sequence、leftover、utilization、switches。
+多规格母材上使用列生成/CP-SAT产生基础排样，再以带固定随机种子的ALNS优化 sequence、端向和切换；记录 leftover、utilization、switches。
 
 ## 3. 求解结果（solver JSON）
 
@@ -144,7 +144,7 @@ def main() -> int:
 
 ## 7. 结论
 
-在给定数据与 BFD/共切启发式下，得到 **可行** 下料方案：Q1 母材总长 **{metrics['q1_stock']}** mm，Q3 **{metrics['q3_stock']}** mm，Q4 新标准母材 **{metrics['q4_stock']}** mm。结果与 xlsx 已写出。
+在给定数据与混合母材/共切联合启发式下，得到 **可行** 下料方案：Q1 母材总长 **{metrics['q1_stock']}** mm，Q3 **{metrics['q3_stock']}** mm，Q4 新标准母材 **{metrics['q4_stock']}** mm。结果与 xlsx 已写出。
 
 ---
 

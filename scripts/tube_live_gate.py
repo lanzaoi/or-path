@@ -1,117 +1,100 @@
 #!/usr/bin/env python3
-"""Tube LIVE close gate — schema + tube validate on disk (no full LIVE Pi).
+"""Strict current Tube gate: source preflight -> solve -> v2 recompute validate.
 
-Default targets slug=live-btube artifacts from contest B tube-cut run.
-Exit 0 only if:
-- schema gate PASS (cutting_stock/tube_cut structural OK; string path keys OK)
-- solution is tube tool FEASIBLE (not SP mock 42)
-- validate_solution ok for tube_cut
+Historical demo output is intentionally not accepted.  Missing unpublished
+attachments is reported as BLOCKED with exit code 2, not as a solver PASS.
 """
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+TOOLS = ROOT / "tools"
+if str(TOOLS) not in sys.path:
+    sys.path.insert(0, str(TOOLS))
+
+from solve_tube_cut_b2026 import blocked_envelope, input_readiness  # noqa: E402
 
 
 def _py() -> str:
-    cand = ROOT / ".venv-314" / "Scripts" / "python.exe"
-    return str(cand) if cand.is_file() else sys.executable
+    candidate = ROOT / ".venv-314" / "Scripts" / "python.exe"
+    return str(candidate) if candidate.is_file() else sys.executable
 
 
-def _fail(msg: str) -> None:
-    print("FAIL:", msg)
-    raise SystemExit(1)
+def fail(message: str) -> int:
+    print(f"FAIL: {message}")
+    return 1
 
 
-def _ok(msg: str) -> None:
-    print("OK:", msg)
+def main(argv: list[str] | None = None) -> int:
+    argv = list(argv if argv is not None else sys.argv[1:])
+    print("=== tube_live_gate v2 ===")
+    ready = input_readiness()
+    if not ready["ok"]:
+        payload = blocked_envelope()
+        payload["gate"] = "tube_live_gate"
+        payload["gate_result"] = "BLOCKED"
+        payload["strict_current_run"] = False
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 2
 
-
-def main() -> int:
-    print("=== tube_live_gate ===")
-    slug = "live-btube"
-    if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
-        slug = sys.argv[1]
-    schema = ROOT / "outputs" / f"{slug}-schema.json"
-    sol = ROOT / "outputs" / f"{slug}-solution.json"
-    val_out = ROOT / "outputs" / f"{slug}-validate.json"
-
-    if not schema.is_file():
-        _fail(f"missing {schema}")
-    if not sol.is_file():
-        _fail(f"missing {sol}")
-
-    env = {**dict(**{k: v for k, v in __import__("os").environ.items() if k not in {"PYTHONPATH", "PYTHONHOME"}}),
-           "PYTHONNOUSERSITE": "1"}
-    r = subprocess.run(
-        [_py(), str(ROOT / "tools" / "gate_schema.py"), str(schema)],
+    # A gate uses the short deterministic budget unless the caller explicitly
+    # chooses another profile/budget.
+    solve_args = argv or ["--fast"]
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in {"PYTHONPATH", "PYTHONHOME"}
+    }
+    env["PYTHONNOUSERSITE"] = "1"
+    process = subprocess.run(
+        [_py(), str(ROOT / "scripts" / "b_tube_solve.py"), *solve_args],
         cwd=str(ROOT),
         env=env,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
-    if r.returncode != 0:
-        _fail(f"gate_schema: {(r.stdout or '') + (r.stderr or '')}")
-    _ok("gate_schema PASS")
+    if process.returncode != 0:
+        return fail(((process.stdout or "") + (process.stderr or ""))[-2000:])
 
-    r2 = subprocess.run(
-        [
-            _py(),
-            str(ROOT / "tools" / "validate_solution.py"),
-            "--problem-id",
-            "b-tube-cut",
-            "--solution",
-            str(sol),
-            "--out",
-            str(val_out),
-        ],
-        cwd=str(ROOT),
-        env=env,
-        capture_output=True,
-        text=True,
+    solution_path = ROOT / "outputs" / "tube_cut_b2026-solution.json"
+    validate_path = ROOT / "outputs" / "tube_cut_b2026-validate.json"
+    if not solution_path.is_file() or not validate_path.is_file():
+        return fail("current v2 solution/validate artifacts were not written")
+    solution = json.loads(solution_path.read_text(encoding="utf-8"))
+    report = json.loads(validate_path.read_text(encoding="utf-8"))
+    if not report.get("ok"):
+        return fail(f"strict validator rejected current run: {report.get('errors')}")
+    snapshot = solution.get("model_snapshot") or {}
+    if snapshot.get("schema") != "orpath.tube_model.v2":
+        return fail("current solution lacks orpath.tube_model.v2 snapshot")
+    if str(solution.get("status") or "").upper() != "FEASIBLE":
+        return fail(f"unexpected solution status {solution.get('status')}")
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "gate": "tube_live_gate",
+                "gate_result": "PASS",
+                "strict_current_run": True,
+                "status": solution["status"],
+                "objective": solution["objective"],
+                "solution_path": str(solution_path),
+                "validate_path": str(validate_path),
+                "model_schema": snapshot["schema"],
+                "seed": snapshot.get("seed"),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
     )
-    if r2.returncode != 0:
-        _fail(f"validate: {(r2.stdout or '')[-500:]}")
-    rep = json.loads(val_out.read_text(encoding="utf-8"))
-    if not rep.get("ok"):
-        _fail(f"validate not ok: {rep.get('errors')}")
-    _ok(f"validate ok class={rep.get('problem_class')}")
-
-    sol_o = json.loads(sol.read_text(encoding="utf-8"))
-    if sol_o.get("objective") == 42:
-        _fail("objective looks like SP mock gold 42")
-    src = str(sol_o.get("source") or "")
-    if "tube" not in src.lower() and "tube" not in str(sol_o.get("solver") or "").lower():
-        _fail(f"solution source not tube: {src}")
-    if str(sol_o.get("status") or "").upper() not in {"FEASIBLE", "OPTIMAL"}:
-        _fail(f"bad status {sol_o.get('status')}")
-    _ok(
-        f"solution status={sol_o.get('status')} objective={sol_o.get('objective')} "
-        f"source={src}"
-    )
-
-    # sub evidence optional but preferred
-    agents = ROOT / "outputs" / ".agents" / slug
-    if agents.is_dir():
-        sys.path.insert(0, str(ROOT))
-        from orpath.subagent_dispatch import detect_subagent_calls
-
-        hit = False
-        for lg in agents.glob("*-lead-*.log"):
-            t = lg.read_bytes()[-200000:].decode("utf-8", "replace")
-            h, _ = detect_subagent_calls(t)
-            if h:
-                hit = True
-                break
-        if hit:
-            _ok("true subagent toolCall evidence on slug")
-        else:
-            print("NOTE: no subagent detect on this slug (core numbers still PASS)")
-    print("PASS tube_live_gate")
+    print("PASS tube_live_gate v2")
     return 0
 
 

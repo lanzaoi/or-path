@@ -1,0 +1,10 @@
+{
+  "urls": [
+    "https://galgos.inf.puc-rio.br/cvrplib/en/instances/1",
+    "https://galgos.inf.puc-rio.br/cvrplib/en/download/instance/4",
+    "https://galgos.inf.puc-rio.br/cvrplib/en/download/bks/4"
+  ],
+  "notes": [
+    "notes://cvrplib-a-n32-k5-baseline"
+  ]
+}

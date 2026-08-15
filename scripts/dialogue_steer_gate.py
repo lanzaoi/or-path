@@ -257,6 +257,15 @@ def test_d3_tier2_deep_link() -> None:
         if n not in html:
             _fail(f"watch.html D3 missing {n!r}")
     _ok("D3 HTML markers")
+    scroll_open = '<div class="scroll art" id="artifacts">'
+    panel_marker = '<div id="tier2Panel"'
+    if scroll_open not in html or panel_marker not in html:
+        _fail("Tier-2 scroll container markers missing")
+    if html.index(panel_marker) < html.index(scroll_open):
+        _fail("Tier-2 panel must live inside the L4 scroll container")
+    if 'const box = $("artifactList");' not in html:
+        _fail("artifact rendering must preserve the nested Tier-2 panel")
+    _ok("D3 Tier-2 panel is inside the L4 scroll container")
 
     for rel in (
         "docs/d3-tier2-deep-link.md",

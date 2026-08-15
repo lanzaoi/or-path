@@ -163,7 +163,7 @@ orpath.bat watch-run --workdir D:\cases\b --slug b1 --live --keep-watch ^
 | `cpsat` | 小 TSP | exact · 金标 45 |
 | `ortools` | VRP/TW | 搜索 FEASIBLE · 金标 58 |
 | `polyomino` | 骨牌覆盖 | CP-SAT · Q1.1=6 |
-| `tube` | 异形圆管下料 | BFD 启发式 · Q3≈99000 FEASIBLE |
+| `tube` | 异形圆管下料 | 混合母材列生成/CP-SAT + DP/ALNS/束搜索 · FEASIBLE；无附件则 BLOCKED |
 | `mock` | CI | fixture |
 
 圆管全问重算（写 `outputs/b-tube-cut/`）：

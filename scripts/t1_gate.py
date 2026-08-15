@@ -21,6 +21,8 @@ def child_env() -> dict[str, str]:
     env = dict(os.environ)
     env["PYTHONNOUSERSITE"] = "1"
     env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     # Prefer this interpreter's site-packages only
     env.pop("PYTHONPATH", None)
     return env

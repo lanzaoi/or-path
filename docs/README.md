@@ -26,6 +26,10 @@
 | **[`OUT_OF_BAND.md`](OUT_OF_BAND.md)** | vendor / pi-main / .hermes 等带外 |
 | **[`m2-polyomino.md`](m2-polyomino.md)** | M2 骨牌域桥 |
 | **[`solver-stack.md`](solver-stack.md)** | 求解栈 claim（与 specs 配套） |
+| **[`vrp-public-baseline.md`](vrp-public-baseline.md)** | 无 Tube 数据时可复现的公开 CVRPLIB 基线 |
+| **[`tube-optimization-v2.md`](tube-optimization-v2.md)** | Tube v2 混合母材、共切、ALNS、跨批余料与严格验证 |
+| **[`tube-optimization-plan.md`](tube-optimization-plan.md)** | Tube B 当前基线、精力分配、Q4 0.4% 缺口与后续执行计划 |
+| **[`../fixtures/t3/tube_cut_b2026/DATA_REQUIRED.md`](../fixtures/t3/tube_cut_b2026/DATA_REQUIRED.md)** | Tube B 私有源数据清单与 BLOCKED 语义 |
 | **[`v0-smoke.md`](v0-smoke.md)** | Watch / 过程脸冒烟（门禁锚点） |
 | **[`p5-closeout.md`](p5-closeout.md)** | P5 过程脸收口（门禁锚点） |
 | **[`m0-smoke.md`](m0-smoke.md)** · **[`m1-smoke.md`](m1-smoke.md)** | M0 mock · M1 workdir |

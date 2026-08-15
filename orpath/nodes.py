@@ -831,7 +831,7 @@ def _intake_front_door_active(state: ORPathState) -> bool:
 
 
 def _solution_is_blocked(state: ORPathState) -> bool:
-    """True when solve refused / BLOCKED envelope (intake soak, no domain adapter)."""
+    """True when solve refused or returned any honest BLOCKED envelope."""
     if state.get("solve_refused"):
         return True
     sp = state.get("solution_path") or ""
@@ -1004,7 +1004,7 @@ def node_gate_validate(state: ORPathState) -> dict:
     root = _root(state)
     vpath = root / "outputs" / f"{state['slug']}-validate.json"
     sol_path = Path(state.get("solution_path") or "")
-    # BLOCKED / intake refuse: no tune/model repair ladder — go explain→paper shell
+    # BLOCKED: no tune/model repair ladder — go explain → paper shell.
     if sol_path.is_file():
         try:
             sol_obj = json.loads(sol_path.read_text(encoding="utf-8"))
@@ -1029,7 +1029,7 @@ def node_gate_validate(state: ORPathState) -> dict:
                     else "solution BLOCKED"
                 ],
                 "solution_path": str(sol_path),
-                "detail": "intake_or_domain_adapter_blocked",
+                "detail": "solution_blocked",
             }
             vpath.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
             return {
@@ -1037,7 +1037,13 @@ def node_gate_validate(state: ORPathState) -> dict:
                 "validate_path": str(vpath),
                 "gate_validate_ok": False,
                 "human_required": True,
-                "last_error": state.get("last_error") or "no_domain_adapter_for_intake",
+                "last_error": (
+                    sol_obj.get("meta", {}).get("blocked_code")
+                    if isinstance(sol_obj.get("meta"), dict)
+                    else None
+                )
+                or state.get("last_error")
+                or "solution_blocked",
             }
 
     ok, report, msg = gate_validate(
@@ -1127,11 +1133,8 @@ def node_explain(state: ORPathState) -> dict:
     shape = sol.get("path") or sol.get("tour") or sol.get("routes")
     meta = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
     blocked = str(sol.get("status") or "").upper() == "BLOCKED" or bool(meta.get("blocked"))
-    note = (
-        "**BLOCKED:** no domain adapter for intake problem — do not treat fixture gold as answer."
-        if blocked
-        else ""
-    )
+    reason = str(meta.get("reason") or "solver prerequisites are unavailable")
+    note = f"**BLOCKED:** {reason}. Do not invent a result." if blocked else ""
     path.write_text(
         (
             f"# Explain: {state['slug']}\n\n"
@@ -1211,6 +1214,7 @@ def node_draft_paper(state: ORPathState) -> dict:
             try:
                 wl = json.loads(wl_path.read_text(encoding="utf-8"))
                 cites.extend(str(u) for u in (wl.get("urls") or []))
+                cites.extend(str(n) for n in (wl.get("notes") or []))
             except json.JSONDecodeError:
                 cites = []
         if not cites:
@@ -1251,14 +1255,16 @@ def node_draft_paper(state: ORPathState) -> dict:
     )
     meta = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
     if str(sol.get("status") or "").upper() == "BLOCKED" or meta.get("blocked"):
+        blocked_code = str(meta.get("blocked_code") or "solution_blocked")
+        blocked_reason = str(meta.get("reason") or "solver prerequisites are unavailable")
         body = (
             body
-            + "\n\n## Provenance note (intake soak)\n\n"
-            + "Solution status is **BLOCKED** (`no_domain_adapter_for_intake`). "
-            + "Do **not** invent Q1–Q4 numeric tables or 2-week profit forecasts. "
-                        + "Do **not** treat shell fixture gold objectives as contest answers. "
-                        + "Paper gates R2/claim should remain BLOCKED/fail-closed.\n"
-                    )
+            + "\n\n## Provenance note (blocked solve)\n\n"
+            + f"Solution status is **BLOCKED** (`{blocked_code}`): {blocked_reason}. "
+            + "Do **not** invent result tables or forecasts. "
+            + "Do **not** treat shell fixture gold objectives as contest answers. "
+            + "Paper gates R2/claim should remain BLOCKED/fail-closed.\n"
+        )
     # P1-5 layered drafts: draft only here; cite_pack builds cited
     paths["draft"].write_text(body, encoding="utf-8")
     paths["paper"].write_text(body, encoding="utf-8")
@@ -1613,7 +1619,7 @@ def node_revise_or_done(state: ORPathState) -> dict:
             "gate_claim_ok": False,
             "paper_blocked": True,
             "last_error": (
-                "paper_blocked_no_domain_adapter: "
+                "paper_blocked_solution: "
                 + str(state.get("last_error") or "R2/claim not applicable")
             )[:500],
         }

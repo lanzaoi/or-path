@@ -9,6 +9,16 @@ set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 .venv-314\Scripts\python.exe scripts\t2_gate.py
 ```
 
+本地门禁可离线运行：它验证仓库内已归档的 T2 关闭元数据，并打印 `current_live_run=false`，不代表本机刚完成了一次模型调用。
+
+严格检查当前机器的真实多代理 transcript：
+
+```bat
+orpath.bat isolation
+```
+
+如果没有模型密钥或尚未生成 `.pi-subagents/artifacts/`，该命令失败是预期行为，不能拿归档证据替代当前 LIVE 证据。
+
 ## Cloud / online gate
 
 ```bat

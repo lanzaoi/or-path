@@ -31,6 +31,8 @@ def _env() -> dict[str, str]:
     env.pop("PYTHONPATH", None)
     env.pop("PYTHONHOME", None)
     env["PYTHONNOUSERSITE"] = "1"
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONIOENCODING"] = "utf-8"
     env["ORPATH_LIVE_SUBAGENT"] = "0"
     env["ORPATH_HOME"] = str(ROOT)
     return env

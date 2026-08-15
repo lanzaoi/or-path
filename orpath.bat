@@ -734,7 +734,34 @@ if /i "%CMD%"=="steer-gate" (
 )
 if /i "%CMD%"=="p4-gate" goto :p4_gate
 if /i "%CMD%"=="bench" goto :bench
+if /i "%CMD%"=="vrp-baseline" goto :vrp_baseline
 if /i "%CMD%"=="doctor" goto :doctor
+if /i "%CMD%"=="t1-gate" goto :t1_gate
+if /i "%CMD%"=="t2-gate" goto :t2_gate
+if /i "%CMD%"=="m0-gate" goto :m0_gate
+if /i "%CMD%"=="m1-gate" goto :m1_gate
+if /i "%CMD%"=="m2-gate" goto :m2_gate
+if /i "%CMD%"=="subagent-gate" goto :subagent_gate
+if /i "%CMD%"=="tube-solve" goto :tube_solve
+if /i "%CMD%"=="tube-benchmark" goto :tube_benchmark
+if /i "%CMD%"=="tube-live-gate" goto :tube_live_gate
+if /i "%CMD%"=="tube-collab-gate" goto :tube_collab_gate
+if /i "%CMD%"=="tube-redteam-gate" goto :tube_redteam_gate
+if /i "%CMD%"=="tube-geometry-gate" goto :tube_geometry_gate
+if /i "%CMD%"=="v0-watch-gate" goto :v0_watch_gate
+if /i "%CMD%"=="p3-gate" goto :p3_gate
+if /i "%CMD%"=="p5-gate" goto :p5_gate
+if /i "%CMD%"=="paper-gate" goto :paper_gate
+if /i "%CMD%"=="paper-1.0-gate" goto :paper_10_gate
+if /i "%CMD%"=="run" goto :run
+if /i "%CMD%"=="run-full" goto :run_full
+if /i "%CMD%"=="resume" goto :resume
+if /i "%CMD%"=="status" goto :status
+if /i "%CMD%"=="list" goto :list
+if /i "%CMD%"=="t2" goto :t2
+if /i "%CMD%"=="watch" goto :watch
+if /i "%CMD%"=="watch-run" goto :watch_run
+if /i "%CMD%"=="isolation" goto :isolation
 
 
 
@@ -1732,6 +1759,11 @@ echo ==============================================
 "%PY%" "!ORPATH_HOME!\eval_or_bench\run_full_benchmark.py"
 exit /b %ERRORLEVEL%
 
+:vrp_baseline
+set "ORPATH_LIVE_SUBAGENT=0"
+"%PY%" "!ORPATH_HOME!\eval_or_bench\run_cvrp_baseline.py" %2 %3 %4 %5 %6 %7 %8 %9
+exit /b %ERRORLEVEL%
+
 :doctor
 
 
@@ -1816,6 +1848,18 @@ set "ORPATH_LIVE_SUBAGENT=0"
 
 
 
+exit /b %ERRORLEVEL%
+
+:t1_gate
+
+set "ORPATH_LIVE_SUBAGENT=0"
+"%PY%" "!ORPATH_HOME!\scripts\t1_gate.py"
+exit /b %ERRORLEVEL%
+
+:t2_gate
+
+set "ORPATH_LIVE_SUBAGENT=0"
+"%PY%" "!ORPATH_HOME!\scripts\t2_gate.py"
 exit /b %ERRORLEVEL%
 
 
@@ -3370,6 +3414,18 @@ exit /b %ERRORLEVEL%
 
 
 
+:tube_solve
+
+set "ORPATH_LIVE_SUBAGENT=0"
+"%PY%" "!ORPATH_HOME!\scripts\b_tube_solve.py" %2 %3 %4 %5 %6 %7 %8 %9
+exit /b %ERRORLEVEL%
+
+:tube_benchmark
+
+set "ORPATH_LIVE_SUBAGENT=0"
+"%PY%" "!ORPATH_HOME!\eval_or_bench\run_tube_synthetic_benchmark.py" %2 %3 %4 %5 %6 %7 %8 %9
+exit /b %ERRORLEVEL%
+
 :tube_live_gate
 
 
@@ -3394,6 +3450,21 @@ set "ORPATH_LIVE_SUBAGENT=0"
 
 
 
+exit /b %ERRORLEVEL%
+
+:tube_collab_gate
+set "ORPATH_LIVE_SUBAGENT=0"
+"%PY%" "!ORPATH_HOME!\scripts\tube_collaboration_gate.py"
+exit /b %ERRORLEVEL%
+
+:tube_redteam_gate
+set "ORPATH_LIVE_SUBAGENT=0"
+"%PY%" "!ORPATH_HOME!\scripts\tube_redteam_gate.py" %2 %3 %4 %5 %6 %7 %8 %9
+exit /b %ERRORLEVEL%
+
+:tube_geometry_gate
+set "ORPATH_LIVE_SUBAGENT=0"
+"%PY%" "!ORPATH_HOME!\scripts\tube_geometry_stability_gate.py" %2 %3 %4 %5 %6 %7 %8 %9
 exit /b %ERRORLEVEL%
 
 

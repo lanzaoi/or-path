@@ -19,7 +19,9 @@ from orpath.subagent_harness import LEAD_TOOLS_NO_WRITE
 
 
 def test_single_lead_cmd_not_harness_shaped():
-    cmd = build_single_lead_cmd(ROOT, prompt="hello single lead")
+    cmd = build_single_lead_cmd(
+        ROOT, prompt="hello single lead", require_credentials=False
+    )
     assert not is_harness_shaped_cmd(cmd)
     v = validate_launch(cmd, claim_multi_agent=False)
     assert v.ok
@@ -27,14 +29,16 @@ def test_single_lead_cmd_not_harness_shaped():
 
 
 def test_claim_multi_on_bare_cmd_fails():
-    cmd = build_single_lead_cmd(ROOT, prompt="pretend multi")
+    cmd = build_single_lead_cmd(ROOT, prompt="pretend multi", require_credentials=False)
     v = validate_launch(cmd, claim_multi_agent=True, label="test")
     assert not v.ok
     assert "ILLEGAL" in v.reason or "harness" in v.reason.lower()
 
 
 def test_multi_agent_cmd_is_harness_shaped():
-    cmd = build_multi_agent_lead_cmd(ROOT, prompt="must call subagent")
+    cmd = build_multi_agent_lead_cmd(
+        ROOT, prompt="must call subagent", require_credentials=False
+    )
     assert is_harness_shaped_cmd(cmd)
     assert LEAD_TOOLS_NO_WRITE.split(",")[0] in " ".join(cmd) or "--tools" in cmd
     tools_idx = cmd.index("--tools")
@@ -56,24 +60,14 @@ def test_banner_mentions_mode():
     assert "MULTI_AGENT" in b2
 
 
-def test_resolve_launcher_imports():
-    # syntax / import path used by tube launcher
-    import importlib.util
-
-    p = ROOT / "outputs/b-tube-cut/logs/launch_pi_resolve.py"
-    spec = importlib.util.spec_from_file_location("launch_pi_resolve", p)
-    assert spec and spec.loader
-    # only check file declares SINGLE_LEAD
-    text = p.read_text(encoding="utf-8")
-    assert "SINGLE_LEAD" in text
-    assert "claim_multi_agent=False" in text
+def test_tube_cli_uses_tracked_dispatch():
+    """Clean clones must not depend on ignored outputs/b-tube-cut launchers."""
+    text = (ROOT / "scripts/b_tube_solve.py").read_text(encoding="utf-8")
+    assert "from solve_dispatch import solve" in text
+    assert '"tube"' in text
 
 
-def test_paper_launcher_uses_harness_imports():
-    text = (ROOT / "outputs/b-tube-cut/logs/launch_pi_paper_loop.py").read_text(
-        encoding="utf-8"
-    )
+def test_product_paper_nodes_use_harness_imports():
+    text = (ROOT / "orpath/nodes.py").read_text(encoding="utf-8")
     assert "run_cite_subagent_lead" in text
     assert "run_review_subagent_lead" in text
-    assert "MULTI_AGENT_HARNESS" in text
-    assert "claim_multi_agent=False" in text  # draft only

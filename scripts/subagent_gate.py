@@ -93,6 +93,12 @@ def test_agents() -> None:
         "or-writer",
         "or-verifier",
         "or-reviewer",
+        "or-tube-lead",
+        "or-tube-geometry",
+        "or-tube-q1q2",
+        "or-tube-q3",
+        "or-tube-q4",
+        "or-tube-redteam",
     ]
     for name in required:
         if name not in agents:
@@ -328,18 +334,18 @@ def test_pi_launch_law() -> None:
     ]
     v = validate_launch(bare, claim_multi_agent=True, label="gate-bare")
     assert not v.ok, "bare multi claim must fail"
-    single = build_single_lead_cmd(ROOT, prompt="single")
+    single = build_single_lead_cmd(ROOT, prompt="single", require_credentials=False)
     assert not is_harness_shaped_cmd(single)
     assert validate_launch(single, claim_multi_agent=False).ok
-    multi = build_multi_agent_lead_cmd(ROOT, prompt="multi")
+    multi = build_multi_agent_lead_cmd(ROOT, prompt="multi", require_credentials=False)
     assert is_harness_shaped_cmd(multi)
     assert validate_launch(multi, claim_multi_agent=True).ok
-    # tube launchers honest
-    res = (ROOT / "outputs/b-tube-cut/logs/launch_pi_resolve.py").read_text(encoding="utf-8")
-    assert "SINGLE_LEAD" in res and "claim_multi_agent=False" in res
-    pap = (ROOT / "outputs/b-tube-cut/logs/launch_pi_paper_loop.py").read_text(encoding="utf-8")
-    assert "run_cite_subagent_lead" in pap and "run_review_subagent_lead" in pap
-    print("OK pi_launch_law + tube launchers")
+    # Product glue is tracked; ignored outputs must never be a clean-clone gate input.
+    cli = (ROOT / "scripts/b_tube_solve.py").read_text(encoding="utf-8")
+    nodes = (ROOT / "orpath/nodes.py").read_text(encoding="utf-8")
+    assert "from solve_dispatch import solve" in cli
+    assert "run_cite_subagent_lead" in nodes and "run_review_subagent_lead" in nodes
+    print("OK pi_launch_law + tracked tube/product glue")
 
 
 def main() -> int:

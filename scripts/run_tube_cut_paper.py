@@ -57,7 +57,7 @@ def build_solution() -> dict:
         "problem_class": "cutting_stock",
         "status": "FEASIBLE",
         "objective": obj,
-        "solver": "tools/solve_tube_cut_b2026.py (BFD heuristic via solve_dispatch)",
+        "solver": "tools/solve_tube_cut_b2026.py (mixed-stock/DP/ALNS/beam via solve_dispatch)",
         "source": "tools/solve_tube_cut_b2026.py → outputs/b-tube-cut/q*-solution.json",
         "metrics": metrics,
         "questions": {
@@ -190,7 +190,7 @@ chunk_id: tube-cut-seed-cocut
         f"""# Explain — {SLUG}
 
 Numbers truth: only `outputs/b-tube-cut/solution.json` and q*-solution.json.
-Status FEASIBLE (BFD heuristic). Not proven optimal.
+Status FEASIBLE (mixed-stock/DP/ALNS/beam heuristic). Not proven optimal.
 
 Headline objective (Q1 stock) = {sol['objective']}.
 """,

@@ -30,11 +30,11 @@ python tools/validate_solution.py --problem-id <id> --solution path.json
 | solve_cpsat | CP-SAT 小 TSP | ✅ |
 | solve_highs | HiGHS MTZ TSP | ✅ |
 | solve_ortools | Routing 实用搜索 | ❌ |
-| solve_tube_cut_b2026 | 圆管 BFD | ❌ FEASIBLE |
+| solve_tube_cut_b2026 | 圆管：列生成/CP-SAT + 朝向 DP + ALNS + 跨批束搜索 | ❌ FEASIBLE |
 | solve_polyomino* | 骨牌 **polyomino_cover**（M2：已注册 dispatch；validate 见阶段 2） | CP-SAT exact 视 meta |
 | validate_solution | 重算与可行性 | — |
 
-禁止：NetworkX 标 ortools；Routing/BFD 宣传 proven optimal。
+禁止：NetworkX 标 ortools；Routing/Tube 启发式宣传 proven optimal。
 
 ---
 
@@ -79,7 +79,7 @@ meta.method_class: exact | metaheuristic | fixture
 
 envelope：`proven_optimal and not exact` → 非法。
 
-status：`OPTIMAL` | `FEASIBLE` | `INFEASIBLE` | `ERROR` | `BLOCKED`（产品扩展，intake 无 adapter）
+status：`OPTIMAL` | `FEASIBLE` | `INFEASIBLE` | `ERROR` | `BLOCKED`（无法诚实求解，例如 intake 无 adapter 或必需源数据缺失）
 
 ---
 
@@ -92,6 +92,18 @@ status：`OPTIMAL` | `FEASIBLE` | `INFEASIBLE` | `ERROR` | `BLOCKED`（产品扩
 - 可选 gold_gap  
 
 BLOCKED solution：validate **短路径** 不得假装调参修复出假优。
+
+Tube B 适配器在启动求解前必须检查 10 个 CSV、1 个批次 XLSX 和 4 个结果模板。任一缺失时，dispatch 返回合法的 `BLOCKED` envelope（`objective: null`、`blocked_code: tube_source_data_missing`），不得读取历史输出冒充本次结果。完整文件清单见 `fixtures/t3/tube_cut_b2026/DATA_REQUIRED.md`。
+
+Tube v2 求解与验证约束：
+
+1. Q1 必须允许 9000/10000/11000/12000 mm 在同一方案中混合选择；当前实现为列生成模式库 + CP-SAT 整数主问题。
+2. 固定序列的 L/R 朝向用两状态动态规划精确求解，不得在长序列退化成逐件贪心。
+3. Q2 固定 Q1 每根母材的工件多重集合；只允许修改顺序和端向。
+4. Q3 使用字典序 `(总母材长度, -总共切收益, 切换次数)`；当前联合 ALNS 为可复现启发式，不宣称最优。
+5. Q4 使用带编号余料库存和多状态束搜索；逐批满足物料守恒，目标只累计新购标准母材。
+6. 求解输出必须携带 `orpath.tube_model.v2` 模型快照；validator 逐根重算需求、几何收益、占用、余料、利用率、Q2 分配和 Q4 库存。超长方案必须拒绝，禁止缩放数字“修复”。
+7. 随机搜索必须写入 seed；默认 `20260813`，`--fast` 用于冒烟，`--quality` 用于最终实验。
 
 ---
 

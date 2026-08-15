@@ -78,7 +78,7 @@ TOOLS: tuple[ToolSpec, ...] = (
         "solve_tube",
         "solve",
         "tools/solve_tube_cut_b2026.py",
-        "Tube cut BFD heuristic",
+        "Tube mixed-stock + orientation DP + ALNS/beam heuristic",
         True,
         False,
         ("tube",),

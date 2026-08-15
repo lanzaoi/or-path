@@ -4,20 +4,32 @@
 Bugs fixed vs Pi draft:
 1) Axial length = PCA first-axis span (tube axis), NOT Z_max-Z_min (~40mm disk).
 2) Co-cut Δ = l_i+l_j - L_ab via end-envelope nesting + rotation search.
-3) Cutting-stock: first-fit / multi-stock BFD + local improvement; Q2 reorder only.
+3) Cutting-stock: genuine mixed stock, exact orientation DP, seeded ALNS and beam search.
 4) Export result1-4.xlsx + consistent DONE metrics from one source of truth.
 """
 from __future__ import annotations
 
 import json
-import math
+import argparse
+import hashlib
 import shutil
-from collections import defaultdict
-from copy import deepcopy
+from copy import copy, deepcopy
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+from tube_optimization import (
+    counts_from_bins,
+    homogeneous_block_stock_patterns,
+    joint_relaxation_stock_lower_bound,
+    minimize_type_splits_for_fixed_stock,
+    mixed_stock_patterns,
+    optimize_fixed_assignments,
+    optimize_joint_bins,
+    solve_multibatch_beam,
+    summarize_bins,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 CSV_DIR = (
@@ -33,6 +45,90 @@ OUT = ROOT / "outputs/b-tube-cut"
 STOCKS = [9000.0, 10000.0, 11000.0, 12000.0]
 REMNANT_MIN = 200.0  # mm
 GIDS = [f"G{i}" for i in range(1, 11)]
+RESULT_TEMPLATES = tuple(f"result{i}.xlsx" for i in range(1, 5))
+PROFILE_METHOD = "fixed_angular_neighborhood_conservative_v1"
+# The sparsest supplied circumference has a roughly 12.05 degree maximum
+# sample gap.  A fixed +/-6.25 degree physical neighbourhood covers every
+# target angle at every output resolution.  Taking the most conservative end
+# value in that neighbourhood prevents empty fine bins from creating fictitious
+# co-cut spikes.
+PROFILE_NEIGHBORHOOD_RADIUS_DEG = 6.25
+
+
+def required_input_paths() -> list[Path]:
+    """Files required for an actual Tube solve (STP files are not read)."""
+    return (
+        [CSV_DIR / f"圆管{i}.csv" for i in range(1, 11)]
+        + [BATCH_XLSX]
+        + [TMPL_DIR / name for name in RESULT_TEMPLATES]
+    )
+
+
+def input_readiness() -> dict:
+    """Return a machine-readable preflight without touching solver outputs."""
+    required = required_input_paths()
+    missing = [p for p in required if not p.is_file()]
+
+    def rel(path: Path) -> str:
+        try:
+            return path.relative_to(ROOT).as_posix()
+        except ValueError:
+            return path.as_posix()
+
+    return {
+        "ok": not missing,
+        "problem_id": "tube_cut_b2026",
+        "required_count": len(required),
+        "missing_count": len(missing),
+        "missing_inputs": [rel(p) for p in missing],
+        "data_manifest": "fixtures/t3/tube_cut_b2026/DATA_REQUIRED.md",
+    }
+
+
+def input_sha256() -> dict[str, str]:
+    """Hash every authorised source/template used by a real solve."""
+    ready = input_readiness()
+    if not ready["ok"]:
+        raise FileNotFoundError("cannot hash Tube inputs before readiness passes")
+    hashes: dict[str, str] = {}
+    for path in required_input_paths():
+        rel = path.relative_to(ROOT).as_posix()
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        hashes[rel] = digest.hexdigest()
+    return hashes
+
+
+def blocked_envelope(problem_id: str = "tube_cut_b2026") -> dict:
+    """Honest product response when the untracked contest attachments are absent."""
+    ready = input_readiness()
+    reason = (
+        "required Tube source attachments are absent; restore the original local "
+        "contest data listed in the data manifest before solving"
+    )
+    return {
+        "problem_id": problem_id or "tube_cut_b2026",
+        "problem_class": "tube_cut",
+        "status": "BLOCKED",
+        "objective": None,
+        "source": "tools/solve_tube_cut_b2026.py",
+        "solver": "none",
+        "questions": {},
+        "missing_inputs": ready["missing_inputs"],
+        "data_manifest": ready["data_manifest"],
+        "meta": {
+            "exact": False,
+            "proven_optimal": False,
+            "method_class": "heuristic",
+            "blocked": True,
+            "blocked_code": "tube_source_data_missing",
+            "reason": reason,
+            "required_count": ready["required_count"],
+            "missing_count": ready["missing_count"],
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -44,13 +140,14 @@ def load_points(i: int) -> np.ndarray:
     return df[["X", "Y", "Z"]].to_numpy(dtype=float)
 
 
-def analyze_tube(i: int) -> dict:
+def analyze_tube(i: int, *, n_bins: int = 360) -> dict:
     P = load_points(i)
     c = P.mean(axis=0)
     _, _, Vt = np.linalg.svd(P - c, full_matrices=False)
     axis = Vt[0].copy()
-    # consistent orientation: mean projection increases along +axis with larger X if correlated
-    if np.dot(axis, np.array([1.0, 0.0, 0.0])) < 0:
+    # Deterministic PCA sign: the largest absolute component is positive.
+    pivot = int(np.argmax(np.abs(axis)))
+    if axis[pivot] < 0:
         axis = -axis
     t = (P - c) @ axis
     t_min, t_max = float(t.min()), float(t.max())
@@ -61,8 +158,7 @@ def analyze_tube(i: int) -> dict:
     e1 /= np.linalg.norm(e1) + 1e-15
     e2 = np.cross(axis, e1)
     e2 /= np.linalg.norm(e2) + 1e-15
-    # end envelopes: axial inset from extreme planes, by angle bins
-    n_bins = 72
+    # Full-circumference cut profiles, not a fixed 3 mm end band.
     L_env = end_envelope(P, c, axis, e1, e2, t, t_min, side="L", n_bins=n_bins)
     R_env = end_envelope(P, c, axis, e1, e2, t, t_max, side="R", n_bins=n_bins)
     return {
@@ -75,55 +171,52 @@ def analyze_tube(i: int) -> dict:
         "L_env": L_env.tolist(),
         "R_env": R_env.tolist(),
         "n_points": int(len(P)),
+        "profile_bins": n_bins,
     }
 
 
-def end_envelope(
-    P, c, axis, e1, e2, t, t_end, *, side: str, n_bins: int, band: float = 3.0
-) -> np.ndarray:
-    """Return per-angle axial inset (>=0) from the extreme plane toward the body."""
-    if side == "L":
-        mask = t <= t_end + band
-        # inset = how far inside from t_min
-        inset_vals = t[mask] - t_end  # >=0 near L? t>=t_min, t_end=t_min → >=0
-        # actually points at L have t near t_min; inset from extreme = t - t_min
-        inset_vals = t[mask] - t_end
-    else:
-        mask = t >= t_end - band
-        inset_vals = t_end - t[mask]  # >=0
-    pts = P[mask]
-    if len(pts) == 0:
-        return np.zeros(n_bins)
-    rel = pts - c
+def end_envelope(P, c, axis, e1, e2, t, t_end, *, side: str, n_bins: int) -> np.ndarray:
+    """Return a conservative, resolution-stable end profile in millimetres.
+
+    Every target ray uses a fixed physical angular neighbourhood rather than a
+    bin whose width shrinks with ``n_bins``.  The L profile takes the minimum
+    axial coordinate in the neighbourhood and the R profile takes the maximum;
+    both choices reduce, never inflate, the inferred nesting inset.  The fixed
+    radius covers the largest observed angular gap in the authorised point
+    clouds and makes 180/360/720 resolution a rotation-search refinement, not a
+    change in the source geometry.
+    """
+    rel = P - c
     ang = np.arctan2(rel @ e2, rel @ e1)  # [-pi,pi]
-    bins = np.floor((ang + np.pi) / (2 * np.pi) * n_bins).astype(int)
-    bins = np.clip(bins, 0, n_bins - 1)
-    env = np.full(n_bins, np.nan)
-    for b in range(n_bins):
-        sel = inset_vals[bins == b]
-        if len(sel):
-            # outer surface toward neighbor: minimal inset among points = most protruding
-            env[b] = float(np.min(sel))
-    # fill nan by interpolation
-    idx = np.arange(n_bins)
-    good = ~np.isnan(env)
-    if not good.any():
-        return np.zeros(n_bins)
-    env[~good] = np.interp(idx[~good], idx[good], env[good], period=n_bins)
+    targets = -np.pi + (np.arange(n_bins, dtype=float) + 0.5) * 2 * np.pi / n_bins
+    radius = np.deg2rad(PROFILE_NEIGHBORHOOD_RADIUS_DEG)
+    env = np.empty(n_bins, dtype=float)
+    for index, target in enumerate(targets):
+        distance = np.abs(np.angle(np.exp(1j * (ang - target))))
+        selected = distance <= radius + 1e-12
+        if not selected.any():
+            # Defensive fallback for a different future data set.  The current
+            # authorised inputs never need it because the radius covers their
+            # maximum angular gap; using nearest samples remains conservative.
+            selected = distance <= float(distance.min()) + 1e-12
+        axial = float(np.min(t[selected]) if side == "L" else np.max(t[selected]))
+        env[index] = axial - t_end if side == "L" else t_end - axial
     return np.maximum(env, 0.0)
 
 
 def cocut_saving(geo_i: dict, geo_j: dict, end_i: str, end_j: str) -> float:
-    """Δ = max nesting when end_i of i meets end_j of j (rotation search)."""
+    """Δ from a full discrete rotation search of the two facing end profiles."""
     ei = np.array(geo_i[f"{end_i}_env"], dtype=float)
     ej = np.array(geo_j[f"{end_j}_env"], dtype=float)
     n = len(ei)
     best = 0.0
-    # Facing ends: protrusions oppose; nest = min_θ (inset_i(θ)+inset_j(θ+φ))
-    # Larger combined inset → more nest possible before collision of bodies.
+    # A proper 3-D placement fixes angular handedness.  With i on the left and
+    # j on the right, equal end labels (LL/RR) reverse angular direction;
+    # different labels (LR/RL) preserve it.  Trying both and taking max would
+    # admit a mirror reflection that is not a physical rotation.
+    facing = ej[::-1] if end_i == end_j else ej
     for shift in range(n):
-        ej_r = np.roll(ej, shift)
-        nest = float(np.min(ei + ej_r))
+        nest = float(np.min(ei + np.roll(facing, shift)))
         if nest > best:
             best = nest
     # Cap by physical lengths
@@ -132,8 +225,8 @@ def cocut_saving(geo_i: dict, geo_j: dict, end_i: str, end_j: str) -> float:
     return round(max(0.0, best), 4)
 
 
-def build_geometry() -> dict:
-    geos = {f"G{i}": analyze_tube(i) for i in range(1, 11)}
+def build_geometry(*, n_bins: int = 360) -> dict:
+    geos = {f"G{i}": analyze_tube(i, n_bins=n_bins) for i in range(1, 11)}
     lengths = {g: geos[g]["axial_length_mm"] for g in GIDS}
     # 10x10x4 savings
     modes = [("L", "L"), ("L", "R"), ("R", "L"), ("R", "R")]
@@ -146,268 +239,92 @@ def build_geometry() -> dict:
                 mn: cocut_saving(geos[a], geos[b], ea, eb)
                 for mn, (ea, eb) in zip(mode_names, modes)
             }
-    return {"geos": geos, "lengths": lengths, "savings": savings}
-
-
-# ---------------------------------------------------------------------------
-# Cutting stock helpers
-# ---------------------------------------------------------------------------
-
-def switches_in_seq(seq: list[str]) -> int:
-    if not seq:
-        return 0
-    s = 0
-    for a, b in zip(seq, seq[1:]):
-        if a != b:
-            s += 1
-    return s
-
-
-def pack_bfd(items: list[tuple[str, float]], stock_len: float) -> list[dict] | None:
-    """Best-fit decreasing into identical stock_len bins. items=(gid,length)."""
-    ordered = sorted(items, key=lambda x: -x[1])
-    bins: list[dict] = []  # remaining, seq list
-    for gid, L in ordered:
-        if L > stock_len + 1e-9:
-            return None
-        best_i, best_rem = -1, 1e18
-        for i, b in enumerate(bins):
-            rem = b["remaining"]
-            if rem + 1e-9 >= L and rem - L < best_rem:
-                best_rem = rem - L
-                best_i = i
-        if best_i < 0:
-            bins.append({"remaining": stock_len - L, "seq": [gid], "stock_len": stock_len})
-        else:
-            bins[best_i]["seq"].append(gid)
-            bins[best_i]["remaining"] -= L
-    return bins
-
-
-def pack_multisize(items: list[tuple[str, float]]) -> list[dict]:
-    """Try each uniform stock length; pick min total length, then min switches."""
-    best = None
-    best_key = None
-    for S in STOCKS:
-        bins = pack_bfd(items, S)
-        if bins is None:
-            continue
-        # group identical types in each bin to reduce switches
-        for b in bins:
-            b["seq"] = compress_seq_sort_blocks(b["seq"])
-        total = sum(b["stock_len"] for b in bins)
-        sw = sum(switches_in_seq(b["seq"]) for b in bins)
-        key = (total, sw, len(bins))
-        if best is None or key < best_key:
-            best = bins
-            best_key = key
-    assert best is not None
-    return finalize_bins(best, lengths_map=None)
-
-
-def compress_seq_sort_blocks(seq: list[str]) -> list[str]:
-    """Put same types contiguous; order blocks by count desc then id."""
-    cnt: dict[str, int] = defaultdict(int)
-    for g in seq:
-        cnt[g] += 1
-    order = sorted(cnt.keys(), key=lambda g: (-cnt[g], g))
-    out: list[str] = []
-    for g in order:
-        out.extend([g] * cnt[g])
-    return out
-
-
-def finalize_bins(bins: list[dict], lengths_map: dict[str, float] | None) -> list[dict]:
-    out = []
-    for i, b in enumerate(bins, 1):
-        seq = list(b["seq"])
-        used = b["stock_len"] - b["remaining"]
-        out.append(
-            {
-                "id": f"M{i}",
-                "stock_length_mm": round(b["stock_len"], 3),
-                "sequence": seq,
-                "used_length_mm": round(used, 4),
-                "leftover_mm": round(b["remaining"], 4),
-                "utilization": round(used / b["stock_len"], 6) if b["stock_len"] else 0.0,
-                "switches": switches_in_seq(seq),
-            }
-        )
-    return out
-
-
-def items_from_demand(demand: dict[str, int], lengths: dict[str, float]) -> list[tuple[str, float]]:
-    items = []
-    for g, n in demand.items():
-        L = lengths[g]
-        for _ in range(int(n)):
-            items.append((g, L))
-    return items
-
-
-def seq_effective_length(seq: list[str], lengths: dict[str, float], savings: dict) -> tuple[float, float, list[dict]]:
-    """Return (effective_len, total_delta, joint_list)."""
-    if not seq:
-        return 0.0, 0.0, []
-    raw = sum(lengths[g] for g in seq)
-    delta = 0.0
-    joints = []
-    # choose orientation chain to max savings (L/R as ends)
-    # DP: state end used on previous piece
-    ends = ["L", "R"]
-    n = len(seq)
-    # prev_end choice for piece 0 doesn't matter for length; track best
-    best_delta = -1.0
-    best_joints: list[dict] = []
-    # brute orientations 2^n only if n small; else greedy
-    if n <= 12:
-        from itertools import product
-
-        for ori in product(ends, repeat=n):
-            d = 0.0
-            js = []
-            ok = True
-            for i in range(n - 1):
-                a, b = seq[i], seq[i + 1]
-                ea, eb = ori[i], ori[i + 1]
-                # join right-facing end of a with left-facing end of b
-                # map: if piece oriented with L at left, right end is R
-                right_a = "R" if ea == "L" else "L"
-                left_b = eb  # left end type
-                mode = right_a + left_b
-                sav = savings[f"{a}-{b}"][mode]
-                d += sav
-                js.append({"pair": f"{a}-{b}", "mode": mode, "benefit": sav})
-            if d > best_delta:
-                best_delta = d
-                best_joints = js
-    else:
-        # greedy alternate
-        d = 0.0
-        js = []
-        right = "R"
-        for i in range(n - 1):
-            a, b = seq[i], seq[i + 1]
-            # try both left for b
-            best_m, best_s = "RL", -1.0
-            for left in ends:
-                mode = right + left
-                s = savings[f"{a}-{b}"][mode]
-                if s > best_s:
-                    best_s, best_m = s, mode
-            d += best_s
-            js.append({"pair": f"{a}-{b}", "mode": best_m, "benefit": best_s})
-            # next piece left was best_m[1], so its right is opposite
-            left = best_m[1]
-            right = "R" if left == "L" else "L"
-        best_delta, best_joints = d, js
-    eff = raw - best_delta
-    return round(eff, 4), round(best_delta, 4), best_joints
-
-
-def reorder_bin_for_cocut(seq: list[str], lengths: dict, savings: dict) -> list[str]:
-    """Keep multiset; order type-blocks to max inter-block savings + internal."""
-    cnt: dict[str, int] = defaultdict(int)
-    for g in seq:
-        cnt[g] += 1
-    types = list(cnt.keys())
-    # start with type of max internal LR * (n-1)
-    def internal(g):
-        n = cnt[g]
-        if n <= 1:
-            return 0.0
-        return (n - 1) * max(savings[f"{g}-{g}"].values())
-
-    types.sort(key=lambda g: -internal(g))
-    # simple nearest insertion on types
-    if not types:
-        return []
-    order = [types[0]]
-    remain = set(types[1:])
-    while remain:
-        best_t, best_s, best_pos = None, -1.0, 0
-        for t in remain:
-            for pos in range(len(order) + 1):
-                s = 0.0
-                if pos > 0:
-                    s += max(savings[f"{order[pos-1]}-{t}"].values())
-                if pos < len(order):
-                    s += max(savings[f"{t}-{order[pos]}"].values())
-                if s > best_s:
-                    best_s, best_t, best_pos = s, t, pos
-        order.insert(best_pos, best_t)
-        remain.remove(best_t)
-    out: list[str] = []
-    for t in order:
-        out.extend([t] * cnt[t])
-    return out
-
-
-def apply_cocut_to_bins(bins: list[dict], lengths: dict, savings: dict, reorder: bool) -> dict:
-    stocks = []
-    total_delta = 0.0
-    total_sw = 0
-    total_stock = 0.0
-    total_eff = 0.0
-    for b in bins:
-        seq = list(b["sequence"])
-        if reorder:
-            seq = reorder_bin_for_cocut(seq, lengths, savings)
-        eff, delta, joints = seq_effective_length(seq, lengths, savings)
-        # feasibility: effective length must fit stock
-        stock_len = b["stock_length_mm"]
-        if eff > stock_len + 1e-6:
-            # drop savings until fits (scale) — shouldn't happen often
-            scale = (stock_len - 1e-6) / eff if eff > 0 else 1.0
-            delta *= scale
-            eff = stock_len - 1e-6
-        left = stock_len - eff
-        sw = switches_in_seq(seq)
-        total_delta += delta
-        total_sw += sw
-        total_stock += stock_len
-        total_eff += eff
-        stocks.append(
-            {
-                "id": b["id"],
-                "stock_length_mm": stock_len,
-                "sequence": seq,
-                "joints": joints,
-                "raw_length_mm": round(sum(lengths[g] for g in seq), 4),
-                "co_cut_benefit_mm": round(delta, 4),
-                "effective_length_mm": round(eff, 4),
-                "leftover_mm": round(left, 4),
-                "utilization": round(eff / stock_len, 6),
-                "switches": sw,
-            }
-        )
-    raw_all = sum(s["raw_length_mm"] for s in stocks)
     return {
-        "stocks": stocks,
-        "total_stock_length_mm": round(total_stock, 3),
-        "total_co_cut_benefit_mm": round(total_delta, 4),
-        "total_raw_length_mm": round(raw_all, 4),
-        "total_effective_length_mm": round(total_eff, 4),
-        "utilization": round((raw_all - total_delta) / total_stock, 6) if total_stock else 0.0,
-        "total_switch": total_sw,
-        "status": "FEASIBLE",
-        "exact": False,
+        "geos": geos,
+        "lengths": lengths,
+        "savings": savings,
+        "profile_bins": n_bins,
+        "profile_method": PROFILE_METHOD,
+        "angular_neighborhood_radius_deg": PROFILE_NEIGHBORHOOD_RADIUS_DEG,
+        "rotation_step_deg": 360.0 / n_bins,
     }
 
 
-def solve_q1(lengths: dict) -> dict:
+def solve_q1(
+    lengths: dict,
+    *,
+    seed: int,
+    time_limit_s: float,
+    secondary_time_limit_s: float,
+) -> dict:
     demand = {g: 50 for g in GIDS}
-    items = items_from_demand(demand, lengths)
-    bins = pack_multisize(items)
-    # attach used from lengths
+    primary_bins = mixed_stock_patterns(
+        demand,
+        lengths,
+        stocks=STOCKS,
+        seed=seed,
+        time_limit_s=time_limit_s,
+    )
+    secondary_trials = []
+    secondary_candidates = []
+    for secondary_seed in dict.fromkeys([seed, seed + 17]):
+        rows, evidence = minimize_type_splits_for_fixed_stock(
+            demand,
+            lengths,
+            primary_bins,
+            stocks=STOCKS,
+            seed=secondary_seed,
+            time_limit_s=secondary_time_limit_s,
+        )
+        secondary_trials.append(evidence)
+        secondary_candidates.append((rows, evidence))
+    bins, selected_secondary = min(
+        secondary_candidates,
+        key=lambda item: (
+            int(item[1]["switch_incumbent"]),
+            -int(item[1]["switch_lower_bound"]),
+            int(item[1]["seed"]),
+        ),
+    )
+    secondary = {
+        "selected_seed": selected_secondary["seed"],
+        "selected": selected_secondary,
+        "trials": secondary_trials,
+        # Duplicate the key totals at this level for validator/backward readers.
+        "switch_incumbent": selected_secondary["switch_incumbent"],
+        "switch_lower_bound": selected_secondary["switch_lower_bound"],
+    }
     for b in bins:
-        used = sum(lengths[g] for g in b["sequence"])
-        b["used_length_mm"] = round(used, 4)
-        b["leftover_mm"] = round(b["stock_length_mm"] - used, 4)
-        b["utilization"] = round(used / b["stock_length_mm"], 6)
-        b["switches"] = switches_in_seq(b["sequence"])
+        used = sum(float(lengths[g]) for g in b["sequence"])
+        b.update(
+            {
+                "used_length_mm": round(used, 6),
+                "raw_length_mm": round(used, 6),
+                "effective_length_mm": round(used, 6),
+                "co_cut_benefit_mm": 0.0,
+                "leftover_mm": round(b["stock_length_mm"] - used, 6),
+                "utilization": round(used / b["stock_length_mm"], 8),
+                "switches": sum(
+                    a != c for a, c in zip(b["sequence"], b["sequence"][1:])
+                ),
+                "orientations": [],
+                "joints": [],
+            }
+        )
     total_stock = sum(b["stock_length_mm"] for b in bins)
     total_raw = sum(b["used_length_mm"] for b in bins)
+    # With no co-cut in Q1, any stock plan must cover the raw axial length.
+    primary_bound = joint_relaxation_stock_lower_bound(
+        demand,
+        lengths,
+        {
+            f"{a}-{b}": {mode: 0.0 for mode in ("LL", "LR", "RL", "RR")}
+            for a in GIDS
+            for b in GIDS
+        },
+        stocks=STOCKS,
+    )
+    primary_lb = float(primary_bound["lower_bound_mm"])
     return {
         "stocks": bins,
         "total_stock_length_mm": round(total_stock, 3),
@@ -416,76 +333,215 @@ def solve_q1(lengths: dict) -> dict:
         "total_switch": sum(b["switches"] for b in bins),
         "status": "FEASIBLE",
         "exact": False,
-        "method": "BFD multi-stock + type-block grouping",
+        "method": "lexicographic compact CP-SAT: stock length, then type switches",
         "demand": demand,
+        "seed": seed,
+        "optimality": {
+            "primary_lower_bound_mm": primary_lb,
+            "primary_gap_mm": round(total_stock - primary_lb, 6),
+            "primary_proven_optimal": abs(total_stock - primary_lb) <= 1e-6,
+            "secondary": secondary,
+        },
+        "search_evidence": {
+            "primary_incumbent_stock_mm": round(
+                sum(float(row["stock_length_mm"]) for row in primary_bins), 6
+            ),
+            "primary_incumbent_switches": sum(
+                sum(a != b for a, b in zip(row["sequence"], row["sequence"][1:]))
+                for row in primary_bins
+            ),
+            "secondary_selected": True,
+        },
+        "_q3_alternative_base": primary_bins,
     }
 
 
-def solve_q2(q1: dict, lengths: dict, savings: dict) -> dict:
-    # keep assignment: same multiset per stock
-    bins = []
-    for s in q1["stocks"]:
-        bins.append(
-            {
-                "id": s["id"],
-                "stock_length_mm": s["stock_length_mm"],
-                "sequence": list(s["sequence"]),
-                "remaining": s["stock_length_mm"] - s["used_length_mm"],
-                "stock_len": s["stock_length_mm"],
-            }
-        )
-    # convert for apply
+def solve_q2(
+    q1: dict,
+    lengths: dict,
+    savings: dict,
+    *,
+    seed: int,
+    iterations: int,
+    restarts: int = 1,
+) -> dict:
     base = [
         {
-            "id": b["id"],
-            "stock_length_mm": b["stock_length_mm"],
-            "sequence": b["sequence"],
+            "id": s["id"],
+            "stock_length_mm": s["stock_length_mm"],
+            "purchase_cost_mm": s["stock_length_mm"],
+            "sequence": list(s["sequence"]),
+            "from_remnant": False,
         }
-        for b in bins
+        for s in q1["stocks"]
     ]
-    res = apply_cocut_to_bins(base, lengths, savings, reorder=True)
+    experiments = []
+    candidates = []
+    for restart in range(max(1, int(restarts))):
+        restart_seed = seed + restart * 1009
+        stocks = optimize_fixed_assignments(
+            base,
+            lengths,
+            savings,
+            seed=restart_seed,
+            iterations=iterations,
+        )
+        candidate = summarize_bins(stocks)
+        experiments.append(
+            {
+                "restart": restart,
+                "seed": restart_seed,
+                "total_co_cut_benefit_mm": candidate["total_co_cut_benefit_mm"],
+                "total_switch": candidate["total_switch"],
+            }
+        )
+        candidates.append((candidate, restart_seed))
+    res, selected_seed = min(
+        candidates,
+        key=lambda item: (
+            -float(item[0]["total_co_cut_benefit_mm"]),
+            int(item[0]["total_switch"]),
+            int(item[1]),
+        ),
+    )
     res["note"] = "Assignment fixed from Q1; reorder+joints only"
-    res["method"] = "Q1 assignment + type-block TSP-ish + end orientation DP"
+    res["method"] = "Q1 fixed assignment + multi-start seeded ALNS + exact orientation DP"
+    res["demand"] = dict(q1["demand"])
+    res["seed"] = selected_seed
+    res["search_evidence"] = {
+        "base_seed": seed,
+        "selected_seed": selected_seed,
+        "restarts": experiments,
+    }
     return res
 
 
-def solve_q3(lengths: dict, savings: dict) -> dict:
-    """Re-pack using effective length estimates with cocut (iterative)."""
-    demand = {g: 50 for g in GIDS}
-    # Use reduced item lengths: l' = l - 0.5*avg_self_cocut as heuristic capacity
-    adj = {}
-    for g in GIDS:
-        self_s = max(savings[f"{g}-{g}"].values())
-        adj[g] = max(lengths[g] * 0.55, lengths[g] - 0.85 * self_s)
-
-    items = items_from_demand(demand, adj)
-    bins_adj = pack_multisize(items)
-    # map back: sequences from adj packing
-    base = [
-        {
-            "id": b["id"],
-            "stock_length_mm": b["stock_length_mm"],
-            "sequence": b["sequence"],
+def solve_q3(
+    q2: dict,
+    lengths: dict,
+    savings: dict,
+    *,
+    seed: int,
+    iterations: int,
+    restarts: int = 1,
+    alternative_bases: list[list[dict]] | None = None,
+    block_master_time_limit_s: float | None = None,
+) -> dict:
+    demand = dict(q2["demand"])
+    bases = [("q2_low_switch", deepcopy(q2["stocks"]))]
+    for index, rows in enumerate(alternative_bases or [], 1):
+        if counts_from_bins(rows) != demand:
+            raise ValueError(f"Q3 alternative base {index} does not match demand")
+        bases.append((f"primary_packing_{index}", deepcopy(rows)))
+    block_evidence = None
+    if block_master_time_limit_s is not None and block_master_time_limit_s > 0:
+        block_trials = []
+        # The canonical seed is retained as a stable cross-run baseline; the
+        # Q3-derived seeds add diversified deterministic starts.
+        block_seeds = list(
+            dict.fromkeys([20260813, seed + 7919, seed + 8928])
+        )
+        block_candidates = []
+        for block_seed in block_seeds:
+            rows, evidence = homogeneous_block_stock_patterns(
+                demand,
+                lengths,
+                savings,
+                stocks=STOCKS,
+                seed=block_seed,
+                time_limit_s=block_master_time_limit_s,
+                id_prefix="M",
+            )
+            block_trials.append(evidence)
+            block_candidates.append((rows, evidence))
+        block_rows, selected_block_evidence = min(
+            block_candidates,
+            key=lambda item: (
+                float(item[1]["stock_incumbent_mm"]),
+                int(item[1]["type_incidence"]),
+                int(item[1]["seed"]),
+            ),
+        )
+        block_evidence = {
+            "selected_seed": selected_block_evidence["seed"],
+            "selected": selected_block_evidence,
+            "trials": block_trials,
         }
-        for b in bins_adj
-    ]
-    res = apply_cocut_to_bins(base, lengths, savings, reorder=True)
-    # If any bin infeasible on true lengths without enough cocut, re-pack with true lengths
-    bad = any(s["effective_length_mm"] > s["stock_length_mm"] + 1e-6 for s in res["stocks"])
-    if bad or res["total_stock_length_mm"] > 1e12:
-        items_true = items_from_demand(demand, lengths)
-        bins_t = pack_multisize(items_true)
-        base = [
+        bases.append(("homogeneous_block_master", block_rows))
+    experiments = []
+    candidates = []
+    if block_evidence is not None:
+        block_candidate = summarize_bins(deepcopy(block_rows))
+        experiments.append(
             {
-                "id": b["id"],
-                "stock_length_mm": b["stock_length_mm"],
-                "sequence": b["sequence"],
+                "restart": "block-baseline",
+                "seed": block_evidence["selected_seed"],
+                "base": "homogeneous_block_master",
+                "total_stock_length_mm": block_candidate["total_stock_length_mm"],
+                "total_co_cut_benefit_mm": block_candidate["total_co_cut_benefit_mm"],
+                "total_switch": block_candidate["total_switch"],
             }
-            for b in bins_t
-        ]
-        res = apply_cocut_to_bins(base, lengths, savings, reorder=True)
-    res["method"] = "adjusted-length BFD + cocut refine"
+        )
+        candidates.append((block_candidate, int(block_evidence["selected_seed"])))
+    planned_restarts = max(max(1, int(restarts)), len(bases))
+    for restart in range(planned_restarts):
+        restart_seed = seed + restart * 1009
+        base_name, base = bases[restart % len(bases)]
+        stocks = optimize_joint_bins(
+            base,
+            lengths,
+            savings,
+            seed=restart_seed,
+            iterations=iterations,
+            resize_new=True,
+            stocks=STOCKS,
+        )
+        if counts_from_bins(stocks) != demand:
+            raise AssertionError("Q3 joint search changed demand")
+        candidate = summarize_bins(stocks)
+        experiments.append(
+            {
+                "restart": restart,
+                "seed": restart_seed,
+                "base": base_name,
+                "total_stock_length_mm": candidate["total_stock_length_mm"],
+                "total_co_cut_benefit_mm": candidate["total_co_cut_benefit_mm"],
+                "total_switch": candidate["total_switch"],
+            }
+        )
+        candidates.append((candidate, restart_seed))
+    res, selected_seed = min(
+        candidates,
+        key=lambda item: (
+            float(item[0]["total_stock_length_mm"]),
+            -float(item[0]["total_co_cut_benefit_mm"]),
+            int(item[0]["total_switch"]),
+            int(item[1]),
+        ),
+    )
+    bound = joint_relaxation_stock_lower_bound(
+        demand, lengths, savings, stocks=STOCKS
+    )
+    lower = float(bound["lower_bound_mm"])
+    incumbent = float(res["total_stock_length_mm"])
+    res["method"] = "compact mixed-stock master + multi-start joint seeded ALNS + exact orientation DP"
     res["demand"] = demand
+    res["seed"] = selected_seed
+    res["optimality"] = {
+        **bound,
+        "incumbent_mm": incumbent,
+        "absolute_gap_mm": round(incumbent - lower, 6),
+        "relative_gap_to_lower_bound": round((incumbent - lower) / lower, 8)
+        if lower
+        else 0.0,
+        "proven_optimal": abs(incumbent - lower) <= 1e-6,
+    }
+    res["search_evidence"] = {
+        "base_seed": seed,
+        "selected_seed": selected_seed,
+        "restarts": experiments,
+        "homogeneous_block_master": block_evidence,
+    }
     return res
 
 
@@ -500,143 +556,297 @@ def load_batches() -> list[dict[str, int]]:
             # search
             for r in range(len(df)):
                 val = df.iloc[r, 0]
-                if str(val).strip() in (f"工件{i}", f"G{i}", i):
+                if str(val).strip() in (f"工件{i}", f"G{i}", str(i)):
                     dem[f"G{i}"] = int(df.iloc[r, bi + 1])
                     break
         if len(dem) < 10:
-            # fallback from known OCR table
-            tables = [
-                [52, 31, 43, 39, 58, 55, 57, 41, 45, 47],
-                [46, 28, 40, 35, 57, 50, 51, 37, 44, 45],
-                [44, 27, 36, 34, 60, 56, 49, 39, 42, 40],
-            ]
-            dem = {f"G{i+1}": tables[bi][i] for i in range(10)}
+            missing = sorted(set(GIDS) - set(dem))
+            raise ValueError(
+                f"batch workbook is missing demand rows for B{bi + 1}: {missing}; "
+                "hard-coded OCR fallback is forbidden"
+            )
+        if any(value < 0 for value in dem.values()):
+            raise ValueError(f"batch B{bi + 1} contains negative demand")
         batches.append(dem)
     return batches
 
 
-def solve_q4(lengths: dict, savings: dict) -> dict:
+def solve_q4(
+    lengths: dict,
+    savings: dict,
+    *,
+    seed: int,
+    beam_width: int,
+    iterations: int,
+    master_time_limit_s: float,
+    block_master_time_limit_s: float,
+    remaining_block_master_time_limit_s: float,
+    remaining_block_max_keys_per_batch: int,
+    restarts: int = 1,
+) -> dict:
     batches = load_batches()
-    inventory: list[float] = []  # remnant lengths reusable
-    all_batch = []
-    total_stock = 0.0
-    total_delta = 0.0
-    total_sw = 0
-    new_stock_only = 0.0
-
-    for bi, demand in enumerate(batches, 1):
-        items = items_from_demand(demand, lengths)
-        # first try use remnants as pseudo-stocks
-        remnants_used = []
-        remaining_items = items[:]
-        inv_sorted = sorted(inventory, reverse=True)
-        new_inv = []
-        bins = []
-        # pack into remnants
-        for rem in inv_sorted:
-            if not remaining_items:
-                new_inv.append(rem)
-                continue
-            # take items that fit greedily
-            seq = []
-            cap = rem
-            left_items = []
-            for gid, L in sorted(remaining_items, key=lambda x: -x[1]):
-                if L <= cap + 1e-9:
-                    seq.append(gid)
-                    cap -= L
-                else:
-                    left_items.append((gid, L))
-            remaining_items = left_items
-            if seq:
-                bins.append(
-                    {
-                        "id": f"B{bi}-R{len(remnants_used)+1}",
-                        "stock_length_mm": round(rem, 3),
-                        "sequence": compress_seq_sort_blocks(seq),
-                        "from_remnant": True,
-                    }
-                )
-                remnants_used.append(rem)
-            else:
-                new_inv.append(rem)
-
-        # pack rest into new stocks
-        if remaining_items:
-            packed = pack_multisize(remaining_items)
-            for j, b in enumerate(packed, 1):
-                bins.append(
-                    {
-                        "id": f"B{bi}-M{j}",
-                        "stock_length_mm": b["stock_length_mm"],
-                        "sequence": b["sequence"],
-                        "from_remnant": False,
-                    }
-                )
-                new_stock_only += b["stock_length_mm"]
-
-        res = apply_cocut_to_bins(bins, lengths, savings, reorder=True)
-        # update inventory from leftovers
-        inventory = []
-        for s in res["stocks"]:
-            left = s["leftover_mm"]
-            if left >= REMNANT_MIN - 1e-9:
-                inventory.append(left)
-        # also unused old remnants
-        inventory.extend(new_inv)
-        inventory = [round(x, 4) for x in inventory if x >= REMNANT_MIN - 1e-9]
-
-        total_stock += res["total_stock_length_mm"]  # counts remnant capacity too
-        # For objective "标准母材总长度", count only new standard bars
-        total_delta += res["total_co_cut_benefit_mm"]
-        total_sw += res["total_switch"]
-        all_batch.append(
+    block_initial_bins: list[list[dict] | None] = []
+    block_trials = []
+    for batch_index, demand in enumerate(batches, 1):
+        block_seed = seed + batch_index * 7919
+        try:
+            rows, evidence = homogeneous_block_stock_patterns(
+                demand,
+                lengths,
+                savings,
+                stocks=STOCKS,
+                seed=block_seed,
+                time_limit_s=block_master_time_limit_s,
+                id_prefix=f"B{batch_index}-C",
+            )
+            block_initial_bins.append(rows)
+            block_trials.append(
+                {
+                    "batch": f"B{batch_index}",
+                    "available": True,
+                    **evidence,
+                }
+            )
+        except RuntimeError as exc:
+            # The raw master remains a complete, feasible fallback.  Record a
+            # short-budget UNKNOWN instead of failing or hiding the experiment.
+            block_initial_bins.append(None)
+            block_trials.append(
+                {
+                    "batch": f"B{batch_index}",
+                    "available": False,
+                    "seed": block_seed,
+                    "time_limit_s": block_master_time_limit_s,
+                    "reason": str(exc),
+                }
+            )
+    experiments = []
+    candidates = []
+    for restart in range(max(1, int(restarts))):
+        restart_seed = seed + restart * 1009
+        candidate = solve_multibatch_beam(
+            batches,
+            lengths,
+            savings,
+            stocks=STOCKS,
+            remnant_min_mm=REMNANT_MIN,
+            seed=restart_seed,
+            beam_width=beam_width,
+            variants_per_state=6,
+            joint_iterations=iterations,
+            master_time_limit_s=master_time_limit_s,
+            cocut_initial_bins=block_initial_bins,
+            cocut_remaining_master_time_limit_s=remaining_block_master_time_limit_s,
+            cocut_remaining_max_keys_per_batch=remaining_block_max_keys_per_batch,
+        )
+        experiments.append(
             {
-                "batch": f"B{bi}",
-                "demand": demand,
-                "result": res,
-                "inventory_after": list(inventory),
+                "restart": restart,
+                "seed": restart_seed,
+                "total_new_standard_stock_mm": candidate["total_new_standard_stock_mm"],
+                "total_waste_mm": candidate["total_waste_mm"],
+                "final_inventory_mm": candidate["final_inventory_mm"],
+                "total_co_cut_benefit_mm": candidate["total_co_cut_benefit_mm"],
+                "total_switch": candidate["total_switch"],
             }
         )
-
-    # recompute total new standard stock length only
-    new_std = 0.0
-    for br in all_batch:
-        for s in br["result"]["stocks"]:
-            if not s.get("from_remnant") and s["stock_length_mm"] in STOCKS:
-                new_std += s["stock_length_mm"]
-            # remnant stocks may have nonstandard lengths
-            if str(s["id"]).find("-R") >= 0:
-                continue
-            elif s["stock_length_mm"] in STOCKS and "-M" in str(s["id"]):
-                pass
-
-    # cleaner: sum stock_length where id contains -M
-    new_std = 0.0
-    for br in all_batch:
-        for s in br["result"]["stocks"]:
-            if "-M" in s["id"]:
-                new_std += s["stock_length_mm"]
-
-    return {
-        "batches": all_batch,
-        "total_new_standard_stock_mm": round(new_std, 3),
-        "total_stock_length_mm": round(new_std, 3),  # primary objective
-        "total_co_cut_benefit_mm": round(total_delta, 4),
-        "total_switch": total_sw,
-        "final_inventory_mm": inventory,
-        "status": "FEASIBLE",
-        "exact": False,
-        "method": "sequential batches + remnant>=200 reuse + BFD",
+        candidates.append((candidate, restart_seed))
+    result, selected_seed = min(
+        candidates,
+        key=lambda item: (
+            float(item[0]["total_new_standard_stock_mm"]),
+            -float(item[0]["total_co_cut_benefit_mm"]),
+            int(item[0]["total_switch"]),
+            float(item[0]["total_waste_mm"]),
+            int(item[1]),
+        ),
+    )
+    total_demand = {
+        gid: sum(int(batch[gid]) for batch in batches) for gid in GIDS
     }
+    bound = joint_relaxation_stock_lower_bound(
+        total_demand, lengths, savings, stocks=STOCKS
+    )
+    lower = float(bound["lower_bound_mm"])
+    incumbent = float(result["total_new_standard_stock_mm"])
+    result["seed"] = selected_seed
+    result["optimality"] = {
+        **bound,
+        "relaxations": [
+            "all three batches pooled",
+            "remnant timing and 200 mm threshold ignored",
+            "path connectivity and per-bar capacity ignored before stock rounding",
+        ],
+        "incumbent_mm": incumbent,
+        "absolute_gap_mm": round(incumbent - lower, 6),
+        "relative_gap_to_lower_bound": round((incumbent - lower) / lower, 8)
+        if lower
+        else 0.0,
+        "proven_optimal": abs(incumbent - lower) <= 1e-6,
+    }
+    result["search_evidence"] = {
+        "base_seed": seed,
+        "selected_seed": selected_seed,
+        "restarts": experiments,
+        "homogeneous_block_initializers": block_trials,
+    }
+    return result
 
 
 # ---------------------------------------------------------------------------
 # Excel export
 # ---------------------------------------------------------------------------
 
-def export_excels(lengths, q1, q2, q3, q4):
-    import openpyxl
+def sequence_blocks(sequence: list[str]) -> list[dict]:
+    """Compress consecutive equal pieces into the contest's Gx×n blocks."""
+    blocks: list[dict] = []
+    for gid in sequence:
+        if blocks and blocks[-1]["gid"] == gid:
+            blocks[-1]["count"] += 1
+        else:
+            blocks.append({"gid": gid, "count": 1})
+    for block in blocks:
+        block["label"] = f"{block['gid']}×{block['count']}"
+    return blocks
+
+
+def sequence_block_text(sequence: list[str]) -> str:
+    return "|".join(block["label"] for block in sequence_blocks(sequence))
+
+
+def joint_summary(stock: dict) -> list[dict]:
+    """Aggregate adjacent joints into the official internal/inter-block rows."""
+    sequence = list(stock.get("sequence") or [])
+    joints = list(stock.get("joints") or [])
+    if len(joints) != max(0, len(sequence) - 1):
+        raise ValueError(
+            f"{stock.get('id')}: joints={len(joints)} does not match sequence={len(sequence)}"
+        )
+    if not sequence:
+        return []
+    blocks = sequence_blocks(sequence)
+    position_blocks: list[str] = []
+    for block in blocks:
+        position_blocks.extend([block["label"]] * int(block["count"]))
+    grouped: dict[tuple, dict] = {}
+    for index, joint in enumerate(joints):
+        front = position_blocks[index]
+        rear = position_blocks[index + 1]
+        kind = "内部拼接" if front == rear else "块间拼接"
+        mode = str(joint["mode"])
+        benefit = round(float(joint["benefit"]), 6)
+        key = (kind, front, rear, mode, benefit)
+        row = grouped.setdefault(
+            key,
+            {
+                "type": kind,
+                "front": front,
+                "rear": rear,
+                "mode": mode,
+                "count": 0,
+                "unit_benefit_mm": benefit,
+                "subtotal_mm": 0.0,
+            },
+        )
+        row["count"] += 1
+        row["subtotal_mm"] = round(row["count"] * benefit, 6)
+    return list(grouped.values())
+
+
+def trace_q4_materials(q4: dict) -> tuple[list[dict], list[dict], list[dict]]:
+    """Trace each Q4 remnant back to one purchased standard tube."""
+    remnant_owner: dict[str, str] = {}
+    materials: dict[str, dict] = {}
+    plans: list[dict] = []
+    joints: list[dict] = []
+    next_material = 1
+    for batch in q4["batches"]:
+        batch_id = str(batch["batch"])
+        result = batch["result"]
+        next_remnant_owner: dict[str, str] = {
+            str(row["id"]): remnant_owner[str(row["id"])]
+            for row in result.get("inventory_before", [])
+            if str(row["id"]) in remnant_owner
+        }
+        for row_index, stock in enumerate(result["stocks"], 1):
+            if stock.get("from_remnant"):
+                source_id = str(stock["remnant_id"])
+                if source_id not in remnant_owner:
+                    raise ValueError(f"unowned remnant in {batch_id}: {source_id}")
+                material_id = remnant_owner[source_id]
+                source = "余料"
+                display_id = source_id
+            else:
+                material_id = f"M{next_material}"
+                next_material += 1
+                source = "新母材"
+                display_id = material_id
+                materials[material_id] = {
+                    "material_id": material_id,
+                    "first_batch": batch_id,
+                    "last_batch": batch_id,
+                    "initial_length_mm": float(stock["stock_length_mm"]),
+                    "total_co_cut_benefit_mm": 0.0,
+                    "total_effective_length_mm": 0.0,
+                    "final_leftover_mm": float(stock["stock_length_mm"]),
+                    "final_status": "入库",
+                }
+            material = materials[material_id]
+            leftover = float(stock["leftover_mm"])
+            if leftover <= 1e-6:
+                status = "用尽"
+            elif leftover >= REMNANT_MIN - 1e-6:
+                status = "入库"
+            else:
+                status = "废料"
+            material["last_batch"] = batch_id
+            material["total_co_cut_benefit_mm"] = round(
+                material["total_co_cut_benefit_mm"]
+                + float(stock["co_cut_benefit_mm"]),
+                6,
+            )
+            material["total_effective_length_mm"] = round(
+                material["total_effective_length_mm"]
+                + float(stock["effective_length_mm"]),
+                6,
+            )
+            material["final_leftover_mm"] = round(leftover, 6)
+            material["final_status"] = status
+            plans.append(
+                {
+                    "batch": batch_id,
+                    "display_id": display_id,
+                    "source": source,
+                    "stock_length_mm": float(stock["stock_length_mm"]),
+                    "sequence": sequence_block_text(stock["sequence"]),
+                    "co_cut_benefit_mm": float(stock["co_cut_benefit_mm"]),
+                    "effective_length_mm": float(stock["effective_length_mm"]),
+                    "leftover_mm": leftover,
+                    "status": status,
+                }
+            )
+            for summary in joint_summary(stock):
+                joints.append(
+                    {"batch": batch_id, "display_id": display_id, **summary}
+                )
+            if status == "入库":
+                remnant_id = f"{batch_id}-R{row_index}"
+                next_remnant_owner[remnant_id] = material_id
+        inventory_ids = {str(row["id"]) for row in result.get("inventory_after", [])}
+        remnant_owner = {
+            remnant_id: owner
+            for remnant_id, owner in next_remnant_owner.items()
+            if remnant_id in inventory_ids
+        }
+    for material in materials.values():
+        material["utilization"] = round(
+            material["total_effective_length_mm"] / material["initial_length_mm"],
+            8,
+        )
+    return plans, joints, list(materials.values())
+
+
+def export_excels(lengths, savings, q1, q2, q3, q4):
     from openpyxl import load_workbook
 
     OUT.mkdir(parents=True, exist_ok=True)
@@ -647,6 +857,68 @@ def export_excels(lengths, q1, q2, q3, q4):
         shutil.copy2(src, dst)
         return dst
 
+    def clear_values(ws, start_row: int, end_row: int | None = None) -> None:
+        for row in ws.iter_rows(
+            min_row=start_row, max_row=end_row or ws.max_row, max_col=ws.max_column
+        ):
+            for cell in row:
+                cell.value = None
+
+    def copy_row_style(ws, source_row: int, target_row: int, max_col: int) -> None:
+        if source_row == target_row:
+            return
+        for column in range(1, max_col + 1):
+            source = ws.cell(source_row, column)
+            target = ws.cell(target_row, column)
+            if source.has_style:
+                target._style = copy(source._style)
+            if source.number_format:
+                target.number_format = source.number_format
+        if ws.row_dimensions[source_row].height is not None:
+            ws.row_dimensions[target_row].height = ws.row_dimensions[source_row].height
+
+    def write_rows(ws, start_row: int, rows: list[list], *, style_row: int) -> None:
+        clear_values(ws, start_row)
+        max_col = max((len(row) for row in rows), default=ws.max_column)
+        for offset, values in enumerate(rows):
+            row_number = start_row + offset
+            copy_row_style(ws, style_row, row_number, max_col)
+            for column, value in enumerate(values, 1):
+                ws.cell(row_number, column, value)
+
+    def plan_rows(stocks: list[dict]) -> list[list]:
+        return [
+            [
+                stock["id"],
+                stock["stock_length_mm"],
+                sequence_block_text(stock["sequence"]),
+                stock["co_cut_benefit_mm"],
+                stock["effective_length_mm"],
+                stock["leftover_mm"],
+                stock["utilization"],
+            ]
+            for stock in stocks
+        ]
+
+    def joint_rows(stocks: list[dict], include_batch: str | None = None) -> list[list]:
+        rows: list[list] = []
+        for stock in stocks:
+            for summary in joint_summary(stock):
+                prefix = [include_batch, stock["id"]] if include_batch else [stock["id"]]
+                rows.append(
+                    prefix
+                    + [
+                        summary["type"],
+                        summary["front"],
+                        summary["rear"],
+                        summary["mode"],
+                        summary["count"],
+                        summary["unit_benefit_mm"],
+                        summary["subtotal_mm"],
+                    ]
+                )
+        return rows
+
     # --- result1 ---
     p1 = copy_tmpl("result1.xlsx")
     wb = load_workbook(p1)
@@ -655,17 +927,22 @@ def export_excels(lengths, q1, q2, q3, q4):
         ws.cell(i, 1, g)
         ws.cell(i, 2, lengths[g])
     ws2 = wb["问题一_下料方案"]
-    # header already row1
-    r = 2
-    for s in q1["stocks"]:
-        seq_str = "|".join(s["sequence"])
-        ws2.cell(r, 1, s["id"])
-        ws2.cell(r, 2, s["stock_length_mm"])
-        ws2.cell(r, 3, seq_str)
-        ws2.cell(r, 4, s["used_length_mm"])
-        ws2.cell(r, 5, s["leftover_mm"])
-        ws2.cell(r, 6, s["utilization"])
-        r += 1
+    write_rows(
+        ws2,
+        2,
+        [
+            [
+                s["id"],
+                s["stock_length_mm"],
+                sequence_block_text(s["sequence"]),
+                s["used_length_mm"],
+                s["leftover_mm"],
+                s["utilization"],
+            ]
+            for s in q1["stocks"]
+        ],
+        style_row=2,
+    )
     ws3 = wb["问题一_汇总指标"]
     ws3.cell(2, 1, q1["total_stock_length_mm"])
     ws3.cell(2, 2, q1["total_axial_length_mm"])
@@ -673,107 +950,233 @@ def export_excels(lengths, q1, q2, q3, q4):
     ws3.cell(2, 4, q1["total_switch"])
     wb.save(p1)
 
-    # --- result2: inspect sheets ---
+    # --- result2 ---
     p2 = copy_tmpl("result2.xlsx")
     wb = load_workbook(p2)
-    # write first sheet generically
-    sheets = wb.sheetnames
-    # fill summary-like
-    for idx, sname in enumerate(sheets):
-        ws = wb[sname]
-        if idx == 0:
-            # try write cocut matrix-ish or plan
-            ws.cell(1, 1, "母材编号")
-            ws.cell(1, 2, "母材长度mm")
-            ws.cell(1, 3, "工件序列")
-            ws.cell(1, 4, "共切收益mm")
-            ws.cell(1, 5, "有效占用mm")
-            ws.cell(1, 6, "切换次数")
-            for r, s in enumerate(q2["stocks"], start=2):
-                ws.cell(r, 1, s["id"])
-                ws.cell(r, 2, s["stock_length_mm"])
-                ws.cell(r, 3, "|".join(s["sequence"]))
-                ws.cell(r, 4, s["co_cut_benefit_mm"])
-                ws.cell(r, 5, s["effective_length_mm"])
-                ws.cell(r, 6, s["switches"])
-        elif "汇总" in sname or idx == len(sheets) - 1:
-            ws.cell(1, 1, "总母材长度mm")
-            ws.cell(1, 2, "总共切收益mm")
-            ws.cell(1, 3, "总切换")
-            ws.cell(1, 4, "利用率")
-            ws.cell(2, 1, q2["total_stock_length_mm"])
-            ws.cell(2, 2, q2["total_co_cut_benefit_mm"])
-            ws.cell(2, 3, q2["total_switch"])
-            ws.cell(2, 4, q2["utilization"])
+    for mode in ("LL", "LR", "RL", "RR"):
+        ws = wb[f"问题二_{mode}收益矩阵"]
+        for i, left in enumerate(GIDS, 3):
+            for j, right in enumerate(GIDS, 2):
+                ws.cell(i, j, savings[f"{left}-{right}"][mode])
+    ws = wb["问题二_下料方案"]
+    write_rows(ws, 3, plan_rows(q2["stocks"]), style_row=3)
+    ws = wb["问题二_拼接方式摘要表"]
+    headers = [
+        "母材编号(M_ID)", "拼接类型", "前工件块", "后工件块",
+        "拼接方式", "拼接次数", "单次共切收益(mm)", "共切收益小计(mm)",
+    ]
+    for column, value in enumerate(headers, 1):
+        ws.cell(2, column, value)
+    write_rows(ws, 3, joint_rows(q2["stocks"]), style_row=3)
+    ws = wb["问题二_汇总指标"]
+    for column, value in enumerate(
+        [
+            q2["total_stock_length_mm"],
+            q2["total_co_cut_benefit_mm"],
+            q2["total_effective_length_mm"],
+            q2["utilization"],
+            q2["total_switch"],
+        ],
+        1,
+    ):
+        ws.cell(2, column, value)
     wb.save(p2)
 
     p3 = copy_tmpl("result3.xlsx")
     wb = load_workbook(p3)
-    ws = wb[wb.sheetnames[0]]
-    ws.cell(1, 1, "母材编号")
-    ws.cell(1, 2, "母材长度mm")
-    ws.cell(1, 3, "序列")
-    ws.cell(1, 4, "共切mm")
-    ws.cell(1, 5, "有效占用mm")
-    ws.cell(1, 6, "利用率")
-    ws.cell(1, 7, "切换")
-    for r, s in enumerate(q3["stocks"], start=2):
-        ws.cell(r, 1, s["id"])
-        ws.cell(r, 2, s["stock_length_mm"])
-        ws.cell(r, 3, "|".join(s["sequence"]))
-        ws.cell(r, 4, s["co_cut_benefit_mm"])
-        ws.cell(r, 5, s["effective_length_mm"])
-        ws.cell(r, 6, s["utilization"])
-        ws.cell(r, 7, s["switches"])
-    if len(wb.sheetnames) > 1:
-        ws = wb[wb.sheetnames[-1]]
-        ws.cell(1, 1, "总母材mm")
-        ws.cell(1, 2, "总共切mm")
-        ws.cell(1, 3, "总切换")
-        ws.cell(1, 4, "利用率")
-        ws.cell(2, 1, q3["total_stock_length_mm"])
-        ws.cell(2, 2, q3["total_co_cut_benefit_mm"])
-        ws.cell(2, 3, q3["total_switch"])
-        ws.cell(2, 4, q3["utilization"])
+    write_rows(wb["问题三_下料方案"], 2, plan_rows(q3["stocks"]), style_row=2)
+    write_rows(
+        wb["问题三_拼接方式摘要表"],
+        2,
+        joint_rows(q3["stocks"]),
+        style_row=2,
+    )
+    ws = wb["问题三_汇总指标"]
+    for column, value in enumerate(
+        [
+            q3["total_stock_length_mm"],
+            q3["total_co_cut_benefit_mm"],
+            q3["total_effective_length_mm"],
+            q3["utilization"],
+            q3["total_switch"],
+        ],
+        1,
+    ):
+        ws.cell(2, column, value)
     wb.save(p3)
 
     p4 = copy_tmpl("result4.xlsx")
     wb = load_workbook(p4)
-    ws = wb[wb.sheetnames[0]]
-    ws.cell(1, 1, "批次")
-    ws.cell(1, 2, "母材编号")
-    ws.cell(1, 3, "母材长度mm")
-    ws.cell(1, 4, "序列")
-    ws.cell(1, 5, "共切mm")
-    ws.cell(1, 6, "有效占用mm")
-    ws.cell(1, 7, "余料mm")
-    r = 2
-    for br in q4["batches"]:
-        for s in br["result"]["stocks"]:
-            ws.cell(r, 1, br["batch"])
-            ws.cell(r, 2, s["id"])
-            ws.cell(r, 3, s["stock_length_mm"])
-            ws.cell(r, 4, "|".join(s["sequence"]))
-            ws.cell(r, 5, s["co_cut_benefit_mm"])
-            ws.cell(r, 6, s["effective_length_mm"])
-            ws.cell(r, 7, s["leftover_mm"])
-            r += 1
-    if len(wb.sheetnames) > 1:
-        ws = wb[wb.sheetnames[-1]]
-        ws.cell(1, 1, "三批新标准母材总长mm")
-        ws.cell(1, 2, "总共切mm")
-        ws.cell(1, 3, "总切换")
-        ws.cell(2, 1, q4["total_new_standard_stock_mm"])
-        ws.cell(2, 2, q4["total_co_cut_benefit_mm"])
-        ws.cell(2, 3, q4["total_switch"])
+    q4_plans, q4_joints, q4_materials = trace_q4_materials(q4)
+    write_rows(
+        wb["问题四_下料方案"],
+        3,
+        [
+            [
+                row["batch"], row["display_id"], row["source"],
+                row["stock_length_mm"], row["sequence"],
+                row["co_cut_benefit_mm"], row["effective_length_mm"],
+                row["leftover_mm"], row["status"],
+            ]
+            for row in q4_plans
+        ],
+        style_row=3,
+    )
+    write_rows(
+        wb["问题四_拼接方式摘要表"],
+        2,
+        [
+            [
+                row["batch"], row["display_id"], row["type"], row["front"],
+                row["rear"], row["mode"], row["count"],
+                row["unit_benefit_mm"], row["subtotal_mm"],
+            ]
+            for row in q4_joints
+        ],
+        style_row=2,
+    )
+    ws = wb["问题四_母材利用率"]
+    note = "说明：本表仅统计各根新母材在整个周期结束后的最终利用率，不单独统计余料利用率。"
+    write_rows(
+        ws,
+        3,
+        [
+            [
+                row["material_id"], row["first_batch"], row["last_batch"],
+                row["initial_length_mm"], row["total_co_cut_benefit_mm"],
+                row["total_effective_length_mm"], row["final_leftover_mm"],
+                row["final_status"], f"=F{3 + index}/D{3 + index}",
+            ]
+            for index, row in enumerate(q4_materials)
+        ],
+        style_row=3,
+    )
+    ws.cell(4 + len(q4_materials), 1, note)
+    total_effective_q4 = round(
+        sum(
+            float(batch["result"]["total_effective_length_mm"])
+            for batch in q4["batches"]
+        ),
+        6,
+    )
+    ws = wb["问题四_汇总指标"]
+    for column, value in enumerate(
+        [
+            q4["total_new_standard_stock_mm"],
+            q4["total_co_cut_benefit_mm"],
+            total_effective_q4,
+            total_effective_q4 / q4["total_new_standard_stock_mm"],
+            q4["total_switch"],
+        ],
+        1,
+    ):
+        ws.cell(2, column, value)
+    # No spreadsheet engine is required to generate the deliverable. Ask
+    # Excel/LibreOffice to refresh the utilisation formulas on first open.
+    wb.calculation.calcMode = "auto"
+    wb.calculation.fullCalcOnLoad = True
+    wb.calculation.forceFullCalc = True
+    wb.calculation.calcOnSave = True
     wb.save(p4)
     return [p1, p2, p3, p4]
 
 
-def main():
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Solve Tube B with reproducible search")
+    parser.add_argument("--seed", type=int, default=20260813)
+    parser.add_argument("--profile-bins", type=int, default=360)
+    parser.add_argument("--master-time-limit-s", type=float, default=10.0)
+    parser.add_argument("--q1-secondary-time-limit-s", type=float, default=30.0)
+    parser.add_argument("--q3-block-time-limit-s", type=float, default=10.0)
+    parser.add_argument("--q4-block-time-limit-s", type=float, default=10.0)
+    parser.add_argument(
+        "--q4-remaining-block-time-limit-s", type=float, default=2.0
+    )
+    parser.add_argument("--q4-remaining-block-max-keys", type=int, default=8)
+    parser.add_argument("--q2-iterations", type=int, default=1500)
+    parser.add_argument("--q3-iterations", type=int, default=5000)
+    parser.add_argument("--q4-iterations", type=int, default=500)
+    parser.add_argument("--q2-restarts", type=int, default=3)
+    parser.add_argument("--q3-restarts", type=int, default=4)
+    parser.add_argument("--q4-restarts", type=int, default=4)
+    parser.add_argument("--beam-width", type=int, default=12)
+    parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="short deterministic smoke budget (does not change model semantics)",
+    )
+    parser.add_argument(
+        "--quality",
+        action="store_true",
+        help="larger search budget for final experiments",
+    )
+    args = parser.parse_args(argv)
+    if args.fast and args.quality:
+        parser.error("--fast and --quality are mutually exclusive")
+    if args.profile_bins < 36 or args.profile_bins > 1440:
+        parser.error("--profile-bins must be between 36 and 1440")
+    if min(
+        args.master_time_limit_s,
+        args.q1_secondary_time_limit_s,
+        args.q3_block_time_limit_s,
+        args.q4_block_time_limit_s,
+        args.q4_remaining_block_time_limit_s,
+    ) <= 0:
+        parser.error("solver time limits must be positive")
+    if min(args.q2_iterations, args.q3_iterations, args.q4_iterations) < 0:
+        parser.error("iteration counts must be non-negative")
+    if args.beam_width < 1:
+        parser.error("--beam-width must be positive")
+    if args.q4_remaining_block_max_keys < 0:
+        parser.error("--q4-remaining-block-max-keys must be non-negative")
+    if min(args.q2_restarts, args.q3_restarts, args.q4_restarts) < 1:
+        parser.error("restart counts must be positive")
+    if args.fast:
+        args.profile_bins = min(args.profile_bins, 180)
+        args.master_time_limit_s = min(args.master_time_limit_s, 2.0)
+        args.q2_iterations = min(args.q2_iterations, 250)
+        args.q3_iterations = min(args.q3_iterations, 600)
+        args.q4_iterations = min(args.q4_iterations, 80)
+        args.beam_width = min(args.beam_width, 5)
+        args.q1_secondary_time_limit_s = min(args.q1_secondary_time_limit_s, 10.0)
+        args.q3_block_time_limit_s = min(args.q3_block_time_limit_s, 10.0)
+        args.q4_block_time_limit_s = min(args.q4_block_time_limit_s, 5.0)
+        args.q4_remaining_block_time_limit_s = min(
+            args.q4_remaining_block_time_limit_s, 1.0
+        )
+        args.q4_remaining_block_max_keys = min(
+            args.q4_remaining_block_max_keys, 8
+        )
+        args.q2_restarts = min(args.q2_restarts, 2)
+        args.q3_restarts = min(args.q3_restarts, 2)
+        args.q4_restarts = min(args.q4_restarts, 2)
+    elif args.quality:
+        args.profile_bins = max(args.profile_bins, 720)
+        args.master_time_limit_s = max(args.master_time_limit_s, 30.0)
+        args.q2_iterations = max(args.q2_iterations, 10000)
+        args.q3_iterations = max(args.q3_iterations, 30000)
+        args.q4_iterations = max(args.q4_iterations, 1500)
+        args.beam_width = max(args.beam_width, 24)
+        args.q1_secondary_time_limit_s = max(args.q1_secondary_time_limit_s, 120.0)
+        args.q3_block_time_limit_s = max(args.q3_block_time_limit_s, 30.0)
+        args.q4_block_time_limit_s = max(args.q4_block_time_limit_s, 30.0)
+        args.q4_remaining_block_time_limit_s = max(
+            args.q4_remaining_block_time_limit_s, 3.0
+        )
+        args.q4_remaining_block_max_keys = max(
+            args.q4_remaining_block_max_keys, 12
+        )
+        args.q2_restarts = max(args.q2_restarts, 8)
+        args.q3_restarts = max(args.q3_restarts, 12)
+        args.q4_restarts = max(args.q4_restarts, 12)
+
+    ready = input_readiness()
+    if not ready["ok"]:
+        print(json.dumps(blocked_envelope(), ensure_ascii=False, indent=2))
+        return 0
     OUT.mkdir(parents=True, exist_ok=True)
     print("Building geometry...", flush=True)
-    geo = build_geometry()
+    geo = build_geometry(n_bins=args.profile_bins)
     lengths = geo["lengths"]
     savings = geo["savings"]
     (OUT / "axial_lengths.json").write_text(
@@ -798,29 +1201,111 @@ def main():
     (OUT / "cocut_savings.json").write_text(
         json.dumps(savings, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
+    (OUT / "model_snapshot.json").write_text(
+        json.dumps(
+            {
+                "schema": "orpath.tube_model.v2",
+                "units": "mm",
+                "lengths": lengths,
+                "savings": savings,
+                "stock_lengths_mm": STOCKS,
+                "remnant_min_mm": REMNANT_MIN,
+                "profile_bins": geo["profile_bins"],
+                "profile_method": geo["profile_method"],
+                "angular_neighborhood_radius_deg": geo[
+                    "angular_neighborhood_radius_deg"
+                ],
+                "rotation_step_deg": geo["rotation_step_deg"],
+                "seed": args.seed,
+                "search_settings": {
+                    "master_time_limit_s": args.master_time_limit_s,
+                    "q1_secondary_time_limit_s": args.q1_secondary_time_limit_s,
+                    "q3_block_time_limit_s": args.q3_block_time_limit_s,
+                    "q4_block_time_limit_s": args.q4_block_time_limit_s,
+                    "q4_remaining_block_time_limit_s": args.q4_remaining_block_time_limit_s,
+                    "q4_remaining_block_max_keys": args.q4_remaining_block_max_keys,
+                    "q2_iterations": args.q2_iterations,
+                    "q3_iterations": args.q3_iterations,
+                    "q4_iterations": args.q4_iterations,
+                    "q2_restarts": args.q2_restarts,
+                    "q3_restarts": args.q3_restarts,
+                    "q4_restarts": args.q4_restarts,
+                    "beam_width": args.beam_width,
+                },
+                "collaboration_protocol": {
+                    "schema": "orpath.tube_collaboration.v1",
+                    "budget_percent": {
+                        "geometry": 20,
+                        "q1_q2": 10,
+                        "q3": 25,
+                        "q4": 45,
+                    },
+                    "numeric_authority": "solve_plus_independent_validate",
+                },
+                "input_sha256": input_sha256(),
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
     print("lengths", lengths, flush=True)
     print("Q1...", flush=True)
-    q1 = solve_q1(lengths)
+    q1 = solve_q1(
+        lengths,
+        seed=args.seed,
+        time_limit_s=args.master_time_limit_s,
+        secondary_time_limit_s=args.q1_secondary_time_limit_s,
+    )
     print("Q1 total", q1["total_stock_length_mm"], "sw", q1["total_switch"], flush=True)
     print("Q2...", flush=True)
-    q2 = solve_q2(q1, lengths, savings)
+    q2 = solve_q2(
+        q1,
+        lengths,
+        savings,
+        seed=args.seed + 101,
+        iterations=args.q2_iterations,
+        restarts=args.q2_restarts,
+    )
     print("Q2 cocut", q2["total_co_cut_benefit_mm"], flush=True)
     print("Q3...", flush=True)
-    q3 = solve_q3(lengths, savings)
+    q3_alternative_base = q1.pop("_q3_alternative_base")
+    q3 = solve_q3(
+        q2,
+        lengths,
+        savings,
+        seed=args.seed + 202,
+        iterations=args.q3_iterations,
+        restarts=args.q3_restarts,
+        alternative_bases=[q3_alternative_base],
+        block_master_time_limit_s=args.q3_block_time_limit_s,
+    )
     print("Q3 total", q3["total_stock_length_mm"], "cocut", q3["total_co_cut_benefit_mm"], flush=True)
     # keep better of q3 vs q1+q2 packing on primary then secondary
     if (q3["total_stock_length_mm"], -q3["total_co_cut_benefit_mm"], q3["total_switch"]) > (
         q1["total_stock_length_mm"],
         -q2["total_co_cut_benefit_mm"],
-        q1["total_switch"],
+        q2["total_switch"],
     ):
         # q3 worse on primary: fallback to q2 plan as q3 baseline then try improve stocks
         print("Q3 not better on primary; using Q1 pack + cocut as Q3", flush=True)
-        q3 = solve_q2(q1, lengths, savings)
-        q3["note"] = "fallback to Q1 assignment + cocut (adjusted pack not better)"
+        q3 = deepcopy(q2)
+        q3["note"] = "Q2 fixed-assignment plan retained because joint search was not lexicographically better"
     print("Q4...", flush=True)
-    q4 = solve_q4(lengths, savings)
+    q4 = solve_q4(
+        lengths,
+        savings,
+        seed=args.seed + 303,
+        beam_width=args.beam_width,
+        iterations=args.q4_iterations,
+        master_time_limit_s=args.master_time_limit_s,
+        block_master_time_limit_s=args.q4_block_time_limit_s,
+        remaining_block_master_time_limit_s=args.q4_remaining_block_time_limit_s,
+        remaining_block_max_keys_per_batch=args.q4_remaining_block_max_keys,
+        restarts=args.q4_restarts,
+    )
     print("Q4 new stock", q4["total_new_standard_stock_mm"], flush=True)
 
     for name, obj in [("q1", q1), ("q2", q2), ("q3", q3), ("q4", q4)]:
@@ -829,15 +1314,27 @@ def main():
         )
 
     print("Excel...", flush=True)
-    paths = export_excels(lengths, q1, q2, q3, q4)
+    paths = export_excels(lengths, savings, q1, q2, q3, q4)
 
-    done = f"""# DONE (Hermes fix) — 异形圆管下料
+    q1_primary_status = (
+        "主目标已证明最优"
+        if q1["optimality"]["primary_proven_optimal"]
+        else "主目标尚未证明最优"
+    )
+    q3_primary_status = (
+        "主目标已证明最优"
+        if q3.get("optimality", {}).get("proven_optimal")
+        else "主目标尚未证明最优"
+    )
+    q4_gap = q4["optimality"]
+    done = f"""# DONE — 异形圆管下料可复现实验
 
 ## Bug fixes
 1. **轴向长度**: PCA 第一主轴跨度（管轴），不再用 Z 截面 ~40mm  
-2. **共切**: 端部包络 + 旋转搜索嵌套，Δ=l_i+l_j 路径下的 nest  
+2. **共切**: 固定 ±{geo['angular_neighborhood_radius_deg']}° 邻域的保守端部轮廓，{geo['profile_bins']} 个角度 + 全旋转搜索，步长 {geo['rotation_step_deg']}°
 3. **数字单一来源**: 下列指标均来自 `q*-solution.json`  
 4. **Excel**: 已重写 `result1.xlsx`…`result4.xlsx`
+5. **复现参数**: seed={args.seed}; q1-secondary={args.q1_secondary_time_limit_s}s; q3-block={args.q3_block_time_limit_s}s; q4-block={args.q4_block_time_limit_s}s; q4-remaining-block={args.q4_remaining_block_time_limit_s}s/每批最多{args.q4_remaining_block_max_keys}个; q2={args.q2_iterations}x{args.q2_restarts}; q3={args.q3_iterations}x{args.q3_restarts}; q4={args.q4_iterations}x{args.q4_restarts}; beam={args.beam_width}
 
 ## 轴向长度 (mm)
 {json.dumps(lengths, ensure_ascii=False)}
@@ -851,8 +1348,10 @@ def main():
 | Q4 | {q4['total_new_standard_stock_mm']} | {q4['total_co_cut_benefit_mm']} | {q4['total_switch']} | 新标准母材；余料≥200复用 |
 
 ## 状态
-- 全部 **FEASIBLE**（BFD/启发式，**非** proven OPTIMAL）
-- 共切为几何近似包络模型，非完整 3D 布尔
+- Q1：{q1_primary_status}；固定母材总长后的切换数尚未证明最优。
+- Q3：{q3_primary_status}（下界 {q3.get('optimality', {}).get('lower_bound_mm')} mm）。
+- Q4：严格可行但尚未证明全局最优；下界 {q4_gap['lower_bound_mm']} mm，绝对差 {q4_gap['absolute_gap_mm']} mm，相对差 {100 * q4_gap['relative_gap_to_lower_bound']:.2f}%。
+- 共切为高分辨率点云轮廓模型；仍不是 CAD 实体布尔碰撞证明
 
 ## 文件
 - {paths[0]}
@@ -863,12 +1362,13 @@ def main():
 """
     (OUT / "DONE.md").write_text(done, encoding="utf-8")
     (OUT / "MONITOR.md").write_text(
-        "# MONITOR (post-fix)\n\nHermes repaired geometry+solver. See DONE.md.\n",
+        "# MONITOR\n\nReproducible mixed-stock/ALNS/beam run complete. See DONE.md.\n",
         encoding="utf-8",
     )
     print("DONE", flush=True)
     print(done)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

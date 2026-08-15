@@ -65,6 +65,8 @@ set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 .venv-314\Scripts\python.exe scripts\t2_gate_cloud.py
 ```
 
+默认 `t2_gate.py` 在无模型密钥的干净克隆上校验已归档的 T2 关闭证据；输出必须明确标记 `current_live_run=false`。严格的当前机器多代理隔离证据由 `orpath.bat isolation` 单独检查，它只接受本地 `.pi-subagents/artifacts/` 中的真实 transcript，缺失时必须失败。
+
 ### T2 硬清单（历史关单用）
 
 见 `docs/archive/closeouts/t2-closeout.md`。OpenPi 截图项 **不再作为活 DoD**。
@@ -139,7 +141,7 @@ PASS = 架构证据包（intake + 诚实 FAIL/BLOCKED + MA 轨迹 + 监控）。
 |------|------|
 | exit 2 menu | run 失败如实 |
 | HUMAN_REQUIRED | 计数器用尽 |
-| BLOCKED solution | 无 adapter 诚实 |
+| BLOCKED solution | 无 adapter 或必需源数据缺失时诚实停止 |
 | gate 绿 only | 工程回归，非用户 Demo |
 
 ---

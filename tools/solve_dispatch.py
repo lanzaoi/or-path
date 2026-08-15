@@ -147,14 +147,21 @@ def _tube_envelope_from_outputs(root: Path, problem_id: str) -> dict[str, Any]:
         raise FileNotFoundError(
             f"tube outputs missing under [{tried}]; run tools/solve_tube_cut_b2026.py first"
         )
+    snapshot_path = out_dir / "model_snapshot.json"
+    if not snapshot_path.is_file():
+        raise FileNotFoundError(
+            f"tube model snapshot missing: {snapshot_path}; stale pre-v2 outputs are not valid"
+        )
+    model_snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
     env = {
             "problem_id": problem_id or "tube_cut_b2026",
             "problem_class": "tube_cut",
             "status": status,
             "objective": primary_obj,
             "source": "tools/solve_tube_cut_b2026.py",
-            "solver": "tube-bfd",
+            "solver": "tube-cg-cpsat-alns-beam",
             "questions": questions,
+            "model_snapshot": model_snapshot,
             "outputs_dir": str(out_dir),
             # Policy constants used by paper/R2 (not invented optima)
             "remnant_min_mm": 200.0,
@@ -173,7 +180,7 @@ def _tube_envelope_from_outputs(root: Path, problem_id: str) -> dict[str, Any]:
                 "exact": False,
                 "proven_optimal": False,
                 "method_class": "heuristic",
-                "claim": "FEASIBLE BFD/heuristic; not proven OPTIMAL",
+                "claim": "FEASIBLE mixed-stock/ALNS/beam solution; not proven OPTIMAL",
                 "remnant_min_mm": 200.0,
                 "stock_lengths_mm": [9000.0, 10000.0, 11000.0, 12000.0],
             },
@@ -229,13 +236,29 @@ def solve(
     args = _build_args(mode_l, problem_id, problem_class, extra_args)
 
     if mode_l in ("tube", "tube_bfd"):
+        # Public installs intentionally exclude the original contest attachments.
+        # Preflight before running the solver or reading potentially stale outputs.
+        from solve_tube_cut_b2026 import blocked_envelope, input_readiness
+
+        ready = input_readiness()
+        if not ready["ok"]:
+            data = normalize_solution(
+                blocked_envelope(problem_id or "tube_cut_b2026"), mode=mode_l
+            )
+            ok_e, e_errs = validate_envelope(data)
+            if not ok_e:
+                return False, data, "envelope: " + "; ".join(e_errs)
+            raw = json.dumps(data, ensure_ascii=False)
+            return True, data, raw
         # Adapter uses install-root paths for CSV/OUT — run with install cwd.
         code, out, err = _run_py(script, args, _ROOT)
         raw = (out + "\n" + err).strip()
         if code != 0:
             return False, {}, raw or f"tube solver exit {code}"
         try:
-            data = _tube_envelope_from_outputs(root, problem_id or "tube_cut_b2026")
+            # The adapter always writes to the install-root output directory.
+            # Read that exact run, never a stale case-workdir copy.
+            data = _tube_envelope_from_outputs(_ROOT, problem_id or "tube_cut_b2026")
         except Exception as exc:  # noqa: BLE001
             return False, {}, f"tube envelope: {exc}\n{raw[:500]}"
         if normalize:
@@ -243,6 +266,7 @@ def solve(
         ok_e, e_errs = validate_envelope(data)
         if not ok_e:
             return False, data, "envelope: " + "; ".join(e_errs)
+        return True, data, raw
     handled, code, out, err = _try_in_proc(script_name, args)
     if not handled:
         code, out, err = _run_py(script, args, root)

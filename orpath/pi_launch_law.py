@@ -175,6 +175,7 @@ def build_single_lead_cmd(
     model: str = DEFAULT_MODEL,
     tools: str = SINGLE_LEAD_TOOLS,
     json_mode: bool = False,
+    require_credentials: bool = True,
 ) -> list[str]:
     """Honest single-lead command (may include write)."""
     return build_pi_command(
@@ -184,6 +185,7 @@ def build_single_lead_cmd(
         model=model,
         tools=tools,
         json_mode=json_mode,
+        require_credentials=require_credentials,
         append_system_prompt=(
             "OR-Path SINGLE_LEAD mode: you are one agent. "
             "Do not claim multi-agent or subagent completion without calling tool `subagent`. "
@@ -198,6 +200,7 @@ def build_multi_agent_lead_cmd(
     prompt: str,
     provider: str = DEFAULT_PROVIDER,
     model: str = DEFAULT_MODEL,
+    require_credentials: bool = True,
 ) -> list[str]:
     """Harness-shaped lead cmd (no write/edit)."""
     cmd = build_pi_command(
@@ -207,6 +210,7 @@ def build_multi_agent_lead_cmd(
         model=model,
         tools=LEAD_TOOLS_NO_WRITE,
         json_mode=True,
+        require_credentials=require_credentials,
         append_system_prompt=ANTI_COSPLAY_SYSTEM,
     )
     v = validate_launch(cmd, claim_multi_agent=True, label="build_multi_agent_lead_cmd")

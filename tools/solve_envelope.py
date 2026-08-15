@@ -78,18 +78,22 @@ def validate_envelope(data: Any) -> tuple[bool, list[str]]:
         if k not in data:
             errs.append(f"missing key: {k}")
 
+    status = str(data.get("status", "")).upper()
+
     if "objective" in data:
         obj = data["objective"]
-        if not isinstance(obj, (int, float)):
+        if obj is None and status == "BLOCKED":
+            pass
+        elif not isinstance(obj, (int, float)) or isinstance(obj, bool):
             errs.append("objective must be number")
 
-    status = str(data.get("status", "")).upper()
     if status and status not in {
         "OPTIMAL",
         "FEASIBLE",
         "INFEASIBLE",
         "ERROR",
         "UNKNOWN",
+        "BLOCKED",
     }:
         errs.append(f"unusual status: {data.get('status')}")
 

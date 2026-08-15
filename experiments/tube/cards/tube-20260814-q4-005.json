@@ -1,0 +1,35 @@
+{
+  "schema": "orpath.tube_experiment_card.v1",
+  "experiment_id": "tube-20260814-q4-005",
+  "domain": "q4",
+  "owner_agent": "or-tube-q4",
+  "hypothesis": "Joint deletion-repair across remnants and new bars may complete a 172000 + 78000 path.",
+  "baseline_artifact": "outputs/tube-experiments/tube-20260814-q4-004-target-172-plus-78.json",
+  "changed_factor": {
+    "name": "targeted_joint_repair_iterations",
+    "baseline": 0,
+    "candidate": 30000
+  },
+  "frozen_factors": [
+    "input_sha256",
+    "geometry_profile_bins",
+    "demand",
+    "stock_lengths_mm",
+    "remnant_min_mm",
+    "objective_order",
+    "prefix_inventory"
+  ],
+  "seed_set": [20260813, 20261822, 20262831, 20263840],
+  "budget": {
+    "unit": "seconds",
+    "value": 240
+  },
+  "acceptance": {
+    "hard_gates": ["runtime_cap", "strict_validate_if_feasible"],
+    "primary": "find a 250000 mm complete feasible plan",
+    "secondary": "maximize co-cut then minimize switches",
+    "stop": "record ERROR on timeout; timeout must not be interpreted as infeasibility"
+  },
+  "output_path": "outputs/tube-experiments/tube-20260814-q4-005-timeout.json",
+  "status": "ERROR"
+}

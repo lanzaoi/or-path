@@ -23,6 +23,12 @@ REQUIRED_AGENTS = [
     "or-writer.md",
     "or-verifier.md",
     "or-reviewer.md",
+    "or-tube-lead.md",
+    "or-tube-geometry.md",
+    "or-tube-q1q2.md",
+    "or-tube-q3.md",
+    "or-tube-q4.md",
+    "or-tube-redteam.md",
 ]
 
 MIN_PY = (3, 11)
@@ -48,8 +54,19 @@ def _hint_setup() -> None:
     print("  HINT pip:  .venv-314\\Scripts\\pip install -r requirements.txt")
 
 
-def _node_ver() -> tuple[int, ...] | None:
+def _node_path() -> tuple[str | None, bool]:
     node = shutil.which("node")
+    if node:
+        return node, True
+    if os.name == "nt":
+        program_files = Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
+        fallback = program_files / "nodejs" / "node.exe"
+        if fallback.is_file():
+            return str(fallback), False
+    return None, False
+
+
+def _node_ver(node: str | None) -> tuple[int, ...] | None:
     if not node:
         return None
     r = subprocess.run([node, "-p", "process.versions.node"], capture_output=True, text=True)
@@ -81,7 +98,16 @@ def main() -> int:
         _ok(f"Python {vi.major}.{vi.minor}.{vi.micro}")
 
     # imports (product deps)
-    for mod in ("langgraph", "ortools", "networkx", "pydantic"):
+    for mod in (
+        "langgraph",
+        "langgraph.checkpoint.sqlite",
+        "ortools",
+        "networkx",
+        "pydantic",
+        "numpy",
+        "pandas",
+        "openpyxl",
+    ):
         try:
             __import__(mod)
             _ok(f"import {mod}")
@@ -91,7 +117,8 @@ def main() -> int:
             _hint_setup()
 
     # node
-    nv = _node_ver()
+    node, node_from_path = _node_path()
+    nv = _node_ver(node)
     pi_ok = (home / PI_CLI).is_file()
     if nv is None:
         if pi_ok:
@@ -110,7 +137,10 @@ def main() -> int:
             _bad(msg)
             errors.append("node_version")
     else:
-        _ok(f"node {'.'.join(map(str, nv))}")
+        _ok(f"node {'.'.join(map(str, nv))} ({node})")
+        if not node_from_path:
+            _warn("Node is installed and system PATH is configured, but this process has a stale PATH snapshot; reopen the terminal/app")
+            warnings.append("node_path_snapshot")
 
     # layout
     for rel in (

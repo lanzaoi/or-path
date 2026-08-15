@@ -1,0 +1,32 @@
+{
+  "schema": "orpath.tube_experiment_card.v1",
+  "experiment_id": "tube-20260814-geometry-001",
+  "domain": "geometry",
+  "owner_agent": "or-tube-geometry",
+  "hypothesis": "A fixed physical angular neighbourhood removes sampling-phase instability without making selected benefits resolution-sensitive.",
+  "baseline_artifact": "outputs/tube-geometry-stability.json",
+  "changed_factor": {
+    "name": "profile_method",
+    "baseline": "angular_bin_extrema_with_empty_bin_interpolation",
+    "candidate": "fixed_angular_neighborhood_conservative_v1"
+  },
+  "frozen_factors": [
+    "input_sha256",
+    "pca_axis_rule",
+    "joint_modes",
+    "units"
+  ],
+  "seed_set": [],
+  "budget": {
+    "unit": "profile_resolutions",
+    "value": 3
+  },
+  "acceptance": {
+    "hard_gates": ["independent_180_360_720_rebuild", "symmetry", "snapshot_match"],
+    "primary": "360-to-720 max delta <= 0.5 mm and p95 <= 0.2 mm",
+    "secondary": "no matrix entry above 0.5 mm",
+    "stop": "accept only after the independent geometry gate passes"
+  },
+  "output_path": "outputs/tube-geometry-stability.json",
+  "status": "ACCEPTED"
+}

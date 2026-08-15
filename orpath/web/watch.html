@@ -788,8 +788,10 @@
     </section>
     <section>
       <h2>产物与说明 · L4</h2>
-      <div class="scroll art" id="artifacts"></div>
-      <div id="tier2Panel" data-orpath-tier2="1" data-m1-tier2="1" hidden></div>
+      <div class="scroll art" id="artifacts">
+        <div id="artifactList"></div>
+        <div id="tier2Panel" data-orpath-tier2="1" data-m1-tier2="1" hidden></div>
+      </div>
     </section>
   </main>
 
@@ -1487,7 +1489,10 @@
     }
 
     function renderArtifacts(s) {
-      const box = $("artifacts");
+      // Both the ordinary artifacts and the long Tier-2 panel live in this
+      // same scroll container.  Keeping Tier-2 outside used to clip it below
+      // the viewport because the parent section intentionally hides overflow.
+      const box = $("artifactList");
       const a = s.artifacts || {};
       const keys = ["solution", "validate", "schema", "paper", "intake", "plan", "provenance", "runs_dir", "agents_dir"];
       const labels = {

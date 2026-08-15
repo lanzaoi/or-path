@@ -1,0 +1,126 @@
+{
+  "schema": "orpath.tube_collaboration.v1",
+  "problem_id": "tube_cut_b2026",
+  "numeric_authority": "local_solver_and_independent_validator",
+  "selection_rule": "lexicographic_not_agent_vote",
+  "objective_order": [
+    "hard_constraints",
+    "new_standard_stock_mm",
+    "negative_co_cut_benefit_mm",
+    "type_switches",
+    "diagnostic_waste_mm"
+  ],
+  "budget_scope": "discretionary_experiment_effort_excluding_baseline_and_gates",
+  "budget_percent": {
+    "geometry": 20,
+    "q1_q2": 10,
+    "q3": 25,
+    "q4": 45
+  },
+  "q4_internal_budget_percent": {
+    "future_value_and_stratified_beam": 40,
+    "remaining_demand_cocut_initializer": 25,
+    "beam_width_and_new_seeds": 20,
+    "targeted_deletion_repair": 10,
+    "strict_validation_and_reproduction": 5
+  },
+  "risk_override": {
+    "trigger": "upstream_geometry_gate_red",
+    "temporary_budget_percent": {
+      "geometry": 35,
+      "q1_q2": 10,
+      "q3": 25,
+      "q4": 30
+    },
+    "release_condition": "geometry_resolution_and_independent_recompute_gates_pass",
+    "then_restore_budget_percent": {
+      "geometry": 20,
+      "q1_q2": 10,
+      "q3": 25,
+      "q4": 45
+    }
+  },
+  "roles": {
+    "or-tube-lead": {
+      "owns": ["assumption_register", "experiment_registry", "budget_ledger"],
+      "forbidden": ["invent_objective", "override_validator", "agent_vote"]
+    },
+    "or-tube-geometry": {
+      "owns": ["input_manifest", "pca_axis", "end_profiles", "cocut_stability"],
+      "forbidden": ["author_solution_numbers", "claim_step_collision_proof"]
+    },
+    "or-tube-q1q2": {
+      "owns": ["q1_primary_secondary_model", "q2_fixed_assignment_model"],
+      "forbidden": ["change_geometry", "claim_unproved_secondary_optimum"]
+    },
+    "or-tube-q3": {
+      "owns": ["joint_packing_candidates", "q3_bounds", "q3_stop_decision"],
+      "forbidden": ["change_demand", "claim_heuristic_global_optimum"]
+    },
+    "or-tube-q4": {
+      "owns": ["multibatch_candidates", "inventory_policy", "q4_bounds", "q4_stop_decision"],
+      "forbidden": ["reuse_remnant", "hide_inventory", "claim_heuristic_global_optimum"]
+    },
+    "or-tube-redteam": {
+      "owns": ["independent_recompute", "tamper_tests", "claim_audit"],
+      "forbidden": ["repair_candidate", "share_solver_state", "waive_failed_gate"]
+    }
+  },
+  "handoff_order": [
+    "assumptions",
+    "geometry",
+    "q1_q2_q3_q4_candidates",
+    "solve",
+    "redteam_validate",
+    "write"
+  ],
+  "experiment_rules": {
+    "changed_factors_per_card": 1,
+    "seed_required_for_stochastic_search": true,
+    "baseline_artifact_required": true,
+    "acceptance_criteria_required_before_run": true,
+    "failed_experiments_are_retained": true,
+    "numbers_may_only_move_via_json_artifacts": true,
+    "hard_runtime_cap_required": true,
+    "timeout_is_not_no_solution": true,
+    "accepted_candidate_requires_independent_validation": true,
+    "official_candidate_must_be_lexicographically_nonworse": true
+  },
+  "candidate_lifecycle": [
+    "PROPOSED",
+    "SOLVER_FEASIBLE",
+    "INDEPENDENTLY_VALIDATED",
+    "REDTEAM_PASSED",
+    "ACCEPTED"
+  ],
+  "registry": {
+    "experiment_cards": "experiments/tube/cards",
+    "budget_ledger": "experiments/tube/budget-ledger.json",
+    "accepted_solution": "outputs/tube_cut_b2026-solution.json",
+    "validation_report": "outputs/tube_cut_b2026-validate.json"
+  },
+  "stop_rules": {
+    "geometry": [
+      "compare_180_360_720_profiles_on_identical_input_hashes",
+      "fail_if_final_resolution_makes_any_selected_bar_infeasible",
+      "report_selected_joint_delta_and_rank_reversals",
+      "require_step_or_collision_kernel_before_engineering_deployment_claim"
+    ],
+    "q1_q2": [
+      "freeze_q1_primary_after_valid_bound_equals_incumbent",
+      "continue_q1_secondary_only_while_switch_incumbent_or_bound_improves",
+      "stop_q2_after_doubled_budget_and_three_new_seeds_do_not_improve_cocut"
+    ],
+    "q3": [
+      "stop_after_two_budget_levels_and_four_new_seeds_do_not_reduce_stock",
+      "retain_best_valid_secondary_result_at_fixed_stock",
+      "always_report_relaxation_lower_bound_and_gap"
+    ],
+    "q4": [
+      "stop_after_two_budget_levels_and_four_new_seeds_do_not_reduce_purchase",
+      "compare_raw_and_cocut_aware_initializers",
+      "retain_inventory_balance_and_remnant_identity_checks",
+      "always_report_relaxation_lower_bound_and_gap"
+    ]
+  }
+}

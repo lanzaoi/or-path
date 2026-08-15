@@ -1,0 +1,34 @@
+{
+  "schema": "orpath.tube_experiment_card.v1",
+  "experiment_id": "tube-YYYYMMDD-domain-001",
+  "domain": "q4",
+  "owner_agent": "or-tube-q4",
+  "hypothesis": "Describe one testable reason this single change may improve the lexicographic objective.",
+  "baseline_artifact": "outputs/tube_cut_b2026-solution.json",
+  "changed_factor": {
+    "name": "beam_width",
+    "baseline": 12,
+    "candidate": 24
+  },
+  "frozen_factors": [
+    "input_sha256",
+    "geometry_profile_bins",
+    "demand",
+    "stock_lengths_mm",
+    "remnant_min_mm",
+    "objective_order"
+  ],
+  "seed_set": [20260813, 20261822, 20262831, 20263840],
+  "budget": {
+    "unit": "seconds",
+    "value": 600
+  },
+  "acceptance": {
+    "hard_gates": ["strict_validate", "redteam_tamper_rejection"],
+    "primary": "lower total_new_standard_stock_mm",
+    "secondary": "at equal purchase: higher co-cut, then fewer switches; waste is diagnostic",
+    "stop": "no primary improvement at this and the next doubled budget"
+  },
+  "output_path": "outputs/tube-experiments/tube-YYYYMMDD-domain-001.json",
+  "status": "PLANNED"
+}

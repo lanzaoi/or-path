@@ -233,6 +233,12 @@ def check_env(root: Path | None = None) -> EnvCheck:
         "or-writer",
         "or-verifier",
         "or-reviewer",
+        "or-tube-lead",
+        "or-tube-geometry",
+        "or-tube-q1q2",
+        "or-tube-q3",
+        "or-tube-q4",
+        "or-tube-redteam",
     }
     missing = sorted(required - set(agents))
     if missing:
@@ -462,8 +468,22 @@ def build_pi_command(
     json_mode: bool = True,
     tools: str | None = None,
     append_system_prompt: str | None = None,
+    require_credentials: bool = True,
 ) -> list[str]:
-    chk = require_env(root)
+    if require_credentials:
+        chk = require_env(root)
+    else:
+        # Command-shape tests still require the real local Pi runtime, package,
+        # settings and agents. They deliberately do not require a paid/live
+        # credential because no network call is made.
+        chk = check_env(root)
+        non_auth_errors = [
+            e for e in chk.errors if not e.startswith("no API key / Pi auth.json")
+        ]
+        if non_auth_errors:
+            raise RuntimeError(
+                "OR-Path subagent runtime FAIL: " + "; ".join(non_auth_errors)
+            )
     cli = chk.pi_cli
     assert cli
     ep, em = _effective_defaults()

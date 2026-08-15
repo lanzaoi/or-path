@@ -88,6 +88,14 @@ orpath.bat m2-gate
 orpath.bat tube-live-gate
 ```
 
+当前 Tube v2 求解（原始附件缺失时返回 `BLOCKED`）：
+
+```bat
+orpath.bat tube-solve --fast
+orpath.bat tube-solve
+orpath.bat tube-solve --quality
+```
+
 ## Skills · 过程记忆 · Tools · MCP（已接入产品）
 
 | 能力 | 位置 / 命令 | 自动？ |

@@ -198,6 +198,14 @@ def test_r2_bad():
     assert r.returncode == 1
 
 
+def test_r2_ignores_numbers_inside_windows_paths():
+    sys.path.insert(0, str(TOOLS))
+    from r2_numeric_check import check_draft
+
+    draft = r"validate report: C:\\Users\\34060\\AppData\\Temp\\case-88421\\validate.json"
+    assert check_draft(draft, {"objective": 42}) == []
+
+
 def test_r1_good():
     r = run(
         [
@@ -237,6 +245,82 @@ def test_solve_envelope_unit():
     )
     assert n["meta"]["exact"] is False
     assert n["meta"]["proven_optimal"] is False
+
+    blocked = normalize_solution(
+        {
+            "problem_id": "missing-data-case",
+            "status": "BLOCKED",
+            "objective": None,
+            "source": "preflight",
+            "meta": {"blocked": True},
+        }
+    )
+    ok3, errs3 = validate_envelope(blocked)
+    assert ok3, errs3
+
+
+def test_tube_dispatch_blocks_when_public_data_absent(monkeypatch):
+    sys.path.insert(0, str(TOOLS))
+    import solve_tube_cut_b2026
+    from solve_dispatch import solve
+
+    monkeypatch.setattr(
+        solve_tube_cut_b2026,
+        "input_readiness",
+        lambda: {
+            "ok": False,
+            "problem_id": "tube_cut_b2026",
+            "required_count": 15,
+            "missing_count": 1,
+            "missing_inputs": ["fixtures/t3/tube_cut_b2026/raw/missing.csv"],
+            "data_manifest": "fixtures/t3/tube_cut_b2026/DATA_REQUIRED.md",
+        },
+    )
+    ok, data, _raw = solve(ROOT, "tube_cut_b2026", "tube", "tube_cut")
+    assert ok
+    assert data["status"] == "BLOCKED"
+    assert data["objective"] is None
+    assert data["meta"]["blocked_code"] == "tube_source_data_missing"
+    assert data["missing_inputs"]
+
+
+def test_tube_dispatch_returns_after_one_successful_adapter_run(monkeypatch, tmp_path):
+    sys.path.insert(0, str(TOOLS))
+    import solve_dispatch
+    import solve_tube_cut_b2026
+
+    calls = []
+    monkeypatch.setattr(solve_tube_cut_b2026, "input_readiness", lambda: {"ok": True})
+    monkeypatch.setattr(
+        solve_dispatch,
+        "_run_py",
+        lambda script, args, cwd: (calls.append((script, args, cwd)) or (0, "done", "")),
+    )
+    monkeypatch.setattr(
+        solve_dispatch,
+        "_tube_envelope_from_outputs",
+        lambda root, problem_id: {
+            "problem_id": problem_id,
+            "problem_class": "tube_cut",
+            "status": "FEASIBLE",
+            "objective": 1.0,
+            "source": "tools/solve_tube_cut_b2026.py",
+            "questions": {"q1": {}},
+            "meta": {
+                "exact": False,
+                "proven_optimal": False,
+                "method_class": "heuristic",
+            },
+        },
+    )
+
+    ok, data, raw = solve_dispatch.solve(
+        tmp_path, "tube_cut_b2026", "tube", "tube_cut", ["--fast"]
+    )
+    assert ok
+    assert data["objective"] == 1.0
+    assert raw == "done"
+    assert len(calls) == 1
 
 
 def test_gates_solve_dispatch_wiring():

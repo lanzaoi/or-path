@@ -30,12 +30,18 @@ META_COUNTER_RE = re.compile(
     r"labelIndex|prev_events|n_stages"
     r")\b[^\n]*$"
 )
+# Paths are provenance, not result claims. This also prevents a numeric Windows
+# username or temporary directory name from becoming a false result number.
+PATH_TOKEN_RE = re.compile(
+    r"(?i)(?:[A-Z]:[\\/][^\s`'\"<>|]+|(?:\.\.?[\\/]|[A-Za-z0-9_.-]+[\\/])[^\s`'\"<>|]+)"
+)
 
 
 def mask_non_result_numbers(text: str) -> str:
     """Blank arxiv/doi and process-meta lines before numeric binding scans."""
     masked = ARXIV_ID_RE.sub(" ARXIV ", text or "")
     masked = DOI_NUM_RE.sub(" DOI ", masked)
+    masked = PATH_TOKEN_RE.sub(" PATH ", masked)
     masked = META_COUNTER_RE.sub(" META_COUNTER_LINE ", masked)
     # also inline "claims_recorded: 309" mid-line
     masked = re.sub(
