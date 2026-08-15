@@ -5,7 +5,7 @@
 
 **详细使用教程 → [`docs/user-guide.md`](docs/user-guide.md)**（安装 · 路径 A · LIVE · 求解器 · RAG · FAQ）。  
 **全新机器请先：** `orpath.bat setup` → `doctor`（说明见 **`docs/install.md`**）。  
-**版本：** 根目录 `VERSION`（**0.3.5**）；线上 Release 见 install 版本表。
+**版本：** 根目录 `VERSION`（**0.3.6**）；线上 Release 见 install 版本表。
 
 ## 一键启动（推荐）
 
@@ -13,6 +13,7 @@
 |------|--------|
 | **`orpath.bat setup`** | 建 venv + Pi npm + 释放 demo seed + doctor |
 | **双击 `START-WATCH.bat`** | 清环境 → 起 Watch → 开浏览器；默认 **圆管 seed `live-btube`** |
+| **`orpath.bat demo-m0`** | 运行 M0 演示并生成证据链 (`--slug m0`) |
 | **双击 `START-CASE.bat`** | **路径 A**：指定**本地案例文件夹** + slug；可选 watch-run / 只看脸 / 题面路径 |
 | 双击 `START-ORPATH.bat` | 选 **1 菜单** / **2 Watch**（回车默认 2） |
 | `orpath.bat face` | 命令行同 START-WATCH 默认 |

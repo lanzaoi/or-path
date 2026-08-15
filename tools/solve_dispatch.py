@@ -10,6 +10,7 @@ import contextlib
 import importlib
 import io
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -251,6 +252,20 @@ def solve(
             raw = json.dumps(data, ensure_ascii=False)
             return True, data, raw
         # Adapter uses install-root paths for CSV/OUT — run with install cwd.
+        if os.environ.get("ORPATH_TUBE_REUSE") == "1":
+            # Demo path: reuse the already-shipped b-tube-cut answers instead of
+            # re-running the Q1–Q4 beam search (minutes). Env-gated, off by default.
+            try:
+                data = _tube_envelope_from_outputs(_ROOT, problem_id or "tube_cut_b2026")
+            except Exception as exc:  # noqa: BLE001
+                return False, {}, f"tube envelope reuse: {exc}"
+            if normalize:
+                data = normalize_solution(data, mode=mode_l)
+            ok_e, e_errs = validate_envelope(data)
+            if not ok_e:
+                return False, data, "envelope: " + "; ".join(e_errs)
+            raw = json.dumps(data, ensure_ascii=False)
+            return True, data, raw
         code, out, err = _run_py(script, args, _ROOT)
         raw = (out + "\n" + err).strip()
         if code != 0:

@@ -115,16 +115,31 @@ def test_docs_face() -> None:
     _ok("docs face contract (ORPATH/README/v0-smoke)")
 
 
+def _pick_slug_with_stages(workdir: Path) -> str:
+    runs = workdir / "runs"
+    if runs.is_dir():
+        if (runs / "test" / "stages").is_dir() and any((runs / "test" / "stages").glob("*.json")):
+            return "test"
+        for d in ("live-btube", "m0"):
+            if (runs / d / "stages").is_dir() and any((runs / d / "stages").glob("*.json")):
+                return d
+        for d in sorted(runs.iterdir()):
+            if d.is_dir() and (d / "stages").is_dir() and any((d / "stages").glob("*.json")):
+                return d.name
+    return "live-btube"
+
+
 def test_snapshot_unit() -> None:
     assert_no_llm_imports(ROOT / "orpath" / "watch_snapshot.py")
-    snap = build_snapshot(slug="test", thread_id="test", root=ROOT, workdir=ROOT)
+    slug = _pick_slug_with_stages(ROOT)
+    snap = build_snapshot(slug=slug, thread_id=slug, root=ROOT, workdir=ROOT)
     errs = validate_snapshot_shape(snap)
     if errs:
         _fail(f"snapshot shape: {errs}")
     if not snap.get("stages"):
-        _fail("expected historical runs/test stages for V0 smoke fixture")
+        _fail(f"expected historical runs/{slug} stages for V0 smoke fixture")
     if snap.get("status") == "no_product_run":
-        _fail("test slug should be a product run")
+        _fail(f"{slug} slug should be a product run")
     miss = build_snapshot(
         slug="__v0_gate_missing__",
         thread_id="__v0_gate_missing__",
@@ -156,6 +171,7 @@ def test_watch_snapshot_gate() -> None:
 
 
 def test_http_smoke() -> None:
+    slug = _pick_slug_with_stages(ROOT)
     sock = socket.socket()
     sock.bind(("127.0.0.1", 0))
     port = sock.getsockname()[1]
@@ -166,7 +182,7 @@ def test_http_smoke() -> None:
             py,
             str(ROOT / "scripts" / "orpath_watch.py"),
             "--slug",
-            "test",
+            slug,
             "--port",
             str(port),
             "--no-browser",
@@ -202,17 +218,17 @@ def test_http_smoke() -> None:
         _ok(f"HTTP health port={port}")
 
         with urllib.request.urlopen(
-            base + "/api/poll?slug=test&thread=test", timeout=5
+            base + f"/api/poll?slug={slug}&thread={slug}", timeout=5
         ) as resp:
             poll = json.loads(resp.read().decode())
         if not poll.get("fingerprint"):
             _fail(f"poll missing fingerprint: {poll}")
         if poll.get("stages_count", 0) < 1:
-            _fail("poll stages_count expected >=1 for test")
+            _fail(f"poll stages_count expected >=1 for {slug}")
         _ok(f"HTTP poll fp={poll['fingerprint']} stages={poll['stages_count']}")
 
         with urllib.request.urlopen(
-            base + "/api/snapshot?slug=test&thread=test", timeout=15
+            base + f"/api/snapshot?slug={slug}&thread={slug}", timeout=15
         ) as resp:
             snap = json.loads(resp.read().decode())
         if not snap.get("stages"):

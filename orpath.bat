@@ -736,6 +736,13 @@ if /i "%CMD%"=="p4-gate" goto :p4_gate
 if /i "%CMD%"=="bench" goto :bench
 if /i "%CMD%"=="vrp-baseline" goto :vrp_baseline
 if /i "%CMD%"=="doctor" goto :doctor
+if /i "%CMD%"=="demo-m0" goto :demo_m0
+if /i "%CMD%"=="m0-demo" goto :demo_m0
+if /i "%CMD%"=="m0" goto :demo_m0
+if /i "%CMD%"=="face" goto :face
+if /i "%CMD%"=="gui-demo" goto :gui_demo
+if /i "%CMD%"=="intake" goto :intake
+if /i "%CMD%"=="intake-auto" goto :intake_auto
 if /i "%CMD%"=="t1-gate" goto :t1_gate
 if /i "%CMD%"=="t2-gate" goto :t2_gate
 if /i "%CMD%"=="m0-gate" goto :m0_gate

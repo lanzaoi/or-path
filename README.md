@@ -9,7 +9,7 @@
 | 主入口 | **`START-CASE.bat`** · **`START-WATCH.bat`** · `orpath.bat` |
 | 法条 | **`specs/`**（索引 `specs/README.md`） |
 | 架构 | **`docs/ARCHITECTURE.md`** |
-| 安装 | **`docs/install.md`** · Release **v0.3.5**（线上） |
+| 安装 | **`docs/install.md`** · Release **v0.3.6**（线上） |
 | 教程 | **`docs/user-guide.md`**（详细）· **`ORPATH.md`**（速查） |
 
 ---
@@ -18,14 +18,15 @@
 
 ```bat
 :: 新机器（安装包）
-irm https://github.com/lanzaoi/or-path/releases/download/v0.3.5/install.ps1 | iex
+irm https://github.com/lanzaoi/or-path/releases/download/v0.3.6/install.ps1 | iex
 cd %LOCALAPPDATA%\Programs\orpath
 orpath.bat doctor
+orpath.bat watch --slug live-btube
 START-WATCH.bat
 
 :: 或开发者（源码）
 git clone https://github.com/lanzaoi/or-path.git && cd or-path
-orpath.bat setup && orpath.bat doctor && START-WATCH.bat
+orpath.bat setup && orpath.bat doctor && orpath.bat watch
 ```
 
 | 双击 | 作用 |

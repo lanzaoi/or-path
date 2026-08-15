@@ -1,0 +1,37 @@
+{
+  "schema": "orpath.tube_experiment_card.v1",
+  "experiment_id": "tube-20260814-q4-003",
+  "domain": "q4",
+  "owner_agent": "or-tube-q4",
+  "hypothesis": "A wider stratified beam retains low-purchase inventory futures and can improve the lexicographic Q4 incumbent.",
+  "baseline_artifact": "outputs/tube-experiments/tube-20260814-q4-002-stratified-beam.json",
+  "changed_factor": {
+    "name": "beam_width",
+    "baseline": 5,
+    "candidate": 12
+  },
+  "frozen_factors": [
+    "input_sha256",
+    "geometry_profile_bins",
+    "demand",
+    "stock_lengths_mm",
+    "remnant_min_mm",
+    "objective_order",
+    "seed_set",
+    "iteration_budgets",
+    "restart_counts"
+  ],
+  "seed_set": [20260813],
+  "budget": {
+    "unit": "seconds",
+    "value": 480
+  },
+  "acceptance": {
+    "hard_gates": ["strict_validate", "redteam_tamper_rejection"],
+    "primary": "total_new_standard_stock_mm does not increase",
+    "secondary": "at equal purchase, co-cut increases; switches are compared only after co-cut",
+    "stop": "accept the independently validated lexicographically better candidate"
+  },
+  "output_path": "outputs/tube_cut_b2026-solution.json",
+  "status": "ACCEPTED"
+}

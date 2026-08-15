@@ -11,8 +11,9 @@ rank-bm25>=0.2.2
 # LightRAG often installed as lightrag-hku; keep flexible
 pi-py-sdk>=0.2
 python-dotenv>=1.0
-# 1.1 intake OCR — PDF text layer (image OCR is optional; see requirements-ocr.txt)
+# 1.1 intake OCR — PDF text layer + onnxruntime image OCR
 pypdf>=4
+rapidocr-onnxruntime>=1.3.0
 # Modeling API (pulled industry standard; solvers remain networkx/cpsat/highs/ortools)
 pulp>=2.8
 # Tube adapter + result workbook export (raw contest data remains local/ignored)

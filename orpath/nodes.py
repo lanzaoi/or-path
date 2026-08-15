@@ -946,8 +946,11 @@ def node_solve(state: ORPathState) -> dict:
                 "solve_refused": True,
             }
         # Prefer domain solve mode when adapter applies
-        if has_domain_adapter and str(mode).lower() in {"mock", "auto", ""}:
-            mode = "polyomino" if poly_ad else "tube"
+        if str(mode).lower() in {"mock", "auto", ""}:
+            if poly_ad:
+                mode = "polyomino"
+            elif tube_ad:
+                mode = "tube"
 
     # Non-intake: polyomino must not use SP mock bind
     try:

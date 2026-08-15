@@ -382,7 +382,9 @@ def cmd_intake(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="OR-Path product runner (T3 LG skeleton)")
+    p = argparse.ArgumentParser(
+        description="OR-Path product runner (T3 LG skeleton)", allow_abbrev=False
+    )
     sub = p.add_subparsers(dest="cmd")
 
     def add_common(sp: argparse.ArgumentParser) -> None:

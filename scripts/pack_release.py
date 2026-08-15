@@ -45,6 +45,7 @@ INCLUDE_DIRS = [
     "knowledge_svc",
     "docs",
     "demo",
+    "experiments",
     ".pi",
     "runtime",
 ]

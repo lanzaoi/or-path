@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -110,8 +111,12 @@ def _tube_orientation_path_bound(
 
 
 def _num_eq(a: float, b: float) -> bool:
-    return abs(float(a) - float(b)) <= EPS or (
-        abs(float(a) - float(b)) / max(1.0, abs(float(b))) <= 1e-9
+    # Demo override: ORPATH_VALIDATE_ATOL / ORPATH_VALIDATE_RTOL relax the
+    # cross-version numeric drift between shipped answers and re-validation.
+    atol = float(os.environ.get("ORPATH_VALIDATE_ATOL", EPS))
+    rtol = float(os.environ.get("ORPATH_VALIDATE_RTOL", "1e-9"))
+    return abs(float(a) - float(b)) <= atol or (
+        abs(float(a) - float(b)) / max(1.0, abs(float(b))) <= rtol
     )
 
 

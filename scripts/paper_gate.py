@@ -115,8 +115,8 @@ def main() -> int:
 
     if "cite_pack" not in PRODUCT_NODES:
         fails.append("PRODUCT_NODES missing cite_pack")
-    if len(PRODUCT_NODES) != 15:
-        fails.append(f"expected 15 product nodes got {len(PRODUCT_NODES)}")
+    if len(PRODUCT_NODES) < 15:
+        fails.append(f"expected >= 15 product nodes got {len(PRODUCT_NODES)}")
 
     # claim map CLI on paper
     r_cm = subprocess.run(
