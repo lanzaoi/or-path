@@ -11,13 +11,13 @@
 
 | 方式 | 做什么 |
 |------|--------|
-| **`orpath.bat setup`** | L1：venv + Pi npm + 释放 demo seed + doctor |
+| **`orpath.bat setup`** | 建 venv + Pi npm + 释放 demo seed + doctor |
 | **双击 `START-WATCH.bat`** | 清环境 → 起 Watch → 开浏览器；默认 **圆管 seed `live-btube`** |
 | **双击 `START-CASE.bat`** | **路径 A**：指定**本地案例文件夹** + slug；可选 watch-run / 只看脸 / 题面路径 |
 | 双击 `START-ORPATH.bat` | 选 **1 菜单** / **2 Watch**（回车默认 2） |
 | `orpath.bat face` | 命令行同 START-WATCH 默认 |
 | `START-WATCH.bat 其它slug` | 看 workdir 下指定任务 |
-| `orpath.bat pack-release` | 打 L2 半肥 zip → `dist/` |
+| `orpath.bat pack-release` | 打半肥 zip → `dist/` |
 
 - 路径**不要加引号**（脚本会剥引号，但易踩坑）。  
 - 结束 Watch：黑窗 **Ctrl+C** → 任意键。  
