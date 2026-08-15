@@ -9,7 +9,7 @@
 | 主入口 | **`START-CASE.bat`** · **`START-WATCH.bat`** · `orpath.bat` |
 | 法条 | **`specs/`**（索引 `specs/README.md`） |
 | 架构 | **`docs/ARCHITECTURE.md`** |
-| 安装 | **`docs/install.md`** · Release **v0.2.0**（线上）· **v0.3.0** 说明见 notes |
+| 安装 | **`docs/install.md`** · Release **v0.3.5**（线上） |
 | 教程 | **`docs/user-guide.md`**（详细）· **`ORPATH.md`**（速查） |
 
 ---
@@ -17,13 +17,13 @@
 ## 30 秒上手
 
 ```bat
-:: 新机器（L2）
-irm https://github.com/lanzaoi/or-path/releases/download/v0.2.0/install.ps1 | iex
+:: 新机器（安装包）
+irm https://github.com/lanzaoi/or-path/releases/download/v0.3.5/install.ps1 | iex
 cd %LOCALAPPDATA%\Programs\orpath
 orpath.bat doctor
 START-WATCH.bat
 
-:: 或开发者（L1）
+:: 或开发者（源码）
 git clone https://github.com/lanzaoi/or-path.git && cd or-path
 orpath.bat setup && orpath.bat doctor && START-WATCH.bat
 ```
@@ -91,7 +91,7 @@ ORPATH.md        操作说明
 | T1–T2 / 1.0 / 1.1 | CLOSED — `docs/archive/closeouts/` |
 | V0 / M0 / M1 | 过程脸 · mock · workdir |
 | **M2 polyomino** | 域桥 · Q1.1 obj=**6** |
-| L1 / L2 安装 | setup + 线上 **v0.2.0** · 下一包 **v0.3.0** |
+| 安装分发 | setup + 线上 **v0.3.5** |
 | **Knowledge RAG v1–v3** | CLOSED ~88–92% — hybrid + lit 主粮 + research 档 |
 | **promote-run** | 跑完题 → 压缩 skill/lesson → allowlist → sync |
 | **Tube B LIVE** | 产品路径可全绿（启发式 FEASIBLE；共切弱于强手优化稿） |
@@ -145,5 +145,5 @@ orpath.bat m2-gate
 orpath.bat phase5-v3-gate
 orpath.bat promote-run-gate
 orpath.bat pack-release
-orpath.bat l2-gate --zip dist\orpath-0.3.0-win-x64.zip
+orpath.bat l2-gate --zip dist\orpath-0.3.5-win-x64.zip
 ```

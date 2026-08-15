@@ -5,7 +5,7 @@
 
 **详细使用教程 → [`docs/user-guide.md`](docs/user-guide.md)**（安装 · 路径 A · LIVE · 求解器 · RAG · FAQ）。  
 **全新机器请先：** `orpath.bat setup` → `doctor`（说明见 **`docs/install.md`**）。  
-**版本：** 根目录 `VERSION`（**0.3.0**）；线上 L2 zip 仍可能是 v0.2.0，见 install 版本表。
+**版本：** 根目录 `VERSION`（**0.3.5**）；线上 Release 见 install 版本表。
 
 ## 一键启动（推荐）
 
