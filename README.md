@@ -1,159 +1,179 @@
-# OR-Path: 面向复杂工业与运筹决策的自主多智能体协同系统
+# OR-Path: 面向高端智能制造与复杂工业决策的自主运筹多智能体系统
 
-> **2026 智能体设计大赛参赛作品**  
-> **核心定位：** 基于「确定性图谱调度 + 开放式多智能体隔离协同」双轨架构的高可信、可验证、人在回路（Human-in-the-Loop）运筹决策多智能体系统。
+> **2026 智能体设计大赛参赛作品 · 赛道：AI + 工业制造 / 智能决策**  
+> **核心定位：** 融合「大模型认知推理」与「运筹优化物理硬约束」的工业级多智能体协同决策平台，攻克复杂工业制造排产、异形材料智能下料、柔性车间调度等高价值离散制造场景。
 
 [![Release](https://img.shields.io/badge/Release-v0.3.6-blue.svg)](https://github.com/lanzaoi/or-path/releases/tag/v0.3.6)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20x64-brightgreen.svg)]()
-[![Multi-Agent](https://img.shields.io/badge/Multi--Agent-12%20Specialized%20Roles-orange.svg)]()
-[![Verification](https://img.shields.io/badge/Verification-748%20Constraint%20Checks%20PASS-success.svg)]()
+[![Domain](https://img.shields.io/badge/Industry-AI%20%2B%20Smart%20Manufacturing-brightgreen.svg)]()
+[![Multi-Agent](https://img.shields.io/badge/Multi--Agent-12%20Industrial%20Roles-orange.svg)]()
+[![Industrial-Validation](https://img.shields.io/badge/Physical%20Checks-748%20Constraint%20Pass-success.svg)]()
 
 ---
 
-## 🌟 评委 30 秒快速上手（开箱即用体验）
+## 🏭 工业背景与行业痛点
 
-压缩包已内置完整的离线运行时与演示种子，**解压即可直接体验**，无需预先配置复杂环境或 API Key。
+在现代高端离散制造（如汽车制造、船舶工程、航空航天构件、工程机械等）中，运筹优化与工业下料排产直接决定了企业的生产效率与原材料成本：
+
+| 传统工业排产痛点 | 纯大模型 AI 的局限 | **OR-Path 破局方案（AI + 工业运筹）** |
+|:---|:---|:---|
+| **物理约束极度繁杂**：空间几何干涉、焊缝避让、热变形补偿、共切工艺等人工建模极易遗漏 | **严重幻觉与黑盒**：大模型擅长写代码但无法保证数字精确性，易输出物理不可行的“废品方案” | **双轨闭环**：LLM 负责机理认知与约束抽象，底层 OR 求解器（MILP/CP-SAT/ALNS）确保物理可行 |
+| **定制开发周期长**：工艺参数或订单一变，整套数学规划模型需运筹专家推倒重写 | **缺乏车间级交互**：无法吸收一线工程师的工艺先验与突发调度要求 | **人在回路（HITL）**：支持 Dialogue Steer 对话式干预，工程师自然语言注入经验即可自适应重算 |
+| **工业决策黑盒化**：难以溯源排产原因，缺少学术与工程级严格质检链 | **缺乏端到端工程闭环**：仅停留在聊天界面，无法直连数控机床与工业派工单 | **透明看板与数字溯源**：提供实时过程看板（Live Watch）与学术级 Provenance 资产哈希溯源 |
+
+---
+
+## 🌟 评委 / 工业专家 30 秒开箱即用体验
+
+压缩包已内置完整的工业离线运行时与真实制造案例演示种子，**解压即可直接体验**，无需预先配置 API Key。
 
 ```bat
-:: 1. 环境与全链路健康诊断
+:: 1. 工业全链路环境与求解器健康诊断
 orpath.bat doctor
 
-:: 2. 一键启动多智能体实时协同可视化看板（Live Watch）
+:: 2. 一键启动工业多智能体实时协同可视化看板（Live Watch）
 START-WATCH.bat
 :: 或命令行：orpath.bat watch --slug live-btube
 
-:: 3. 运行 M0 运筹全自动多智能体演示链路
+:: 3. 运行 M0 工业运筹全自动多智能体演示链路
 orpath.bat demo-m0
 ```
 
-| 双击入口 | 功能说明 | 适用场景 |
+| 双击入口 | 工业功能说明 | 适用场景 |
 |:---|:---|:---|
-| **`START-WATCH.bat`** | **实时过程看板**（Live Watch）：浏览器实时渲染多智能体思考链、工具调用、阶段流转与状态数据 | 过程评审、协同可视化 |
-| **`START-CASE.bat`** | **案例向导**（路径 A）：指定本地案例目录，进行题面识别、多 Agent 分工求解与论文导出 | 完整案例端到端运行 |
-| **`START-ORPATH.bat`** | **交互式控制台**：聚合菜单导航、诊断、多问题 Benchmark 与 Watch 入口 | 快捷命令执行 |
+| **`START-WATCH.bat`** | **车间过程看板**（Live Watch）：浏览器实时流式呈现 12 个工业 Agent 的思考链、工具调用、排产甘特流转与状态数据 | 工业现场大屏、评审演示 |
+| **`START-CASE.bat`** | **工业案例向导**（路径 A）：输入工单/题面（PDF/图纸），自动完成工艺解析、多 Agent 求解并导出结果 Excel 与工艺报告 | 实际工业案例端到端处理 |
+| **`START-ORPATH.bat`** | **综合控制台**：聚合多问题 Benchmark、诊断与 Watch 快捷操作 | 快速命令执行 |
 
-> 📌 **交互提示**：
-> - 浏览器看板默认地址：`http://127.0.0.1:8765`（支持 1s 极速轮询与流式增量同步）；
-> - 结束 Watch 进程：在命令行窗口按 `Ctrl+C` 即可退出。
+> 📌 **看板访问**：浏览器自动打开 `http://127.0.0.1:8765`（支持 1s 毫秒级轮询与流式增量同步）；退出按 `Ctrl+C`。
 
 ---
 
-## 🤖 12 专业化多智能体角色矩阵
+## 🤖 12 专业化工业多智能体角色矩阵
 
-系统在 `.pi/agents/` 中定义了 12 个职责严密隔离、具备独立 Prompt 契约与工具链的专业化 Agent 角色：
+系统在 `.pi/agents/` 中定义了 12 个职责严密隔离、具备独立工业领域契约的专业化 Agent：
 
 ```mermaid
 graph TD
-    User([用户 / 人在回路]) <--> Orch[or-orchestrator 主控编排 Agent]
+    User([工业工程师 / 评委 / 人在回路]) <--> Orch[or-orchestrator 工业主控编排 Agent]
     
-    subgraph 认知与机理轨
-        Orch --> Res[or-researcher 机理调研 Agent]
-        Orch --> Geo[or-tube-geometry 空间几何 Agent]
+    subgraph 工业机理与认知轨
+        Orch --> Res[or-researcher 制造机理与工艺调研 Agent]
+        Orch --> Geo[or-tube-geometry 空间三维几何与展开 Agent]
     end
 
-    subgraph 建模与求解轨
-        Orch --> Mod[or-modeler 数学建模 Agent]
-        Mod --> Q12[or-tube-q1q2 切割基准 Agent]
-        Mod --> Q3[or-tube-q3 共切优化 Agent]
-        Mod --> Q4[or-tube-q4 多批次排产 Agent]
+    subgraph 工业建模与排产求解轨
+        Orch --> Mod[or-modeler 工业约束抽象与建模 Agent]
+        Mod --> Q12[or-tube-q1q2 定长下料基准求解 Agent]
+        Mod --> Q3[or-tube-q3 激光共线共切优化 Agent]
+        Mod --> Q4[or-tube-q4 多批次动态混合排产 Agent]
     end
 
-    subgraph 质检与对抗轨
-        Orch --> Ver[or-verifier 约束真实验证 Agent]
-        Orch --> Red[or-tube-redteam 红队攻防对抗 Agent]
+    subgraph 工业质检与红队对抗轨
+        Orch --> Ver[or-verifier 车间级 748 项物理约束质检 Agent]
+        Orch --> Red[or-tube-redteam 极端工况与边界对抗 Agent]
     end
 
-    subgraph 学术与成文轨
-        Orch --> Wri[or-writer 论文生成 Agent]
-        Orch --> Rev[or-reviewer 盲审评审 Agent]
+    subgraph 制造技术报告与规范轨
+        Orch --> Wri[or-writer 工业技术报告与排产方案 Agent]
+        Orch --> Rev[or-reviewer 工艺合规与断言审查 Agent]
     end
 
-    Ver --> Gate{748 项真机严苛质检}
-    Gate -- PASS --> Ledger[学术断言账本与 Provenance 溯源]
-    Gate -- FAIL --> User
+    Ver --> Gate{748 项车间硬约束质检}
+    Gate -- 校验通过 --> Ledger[工业派工单 / 结果 Excel / 溯源账本]
+    Gate -- 发现干涉/超限 --> User
 ```
 
-| Agent 角色 | 配置文件 | 核心职责与工具契约 |
+| 工业 Agent 角色 | 配置文件 | 工业场景核心职责 |
 |:---|:---|:---|
-| **主控编排者** | `or-orchestrator.md` | 全局阶段流转控制、上下文传递、Subagent 调度与异常重试 |
-| **机理调研者** | `or-researcher.md` | 文献与技术白皮书检索、知识图谱查询、算法选型论证 |
-| **数学建模者** | `or-modeler.md` | 决策变量与约束抽象、MILP/CP-SAT/ALNS 数学模型形式化构建 |
-| **真机验证者** | `or-verifier.md` | 物理与几何可行性校验（748 项硬约束），杜绝大模型数字幻觉 |
-| **红队对抗者** | `or-tube-redteam.md` | 边界攻击、几何干涉注入、死锁扰动，验证求解体系鲁棒性 |
-| **空间几何专家** | `or-tube-geometry.md` | 3D 异形截面展开、焊缝避让、自相交碰撞检测算法 |
-| **分问求解专家组** | `or-tube-q1q2/q3/q4.md` | 专精于定长下料、共线共切、动态多阶段混合排产的高性能求解 |
-| **论文撰写者** | `or-writer.md` | 结构化学术论文草拟、LaTeX 公式排版、图表生成与实验数据汇编 |
-| **盲审评审者** | `or-reviewer.md` | 论文规范合规性评审、逻辑漏洞审查与 Claim 断言真实性核验 |
+| **工业主控编排者** | `or-orchestrator.md` | 工业流水线全生命周期调度、工单状态流转、子智能体协同分发与异常重试 |
+| **空间几何专家** | `or-tube-geometry.md` | 3D 异形截面数学展开、空间相贯线计算、内焊缝避让与自相交干涉算法 |
+| **制造机理调研者** | `or-researcher.md` | 工业制造标准检索、工艺白皮书解析、算法选型论证（MILP vs CP-SAT vs ALNS） |
+| **工业数学建模者** | `or-modeler.md` | 车间约束形式化抽象、目标函数构建（原材料损耗最小化、机床刀具切换次数最少化） |
+| **车间级真实验证者** | `or-verifier.md` | **748 项严苛物理与几何约束检验**，杜绝大模型数字幻觉导致机床撞刀或废品 |
+| **工业红队对抗者** | `or-tube-redteam.md` | 注入极端残料扰动、突发尺寸突变、边界死锁攻击，确保排产算法工业级鲁棒性 |
+| **下料排产专家组** | `or-tube-q1q2/q3/q4.md` | 攻克定长组合下料、共线共切材料节约优化、多批次多约束动态混合排产 |
+| **工业报告撰写者** | `or-writer.md` | 自动生成标准化技术报告、工艺参数说明、排产甘特表与数控下料派工单 |
+| **工艺规范审查者** | `or-reviewer.md` | 审查方案合规性，严格拦截未经证明的虚假最优声称（Claim Ledger） |
 
 ---
 
-## 💡 核心设计创新与技术特色
+## 💡 5 大核心工业技术创新特色
 
-### 1. 确定性状态机与开放式多智能体双轨架构
-传统 LLM Multi-Agent 极易陷入无限对话死循环或状态漂移。OR-Path 创新性地采用：
-- **宏观轨（LangGraph）**：严格控制 17 个阶段状态流转（Intake $\rightarrow$ Orchestrate $\rightarrow$ Model $\rightarrow$ Solve $\rightarrow$ Validate $\rightarrow$ Paper $\rightarrow$ Provenance），确保主流程收敛性；
-- **微观轨（Pi Subagents）**：在阶段内部派发沙盒隔离的专业子智能体并发探索，兼具开放探索的灵活性与工业级可控性。
+### 1. 「AI 大模型认知 + 运筹优化物理硬约束」双轨闭环
+传统方法要么是纯大模型的“黑盒胡说”，要么是纯运筹的“僵化难用”。OR-Path 建立双轨闭环：
+- **认知层（大模型）**：负责工单图纸理解、约束解析、算法选型与自愈重试策略生成；
+- **执行层（精确求解器）**：负责底层高维度矩阵运算，所有数字结果均由 OR-Tools / HiGHS / CP-SAT 等真机求解器产出，100% 满足物理定律。
 
-### 2. 实时过程可视化看板（Live Watch Dashboard）
-- **告别“黑盒等待”**：原生 Web 实时过程脸，毫秒级流式展现多智能体思考链（Thinking）、工具调用（Tool Calls）、子 Agent 派发与状态卡片；
-- **自愈与重试监控**：可视化展示算法调优（Solver Tune）、模式修复与断言状态。
+### 2. 真实工业级复杂下料场景攻克（异形圆管激光智能共切）
+- 突破工业界极具挑战的**空间异形圆管旋转切割下料问题**（含旋转自由度、内外焊缝禁忌区、端面倾角、共线共切协同）；
+- **748 项几何硬约束全部通过校验**，材料利用率高达 **99.74%**（Q2）与 **99.06%**（Q1），大幅降低千万级工业原材料浪费，超越传统人工排样水平。
 
-### 3. 人在回路与对话回退干预（Dialogue Steer & HITL）
-- 在求解遇到歧义、硬约束冲突或需要专家先验指导时，系统触发 `human_stop` 机制；
-- 用户可通过自然语言注入先验指导，多智能体自动根据指导调整目标函数并回退重算，实现真正的人机协作。
+### 3. 透明化工业过程看板（Live Watch Digital Dashboard）
+- 拒绝传统工业软件的“黑盒黑屏”，提供现代化工业数字看板；
+- 毫秒级流式展现多智能体思考过程（Thinking）、调度拓扑、算法调优迭代计数（Solver Tune）与质检状态。
 
-### 4. 工业级严苛场景验证（异形圆管切割复杂下料）
-- **真机严苛求解**：拒绝大模型“玩具 Demo”，直接攻克具有旋转对称、内焊缝避让、共线共切等多物理约束的工业下料难题；
-- **748 项物理约束 100% 通过**，材料利用率高达 **99.74%**（Q2）与 **99.06%**（Q1），全面超越传统启发式算法。
+### 4. 人在回路与工艺经验动态注入（Dialogue Steer & HITL）
+- 针对车间突发插单、设备临时检修或工程师工艺偏好，支持通过自然语言进行 **Dialogue Steer 人机协同干预**；
+- 智能体系统无缝调整数学模型边界条件并自动回退重算，实现“老师傅经验”与“AI 智能算法”的深度融合。
 
-### 5. 学术级证据链与溯源系统（Provenance & Claim Ledger）
-- 建立端到端资产哈希指纹（`artifact_hashes.json`）、试验记录卡片与声称账本（`Claim Ledger`）；
-- 严禁未经证明的全局最优虚假声称（`claim_map`），保证生成的每篇学术论文与方案均有完整的代码与数据溯源。
+### 5. 工业数字孪生与学术级可信溯源（Provenance & Claim Ledger）
+- 建立从「原始工单 $\rightarrow$ 几何模型 $\rightarrow$ 求解序列 $\rightarrow$ 质检报告 $\rightarrow$ 派工单」的全链条 SHA-256 哈希指纹；
+- 配备声称账本（Claim Ledger），杜绝未经证明的全局最优虚假宣传，保障工业交付的绝对严谨可信。
 
 ---
 
-## 📂 项目结构概览
+## 📊 典型工业制造应用场景矩阵
+
+| 工业应用领域 | 代表性问题 | 智能体应用机制 | 工业交付产物 |
+|:---|:---|:---|:---|
+| **高端构件智能下料** | 异形截面圆管切割 | 空间展开 + 共切优化 + 748 项几何质检 | `result1~4.xlsx`、数控下料排产单 |
+| **智能物流与车间配送** | 多车辆带时间窗调度 (VRP-TW) | 载重平衡 + 时间窗惩罚 + 容量约束 | 车辆行车路径图、配送时间序列表 |
+| **柔性制造单元工序调度** | 经典旅行商与最短路 (TSP/SP) | 网络流建模 + 动态规划 + 拓扑优化 | 最小化换刀路径、工序调度甘特图 |
+
+---
+
+## 📂 项目结构与工业工程规范
 
 ```text
 OR-Path/
-├── .pi/agents/          # 12 个多智能体角色定义与 Prompt 契约
-├── orpath/              # 核心框架（LangGraph 图谱、Watch 看板后端、控制面）
-│   ├── web/watch.html   # 实时多 Agent 过程看板前端
-│   ├── nodes.py         # 17 阶段节点定义与状态流转
-│   └── watch_snapshot.py# 零 LLM 依赖的轻量级状态聚合引擎
-├── tools/               # 智能体工具库（精确求解器、几何引擎、748项约束验证器）
-│   ├── solve_tube_cut_b2026.py   # 圆管切割多阶段混合优化求解器
-│   ├── validate_solution.py      # 物理约束严格检验器
-│   └── solve_dispatch.py         # 多求解器（OR-Tools/HiGHS/CP-SAT/ALNS）路由
-├── specs/               # 系统设计规范与智能体协作协议
-├── scripts/             # 全自动门禁系统、发布打包与知识同步工具
-├── demo/seed/           # 内置免配置演示种子（live-btube / m0）
+├── .pi/agents/          # 12 个工业领域智能体 Prompt 契约与角色定义
+├── orpath/              # 工业多智能体内核（17 阶段状态机、Watch 过程脸、控制面）
+│   ├── web/watch.html   # 车间实时过程看板前端
+│   ├── nodes.py         # 确定性 17 阶段工业状态机
+│   └── watch_snapshot.py# 零 LLM 依赖的高性能车间状态聚合引擎
+├── tools/               # 工业级工具库（精确求解器、3D 展开算法、748 项约束质检）
+│   ├── solve_tube_cut_b2026.py   # 圆管切割多阶段混合运筹求解器
+│   ├── validate_solution.py      # 物理与空间几何严格约束检验器
+│   └── solve_dispatch.py         # 多引擎（OR-Tools/HiGHS/CP-SAT/ALNS）智能分发
+├── specs/               # 工业系统设计规范（SDD）与智能体协作协议
+├── scripts/             # 工业全自动门禁系统、打包与持续集成工具
+├── demo/seed/           # 内置真实工业案例演示种子（圆管制造 live-btube / 基础运筹 m0）
 ├── START-WATCH.bat      # 过程看板一键启动脚本
-├── START-CASE.bat       # 案例交互式向导
-└── orpath.bat           # 命令行统一控制入口
+├── START-CASE.bat       # 案例交互式向导（指定工单目录一键求解）
+└── orpath.bat           # 统一工业命令行控制入口
 ```
 
 ---
 
-## 🛠️ 质量保证与自动化门禁体系
+## 🛠️ 工业级质量保证与全自动化门禁体系
 
-项目配备了严格的多层次全自动化测试与质量门禁（Gate）：
+项目配备了工业级的严苛门禁（Gate）体系，确保代码与模型在车间现场的高可靠性：
 
 ```bat
-:: 1. 全量单元与工具测试（87/87 全部通过）
+:: 1. 全量单元与工业工具测试（87/87 100% 通过）
 pytest tools/ -v
 
-:: 2. 多智能体协作协议与账本门禁
+:: 2. 工业多智能体协同协议与账本门禁
 python scripts/tube_collaboration_gate.py
 
-:: 3. 几何稳定性与红队攻防对抗门禁
+:: 3. 几何稳定性与极端工况对抗门禁
 python scripts/tube_geometry_stability_gate.py
 python scripts/tube_redteam_gate.py
 
-:: 4. 实时看板与文档契约门禁
+:: 4. 实时车间看板与文档契约门禁
 python scripts/v0_watch_gate.py
 
-:: 5. 论文生成与学术证据链门禁
+:: 5. 制造技术报告与学术证据链门禁
 python scripts/paper_gate.py
 ```
 
@@ -161,8 +181,8 @@ python scripts/paper_gate.py
 
 ## 📋 提交与运行环境说明
 
-- **操作系统**：Windows 10 / 11 (x64)
-- **核心依赖**：Python 3.10+、Node.js 22+ (Pi 运行时已预置)
+- **系统平台**：Windows 10 / 11 (x64)
+- **核心依赖**：Python 3.10+、Node.js 22+ (Pi 工业运行时已内置)
 - **开源协议**：MIT License
 - **GitHub 仓库**：[https://github.com/lanzaoi/or-path](https://github.com/lanzaoi/or-path)
 - **最新 Release**：[Release v0.3.6](https://github.com/lanzaoi/or-path/releases/tag/v0.3.6)
