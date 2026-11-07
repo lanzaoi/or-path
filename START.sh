@@ -40,4 +40,5 @@ elif command -v open >/dev/null 2>&1; then
   open "$URL" >/dev/null 2>&1 &
 fi
 
-exec "$PY" "$DIR/scripts/orpath_watch.py" --slug "$SLUG" --thread-id "$THREAD" --host 0.0.0.0 --port "$PORT" --no-browser
+HOST="${ORPATH_HOST:-127.0.0.1}"
+exec "$PY" "$DIR/scripts/orpath_watch.py" --slug "$SLUG" --thread-id "$THREAD" --host "$HOST" --port "$PORT" --no-browser

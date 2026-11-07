@@ -467,7 +467,7 @@ def _discover_workdir_cases(workdir: Path, home: Path) -> list[dict[str, Any]]:
 
 
 class WatchHandler(SimpleHTTPRequestHandler):
-    server_version = "ORPathWatch/0.3-apple"
+    server_version = "ORPathWatch/1.0.0"
 
     def __init__(self, *args, home: Path, workdir: Path, **kwargs):
         self._home = home
@@ -503,8 +503,10 @@ class WatchHandler(SimpleHTTPRequestHandler):
         self.wfile.write(data)
 
     def _qs_slug_thread(self, qs: dict) -> tuple[str, str]:
-        slug = (qs.get("slug") or ["test"])[0].strip() or "test"
-        thread = (qs.get("thread") or qs.get("thread_id") or [slug])[0].strip() or slug
+        raw_slug = (qs.get("slug") or ["test"])[0].strip() or "test"
+        raw_thread = (qs.get("thread") or qs.get("thread_id") or [raw_slug])[0].strip() or raw_slug
+        slug = _sanitize_slug(raw_slug)
+        thread = _sanitize_slug(raw_thread)
         return slug, thread
 
     def do_OPTIONS(self) -> None:  # noqa: N802
@@ -1299,26 +1301,33 @@ class WatchHandler(SimpleHTTPRequestHandler):
             db_file = self._workdir / "runs" / "orpath.sqlite"
             db_file.parent.mkdir(parents=True, exist_ok=True)
             saver, conn = open_sqlite_checkpointer(db_file)
-            app = build_graph(checkpointer=saver)
-            cfg = thread_config(slug)
+            try:
+                app = build_graph(checkpointer=saver)
+                cfg = thread_config(slug)
 
-            k_mode = os.environ.get("ORPATH_KNOWLEDGE_MODE", "hybrid").strip().lower()
-            if k_mode not in {"off", "seed", "hybrid"}:
-                k_mode = "hybrid"
+                k_mode = os.environ.get("ORPATH_KNOWLEDGE_MODE", "hybrid").strip().lower()
+                if k_mode not in {"off", "seed", "hybrid"}:
+                    k_mode = "hybrid"
 
-            initial = default_initial(
-                root=self._workdir,
-                slug=slug,
-                problem_id=slug,
-                problem_class=detected_class,
-                solve_mode=rec_algo if rec_algo != "none" else "mock",
-                knowledge_mode=k_mode,
-                live_subagent=False,
-                thread_id=slug,
-            )
-            final = app.invoke(initial, cfg)
-            conn.close()
-            human_req = bool(final.get("human_required"))
+                initial = default_initial(
+                    root=self._workdir,
+                    slug=slug,
+                    problem_id=slug,
+                    problem_class=detected_class,
+                    solve_mode=rec_algo if rec_algo != "none" else "mock",
+                    knowledge_mode=k_mode,
+                    live_subagent=False,
+                    thread_id=slug,
+                )
+                final = app.invoke(initial, cfg)
+                human_req = bool(final.get("human_required"))
+            finally:
+                if conn is not None:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+                    conn = None
         except Exception as exc:  # noqa: BLE001
             self._send_json(500, {"ok": False, "error": f"graph pause run failed: {exc}"})
             return

@@ -77,14 +77,14 @@ EOF
     ;;
   face)
     if [[ $# -eq 0 ]]; then
-      run_py scripts/orpath_watch.py --slug live-btube --thread-id live-btube --host 0.0.0.0 --port 8765
+      run_py scripts/orpath_watch.py --slug live-btube --thread-id live-btube --host "${ORPATH_HOST:-127.0.0.1}" --port 8765
     else
       run_py scripts/orpath_watch.py "$@"
     fi
     ;;
   watch)
     if [[ $# -eq 0 ]]; then
-      run_py scripts/orpath_watch.py --slug live-btube --thread-id live-btube --host 0.0.0.0 --port 8765
+      run_py scripts/orpath_watch.py --slug live-btube --thread-id live-btube --host "${ORPATH_HOST:-127.0.0.1}" --port 8765
     else
       run_py scripts/orpath_watch.py "$@"
     fi
