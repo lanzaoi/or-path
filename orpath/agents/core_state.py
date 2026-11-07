@@ -39,6 +39,10 @@ class CorePipelineState(TypedDict, total=False):
     problem_file: str
     data_files: list[str]
     profile_path: str
+    knowledge_pack_path: str
+    retrieval_path: str
+    lessons_path: str
+    remediation_path: str
     research_path: str
     schema_path: str
     solution_path: str

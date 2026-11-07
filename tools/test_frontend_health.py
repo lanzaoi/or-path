@@ -211,19 +211,18 @@ def test_dynamic_visualization_components():
     assert "function showVizTooltip" in studio_js
     assert "window.syncStudioSnapshot" in studio_js
 
-    # 3. Gantt features: Makespan red dashed line, machines, time units
-    assert "Makespan = 55" in studio_js
-    assert "M0 卧式铣床" in studio_js
+    # 3. Gantt features: Numbers Truth guard, machine scheduling, makespan
+    assert "Numbers Truth" in studio_js
     assert "solution.schedule" in studio_js
+    assert "Makespan =" in studio_js
 
-    # 4. Route map features: Depot, directed marker-end arrows, customer points
-    assert "配送枢纽 (Depot)" in studio_js
-    assert "marker-end" in studio_js
+    # 4. Route map features: Route planning, customer points, stops
     assert "solution.routes" in studio_js
+    assert "route-node" in studio_js
 
-    # 5. Convergence curve: Optimality Gap shaded polygon, dual bounds
-    assert "polygon points=" in studio_js
-    assert "Gap: 0.00% 严密闭合" in studio_js
+    # 5. Convergence curve: Dual bounds, real gap trajectory, Numbers Truth guard
+    assert "gap_history" in studio_js
+    assert "Gap:" in studio_js
 
     # 6. CSS styles for visualization panels
     assert ".studio-viz-card" in studio_css

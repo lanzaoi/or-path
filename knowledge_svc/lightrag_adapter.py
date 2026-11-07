@@ -24,22 +24,111 @@ log = logging.getLogger(__name__)
 
 EmbedFn = Callable[[Sequence[str]], list[list[float]]]
 
+try:
+    import numpy as _np
+except Exception:  # pragma: no cover
+    _np = None  # type: ignore[assignment]
+
+# Process-level mtime-invalidated cache for SemanticStubIndex
+_SEM_CACHE: dict[Path, dict[str, Any]] = {}
+_LIGHTRAG_IMPORTABLE: bool | None = None
+
+
+def _file_sig(p: Path) -> tuple[int, int]:
+    try:
+        st = p.stat()
+        return (st.st_mtime_ns, st.st_size)
+    except OSError:
+        return (0, 0)
+
+
+def _build_norm_matrix(vectors: dict[str, list[float]]) -> tuple[list[str], Any]:
+    """Build normalized float32 matrix (N, D) + ordered chunk_ids when dims match."""
+    if _np is None or not vectors:
+        return [], None
+    ids = list(vectors.keys())
+    dim = len(vectors[ids[0]])
+    if dim == 0 or any(len(vectors[cid]) != dim for cid in ids):
+        return [], None
+    mat = _np.asarray([vectors[cid] for cid in ids], dtype=_np.float32)
+    norms = _np.linalg.norm(mat, axis=1, keepdims=True)
+    norms = _np.where(norms > 1e-12, norms, 1.0)
+    return ids, (mat / norms).astype(_np.float32, copy=False)
+
 
 class SemanticStubIndex:
-    """File-based chunk store + embedding vectors; cosine search."""
+    """File-based chunk store + embedding vectors; vectorized cosine search."""
 
     def __init__(self, work_dir: Path) -> None:
         self.work_dir = work_dir
         self.work_dir.mkdir(parents=True, exist_ok=True)
         self.chunks_path = work_dir / "stub_chunks.jsonl"
         self.vectors_path = work_dir / "stub_vectors.json"
+        self.npy_path = work_dir / "stub_vectors.npy"
+        self.vec_ids_path = work_dir / "stub_vec_ids.json"
         self.meta_path = work_dir / "embed_meta.json"
         self._chunks: dict[str, dict[str, Any]] = {}
         self._vectors: dict[str, list[float]] = {}
+        self._vec_ids: list[str] = []
+        self._mat_norm: Any = None
+        self._cow: bool = False
         self.last_embed_mode: str = "stub"
         self._load()
 
+    def _disk_sig(self) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int]]:
+        return (
+            _file_sig(self.chunks_path),
+            _file_sig(self.vectors_path),
+            _file_sig(self.meta_path),
+        )
+
+    def _write_npy_sidecar(self, vec_ids: list[str], mat_norm: Any) -> None:
+        if _np is None or mat_norm is None or not vec_ids:
+            return
+        try:
+            tmp_ids = self.vec_ids_path.with_suffix(".json.tmp")
+            tmp_ids.write_text(json.dumps(vec_ids, ensure_ascii=False), encoding="utf-8")
+            tmp_ids.replace(self.vec_ids_path)
+            with self.npy_path.open("wb") as f:
+                _np.save(f, mat_norm, allow_pickle=False)
+        except Exception as e:
+            log.debug("optional npy sidecar write skipped: %s", e)
+
+    def _ensure_vectors_dict(self) -> None:
+        """Lazily populate self._vectors if loaded via fast .npy sidecar."""
+        if self._vectors:
+            return
+        if self.vectors_path.is_file():
+            try:
+                self._vectors = json.loads(self.vectors_path.read_text(encoding="utf-8"))
+                return
+            except Exception:
+                pass
+        if self._mat_norm is not None and self._vec_ids:
+            self._vectors = {
+                cid: self._mat_norm[idx].tolist()
+                for idx, cid in enumerate(self._vec_ids)
+            }
+
     def _load(self) -> None:
+        key = self.work_dir.resolve()
+        sig = self._disk_sig()
+        cached = _SEM_CACHE.get(key)
+        if cached is not None and cached.get("sig") == sig:
+            self._chunks = cached["chunks"]
+            self._vectors = cached["vectors"]
+            self._vec_ids = cached["vec_ids"]
+            self._mat_norm = cached["mat_norm"]
+            self.last_embed_mode = str(cached["last_embed_mode"])
+            self._cow = True
+            return
+
+        self._chunks = {}
+        self._vectors = {}
+        self._vec_ids = []
+        self._mat_norm = None
+        self._cow = False
+
         if self.chunks_path.is_file():
             try:
                 for line in self.chunks_path.read_text(encoding="utf-8").splitlines():
@@ -51,18 +140,52 @@ class SemanticStubIndex:
             except Exception as e:
                 log.warning("corrupt stub_chunks.jsonl, resetting: %s", e)
                 self._chunks.clear()
-        if self.vectors_path.is_file():
+
+        loaded_fast_npy = False
+        if (
+            _np is not None
+            and self.npy_path.is_file()
+            and self.vec_ids_path.is_file()
+            and (
+                not self.vectors_path.is_file()
+                or self.npy_path.stat().st_mtime_ns >= self.vectors_path.stat().st_mtime_ns
+            )
+        ):
+            try:
+                ids = json.loads(self.vec_ids_path.read_text(encoding="utf-8"))
+                mat = _np.load(self.npy_path, allow_pickle=False)
+                if isinstance(ids, list) and mat.ndim == 2 and mat.shape[0] == len(ids):
+                    self._vec_ids = [str(x) for x in ids]
+                    self._mat_norm = mat.astype(_np.float32, copy=False)
+                    loaded_fast_npy = True
+            except Exception:
+                loaded_fast_npy = False
+
+        if not loaded_fast_npy and self.vectors_path.is_file():
             try:
                 self._vectors = json.loads(self.vectors_path.read_text(encoding="utf-8"))
+                self._vec_ids, self._mat_norm = _build_norm_matrix(self._vectors)
+                if self._mat_norm is not None:
+                    self._write_npy_sidecar(self._vec_ids, self._mat_norm)
             except Exception as e:
                 log.warning("corrupt stub_vectors.json, resetting: %s", e)
                 self._vectors.clear()
+
         if self.meta_path.is_file():
             try:
                 meta = json.loads(self.meta_path.read_text(encoding="utf-8"))
                 self.last_embed_mode = str(meta.get("embed_mode") or "stub")
             except Exception:
                 pass
+
+        _SEM_CACHE[key] = {
+            "sig": self._disk_sig(),
+            "chunks": dict(self._chunks),
+            "vectors": dict(self._vectors),
+            "vec_ids": list(self._vec_ids),
+            "mat_norm": self._mat_norm,
+            "last_embed_mode": self.last_embed_mode,
+        }
 
     def _persist(self, *, embed_mode: str | None = None) -> None:
         self.work_dir.mkdir(parents=True, exist_ok=True)
@@ -79,6 +202,14 @@ class SemanticStubIndex:
         )
         tmp_vecs.replace(self.vectors_path)
 
+        self._vec_ids, self._mat_norm = _build_norm_matrix(self._vectors)
+        if self._mat_norm is not None:
+            self._write_npy_sidecar(self._vec_ids, self._mat_norm)
+        else:
+            for p in (self.npy_path, self.vec_ids_path):
+                if p.is_file():
+                    p.unlink()
+
         if embed_mode:
             self.last_embed_mode = embed_mode
         write_json(
@@ -89,14 +220,27 @@ class SemanticStubIndex:
                 "n_vectors": len(self._vectors),
             },
         )
+        key = self.work_dir.resolve()
+        _SEM_CACHE[key] = {
+            "sig": self._disk_sig(),
+            "chunks": dict(self._chunks),
+            "vectors": dict(self._vectors),
+            "vec_ids": list(self._vec_ids),
+            "mat_norm": self._mat_norm,
+            "last_embed_mode": self.last_embed_mode,
+        }
 
     def clear(self) -> None:
-        self._chunks.clear()
-        self._vectors.clear()
+        self._chunks = {}
+        self._vectors = {}
+        self._vec_ids = []
+        self._mat_norm = None
+        self._cow = False
         self.last_embed_mode = "stub"
-        for p in (self.chunks_path, self.vectors_path, self.meta_path):
+        for p in (self.chunks_path, self.vectors_path, self.npy_path, self.vec_ids_path, self.meta_path):
             if p.is_file():
                 p.unlink()
+        _SEM_CACHE.pop(self.work_dir.resolve(), None)
 
     def add_chunks(
         self,
@@ -108,14 +252,18 @@ class SemanticStubIndex:
         chunk_list = list(chunks)
         if not chunk_list:
             return 0
+        if self._cow:
+            self._chunks = dict(self._chunks)
+            self._vectors = dict(self._vectors)
+            self._vec_ids = list(self._vec_ids)
+            self._cow = False
+        self._ensure_vectors_dict()
         texts = [c.text for c in chunk_list]
         if embed_fn is None:
             embed_fn = make_embed_fn("stub" if embed_mode != "live" else "live")
         used_mode = embed_mode
         try:
             vectors = embed_fn(texts)
-            # if live fn fell back to mock vectors silently, still label requested mode;
-            # callers set embed_mode honestly before call when using make_embed_fn.
         except Exception as e:
             log.warning("embed failed, MockEmbedder: %s", e)
             vectors = MockEmbedder().embed_texts(texts)
@@ -134,9 +282,9 @@ class SemanticStubIndex:
         embed_fn: EmbedFn | None = None,
         embed_mode: str = "stub",
     ) -> list[RetrievalHit]:
-        if not self._chunks:
+        if not self._chunks and not self._vec_ids:
             self._load()
-        if not self._vectors:
+        if not self._vectors and self._mat_norm is None:
             return []
         effective_mode = embed_mode
         if self.last_embed_mode == "stub" and embed_mode != "live":
@@ -149,16 +297,46 @@ class SemanticStubIndex:
         except Exception:
             qv = MockEmbedder().embed_query(query)
             self.last_embed_mode = "stub"
+
+        k = max(1, topk)
+        if _np is not None and self._mat_norm is not None and len(qv) == self._mat_norm.shape[1]:
+            qv_arr = _np.asarray(qv, dtype=_np.float32)
+            qnorm = float(_np.linalg.norm(qv_arr))
+            qv_unit = qv_arr / qnorm if qnorm > 1e-12 else _np.zeros_like(qv_arr)
+            scores_arr = self._mat_norm @ qv_unit
+            n = int(scores_arr.shape[0])
+            if n <= k:
+                top_idx = _np.argsort(-scores_arr)
+            else:
+                part = _np.argpartition(-scores_arr, k - 1)[:k]
+                top_idx = part[_np.argsort(-scores_arr[part])]
+            hits: list[RetrievalHit] = []
+            for idx_i in top_idx:
+                i = int(idx_i)
+                cid = self._vec_ids[i]
+                d = self._chunks.get(cid) or {}
+                hits.append(
+                    RetrievalHit(
+                        chunk_id=cid,
+                        score=float(scores_arr[i]),
+                        backend="lightrag",
+                        snippet=snippet(str(d.get("text") or "")),
+                        source_path=d.get("source_path"),
+                    )
+                )
+            return hits
+
+        self._ensure_vectors_dict()
         scored: list[tuple[str, float]] = []
         qnorm = sum(float(x) * float(x) for x in qv) ** 0.5
         if qnorm > 0:
-            qv_unit = [float(x) / qnorm for x in qv]
-            nz = [(i, x) for i, x in enumerate(qv_unit) if x != 0.0]
+            qv_unit_list = [float(x) / qnorm for x in qv]
+            nz = [(i, x) for i, x in enumerate(qv_unit_list) if x != 0.0]
         else:
-            qv_unit = []
+            qv_unit_list = []
             nz = []
-        if nz and len(nz) < len(qv_unit) // 2:
-            qlen = len(qv_unit)
+        if nz and len(nz) < len(qv_unit_list) // 2:
+            qlen = len(qv_unit_list)
             for cid, vec in self._vectors.items():
                 if len(vec) == qlen:
                     scored.append((cid, sum(x * vec[i] for i, x in nz)))
@@ -168,8 +346,8 @@ class SemanticStubIndex:
             for cid, vec in self._vectors.items():
                 scored.append((cid, cosine_similarity(qv, vec)))
         scored.sort(key=lambda x: x[1], reverse=True)
-        hits: list[RetrievalHit] = []
-        for cid, sc in scored[: max(1, topk)]:
+        hits = []
+        for cid, sc in scored[:k]:
             d = self._chunks.get(cid) or {}
             hits.append(
                 RetrievalHit(
@@ -222,22 +400,19 @@ class LightRAGAdapter:
             self._try_init_lightrag()
 
     def _try_init_lightrag(self) -> None:
-        try:
-            import lightrag  # noqa: F401
-        except Exception as e:
-            log.info("lightrag import failed; using semantic stub: %s", e)
+        global _LIGHTRAG_IMPORTABLE
+        if _LIGHTRAG_IMPORTABLE is None:
+            try:
+                import lightrag  # noqa: F401
+                _LIGHTRAG_IMPORTABLE = True
+            except Exception as e:
+                log.info("lightrag import failed; using semantic stub: %s", e)
+                _LIGHTRAG_IMPORTABLE = False
+        if not _LIGHTRAG_IMPORTABLE:
             self.mode = "stub"
             return
         self.mode = "stub_with_lightrag_importable"
-        try:
-            self._rag = None
-            log.info(
-                "lightrag package importable; dual-write uses semantic stub "
-                "(extend LightRAGAdapter for full graph mode when LLM configured)"
-            )
-        except Exception as e:
-            log.warning("lightrag init failed: %s", e)
-            self.mode = "stub"
+        self._rag = None
 
     def clear(self) -> None:
         self.stub.clear()

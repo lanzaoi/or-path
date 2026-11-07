@@ -79,6 +79,7 @@ if exist ".venv\pyvenv.cfg" set "HAS_WSL_VENV=1"
 if exist ".venv\bin\python" set "HAS_WSL_VENV=1"
 if "!IS_WSL_UNC!"=="1" set "HAS_WSL_VENV=1"
 if "!HAS_WSL_VENV!"=="1" goto :wsl_start
+if not defined ORPATH_HOST set "ORPATH_HOST=127.0.0.1"
 
 REM 3. 检查系统 Python（排除 WindowsApps 商店占位程序，且需具备核心依赖）
 for /f "delims=" %%P in ('where python 2^>nul') do (
@@ -97,12 +98,13 @@ if "!PUSHD_OK!"=="1" popd
 exit /b 1
 
 :wsl_start
+if not defined ORPATH_HOST set "ORPATH_HOST=127.0.0.1"
 echo [INFO] 检测到 WSL 虚拟环境 (.venv/bin/python)，正在通过 WSL 启动服务并打开浏览器...
 start "" "!URL!"
 if defined WSL_DISTRO (
-  wsl.exe -d "!WSL_DISTRO!" bash -lc "IFS=; D=$(wslpath -u $1 2>/dev/null || echo $2); cd $D && exec .venv/bin/python scripts/orpath_watch.py --slug $3 --thread-id $4 --host 0.0.0.0 --port $5 --no-browser" -- "!WSL_RAW_HOME!" "!WSL_LINUX_DIR!" "!SLUG!" "!THREAD!" "!PORT!"
+  wsl.exe -d "!WSL_DISTRO!" bash -lc "IFS=; D=$(wslpath -u $1 2>/dev/null || echo $2); cd $D && exec .venv/bin/python scripts/orpath_watch.py --slug $3 --thread-id $4 --host $6 --port $5 --no-browser" -- "!WSL_RAW_HOME!" "!WSL_LINUX_DIR!" "!SLUG!" "!THREAD!" "!PORT!" "!ORPATH_HOST!"
 ) else (
-  wsl.exe bash -lc "IFS=; D=$(wslpath -u $1 2>/dev/null || echo $2); cd $D && exec .venv/bin/python scripts/orpath_watch.py --slug $3 --thread-id $4 --host 0.0.0.0 --port $5 --no-browser" -- "!WSL_RAW_HOME!" "!WSL_LINUX_DIR!" "!SLUG!" "!THREAD!" "!PORT!"
+  wsl.exe bash -lc "IFS=; D=$(wslpath -u $1 2>/dev/null || echo $2); cd $D && exec .venv/bin/python scripts/orpath_watch.py --slug $3 --thread-id $4 --host $6 --port $5 --no-browser" -- "!WSL_RAW_HOME!" "!WSL_LINUX_DIR!" "!SLUG!" "!THREAD!" "!PORT!" "!ORPATH_HOST!"
 )
 set "EC=!ERRORLEVEL!"
 if not "!EC!"=="0" (

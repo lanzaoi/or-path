@@ -1,6 +1,7 @@
 # OR-Path — .gitignore
 
 # Python
+.venv/
 .venv-314/
 __pycache__/
 *.pyc
@@ -76,6 +77,7 @@ runtime/
 *.png
 
 # Contest bulk / local case drops — NEVER publish
+fixtures/benchmarks/microgrid/result*.xlsx
 fixtures/t3/tube_cut_b2026/raw/
 inbox/**
 !inbox/README.md
@@ -98,3 +100,5 @@ third_party/**/node_modules/
 eval_or_bench/__pycache__/
 eval_or_bench/**/__pycache__/
 eval_or_bench/__pycache__/
+
+/docs/_deprecated/tasks/

@@ -125,17 +125,15 @@ class FTSIndex:
         q = (query or "").strip()
         if not q:
             return []
-        # Escape FTS5 special chars by quoting tokens simply
-        # Prefer MATCH; fallback to LIKE if MATCH fails
-        conn = self._connect()
+        terms = [t for t in q.replace('"', " ").split() if t]
+        if not terms:
+            return []
+        # Read-only query path: never run DDL / commit fsync on search
+        conn = sqlite3.connect(str(self.db_path), timeout=60.0)
+        conn.row_factory = sqlite3.Row
         hits: list[RetrievalHit] = []
         try:
-            self.ensure_schema(conn)
             try:
-                # Build simple OR query from terms
-                terms = [t for t in q.replace('"', " ").split() if t]
-                if not terms:
-                    return []
                 fts_q = " OR ".join(f'"{t}"' for t in terms)
                 rows = conn.execute(
                     """
@@ -149,7 +147,6 @@ class FTSIndex:
                     (fts_q, max(1, topk)),
                 ).fetchall()
                 for r in rows:
-                    # bm25 in sqlite is lower-is-better; invert for higher-is-better
                     rank = float(r["rank"])
                     score = 1.0 / (1.0 + max(rank, 0.0)) if rank >= 0 else -rank
                     hits.append(
@@ -162,16 +159,18 @@ class FTSIndex:
                         )
                     )
             except sqlite3.OperationalError:
-                # LIKE fallback
                 like = f"%{q}%"
-                rows = conn.execute(
-                    """
-                    SELECT chunk_id, source_path, text FROM chunks_meta
-                    WHERE text LIKE ?
-                    LIMIT ?
-                    """,
-                    (like, max(1, topk)),
-                ).fetchall()
+                try:
+                    rows = conn.execute(
+                        """
+                        SELECT chunk_id, source_path, text FROM chunks_meta
+                        WHERE text LIKE ?
+                        LIMIT ?
+                        """,
+                        (like, max(1, topk)),
+                    ).fetchall()
+                except sqlite3.OperationalError:
+                    return []
                 for i, r in enumerate(rows):
                     hits.append(
                         RetrievalHit(

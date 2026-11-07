@@ -1051,7 +1051,27 @@ def run_deep_analysis(
     retrieval_query = " ".join(retrieval_query_parts).strip() or "operations research mathematical programming"
 
     knowledge_hits: list[dict[str, Any]] = []
+    matched_skills: list[dict[str, str]] = []
+    literature_anchors: list[dict[str, Any]] = []
     knowledge_context_str = ""
+    try:
+        from orpath.agents.knowledge_pack import extract_skill_highlights, match_top_literature
+
+        skills_raw, _chk, _modes = extract_skill_highlights(
+            problem_class=detected_class if detected_class != "unregistered" else "",
+            home=home,
+        )
+        matched_skills = [{"id": s["id"], "path": s["path"], "excerpt": s["excerpt"][:200]} for s in skills_raw[:4]]
+        literature_anchors = match_top_literature(
+            problem_class=detected_class if detected_class != "unregistered" else "",
+            query=retrieval_query,
+            topk=3,
+            home=home,
+        )
+    except Exception:
+        matched_skills = []
+        literature_anchors = []
+
     try:
         from knowledge_svc.retrieve import retrieve as ks_retrieve
         from knowledge_svc.retrieve import artifact_to_payload
@@ -1064,7 +1084,7 @@ def run_deep_analysis(
             art_obj = ks_retrieve(
                 retrieval_query,
                 mode=k_mode,  # type: ignore[arg-type]
-                topk=3,
+                topk=4,
                 root=home,
                 problem_class=detected_class if detected_class != "unregistered" else None,
             )
@@ -1091,11 +1111,16 @@ def run_deep_analysis(
                     "snippet": str(h.get("snippet") or "")[:240],
                 })
 
-            if knowledge_hits:
-                knowledge_context_str = "\n".join(
-                    f"- 📚 [{kh['title']}] ({kh['backend']}): {kh['snippet']}"
-                    for kh in knowledge_hits
-                )
+            ctx_lines = [
+                f"- 📚 [{kh['title']}] ({kh['backend']}): {kh['snippet']}"
+                for kh in knowledge_hits
+            ]
+            for sk in matched_skills[:2]:
+                ctx_lines.append(f"- 🛠️ [Skill:{sk['id']}]: {sk['excerpt'][:160]}")
+            for lit in literature_anchors[:2]:
+                ctx_lines.append(f"- 🏛️ [TopJournal:{lit['cite_label']}]: {lit['title']} ({lit['venue']})")
+            if ctx_lines:
+                knowledge_context_str = "\n".join(ctx_lines)
     except Exception as exc:
         knowledge_context_str = f"（知识库检索跳过: {exc}）"
 
@@ -1225,9 +1250,13 @@ def run_deep_analysis(
             "reasoning_text": reasoning_text,
             "citations": citations,
             "knowledge_hits": knowledge_hits,
+            "matched_skills": matched_skills,
+            "literature_anchors": literature_anchors,
             "retrieval_query": retrieval_query,
         },
         "knowledge_hits": knowledge_hits,
+        "matched_skills": matched_skills,
+        "literature_anchors": literature_anchors,
         "retrieval_query": retrieval_query,
         "clarification_questions": clarification_questions,
     }

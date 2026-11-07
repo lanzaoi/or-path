@@ -19,12 +19,18 @@ EmbedMode = Literal["live", "stub"]
 EmbedFn = Callable[[Sequence[str]], list[list[float]]]
 
 
+_ENV_LOADED: set[Path] = set()
+
+
 def load_env(root: Path | None = None) -> None:
+    env_path = ((root or ROOT) / ".env").resolve()
+    if env_path in _ENV_LOADED:
+        return
+    _ENV_LOADED.add(env_path)
     try:
         from dotenv import load_dotenv as _load
     except ImportError:
         return
-    env_path = (root or ROOT) / ".env"
     if env_path.is_file():
         _load(env_path, override=False)
 

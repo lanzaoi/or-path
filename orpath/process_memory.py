@@ -277,6 +277,7 @@ def record_from_run(
     skills_used: list[str] | None = None,
     tags: list[str] | None = None,
     local: bool = True,
+    lesson_id: str | None = None,
 ) -> Path:
     les = new_lesson(
         problem_class=problem_class,
@@ -287,6 +288,7 @@ def record_from_run(
         artifact_paths=artifact_paths,
         tags=tags,
         slug=slug,
+        lesson_id=lesson_id,
     )
     return save_lesson(root, les, local=local)
 
@@ -297,12 +299,15 @@ def auto_draft_after_validate(
     *,
     gate_ok: bool,
 ) -> Path | None:
-    """Best-effort lesson draft after validate (process only)."""
+    """Best-effort lesson draft after validate (process only, Numbers-Truth stripped)."""
+    import os
+
     slug = str(state.get("slug") or "")
     pc = str(state.get("problem_class") or "")
     if not slug or not pc:
         return None
-    mode = str(state.get("solve_mode") or "")
+    mode = str(state.get("solve_mode") or "solver")
+    domain = str(state.get("domain_cartridge") or "")
     paths = [
         p
         for p in (
@@ -310,26 +315,36 @@ def auto_draft_after_validate(
             state.get("solution_path"),
             state.get("validate_path"),
             state.get("research_path"),
+            state.get("knowledge_pack_path"),
         )
         if p
     ]
+    skills = list(state.get("skills_used") or ["or-solver-select", "or-numbers-truth"])
+    remediated = [str(x)[:180] for x in (state.get("validator_errors") or state.get("remediated_errors") or []) if str(x).strip()]
+    safe_slug = re.sub(r"[^a-zA-Z0-9_-]", "_", slug)[:40]
+    lid = f"les_auto_{safe_slug}"
+
     if gate_ok:
         summary = (
-            f"Run `{slug}` class={pc} mode={mode}: validate OK. "
-            f"Process: research→model→solve({mode})→validate."
+            f"Run `{slug}` class={pc} domain={domain or '-'} mode={mode}: validate OK. "
+            f"Process: preflight(knowledge_pack)→analyst→modeler({mode})→validate."
         )
         decisions = [
             f"preferred/solve_mode used: {mode}",
-            "numbers accepted only after validate recompute",
+            "numbers accepted only after independent validate recompute",
         ]
-        pitfalls: list[str] = []
-        tags = [pc, mode, "validate_ok"]
+        if domain:
+            decisions.append(f"domain_cartridge={domain}")
+        pitfalls: list[str] = [f"remediated prior failure: {e}" for e in remediated[:2]]
+        tags = [t for t in (pc, domain, mode, "validate_ok") if t]
     else:
         err = str(state.get("last_error") or "validate failed")[:200]
         summary = f"Run `{slug}` class={pc} mode={mode}: validate FAIL — {err}"
         decisions = [f"attempted mode={mode}"]
         pitfalls = [err, "do not invent objective to paper over fail"]
-        tags = [pc, mode, "validate_fail"]
+        tags = [t for t in (pc, domain, mode, "validate_fail") if t]
+
+    promote_seed = (os.environ.get("ORPATH_PROMOTE_LESSONS") or "").strip().lower() == "seed"
     return record_from_run(
         root,
         slug=slug,
@@ -338,9 +353,10 @@ def auto_draft_after_validate(
         key_decisions=decisions,
         pitfalls=pitfalls,
         artifact_paths=[str(p) for p in paths],
-        skills_used=["or-solver-select", "or-numbers-truth"],
+        skills_used=skills,
         tags=tags,
-        local=True,
+        local=not promote_seed,
+        lesson_id=lid,
     )
 
 

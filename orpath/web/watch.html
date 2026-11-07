@@ -5294,29 +5294,88 @@ function initStudioWorkbench() {
 
     const kBanner = $("studioKnowledgeBanner");
     const kHits = ana.knowledge_hits || (meta && meta.knowledge_hits) || [];
+    const kSkills = ana.matched_skills || (meta && meta.matched_skills) || [];
+    const kLit = ana.literature_anchors || (meta && meta.literature_anchors) || [];
     if (kBanner) {
-      if (kHits && kHits.length > 0) {
-        kBanner.style.display = "block";
-        kBanner.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
-            <strong style="font-size:13px;color:#4338ca">📚 运筹知识库先验与文献检索 (RAG 召回 ${kHits.length} 篇)</strong>
-            <span style="font-size:10px;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:8px;font-weight:600">Hybrid BM25 + ONNX bge-m3</span>
+      kBanner.style.display = "block";
+      const renderHitRow = (kh, checked = true) => `
+        <label style="display:flex;align-items:flex-start;gap:8px;background:#fff;border:1px solid #e0e7ff;border-radius:6px;padding:7px 10px;font-size:11px;cursor:pointer">
+          <input type="checkbox" class="studio-pin-kb" ${checked ? "checked" : ""}
+            data-kb-id="${esc(kh.chunk_id || kh.id || '')}"
+            data-kb-title="${esc(kh.title || kh.chunk_id || '')}"
+            data-kb-kind="chunk"
+            data-kb-snippet="${esc((kh.snippet || '').slice(0, 180))}"
+            style="margin-top:2px;cursor:pointer" />
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;gap:6px">
+              <span style="font-weight:600;color:#1e1b4b">📄 ${esc(kh.title || kh.chunk_id)}</span>
+              <span style="font-size:10px;color:#6366f1;font-family:var(--mono)">相关度: ${esc(kh.score ?? '-')}</span>
+            </div>
+            <div style="color:var(--ink-48);line-height:1.4;font-size:10.5px">${esc(kh.snippet || '')}</div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            ${kHits.map(kh => `
-              <div style="background:#fff;border:1px solid #e0e7ff;border-radius:6px;padding:6px 10px;font-size:11px">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
-                  <span style="font-weight:600;color:#1e1b4b">📄 ${esc(kh.title || kh.chunk_id)}</span>
-                  <span style="font-size:10px;color:#6366f1;font-family:var(--mono)">相似度: ${esc(kh.score)}</span>
-                </div>
-                <div style="color:var(--ink-48);line-height:1.4;font-size:10.5px">${esc(kh.snippet || '')}</div>
-              </div>
-            `).join('')}
+        </label>
+      `;
+
+      kBanner.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+          <strong style="font-size:13px;color:#4338ca">📚 运筹知识库先验工作台 (勾选锁定项将注入建模与论文锚点)</strong>
+          <span style="font-size:10px;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:8px;font-weight:600">Hybrid BM25 + bge-m3 + Top500 顶刊</span>
+        </div>
+        ${kSkills.length > 0 ? `
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+            ${kSkills.map((sk, idx) => `
+              <label style="display:inline-flex;align-items:center;gap:5px;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:600;cursor:pointer">
+                <input type="checkbox" class="studio-pin-kb" ${idx < 2 ? "checked" : ""}
+                  data-kb-id="${esc(sk.id)}"
+                  data-kb-title="${esc(sk.id)}"
+                  data-kb-kind="skill"
+                  data-kb-snippet="${esc((sk.excerpt || '').slice(0, 160))}" />
+                🛠️ Skill: ${esc(sk.id)}
+              </label>
+            `).join("")}
           </div>
-        `;
-      } else {
-        kBanner.style.display = "none";
-      }
+        ` : ""}
+        <div id="studioKbItemsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+          ${kHits.map((kh, idx) => renderHitRow(kh, idx < 2)).join("")}
+        </div>
+        ${kLit.length > 0 ? `
+          <div style="background:#f5f3ff;border:1px dashed #c4b5fd;border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:10.5px;color:#4c1d95;line-height:1.5">
+            <strong>🏛️ 匹配权威顶刊文献锚点：</strong>
+            ${kLit.map(l => `<span style="margin-right:10px">• ${esc(l.cite_label)} <em>${esc(l.title)}</em> (${esc(l.venue)})</span>`).join("")}
+          </div>
+        ` : ""}
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="text" id="studioKbSearchInput" placeholder="实时检索知识库方法/模型/割平面 (例如: cutting plane subtour, column generation)…"
+            style="flex:1;height:30px;padding:0 10px;border:1px solid #c7d2fe;border-radius:6px;font-size:11.5px;background:#fff;outline:none" />
+          <button type="button" class="wb-btn" id="btnStudioKbSearch" style="height:30px;padding:0 12px;font-size:11.5px">🔍 检索并锁定</button>
+        </div>
+      `;
+
+      const kbBtn = $("btnStudioKbSearch");
+      const kbInp = $("studioKbSearchInput");
+      const kbList = $("studioKbItemsList");
+      const doKbSearch = async () => {
+        const q = (kbInp?.value || "").trim();
+        if (!q || !kbList) return;
+        if (kbBtn) { kbBtn.disabled = true; kbBtn.textContent = "检索中…"; }
+        try {
+          const pc = encodeURIComponent(diag.problem_class || "");
+          const res = await fetch(`/api/knowledge/search?q=${encodeURIComponent(q)}&problem_class=${pc}&topk=4`);
+          const data = await res.json();
+          if (data && data.ok && Array.isArray(data.hits)) {
+            const existing = new Set(Array.from(kbList.querySelectorAll(".studio-pin-kb")).map(el => el.getAttribute("data-kb-id")));
+            const fresh = data.hits.filter(h => !existing.has(String(h.chunk_id)));
+            if (fresh.length > 0) {
+              kbList.insertAdjacentHTML("afterbegin", fresh.map(h => renderHitRow(h, true)).join(""));
+            }
+          }
+        } catch (_) {
+        } finally {
+          if (kbBtn) { kbBtn.disabled = false; kbBtn.textContent = "🔍 检索并锁定"; }
+        }
+      };
+      if (kbBtn) kbBtn.addEventListener("click", doKbSearch);
+      if (kbInp) kbInp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); doKbSearch(); } });
     }
 
     const algoList = $("studioAlgoList");
@@ -5398,7 +5457,17 @@ function initStudioWorkbench() {
 
       const savedKey = (apiKeyInput?.value || localStorage.getItem("orpath_deepseek_key") || "").trim();
       const savedModel = (modelSelect?.value || localStorage.getItem("orpath_model_name") || "spark-x2.6").trim();
-      const isOffline = savedModel === "offline" || (!savedKey && !savedModel);
+      const isOffline = savedModel === "offline" || !savedKey;
+
+      const confController = new AbortController();
+      const confTimeout = setTimeout(() => confController.abort(), 130000);
+
+      const pinnedKnowledge = Array.from(document.querySelectorAll(".studio-pin-kb:checked")).map(el => ({
+        id: el.getAttribute("data-kb-id") || "",
+        title: el.getAttribute("data-kb-title") || "",
+        kind: el.getAttribute("data-kb-kind") || "chunk",
+        snippet: el.getAttribute("data-kb-snippet") || "",
+      })).filter(x => x.id || x.title);
 
       try {
         const confRes = await fetch("/api/studio/confirm", {
@@ -5408,10 +5477,12 @@ function initStudioWorkbench() {
             slug,
             selected_options: selectedOptions,
             extra_prompt: extraPrompt,
+            pinned_knowledge: pinnedKnowledge,
             api_key: savedKey,
             model: savedModel,
             timeout: isOffline ? 3.0 : 60.0,
           }),
+          signal: confController.signal,
         });
         const confJson = await confRes.json();
         if (!confJson.ok) throw new Error(confJson.error || "求解失败");
@@ -5422,9 +5493,11 @@ function initStudioWorkbench() {
         if (st2) st2.innerHTML = '<span style="color:#dc2626">❌ 求解受阻</span>';
         if (errBox) {
           errBox.style.display = "block";
-          errBox.innerHTML = `<strong>⚠️ 求解失败：</strong> ${esc(err.message)} <br/><span style="font-size:11px;opacity:0.8">请检查题面参数或在高级选项中补充说明。</span>`;
+          const errMsg = err.name === "AbortError" ? "求解等待超时 (130s)，请检查模型响应或降低求解规模。" : err.message;
+          errBox.innerHTML = `<strong>⚠️ 求解失败：</strong> ${esc(errMsg)} <br/><span style="font-size:11px;opacity:0.8">请检查题面参数或在高级选项中补充说明。</span>`;
         }
       } finally {
+        clearTimeout(confTimeout);
         btnConfirm.disabled = false;
         btnConfirm.textContent = "✅ 确认决策并启动真算";
       }
@@ -5438,13 +5511,37 @@ function initStudioWorkbench() {
     setAgentActive("all_done");
 
     const summary = res.plain_language_summary || {};
-    if ($("studioHeadline")) $("studioHeadline").textContent = summary.headline || (res.status === "COMPLETED" ? "优化问题已成功求解" : "求解完成");
+    const isProvenOpt = Boolean(
+      res.proven_optimal ??
+      res.solution?.proven_optimal ??
+      res.solution?.meta?.proven_optimal ??
+      summary.proven_optimal
+    );
+
+    if ($("studioHeadline")) {
+      $("studioHeadline").textContent = summary.headline || (res.status === "COMPLETED" ? "运筹问题已成功求解" : "求解完成");
+    }
+
     const fallbackObj = (res.solution && res.solution.objective != null)
-      ? `最优目标值: ${res.solution.objective}`
+      ? (isProvenOpt ? `严格最优目标值: ${res.solution.objective}` : `可行解目标值: ${res.solution.objective} (未证最优)`)
       : (res.status === "BLOCKED" ? "无解/求解受阻" : "等待求解产物");
-    if ($("studioObjective")) $("studioObjective").textContent = summary.objective_str || fallbackObj;
-    if ($("studioValidation")) $("studioValidation").textContent = summary.validation_status || (res.status === "COMPLETED" ? "数理门禁 100% 校验合格" : "校验中或待完成");
-    if ($("studioSolutionDetail")) $("studioSolutionDetail").textContent = summary.solution_detail || "";
+
+    if ($("studioObjective")) {
+      const objText = summary.objective_str || fallbackObj;
+      const optBadge = isProvenOpt
+        ? '<span style="font-size:11px;background:#ecfdf5;color:#047857;padding:3px 8px;border-radius:12px;font-weight:700;margin-left:10px;vertical-align:middle;border:1px solid #a7f3d0">★ 严格全局最优</span>'
+        : (res.solution && res.solution.objective != null
+          ? '<span style="font-size:11px;background:#fffbeb;color:#b45309;padding:3px 8px;border-radius:12px;font-weight:600;margin-left:10px;vertical-align:middle;border:1px solid #fde68a">⚡ 可行解 (未证最优)</span>'
+          : '');
+      $("studioObjective").innerHTML = `${esc(objText)} ${optBadge}`;
+    }
+
+    if ($("studioValidation")) {
+      $("studioValidation").textContent = summary.validation_status || (res.status === "COMPLETED" ? "数理门禁校验合格" : "校验中或待完成");
+    }
+    if ($("studioSolutionDetail")) {
+      $("studioSolutionDetail").textContent = summary.solution_detail || "";
+    }
 
     const dlSol = $("dlSolution");
     if (dlSol) dlSol.href = `/api/artifact/download?slug=${encodeURIComponent(slug)}&kind=solution`;
@@ -5522,54 +5619,36 @@ function initStudioWorkbench() {
     if (!container) return;
     const colors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#84cc16"];
 
-    // Dynamic extraction if real JSSP schedule is present
-    let ops = [];
-    let machines = [];
-    let makespan = 55;
-    let isRealData = false;
-
-    if (solution && Array.isArray(solution.schedule) && solution.schedule.length > 0) {
-      isRealData = true;
-      const rawSched = solution.schedule;
-      const mSet = new Set();
-      rawSched.forEach(s => {
-        if (s.machine != null) mSet.add(Number(s.machine));
-      });
-      const mSorted = Array.from(mSet).sort((a, b) => a - b);
-      machines = mSorted.map(m => `M${m} 机床单元`);
-      makespan = Number(solution.metrics?.makespan || Math.max(...rawSched.map(s => s.end || 0)) || 55);
-
-      ops = rawSched.slice(0, 36).map(s => ({
-        m: mSorted.indexOf(Number(s.machine)),
-        j: Number(s.job ?? 0),
-        s: Number(s.start ?? 0),
-        e: Number(s.end ?? 0),
-        dur: Number(s.duration ?? (s.end - s.start)),
-        name: `工件${s.job ?? 0}-工序${s.task ?? s.op ?? 0}`,
-      })).filter(o => o.m >= 0);
-    } else {
-      // Golden benchmark Taillard ft06 standard
-      machines = ["M0 卧式铣床", "M1 数控车床", "M2 高速冲床", "M3 精密磨床", "M4 深孔钻床", "M5 终检攻丝"];
-      makespan = 55;
-      ops = [
-        { m: 0, j: 0, s: 0, e: 12, dur: 12, name: "工件0-粗铣" },
-        { m: 1, j: 1, s: 0, e: 10, dur: 10, name: "工件1-车削" },
-        { m: 2, j: 2, s: 0, e: 15, dur: 15, name: "工件2-冲压" },
-        { m: 3, j: 3, s: 0, e: 8, dur: 8, name: "工件3-磨削" },
-        { m: 0, j: 1, s: 12, e: 24, dur: 12, name: "工件1-精铣" },
-        { m: 1, j: 0, s: 12, e: 26, dur: 14, name: "工件0-精车" },
-        { m: 2, j: 3, s: 15, e: 27, dur: 12, name: "工件3-冲压" },
-        { m: 4, j: 4, s: 0, e: 18, dur: 18, name: "工件4-钻孔" },
-        { m: 5, j: 5, s: 0, e: 14, dur: 14, name: "工件5-攻丝" },
-        { m: 3, j: 2, s: 15, e: 29, dur: 14, name: "工件2-精磨" },
-        { m: 4, j: 0, s: 26, e: 42, dur: 16, name: "工件0-镗孔" },
-        { m: 0, j: 5, s: 24, e: 38, dur: 14, name: "工件5-铣槽" },
-        { m: 5, j: 1, s: 26, e: 45, dur: 19, name: "工件1-终磨" },
-        { m: 1, j: 4, s: 26, e: 40, dur: 14, name: "工件4-切断" },
-        { m: 2, j: 5, s: 38, e: 55, dur: 17, name: "工件5-质检" },
-        { m: 5, j: 4, s: 45, e: 55, dur: 10, name: "工件4-总检" },
-      ];
+    if (!solution || !Array.isArray(solution.schedule) || solution.schedule.length === 0) {
+      container.innerHTML = `
+        <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
+          <div style="font-size:32px;margin-bottom:8px">🏭</div>
+          <div style="font-weight:600;font-size:13px;color:#334155">当前算例不含工序时序排程数据</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
+            甘特图专用于流水/作业车间调度（JSSP/FJSSP/RCPSP）工序可视化。<br/>根据 <strong>Numbers Truth</strong> 准则：当前输出无真实 schedule 数组，系统严禁虚构排产基准。
+          </div>
+        </div>
+      `;
+      return;
     }
+
+    const rawSched = solution.schedule;
+    const mSet = new Set();
+    rawSched.forEach(s => {
+      if (s.machine != null) mSet.add(Number(s.machine));
+    });
+    const mSorted = Array.from(mSet).sort((a, b) => a - b);
+    const machines = mSorted.map(m => `M${m} 机床/设备`);
+    const makespan = Number(solution.metrics?.makespan || Math.max(...rawSched.map(s => s.end || 0)) || 0);
+
+    const ops = rawSched.slice(0, 48).map(s => ({
+      m: mSorted.indexOf(Number(s.machine)),
+      j: Number(s.job ?? 0),
+      s: Number(s.start ?? 0),
+      e: Number(s.end ?? 0),
+      dur: Number(s.duration ?? (s.end - s.start)),
+      name: `工件${s.job ?? 0}-工序${s.task ?? s.op ?? 0}`,
+    })).filter(o => o.m >= 0);
 
     const maxT = Math.max(makespan + 5, 20);
     const startX = 110;
@@ -5582,7 +5661,7 @@ function initStudioWorkbench() {
     svg += `<rect width="820" height="${totalH}" fill="#ffffff" rx="10"/>`;
 
     // Horizontal grid & timeline
-    const stepT = maxT > 100 ? 20 : 10;
+    const stepT = maxT > 100 ? (maxT > 300 ? 50 : 20) : 10;
     for (let t = 0; t <= maxT; t += stepT) {
       const x = startX + t * scaleX;
       svg += `<line x1="${x}" y1="20" x2="${x}" y2="${totalH - 45}" stroke="#f1f5f9" stroke-width="1"/>`;
@@ -5613,12 +5692,14 @@ function initStudioWorkbench() {
     });
 
     // Makespan marker
-    const msX = startX + makespan * scaleX;
-    svg += `
-      <line x1="${msX}" y1="16" x2="${msX}" y2="${totalH - 42}" stroke="#dc2626" stroke-width="2" stroke-dasharray="4,4"/>
-      <rect x="${msX - 52}" y="6" width="104" height="20" rx="4" fill="#fef2f2" stroke="#dc2626" stroke-width="1"/>
-      <text x="${msX}" y="20" font-size="9.5" font-weight="700" fill="#dc2626" text-anchor="middle">${makespan === 55 ? "Makespan = 55" : `Makespan = ${makespan}`}</text>
-    `;
+    if (makespan > 0) {
+      const msX = startX + makespan * scaleX;
+      svg += `
+        <line x1="${msX}" y1="16" x2="${msX}" y2="${totalH - 42}" stroke="#dc2626" stroke-width="2" stroke-dasharray="4,4"/>
+        <rect x="${msX - 52}" y="6" width="104" height="20" rx="4" fill="#fef2f2" stroke="#dc2626" stroke-width="1"/>
+        <text x="${msX}" y="20" font-size="9.5" font-weight="700" fill="#dc2626" text-anchor="middle">Makespan = ${makespan}</text>
+      `;
+    }
 
     // Legend
     svg += `<g transform="translate(110, ${totalH - 12})">`;
@@ -5632,17 +5713,13 @@ function initStudioWorkbench() {
     }
     svg += `</g></svg>`;
 
-    const dataBadge = isRealData
-      ? '<span style="font-size:10px;background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">✓ 真实求解排产数据</span>'
-      : '<span style="font-size:10px;background:#eff6ff;color:#2563eb;padding:2px 8px;border-radius:6px;font-weight:600">Taillard ft06 黄金基准</span>';
-
     container.innerHTML = `
-      <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:gap:8px">
         <div style="display:flex;align-items:center;gap:8px">
           <span>🏭 <strong>车间排产逐机甘特图</strong> · ${machines.length} 台设备工序时序</span>
-          ${dataBadge}
+          <span style="font-size:10px;background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">✓ 真实排产数据 (${ops.length} 项工序)</span>
         </div>
-        <span style="font-family:var(--mono);color:#059669;font-weight:700">总完工时间 (Cmax): ${makespan} min · 冲突校验: 0 违背</span>
+        <span style="font-family:var(--mono);color:#059669;font-weight:700">总完工时间 (Cmax): ${makespan}</span>
       </div>
       ${svg}
     `;
@@ -5656,175 +5733,168 @@ function initStudioWorkbench() {
 
   function renderRouteMap(container, solution, domain) {
     if (!container) return;
-    const depot = { x: 410, y: 140 };
-    let isRealData = false;
-    let totalDist = "159.0 km";
-    let routes = [];
-    let customers = [];
+    const hasRoutes = solution && Array.isArray(solution.routes) && solution.routes.length > 0;
+    const hasTour = solution && Array.isArray(solution.tour) && solution.tour.length > 0;
 
-    if (solution && Array.isArray(solution.routes) && solution.routes.length > 0) {
-      isRealData = true;
-      totalDist = (solution.total_distance || solution.objective || 159) + " km";
-      const palette = ["#2563eb", "#059669", "#7c3aed", "#d97706", "#ec4899"];
-
-      // Radial synthetic layout if coordinate matrix is abstract
-      const samplePts = [
-        { x: 230, y: 70 }, { x: 170, y: 150 }, { x: 250, y: 220 }, { x: 330, y: 240 },
-        { x: 330, y: 60 }, { x: 490, y: 50 }, { x: 590, y: 70 }, { x: 660, y: 130 },
-        { x: 610, y: 220 }, { x: 500, y: 240 }, { x: 410, y: 250 }, { x: 120, y: 90 },
-      ];
-      customers = samplePts.map((p, idx) => ({ id: idx + 1, x: p.x, y: p.y, d: `${10 + (idx * 3) % 15}t` }));
-
-      routes = solution.routes.slice(0, 5).map((r, idx) => {
-        const cColor = palette[idx % palette.length];
-        const routeStops = [depot];
-        if (Array.isArray(r.route) && r.route.length > 0) {
-          r.route.slice(0, 4).forEach((cId) => {
-            const pt = customers[(cId - 1) % customers.length] || customers[idx % customers.length];
-            routeStops.push(pt);
-          });
-        } else {
-          routeStops.push(customers[(idx * 2) % customers.length]);
-          routeStops.push(customers[(idx * 2 + 1) % customers.length]);
-        }
-        routeStops.push(depot);
-        return {
-          id: `车队 ${idx + 1}`,
-          color: cColor,
-          pts: routeStops,
-          load: `${Math.min(98, 75 + (idx * 7) % 25)}%`,
-          dist: `${r.distance || (35 + idx * 6)} km`,
-        };
-      });
-    } else {
-      customers = [
-        { id: 1, x: 230, y: 70, d: "14t" },
-        { id: 2, x: 170, y: 150, d: "18t" },
-        { id: 3, x: 250, y: 220, d: "22t" },
-        { id: 4, x: 330, y: 240, d: "16t" },
-        { id: 5, x: 330, y: 60, d: "12t" },
-        { id: 6, x: 490, y: 50, d: "20t" },
-        { id: 7, x: 590, y: 70, d: "15t" },
-        { id: 8, x: 660, y: 130, d: "25t" },
-        { id: 9, x: 610, y: 220, d: "19t" },
-        { id: 10, x: 500, y: 240, d: "17t" },
-        { id: 11, x: 410, y: 250, d: "21t" },
-        { id: 12, x: 120, y: 90, d: "11t" },
-      ];
-      routes = [
-        { id: "车队 1", color: "#2563eb", pts: [depot, customers[4], customers[0], customers[11], customers[1], depot], load: "92%", dist: "42.6 km" },
-        { id: "车队 2", color: "#059669", pts: [depot, customers[2], customers[3], customers[10], depot], load: "85%", dist: "36.8 km" },
-        { id: "车队 3", color: "#7c3aed", pts: [depot, customers[5], customers[6], customers[7], depot], load: "94%", dist: "48.2 km" },
-        { id: "车队 4", color: "#d97706", pts: [depot, customers[9], customers[8], depot], load: "78%", dist: "31.4 km" },
-      ];
+    if (!hasRoutes && !hasTour) {
+      container.innerHTML = `
+        <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
+          <div style="font-size:32px;margin-bottom:8px">🗺️</div>
+          <div style="font-weight:600;font-size:13px;color:#334155">当前算例不含车辆或旅行商路径规划数据</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
+            路径图专用于车辆路径 (VRP/CVRP) 或旅行商回路 (TSP) 可视化。<br/>根据 <strong>Numbers Truth</strong> 准则：当前输出无 routes 或 tour 路径数据，系统严禁伪造路径拓扑。
+          </div>
+        </div>
+      `;
+      return;
     }
 
-    let svg = `<svg class="viz-svg" viewBox="0 0 820 290" xmlns="http://www.w3.org/2000/svg">`;
-    svg += `<defs>
-      <marker id="routeArrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-        <path d="M0,0 L0,6 L6,3 z" fill="#94a3b8"/>
-      </marker>
-    </defs>`;
-    svg += `<rect width="820" height="290" fill="#ffffff" rx="10"/>`;
+    const palette = ["#2563eb", "#059669", "#7c3aed", "#d97706", "#ec4899"];
+    const depot = { x: 410, y: 140, name: "场站/起点 0" };
 
-    // Polylines
-    routes.forEach(r => {
-      const dStr = r.pts.map((p, idx) => `${idx === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(" ");
-      svg += `<path d="${dStr}" fill="none" stroke="${r.color}" stroke-width="2.5" stroke-dasharray="solid" opacity="0.8" marker-end="url(#routeArrow)"/>`;
+    let normalizedRoutes = [];
+    if (hasRoutes) {
+      normalizedRoutes = solution.routes;
+    } else if (hasTour) {
+      normalizedRoutes = [{ route: solution.tour, distance: solution.objective }];
+    }
+
+    const nodeSeq = [];
+    normalizedRoutes.forEach(r => {
+      const arr = Array.isArray(r.route) ? r.route : (Array.isArray(r) ? r : []);
+      arr.forEach(n => {
+        const sid = String(n);
+        if (!nodeSeq.includes(sid)) nodeSeq.push(sid);
+      });
     });
 
-    // Customer nodes
+    const numNodes = nodeSeq.length;
+    const customers = [];
+    const radiusX = 270;
+    const radiusY = 85;
+    nodeSeq.forEach((nid, idx) => {
+      const angle = (idx / Math.max(1, numNodes)) * 2 * Math.PI - Math.PI / 2;
+      const px = 410 + radiusX * Math.cos(angle);
+      const py = 140 + radiusY * Math.sin(angle);
+      customers.push({ id: nid, x: px, y: py, name: `站点 ${nid}` });
+    });
+
+    const nodeMap = new Map();
+    customers.forEach(c => nodeMap.set(String(c.id), c));
+
+    const routes = normalizedRoutes.slice(0, 6).map((r, idx) => {
+      const cColor = palette[idx % palette.length];
+      const routeArr = Array.isArray(r.route) ? r.route : (Array.isArray(r) ? r : []);
+      const routeStops = [depot];
+      routeArr.forEach(nid => {
+        const pt = nodeMap.get(String(nid));
+        if (pt) routeStops.push(pt);
+      });
+      routeStops.push(depot);
+      return {
+        id: hasRoutes ? `车队 ${idx + 1}` : "巡检回路",
+        color: cColor,
+        pts: routeStops,
+        dist: r.distance != null ? `${r.distance}` : (solution.objective != null ? `${solution.objective}` : "已规划"),
+      };
+    });
+
+    let svg = `<svg class="viz-svg" viewBox="0 0 820 280" xmlns="http://www.w3.org/2000/svg">`;
+    svg += `<rect width="820" height="280" fill="#ffffff" rx="10"/>`;
+
+    // Background concentric grid
+    svg += `<circle cx="410" cy="140" r="110" fill="none" stroke="#f1f5f9" stroke-width="1.5" stroke-dasharray="4,4"/>`;
+    svg += `<circle cx="410" cy="140" r="210" fill="none" stroke="#f8fafc" stroke-width="1.5"/>`;
+
+    // Draw route lines
+    routes.forEach(route => {
+      let pathD = "";
+      route.pts.forEach((pt, pIdx) => {
+        pathD += (pIdx === 0 ? "M " : " L ") + `${pt.x} ${pt.y}`;
+      });
+      svg += `<path d="${pathD}" fill="none" stroke="${route.color}" stroke-width="2" stroke-opacity="0.85" stroke-dasharray="6,3"/>`;
+    });
+
+    // Draw customer nodes
     customers.forEach(c => {
-      const desc = `客户点 C${c.id} · 货物需求: ${c.d} · 坐标 (${c.x}, ${c.y})`;
+      const desc = `${c.name} · 拓扑受访节点`;
       svg += `
-        <g class="route-node" data-node-desc="${esc(desc)}" tabindex="0">
+        <g class="route-node" data-node-desc="${esc(desc)}" tabindex="0" style="cursor:pointer">
           <title>${esc(desc)}</title>
-          <circle cx="${c.x}" cy="${c.y}" r="11" fill="#ffffff" stroke="#2563eb" stroke-width="2.5"/>
-          <text x="${c.x}" y="${c.y + 3.5}" font-size="9.5" font-weight="700" fill="#1e293b" text-anchor="middle" pointer-events="none">${c.id}</text>
-          <text x="${c.x}" y="${c.y - 14}" font-size="8.5" fill="#64748b" text-anchor="middle" font-family="var(--mono)" pointer-events="none">${c.d}</text>
+          <circle cx="${c.x}" cy="${c.y}" r="6" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+          <text x="${c.x}" y="${c.y + 15}" font-size="9" font-family="var(--mono)" font-weight="600" fill="#475569" text-anchor="middle">${esc(c.id)}</text>
         </g>
       `;
     });
 
-    // Depot marker
-    const depotDesc = `中心配送枢纽 (Depot) · 坐标 (${depot.x}, ${depot.y}) · 车队集散中心`;
+    // Draw Depot
     svg += `
-      <g class="route-node" data-node-desc="${esc(depotDesc)}" tabindex="0">
-        <title>${esc(depotDesc)}</title>
-        <rect x="${depot.x - 16}" y="${depot.y - 16}" width="32" height="32" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="2.5"/>
-        <text x="${depot.x}" y="${depot.y + 5}" font-size="14" text-anchor="middle" pointer-events="none">🏛️</text>
-        <text x="${depot.x}" y="${depot.y + 28}" font-size="10" font-weight="700" fill="#1e293b" text-anchor="middle" pointer-events="none">配送枢纽 (Depot)</text>
+      <g style="cursor:pointer">
+        <rect x="396" y="126" width="28" height="28" rx="6" fill="#dc2626" stroke="#ffffff" stroke-width="2"/>
+        <text x="410" y="144" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">★</text>
+        <text x="410" y="166" font-size="10" font-weight="700" fill="#dc2626" text-anchor="middle">起点</text>
       </g>
     `;
 
-    // Legend
-    svg += `<g transform="translate(60, 272)">`;
-    routes.forEach((r, idx) => {
-      const lx = idx * 175;
-      svg += `
-        <circle cx="${lx}" cy="0" r="5" fill="${r.color}"/>
-        <text x="${lx + 10}" y="3.5" font-size="10.5" fill="#475569">
-          <tspan font-weight="700">${r.id}</tspan> (${r.dist} · 满载率 ${r.load})
-        </text>
-      `;
-    });
-    svg += `</g></svg>`;
+    svg += `</svg>`;
 
-    const dataBadge = isRealData
-      ? '<span style="font-size:10px;background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">✓ 真实路径规划数据</span>'
-      : '<span style="font-size:10px;background:#eff6ff;color:#2563eb;padding:2px 8px;border-radius:6px;font-weight:600">Solomon C101 基准拓扑</span>';
+    const objLabel = solution.objective != null ? `目标耗费/里程: ${solution.objective}` : "路径规划完成";
 
     container.innerHTML = `
       <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <div style="display:flex;align-items:center;gap:8px">
-          <span>🚚 <strong>物流车队履约轨迹与拓扑网络</strong> · ${routes.length} 组闭环路径</span>
-          ${dataBadge}
+          <span>🗺️ <strong>车辆/巡检路径拓扑图</strong> · ${customers.length} 个受访站点 <span style="font-size:10px;color:#94a3b8">(拓扑序排布)</span></span>
+          <span style="font-size:10px;background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">✓ 真实路径规划数据</span>
         </div>
-        <span style="font-family:var(--mono);color:#059669;font-weight:700">总里程: ${esc(totalDist)} · 车辆超载: 0% · 满足全量窗约束</span>
+        <span style="font-family:var(--mono);color:#059669;font-weight:700">${esc(objLabel)}</span>
       </div>
       ${svg}
     `;
 
-    // Attach hover listener for interactive tooltip
     container.querySelectorAll(".route-node").forEach(node => {
       node.addEventListener("mouseenter", () => showVizTooltip(node.getAttribute("data-node-desc") || ""));
       node.addEventListener("mouseleave", hideVizTooltip);
     });
   }
 
-  function renderConvergenceGapCurve(container, gapHistory, domain) {
+  function renderConvergenceGapCurve(container, solution, domain) {
     if (!container) return;
-    const iters = [
-      { i: 0, ub: 210, lb: 110, gap: 47.6 },
-      { i: 1, ub: 185, lb: 112, gap: 39.5 },
-      { i: 2, ub: 168, lb: 116, gap: 31.0 },
-      { i: 3, ub: 152, lb: 120, gap: 21.1 },
-      { i: 4, ub: 142, lb: 122, gap: 14.1 },
-      { i: 5, ub: 135, lb: 125, gap: 7.4 },
-      { i: 6, ub: 131, lb: 126, gap: 3.8 },
-      { i: 7, ub: 129, lb: 127, gap: 1.6 },
-      { i: 8, ub: 128, lb: 128, gap: 0.0 },
-    ];
+    const rawGap = solution?.gap_history || solution?.metrics?.gap_history || solution?.meta?.gap_history;
+
+    if (!Array.isArray(rawGap) || rawGap.length < 2) {
+      container.innerHTML = `
+        <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
+          <div style="font-size:32px;margin-bottom:8px">📈</div>
+          <div style="font-weight:600;font-size:13px;color:#334155">当前求解为单阶段直接交付，无多轮迭代收敛历程</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
+            根据 <strong>Numbers Truth</strong> 准则：系统绝不伪造虚假收敛曲线与 0.00% 严密闭合结论。<br/>仅当求解器输出真实迭代历程数据（如松弛下界与上界轨迹）时呈现收敛分析。
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const iters = rawGap.map((pt, idx) => ({
+      i: pt.i ?? idx,
+      ub: Number(pt.ub ?? pt.upper_bound ?? 0),
+      lb: Number(pt.lb ?? pt.lower_bound ?? 0),
+      gap: Number(pt.gap ?? 0),
+    }));
 
     const startX = 90;
     const plotW = 680;
     const startY = 35;
     const plotH = 190;
 
-    const scaleX = plotW / (iters.length - 1);
-    const minVal = 100;
-    const maxVal = 220;
-    const scaleY = plotH / (maxVal - minVal);
+    const scaleX = plotW / Math.max(1, iters.length - 1);
+    const allVals = iters.flatMap(p => [p.ub, p.lb]).filter(v => !isNaN(v) && v > 0);
+    const minVal = allVals.length > 0 ? Math.min(...allVals) * 0.9 : 0;
+    const maxVal = allVals.length > 0 ? Math.max(...allVals) * 1.1 : 100;
+    const scaleY = plotH / Math.max(1, maxVal - minVal);
     const getY = (val) => startY + plotH - (val - minVal) * scaleY;
 
     let svg = `<svg class="viz-svg" viewBox="0 0 820 280" xmlns="http://www.w3.org/2000/svg">`;
     svg += `<rect width="820" height="280" fill="#ffffff" rx="10"/>`;
-
-    for (let v = 100; v <= 220; v += 30) {
-      const y = getY(v);
-      svg += `<line x1="${startX}" y1="${y}" x2="${startX + plotW}" y2="${y}" stroke="#f1f5f9" stroke-width="1"/>`;
-      svg += `<text x="${startX - 10}" y="${y + 3.5}" font-size="10" fill="#94a3b8" text-anchor="end" font-family="var(--mono)">${v}</text>`;
-    }
 
     iters.forEach((pt, idx) => {
       const x = startX + idx * scaleX;
@@ -5832,66 +5902,33 @@ function initStudioWorkbench() {
       svg += `<text x="${x}" y="${startY + plotH + 18}" font-size="10" fill="#94a3b8" text-anchor="middle" font-family="var(--mono)">Iter ${pt.i}</text>`;
     });
 
-    let polyPts = iters.map((pt, idx) => `${startX + idx * scaleX},${getY(pt.ub)}`);
-    for (let j = iters.length - 1; j >= 0; j--) {
-      polyPts.push(`${startX + j * scaleX},${getY(iters[j].lb)}`);
-    }
-    svg += `<polygon points="${polyPts.join(' ')}" fill="rgba(59, 130, 246, 0.12)"/>`;
-
-    const ubPath = iters.map((pt, idx) => `${idx === 0 ? 'M' : 'L'} ${startX + idx * scaleX} ${getY(pt.ub)}`).join(" ");
+    const ubPath = iters.map((pt, idx) => `${idx === 0 ? "M" : "L"} ${startX + idx * scaleX} ${getY(pt.ub)}`).join(" ");
     svg += `<path d="${ubPath}" fill="none" stroke="#2563eb" stroke-width="2.5"/>`;
 
-    const lbPath = iters.map((pt, idx) => `${idx === 0 ? 'M' : 'L'} ${startX + idx * scaleX} ${getY(pt.lb)}`).join(" ");
+    const lbPath = iters.map((pt, idx) => `${idx === 0 ? "M" : "L"} ${startX + idx * scaleX} ${getY(pt.lb)}`).join(" ");
     svg += `<path d="${lbPath}" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="4,4"/>`;
 
-    iters.forEach((pt, idx) => {
-      const x = startX + idx * scaleX;
-      const yUb = getY(pt.ub);
-      const yLb = getY(pt.lb);
-      const desc = `迭代轮次 ${pt.i} · 上界 (ALNS): ${pt.ub} · 下界 (CP-SAT/LP): ${pt.lb} · 实时 Optimality Gap: ${pt.gap}%`;
-      svg += `
-        <g class="gap-point" data-gap-desc="${esc(desc)}" tabindex="0">
-          <circle cx="${x}" cy="${yUb}" r="4" fill="#2563eb" stroke="#ffffff" stroke-width="1"/>
-          <rect x="${x - 3}" y="${yLb - 3}" width="6" height="6" fill="#7c3aed" stroke="#ffffff" stroke-width="1"/>
-        </g>
-      `;
-    });
-
+    const last = iters[iters.length - 1];
     const lastX = startX + (iters.length - 1) * scaleX;
-    const lastY = getY(128);
+    const lastY = getY(last.ub);
+    const gapStr = last.gap.toFixed(2);
+
     svg += `
       <g>
         <rect x="${lastX - 110}" y="${lastY - 32}" width="125" height="22" rx="6" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
-        <text x="${lastX - 48}" y="${lastY - 18}" font-size="10" font-weight="700" fill="#047857" text-anchor="middle">★ Gap: 0.00% 严密闭合</text>
+        <text x="${lastX - 48}" y="${lastY - 18}" font-size="10" font-weight="700" fill="#047857" text-anchor="middle">Gap: ${gapStr}%</text>
       </g>
     `;
 
-    svg += `
-      <g transform="translate(180, 264)">
-        <line x1="0" y1="0" x2="20" y2="0" stroke="#2563eb" stroke-width="2.5"/>
-        <circle cx="10" cy="0" r="3.5" fill="#2563eb"/>
-        <text x="26" y="3.5" font-size="10.5" fill="#334155">ALNS 邻域搜索启发式上界 (Incumbent Feasible)</text>
-
-        <line x1="310" y1="0" x2="330" y2="0" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="4,4"/>
-        <rect x="317" y="-3" width="6" height="6" fill="#7c3aed"/>
-        <text x="336" y="3.5" font-size="10.5" fill="#334155">CP-SAT / LP 松弛精确数学下界 (Exact Dual Bound)</text>
-      </g>
-    `;
     svg += `</svg>`;
 
     container.innerHTML = `
       <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-        <span>📈 <strong>数学下界与启发式上界收敛 Gap 曲线</strong> · 严密闭环证明全局最优性</span>
-        <span style="font-family:var(--mono);color:#059669;font-weight:700">初始Gap: 47.6% ➔ 最终Gap: 0.00% (已达理论最优下界)</span>
+        <span>📈 <strong>数学下界与启发式上界真实收敛 Gap 曲线</strong></span>
+        <span style="font-family:var(--mono);color:#059669;font-weight:700">最终 Gap: ${gapStr}%</span>
       </div>
       ${svg}
     `;
-
-    // Attach hover listener for interactive tooltip
-    container.querySelectorAll(".gap-point").forEach(pt => {
-      pt.addEventListener("mouseenter", () => showVizTooltip(pt.getAttribute("data-gap-desc") || ""));
-      pt.addEventListener("mouseleave", hideVizTooltip);
-    });
   }
 
   function renderVisualizations(solution, analysis) {
@@ -5903,7 +5940,7 @@ function initStudioWorkbench() {
 
     renderGanttChart($("vizPanelGantt"), solution, currentDomainKey);
     renderRouteMap($("vizPanelRoutes"), solution, currentDomainKey);
-    renderConvergenceGapCurve($("vizPanelGap"), null, currentDomainKey);
+    renderConvergenceGapCurve($("vizPanelGap"), solution, currentDomainKey);
 
     initVizTabsOnce();
   }

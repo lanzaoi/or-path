@@ -417,6 +417,23 @@ def _preflight(state: Mapping[str, Any], t0: float) -> dict[str, Any]:
     guessed_cls = guess_problem_class(*([explicit_cls] if explicit_cls else []) + [stem] + blobs[1:])
     problem_class = explicit_cls or guessed_cls
 
+    # Extract compact statement snippet for fallback classification & zero-LLM knowledge pack
+    stmt_hint = str(state.get("problem_text") or "")[:300]
+    if not stmt_hint:
+        for p in files:
+            if p.suffix.lower() in {".md", ".txt"}:
+                try:
+                    stmt_hint = p.read_text(encoding="utf-8", errors="replace")[:300]
+                    break
+                except OSError:
+                    continue
+    if not domain and stmt_hint:
+        guessed_domain = guess_domain(stmt_hint)
+        domain = guessed_domain
+    if not problem_class and stmt_hint:
+        guessed_cls = guess_problem_class(stmt_hint)
+        problem_class = guessed_cls
+
     total_bytes = sum(int(m.get("bytes") or 0) for m in manifest)
 
     domain_profile: dict[str, Any] | None = None
@@ -438,6 +455,24 @@ def _preflight(state: Mapping[str, Any], t0: float) -> dict[str, Any]:
         except Exception as exc:  # noqa: BLE001
             domain_profile = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
 
+    if not files:
+        raise ValueError("no input files found under the case directory / inbox")
+
+    # Assemble deterministic zero-LLM Knowledge Pack (notes/<slug>-knowledge-pack.md)
+    kp_info: dict[str, Any] = {}
+    try:
+        from orpath.agents import knowledge_pack as _kp  # noqa: PLC0415
+
+        kp_info = _kp.assemble_preflight_knowledge_pack(
+            root,
+            slug,
+            domain=domain,
+            problem_class=problem_class,
+            query_hint=stmt_hint,
+        )
+    except Exception as exc:  # noqa: BLE001 - never fail preflight if RAG degrades
+        kp_info = {"error": f"{type(exc).__name__}: {exc}"}
+
     profile: dict[str, Any] = {
         "slug": slug,
         "generated_by": "orpath.agents.deterministic_nodes.run_preflight_probe",
@@ -452,10 +487,13 @@ def _preflight(state: Mapping[str, Any], t0: float) -> dict[str, Any]:
             "guessed_problem_class": guessed_cls,
         },
         "domain_profile": domain_profile,
+        "knowledge": {
+            k: kp_info.get(k)
+            for k in ("knowledge_pack_path", "retrieval_path", "lessons_path", "hits_count", "matched_skills", "literature_anchors")
+            if k in kp_info
+        },
     }
     (root / "outputs").mkdir(parents=True, exist_ok=True)
-    if not files:
-        raise ValueError("no input files found under the case directory / inbox")
     profile_path = root / "outputs" / f"{slug}-profile.json"
     profile_path.write_text(json.dumps(profile, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
@@ -465,7 +503,7 @@ def _preflight(state: Mapping[str, Any], t0: float) -> dict[str, Any]:
         f"files={len(manifest)} bytes={total_bytes} domain={domain or None} "
         f"class={problem_class or None} sha={';'.join(sha_head)}took={took:.3f}s"
     )
-    return {
+    out_state: dict[str, Any] = {
         "slug": slug,
         "workdir": str(root),
         "profile_path": str(profile_path),
@@ -476,6 +514,10 @@ def _preflight(state: Mapping[str, Any], t0: float) -> dict[str, Any]:
         "preflight_summary": summary[:4000],
         "last_error": "",
     }
+    for ptr_key in ("knowledge_pack_path", "retrieval_path", "lessons_path"):
+        if kp_info.get(ptr_key):
+            out_state[ptr_key] = str(kp_info[ptr_key])
+    return out_state
 
 
 # --------------------------------------------------------------------------- #
@@ -680,6 +722,42 @@ def run_deterministic_validator(state: Mapping[str, Any]) -> dict[str, Any]:
     except Exception:
         sol = {}
     verdict = _extract_verdict(sol, data)
+    pc_eff = str(state.get("problem_class") or sol.get("problem_class") or "").strip()
+
+    if verdict["validation_ok"]:
+        verdict["remediation_path"] = ""
+        try:
+            from orpath import process_memory as _pm  # noqa: PLC0415
+
+            _pm.auto_draft_after_validate(
+                root,
+                {
+                    **dict(state),
+                    "slug": slug,
+                    "problem_class": pc_eff or "general_or",
+                    "domain_cartridge": domain,
+                    "validate_path": str(out),
+                    "solve_mode": str(sol.get("solver") or state.get("solve_mode") or "solver"),
+                },
+                gate_ok=True,
+            )
+        except Exception:  # noqa: BLE001 - never fail validator on memory write
+            pass
+    else:
+        try:
+            from orpath.agents import knowledge_pack as _kp  # noqa: PLC0415
+
+            rem_info = _kp.build_error_remediation_pack(
+                root,
+                slug,
+                problem_class=pc_eff,
+                validator_errors=verdict["validator_errors"],
+                retry_round=int(state.get("model_retry_count") or 0) + 1,
+            )
+            verdict["remediation_path"] = str(rem_info.get("remediation_path") or "")
+        except Exception:  # noqa: BLE001
+            verdict["remediation_path"] = ""
+
     took = time.perf_counter() - t0
     verdict["validator_took_sec"] = round(took, 4)
     verdict["validate_path"] = str(out)

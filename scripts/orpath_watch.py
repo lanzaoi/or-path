@@ -627,6 +627,7 @@ class WatchHandler(SimpleHTTPRequestHandler):
                         "/api/intake/run",
                         "/api/studio/analyze",
                         "/api/studio/confirm",
+                        "/api/knowledge/search",
                         "/api/artifact/download",
                     ],
                     "dialogue": True,
@@ -648,6 +649,10 @@ class WatchHandler(SimpleHTTPRequestHandler):
                 )
             except Exception as exc:  # noqa: BLE001
                 self._send_json(500, {"ok": False, "error": str(exc)})
+            return
+
+        if path == "/api/knowledge/search":
+            self._handle_knowledge_search(qs)
             return
 
         if path == "/api/artifact":
@@ -772,6 +777,69 @@ class WatchHandler(SimpleHTTPRequestHandler):
 
         self.send_error(404, "not found")
 
+    def _handle_knowledge_search(self, qs: dict) -> None:
+        raw_q = (qs.get("q") or qs.get("query") or [""])[0].strip()
+        raw_cls = (qs.get("problem_class") or qs.get("class") or [""])[0].strip()
+        try:
+            topk = max(1, min(15, int((qs.get("topk") or ["6"])[0])))
+        except ValueError:
+            topk = 6
+
+        q_eff = raw_q or raw_cls.replace("_", " ") or "operations research mathematical programming"
+        hits_out: list[dict[str, Any]] = []
+        lit_out: list[dict[str, Any]] = []
+        skills_out: list[dict[str, str]] = []
+        try:
+            from knowledge_svc.retrieve import artifact_to_payload, retrieve as ks_retrieve
+
+            art = ks_retrieve(
+                q_eff,
+                mode="hybrid",
+                topk=topk,
+                root=self._home,
+                problem_class=raw_cls if raw_cls and raw_cls != "unregistered" else None,
+            )
+            pay = artifact_to_payload(art)
+            for h in pay.get("hits") or []:
+                sp = str(h.get("source_path") or "")
+                hits_out.append({
+                    "chunk_id": str(h.get("chunk_id") or ""),
+                    "title": Path(sp).stem if sp else str(h.get("chunk_id") or ""),
+                    "source_path": sp,
+                    "backend": str(h.get("backend") or "hybrid"),
+                    "score": round(float(h.get("score") or 0.0), 4),
+                    "snippet": str(h.get("snippet") or "")[:240],
+                })
+        except Exception as exc:  # noqa: BLE001
+            self._send_json(500, {"ok": False, "error": f"knowledge search failed: {exc}"})
+            return
+
+        try:
+            from orpath.agents.knowledge_pack import extract_skill_highlights, match_top_literature
+
+            lit_out = match_top_literature(
+                problem_class=raw_cls,
+                query=q_eff,
+                topk=min(topk, 4),
+                home=self._home,
+            )
+            sk_raw, _chk, _modes = extract_skill_highlights(problem_class=raw_cls, home=self._home)
+            skills_out = [{"id": s["id"], "path": s["path"], "excerpt": s["excerpt"][:180]} for s in sk_raw[:4]]
+        except Exception:
+            pass
+
+        self._send_json(
+            200,
+            {
+                "ok": True,
+                "query": q_eff,
+                "problem_class": raw_cls,
+                "hits": hits_out,
+                "literature": lit_out,
+                "skills": skills_out,
+            },
+        )
+
     def _handle_artifact_get(self, slug: str, kind: str) -> None:
         wd = self._workdir.resolve()
         mapping: dict[str, tuple[Path, str]] = {
@@ -788,6 +856,8 @@ class WatchHandler(SimpleHTTPRequestHandler):
             "plan": (wd / "outputs" / ".plans" / f"{slug}.md", "markdown"),
             "analysis": (wd / "outputs" / f"{slug}-studio-analysis.json", "json"),
             "profile": (wd / "outputs" / f"{slug}-data-profile.json", "json"),
+            "knowledge_pack": (wd / "notes" / f"{slug}-knowledge-pack.md", "markdown"),
+            "remediation": (wd / "notes" / f"{slug}-remediation.md", "markdown"),
         }
         if kind not in mapping:
             self._send_json(400, {"ok": False, "error": f"unknown artifact kind: {kind}"})
@@ -1412,7 +1482,19 @@ class WatchHandler(SimpleHTTPRequestHandler):
         if chosen_algo not in ALLOWED_SOLVE_MODES:
             chosen_algo = "ortools" if detected_class in {"tsp", "vrp"} else "mock"
 
-        # 3. Write updated steer with pause_next=False
+        # 3. Write updated steer with pause_next=False (+ optional pinned_knowledge)
+        raw_pinned = body.get("pinned_knowledge") if isinstance(body.get("pinned_knowledge"), list) else []
+        pinned_clean: list[dict[str, str]] = []
+        for p_item in raw_pinned[:10]:
+            if not isinstance(p_item, dict):
+                continue
+            pid = str(p_item.get("id") or p_item.get("chunk_id") or "").strip()[:120]
+            ptitle = str(p_item.get("title") or pid).strip()[:160]
+            pkind = str(p_item.get("kind") or "chunk").strip()[:40]
+            psnip = str(p_item.get("snippet") or "").strip()[:260]
+            if pid or ptitle:
+                pinned_clean.append({"id": pid, "title": ptitle, "kind": pkind, "snippet": psnip})
+
         notes_dir = self._workdir / "notes"
         notes_dir.mkdir(parents=True, exist_ok=True)
         steer_doc = {
@@ -1429,10 +1511,25 @@ class WatchHandler(SimpleHTTPRequestHandler):
                 "prefer_methods": [chosen_algo],
                 "notes": extra_prompt,
                 "selected_options": selected_options,
+                "pinned_knowledge": pinned_clean,
             },
         }
         steer_file = notes_dir / f"{slug}-human-steer.json"
         steer_file.write_text(json.dumps(steer_doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+        # Assemble / refresh deterministic Knowledge Pack with human-pinned items
+        try:
+            from orpath.agents.knowledge_pack import assemble_preflight_knowledge_pack
+
+            assemble_preflight_knowledge_pack(
+                self._workdir,
+                slug,
+                problem_class=detected_class,
+                query_hint=extra_prompt,
+                home=self._home,
+            )
+        except Exception:
+            pass
 
         # Scenario A: Runnable dataset exists
         if has_solver_dataset:
@@ -1823,6 +1920,26 @@ class WatchHandler(SimpleHTTPRequestHandler):
         msg = f"event: {event}\ndata: {payload}\n\n"
         self.wfile.write(msg.encode("utf-8"))
         self.wfile.flush()
+
+
+def make_server(
+    *,
+    host: str = "127.0.0.1",
+    port: int = DEFAULT_PORT,
+    home: Path | None = None,
+    workdir: Path | None = None,
+    default_slug: str = "test",
+    default_thread: str = "test",
+) -> ThreadingHTTPServer:
+    """Create an in-process Watch HTTP server instance (used by serve() and tests)."""
+    h_resolved = (home or orpath_home()).resolve()
+    wd_resolved = (workdir or orpath_workdir()).resolve()
+    wd_resolved.mkdir(parents=True, exist_ok=True)
+    handler = partial(WatchHandler, home=h_resolved, workdir=wd_resolved, directory=str(WEB_DIR))
+    srv = ThreadingHTTPServer((host, port), handler)
+    srv.default_slug = default_slug  # type: ignore[attr-defined]
+    srv.default_thread = default_thread  # type: ignore[attr-defined]
+    return srv
 
 
 def serve(

@@ -285,6 +285,7 @@ def test_tube_dispatch_blocks_when_public_data_absent(monkeypatch):
 
 
 def test_tube_dispatch_returns_after_one_successful_adapter_run(monkeypatch, tmp_path):
+    monkeypatch.delenv("ORPATH_TUBE_REUSE", raising=False)
     sys.path.insert(0, str(TOOLS))
     import solve_dispatch
     import solve_tube_cut_b2026

@@ -101,9 +101,14 @@ class AdaptivePipelineState(CorePipelineState, total=False):  # type: ignore[mis
     # artifacts
     tables_path: str
     ledger_path: str
+    knowledge_pack_path: str
+    retrieval_path: str
+    lessons_path: str
+    remediation_path: str
     # deterministic doc gate
     doc_gate_ok: bool
     doc_gate_errors: list[str]
+    require_knowledge_citations: bool
     # reviewer verdict
     review_verdict: str
     subproblem_done: list[str]
@@ -189,10 +194,15 @@ def _brief(state: Mapping[str, Any], workdir: Path, slug: str, extra_lines: list
         f"complexity_tier={state.get('complexity_tier') or decide_tier(state)}",
         "上游工件 (仅文件指针，全文请自行调用 read_problem_file):",
         f"- profile_path: {state.get('profile_path') or '-'}",
+        f"- knowledge_pack_path: {state.get('knowledge_pack_path') or '-'}",
+        f"- retrieval_path: {state.get('retrieval_path') or '-'}",
+        f"- lessons_path: {state.get('lessons_path') or '-'}",
         f"- problem_file: {state.get('problem_file') or '-'}",
         f"- data_files: {state.get('data_files') or []}",
-        "允许读写目录: outputs/ notes/ papers/ runs/",
     ]
+    if state.get("remediation_path"):
+        lines.append(f"- remediation_path: {state.get('remediation_path')}")
+    lines.append("允许读写目录: outputs/ notes/ papers/ runs/")
     lines.extend(extra_lines)
     return "\n".join(lines)
 
@@ -335,6 +345,41 @@ def render_truth_tables(state: Mapping[str, Any]) -> dict[str, Any]:
     if not (routes or allocations or subs):
         out.append("(无领域分解数据；空真值表由确定性渲染器如实记录。)")
 
+    # Section 4: deterministic knowledge & bibliography anchors (0 LLM)
+    out += ["", "## 4. 知识库方法先验与真实文献锚点 (Verified Knowledge & Literature Anchors)", ""]
+    ret_raw = str(state.get("retrieval_path") or "").strip()
+    ret_file = Path(ret_raw) if ret_raw else (root / "notes" / f"{slug}-retrieval.json")
+    ret_hits: list[dict[str, Any]] = []
+    if ret_file.is_file():
+        try:
+            ret_doc = json.loads(ret_file.read_text(encoding="utf-8"))
+            ret_hits = [h for h in (ret_doc.get("hits") or []) if isinstance(h, dict)]
+        except Exception:
+            ret_hits = []
+    if ret_hits:
+        out += ["| chunk_id | source_path | score |", "|---|---|---|"]
+        for rh in ret_hits[:5]:
+            out.append(
+                f"| `{rh.get('chunk_id', '-')}` | `{rh.get('source_path', '-')}` | {_format_num(rh.get('score'))} |"
+            )
+        out.append("")
+
+    lit_items: list[dict[str, Any]] = []
+    try:
+        from orpath.agents.knowledge_pack import match_top_literature
+
+        pc_lit = str(sol.get("problem_class") or state.get("problem_class") or "")
+        dom_lit = str(state.get("domain_cartridge") or "")
+        lit_items = match_top_literature(pc_lit, dom_lit, topk=3)
+    except Exception:
+        lit_items = []
+    if lit_items:
+        for lit in lit_items:
+            doi_part = f" (DOI: `{lit['doi']}`)" if lit.get("doi") else ""
+            out.append(f"- **{lit['cite_label']}**: *{lit['title']}*, {lit['venue']}.{doi_part}")
+    if not (ret_hits or lit_items):
+        out.append("(无召回文献锚点；严禁编造外部引用。)")
+
     text = "\n".join(out) + "\n"
     tables_path = (root / "outputs" / f"{slug}-tables.md").resolve()
     tables_path.write_text(text, encoding="utf-8")
@@ -350,6 +395,8 @@ REQUIRED_PAPER_KEYWORD_GROUPS: tuple[tuple[str, ...], ...] = (
     ("局限性", "优缺点", "落地建议"),
 )
 
+_FAKE_CITE_RE = re.compile(r"\[FakeRef[^\]]*\]|\bFakeRef\b|\(\s*2099\s*\)|\[\s*[^\]]*2099[^\]]*\]", re.IGNORECASE)
+
 
 def run_deterministic_doc_gate(state: Mapping[str, Any]) -> dict[str, Any]:
     """Deterministic closure gate for the writer artifact (0 LLM).
@@ -357,11 +404,13 @@ def run_deterministic_doc_gate(state: Mapping[str, Any]) -> dict[str, Any]:
     Checks: paper exists; the six SOP chapters are all present (chapter-titled
     keywords, grouped with tolerant alternatives); declared objective value
     appears in the text (Numbers Truth binding); unproven-optimality papers
-    must not claim 全局最优.
+    must not claim 全局最优; fabricated placeholder citations are rejected;
+    optional strict retrieval-anchor binding when require_knowledge_citations=True.
     """
     root = _resolve_root(state)
+    slug = _slug(state, root)
     paper_raw = state.get("paper_path") or ""
-    paper = Path(paper_raw) if paper_raw else (root / "papers" / f"{_slug(state, root)}.md")
+    paper = Path(paper_raw) if paper_raw else (root / "papers" / f"{slug}.md")
     if not paper.is_file():
         return {"doc_gate_ok": False, "doc_gate_errors": [f"paper not found: {paper}"], "last_error": "paper not found"}
     text = paper.read_text(encoding="utf-8", errors="replace")
@@ -379,6 +428,30 @@ def run_deterministic_doc_gate(state: Mapping[str, Any]) -> dict[str, Any]:
             errors.append(f"declared objective {v} not present in paper (Numbers Truth binding)")
     if not state.get("proven_optimal") and "全局最优" in text:
         errors.append("proven_optimal=False but paper claims 全局最优 (optimality honesty violation)")
+    if _FAKE_CITE_RE.search(text):
+        errors.append("fabricated citation placeholder detected in paper (伪造引用占位符)")
+    if state.get("require_knowledge_citations"):
+        ret_raw = str(state.get("retrieval_path") or "").strip()
+        ret_file = Path(ret_raw) if ret_raw else (root / "notes" / f"{slug}-retrieval.json")
+        anchors: set[str] = set()
+        if ret_file.is_file():
+            try:
+                rdoc = json.loads(ret_file.read_text(encoding="utf-8"))
+                for h in rdoc.get("hits") or []:
+                    if not isinstance(h, dict):
+                        continue
+                    cid = str(h.get("chunk_id") or "").strip()
+                    sp = str(h.get("source_path") or "").strip()
+                    if cid:
+                        anchors.add(cid)
+                    if sp:
+                        stem = Path(sp).stem
+                        if len(stem) >= 4:
+                            anchors.add(stem)
+            except Exception:
+                pass
+        if anchors and not any(a in text for a in anchors):
+            errors.append("missing verified knowledge/literature citation anchor from retrieval_path (缺少知识库真实文献锚点)")
     return {"doc_gate_ok": not errors, "doc_gate_errors": errors, "paper_path": str(paper.resolve())}
 
 
@@ -478,7 +551,7 @@ def build_adaptive_graph(
     def node_analyst(state: AdaptivePipelineState) -> dict:
         root, slug = _resolve_root(state), _slug(state, _resolve_root(state))
         brief = _brief(state, root, slug, [
-            "职责: 题面精读 + 数据画像核对 + 数学分类确认 + Tier 分档建议 (严禁求解/猜解)。",
+            "职责: 题面精读 + 数据画像核对 + 查阅 knowledge_pack_path 领域规约 + 数学分类确认 + Tier 分档建议 (严禁求解/猜解)。",
             "输出: 结构化分析结论(≤500字), 交 modeler 承接。",
         ])
         text = _invoke_agent(agent_map["analyst"], brief)
@@ -492,7 +565,14 @@ def build_adaptive_graph(
         tier = decide_tier({**state, **common})
         domain = str(state.get("domain_cartridge") or "")
         general_or = domain == "general_or" or domain == ""
-        extra_lines: list[str] = []
+        extra_lines: list[str] = [
+            "先验参考: 请优先查阅 knowledge_pack_path 中的标准数学规划范式、允许算子与历史防坑经验 (严禁将其当作算例数值答案)。"
+        ]
+        if state.get("remediation_path"):
+            extra_lines.append(
+                f"⚠️ 上轮独立验证器打回修复指令: 必须先读取靶向修复包 remediation_path: {state.get('remediation_path')} "
+                f"并逐条消除错误: {'; '.join(str(x) for x in (state.get('validator_errors') or [])[:3])}"
+            )
         if general_or:
             extra_lines.extend([
                 "装备包: general_or (无现成专用适配器) — 自定义开放赛题闭环协议:",
@@ -567,6 +647,7 @@ def build_adaptive_graph(
         brief = _brief(state, root, slug, [
             "职责: 严格基于预渲染真值表撰写六章学术论文 (docs/or-paper-sop.md)。",
             f"真值表唯一数据来源: {tables}",
+            "文献引用纪律: 仅可引用真值表第4节与 knowledge_pack_path 中的真实文献锚点，严禁编造任何未验证外部文献。",
             f"目标值(以校验器为准): objective={obj} proven_optimal={prov}"
             + (" (未证明最优，必须如实声明)" if not prov else ""),
             f"必须调用 export_paper_markdown 写入: PAPER_PATH={paper}",
@@ -664,7 +745,22 @@ def build_adaptive_graph(
                 ledger[q] = {"ok": True, "objective": obj, "status": sol.get("status", "-")}
             else:
                 failed.append(q)
-                ledger[q] = {"ok": False, "objective": obj, "errors": (data.get("errors") or [])[:3]}
+                q_errs = (data.get("errors") or [])[:3]
+                rem_p = ""
+                try:
+                    from orpath.agents import knowledge_pack as _kp
+
+                    rem_res = _kp.build_error_remediation_pack(
+                        root,
+                        f"{slug}-{q}",
+                        problem_class=str(state.get("problem_class") or ""),
+                        validator_errors=q_errs,
+                        retry_round=int(state.get("model_retry_count") or 0) + 1,
+                    )
+                    rem_p = str(rem_res.get("remediation_path") or "")
+                except Exception:
+                    rem_p = ""
+                ledger[q] = {"ok": False, "objective": obj, "errors": q_errs, "remediation_path": rem_p}
             ledger_path.write_text(json.dumps(ledger, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
         merged: dict[str, Any] = {}
@@ -684,6 +780,22 @@ def build_adaptive_graph(
             }
             merged_path = root_out / f"{slug}-solution.json"
             merged_path.write_text(json.dumps(merged, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            try:
+                from orpath import process_memory as _pm
+
+                _pm.auto_draft_after_validate(
+                    root,
+                    {
+                        **dict(state),
+                        "slug": slug,
+                        "problem_class": str(state.get("problem_class") or "general_or"),
+                        "solution_path": str(merged_path),
+                        "solve_mode": "adaptive_graph.tier_c_merge",
+                    },
+                    gate_ok=True,
+                )
+            except Exception:
+                pass
 
         last_err = ""
         if failed:
