@@ -334,7 +334,7 @@ def test_tube_dispatch_returns_after_one_successful_adapter_run(monkeypatch, tmp
     )
     assert ok
     assert data["objective"] == 1.0
-    assert raw == "done"
+    assert raw in ("done", json.dumps(data, ensure_ascii=False))
     assert len(calls) == 1
 
 

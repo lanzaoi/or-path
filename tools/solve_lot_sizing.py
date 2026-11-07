@@ -567,7 +567,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.capacity is not None
         else bench.get("capacity")
     )
-    unit_cost = args.unit_cost if args.unit_cost != 0.0 else bench.get("unit_cost", 0.0)
+    unit_cost = args.unit_cost if args.unit_cost is not None else bench.get("unit_cost", 0.0)
 
     sol = solve_lot_sizing(
         demands=demands,

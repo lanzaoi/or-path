@@ -19,9 +19,9 @@ point at tools and constants; no agent dialogue, no message-history slicing.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable, Literal, Union
+from typing import Any, Literal, Union
 
-from orpath.domain_registry import CLASS_ALIASES, CANONICAL_CLASSES, normalize_problem_class as _norm
+from orpath.domain_registry import normalize_problem_class as _norm
 
 # Homomorphic tool type-hint (kept as Any so cartridges import without pulling
 # langchain_core in this module's import graph, keeping offline gates fast).

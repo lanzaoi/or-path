@@ -268,9 +268,10 @@ def _solve_alns_vrp(
         prev = 0
         for c in r:
             curr_t += int(dist[prev, c])
-            if curr_t > tws[c][1]:
+            start_service = max(curr_t, tws[c][0])
+            if start_service > tws[c][1]:
                 return False
-            curr_t = max(curr_t, tws[c][0]) + services[c]
+            curr_t = start_service + services[c]
             prev = c
         curr_t += int(dist[prev, 0])
         return curr_t <= tws[0][1]

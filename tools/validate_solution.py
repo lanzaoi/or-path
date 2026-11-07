@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -796,8 +795,13 @@ def _validate_custom_mip(problem_id: str, sol: dict, solution_path: "Path | None
             {"name": "validation_report", "ok": False, "detail": "envelope must declare validation_report"}
         )
         return checks
-    root = Path(solution_path).resolve().parent.parent if solution_path is not None else None
-    rp = (Path(root) / report_rel) if root else Path(report_rel)
+    rp = Path(report_rel)
+    if not rp.is_file() and solution_path is not None:
+        p_cand = Path(solution_path).resolve()
+        for parent in (p_cand.parent, p_cand.parent.parent, p_cand.parent.parent.parent):
+            if (parent / report_rel).is_file():
+                rp = parent / report_rel
+                break
     if not rp.is_file():
         checks.append(
             {"name": "validation_report", "ok": False, "detail": f"validator report missing: {rp}"}

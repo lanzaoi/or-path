@@ -14,7 +14,6 @@ from orpath.process_memory import (  # noqa: E402
     new_lesson,
     retrieve_lessons,
     strip_forbidden,
-    write_retrieve_artifacts,
 )
 from orpath.tool_catalog import default_mode_for_class, list_tools, solver_claim_table  # noqa: E402
 

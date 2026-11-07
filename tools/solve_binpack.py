@@ -384,7 +384,7 @@ def solve_bin_packing_3d(
     return {
         "problem_id": f"binpack_3d_{len(manifest)}items",
         "problem_class": "bin_packing",
-        "status": "FEASIBLE",
+        "status": "FEASIBLE" if not unfitted else "PARTIAL",
         "objective": used_bin_count,
         "solver": "py3dbp",
         "source": _SOURCE,
@@ -607,7 +607,7 @@ def solve_bin_packing_2d(
     return {
         "problem_id": f"binpack_2d_{len(expected_rids)}parts",
         "problem_class": "bin_packing",
-        "status": "FEASIBLE",
+        "status": "FEASIBLE" if not unfitted else "PARTIAL",
         "objective": used_sheet_count,
         "solver": "rectpack",
         "source": _SOURCE,

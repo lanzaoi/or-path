@@ -554,7 +554,7 @@ def _solve_scipy(
     result: dict[str, Any] = {
         "problem_id": f"markowitz_{n}assets_{objective_type}",
         "problem_class": "portfolio_opt",
-        "status": "OPTIMAL" if bool(res.success) else "FEASIBLE",
+        "status": "OPTIMAL" if (bool(res.success) and objective_type != "max_sharpe") else ("FEASIBLE" if bool(res.success) else "INFEASIBLE"),
         "objective": round(obj_val, 6),
         "solver": "scipy-slsqp-markowitz",
         "source": "tools/solve_portfolio.py",
@@ -569,8 +569,8 @@ def _solve_scipy(
             risk_free_rate, total_portfolio_value,
         ),
         "meta": {
-            "exact": bool(res.success),
-            "proven_optimal": bool(res.success),
+            "exact": bool(res.success and objective_type != "max_sharpe"),
+            "proven_optimal": bool(res.success and objective_type != "max_sharpe"),
             "engine": "scipy-slsqp",
             "iterations": int(res.nit),
             "num_assets": n,

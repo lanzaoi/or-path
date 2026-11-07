@@ -310,13 +310,10 @@ def _render_grid(
         if 0 <= r < rows and 0 <= c < cols:
             grid[r][c] = "#"
     letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-    covered: set[tuple[int, int]] = set()
     for i, p in enumerate(placements):
         ch = letters[i % len(letters)]
         for r, c in p["cells"]:
             grid[r][c] = ch
-            covered.add((r, c))
-    # mark uncovered as '.'
     return ["".join(row) for row in grid]
 
 

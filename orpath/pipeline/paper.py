@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +25,6 @@ from orpath.paper_workflow import (
     gate_research_text,
     load_retrieval,
     merge_review_if_child_wrote,
-    render_or_paper,
     run_reviewer_agent,
     thick_provenance,
 )
@@ -36,11 +34,8 @@ from orpath.state import ORPathState
 from orpath.pipeline.common import (
     _root,
     _rel_under,
-    _ensure_dirs,
     _fixture_base,
-    _infer_class,
     _paper_whitelist_path,
-    _count_fatal,
     _solution_is_blocked,
     _intake_front_door_active,
 )

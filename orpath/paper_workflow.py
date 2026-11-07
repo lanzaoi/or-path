@@ -320,6 +320,16 @@ def render_or_paper(
         title = f"OR Fixture Study ({problem_id})"
         abstract_extra = "All numerics bind to solver JSON + validate."
 
+    # Inject rich pre-verified evidence tables and figures
+    ev_blocks = build_verified_evidence_blocks(solution, validation=None)
+    tables_block = ""
+    if ev_blocks.get("summary_table"):
+        tables_block += f"\n### Authoritative Results Table (Pre-verified Python Output)\n{ev_blocks['summary_table']}\n"
+    if ev_blocks.get("breakdown_table"):
+        tables_block += f"\n{ev_blocks['breakdown_table']}\n"
+    if ev_blocks.get("figures"):
+        tables_block += f"\n{ev_blocks['figures']}\n"
+
     return f"""# {title}
 
 ## Abstract
@@ -389,6 +399,7 @@ From `{_leaf(solution_path)}` only:
 - meta.proven_optimal: `{proven}`
 - meta.method_class: `{meta.get("method_class")}`
 {extra_metrics}
+{tables_block}
 Claim: objective equals `{solution.get("objective")}` from solution.json (solver-owned).
 Claim: solution status is `{solution.get("status")}` under declared solve_mode.
 Finding: exactness flags are exact=`{exact}` proven_optimal=`{proven}`.
@@ -714,9 +725,12 @@ def draft_paper_with_writer(
 
     if is_live_paper_agent_enabled(state):
         try:
+            from orpath.control_plane import get_chat_model
             from orpath.agents.workers import create_writer_agent
             from orpath.agents.cartridges import resolve_cartridge, cartridge_tools
             from langchain_core.messages import HumanMessage
+
+            active_model = model if model is not None else get_chat_model()
 
             # Resolve domain cartridge and build rich evidence blocks
             cart = resolve_cartridge(problem_class)
@@ -776,8 +790,8 @@ def draft_paper_with_writer(
 
             # Single-turn direct synthesis: avoid multi-turn tool-calling loop hangs on slow cloud endpoints
             # If the model is a ChatModel instance, invoke directly
-            if model is not None and hasattr(model, "invoke"):
-                res = model.invoke([HumanMessage(content=prompt_text)])
+            if active_model is not None and hasattr(active_model, "invoke"):
+                res = active_model.invoke([HumanMessage(content=prompt_text)])
                 content = getattr(res, "content", "") or ""
                 # Strip markdown code wrapper if wrapped entirely
                 if content.startswith("```markdown") and content.endswith("```"):
@@ -792,7 +806,7 @@ def draft_paper_with_writer(
 
             # Fallback: ReAct agent if direct invoke did not return suitable text
             writer = create_writer_agent(
-                model=model,
+                model=active_model,
                 cartridge_tools=writer_tools,
                 domain_directive=domain_hints,
             )
@@ -849,10 +863,12 @@ def run_reviewer_agent(
     if not is_live_paper_agent_enabled(state):
         return None
     try:
+        from orpath.control_plane import get_chat_model
         from orpath.agents.workers import create_reviewer_agent
         from langchain_core.messages import HumanMessage
 
-        reviewer = create_reviewer_agent(model=model)
+        active_model = model if model is not None else get_chat_model()
+        reviewer = create_reviewer_agent(model=active_model)
         prompt_text = (
             f"Task: Conduct an adversarial peer review on paper '{paper_path}' against '{solution_path}'.\n"
             f"Follow the 10-point rubric in docs/or-paper-sop.md §6.\n"
@@ -860,8 +876,8 @@ def run_reviewer_agent(
             f"Flag unproven global optimality claims as FATAL defects.\n"
             f"Write the final peer review report in Markdown format."
         )
-        if model is not None and hasattr(model, "invoke"):
-            res = model.invoke([HumanMessage(content=prompt_text)])
+        if active_model is not None and hasattr(active_model, "invoke"):
+            res = active_model.invoke([HumanMessage(content=prompt_text)])
             content = getattr(res, "content", "") or ""
             if len(content) > 100:
                 review_path.parent.mkdir(parents=True, exist_ok=True)

@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from fixture_paths import ROOT, fixture_dir, fixture_file  # noqa: E402
+from fixture_paths import fixture_dir  # noqa: E402
 
 
 def _ortools():

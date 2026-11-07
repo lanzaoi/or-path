@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -23,13 +22,8 @@ from orpath.state import ORPathState
 from orpath.pipeline.common import (
     _root,
     _rel_under,
-    _ensure_dirs,
     _fixture_base,
-    _infer_class,
     _intake_front_door_active,
-    _solution_is_blocked,
-    _intake_whitelist_path,
-    _paper_whitelist_path,
     TUNE_STRATEGIES,
 )
 
@@ -694,7 +688,9 @@ def node_gate_validate(state: ORPathState) -> dict:
     if sol_path.is_file():
         try:
             sol_obj = json.loads(sol_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, OSError):
+            sol_obj = {}
+        if not isinstance(sol_obj, dict):
             sol_obj = {}
         meta = sol_obj.get("meta") if isinstance(sol_obj, dict) else None
         blocked = bool(

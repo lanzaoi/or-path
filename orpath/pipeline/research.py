@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,7 +17,6 @@ from orpath.paper_workflow import (
 )
 from orpath.pipeline.common import (
     _root,
-    _rel_under,
     _ensure_dirs,
     _fixture_base,
     _infer_class,
