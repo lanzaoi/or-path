@@ -1,8 +1,8 @@
 # OR-Path installer (Windows)
 # Usage:
-#   irm https://github.com/lanzaoi/or-path/releases/download/v0.3.6/install.ps1 | iex
-#   powershell -File install.ps1 -LocalZip .\dist\orpath-0.3.1-win-x64.zip
-#   powershell -File install.ps1 -Version 0.3.1
+#   irm https://github.com/lanzaoi/or-path/releases/download/v1.0.0/install.ps1 | iex
+#   powershell -File install.ps1 -LocalZip .\dist\orpath-1.0.0-win-x64.zip
+#   powershell -File install.ps1 -Version 1.0.0
 
 param(
   [string]$Version = "latest",

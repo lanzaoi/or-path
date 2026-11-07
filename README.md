@@ -1,10 +1,12 @@
 # OR-Path: 面向高端智能制造与复杂工程决策的运筹优化与智能工作台系统
 
-> **核心定位：** 融合「大模型认知解析 + 本地知识库检索（RAG） + 硬核运筹求解器（MILP / CP-SAT / DP / MPC） + 独立物理与数学验证器」的工程级运筹优化平台，攻克空间异形管材激光下料、离散板材/芯片多目标排样、多车带时间窗路径调度、园区光储充微电网优化调度等复杂工程决策场景。
+> **核心定位：** 融合「大模型认知解析 + 本地知识库检索（RAG） + 27 台重型工业求解器矩阵（MILP / CP-SAT / DP / MPC / HGS / ALNS） + 独立物理与数学验证器（DIMO 5 类变异防御）」的原生级工业运筹优化平台，攻克空间异形管材激光下料、离散板材/芯片多目标排样、多车带时间窗路径调度、智慧能源园区光储充微电网优化调度等复杂工业工程决策场景。
 
-[![Release](https://img.shields.io/badge/Release-v0.3.6-blue.svg)](https://github.com/lanzaoi/or-path/releases/tag/v0.3.6)
+[![Release](https://img.shields.io/badge/Release-v1.0.0-blue.svg)](https://github.com/lanzaoi/or-path/releases/tag/v1.0.0)
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)]()
+[![Solvers](https://img.shields.io/badge/Industrial%20Solvers-27%20Heavyweight-orange.svg)]()
 [![Domain](https://img.shields.io/badge/Industry-AI%20%2B%20Operations%20Research-brightgreen.svg)]()
-[![Validation](https://img.shields.io/badge/Numbers%20Truth-Independent%20Validator-success.svg)]()
+[![Validation](https://img.shields.io/badge/Numbers%20Truth-Independent%20Validator%20(DIMO)-success.svg)]()
 
 ---
 
