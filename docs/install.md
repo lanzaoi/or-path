@@ -2,7 +2,7 @@
 
 **目标：** 开箱即用、一键启动 Web Studio 智能工作舱与运筹求解全流程。  
 **使用教程（详细）：** [`user-guide.md`](user-guide.md)  
-**当前版本：** 仓库根 `VERSION`（**1.0.0 正式版**）
+**当前版本：** 仓库根 `VERSION`（**1.1.0 正式版**）
 
 ---
 
@@ -21,12 +21,12 @@
 
 ## 2. Release 正式版安装包（推荐普通用户）
 
-### v1.0.0 正式版一键安装
+### v1.1.0 正式版一键安装
 
 通过 PowerShell 一键拉取并安装官方正式发行版：
 
 ```powershell
-irm https://github.com/lanzaoi/or-path/releases/download/v1.0.0/install.ps1 | iex
+irm https://github.com/lanzaoi/or-path/releases/download/v1.1.0/install.ps1 | iex
 ```
 
 安装程序默认释出至目录：`%LOCALAPPDATA%\Programs\orpath`
@@ -66,7 +66,7 @@ START.bat
 
 ```bash
 # 1. 确认版本文件
-cat VERSION  # 1.0.0
+cat VERSION  # 1.1.0
 
 # 2. 导出或校验演示种子
 .venv/bin/python scripts/export_demo_seed.py --slug all
@@ -76,11 +76,11 @@ cat VERSION  # 1.0.0
 .venv/bin/python scripts/pack_release.py --platform linux-x64
 
 # 4. 运行 Release 完整性校验门禁
-.venv/bin/python scripts/l2_release_gate.py --zip dist/orpath-1.0.0-win-x64.zip --quick
-.venv/bin/python scripts/l2_release_gate.py --zip dist/orpath-1.0.0-linux-x64.zip --quick
+.venv/bin/python scripts/l2_release_gate.py --zip dist/orpath-1.1.0-win-x64.zip --quick
+.venv/bin/python scripts/l2_release_gate.py --zip dist/orpath-1.1.0-linux-x64.zip --quick
 
 # 5. 发布 GitHub Release
-# gh release create v1.0.0 dist/orpath-1.0.0-win-x64.zip dist/orpath-1.0.0-linux-x64.zip dist/SHA256SUMS dist/install.ps1 --title "OR-Path v1.0.0 Official Release" --notes-file docs/releases/v1.0.0-notes.md
+# gh release create v1.1.0 dist/orpath-1.1.0-win-x64.zip dist/orpath-1.1.0-linux-x64.zip dist/SHA256SUMS dist/install.ps1 --title "OR-Path v1.1.0 Official Release" --notes-file docs/releases/v1.1.0-notes.md
 ```
 
 ---

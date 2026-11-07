@@ -467,7 +467,7 @@ def _discover_workdir_cases(workdir: Path, home: Path) -> list[dict[str, Any]]:
 
 
 class WatchHandler(SimpleHTTPRequestHandler):
-    server_version = "ORPathWatch/1.0.0"
+    server_version = "ORPathWatch/1.1.0"
 
     def __init__(self, *args, home: Path, workdir: Path, **kwargs):
         self._home = home

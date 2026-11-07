@@ -46,6 +46,7 @@
 
 | 版本 | 说明文档 |
 |------|----------|
+| **v1.1.0** | [**`releases/v1.1.0-notes.md`**](releases/v1.1.0-notes.md)（稳定性加固、安全防御、Excel 数据集智能识别与工作台端到端打通） |
 | **v1.0.0** | [**`releases/v1.0.0-notes.md`**](releases/v1.0.0-notes.md)（首个官方正式稳定版：纯 Python 架构、27 求解器、4 常驻智能体） |
 | **v0.3.5** | [`releases/v0.3.5-notes.md`](releases/v0.3.5-notes.md) |
 | **v0.3.1** | [`releases/v0.3.1-notes.md`](releases/v0.3.1-notes.md) |
