@@ -28,13 +28,9 @@
 
 ---
 
-## 3. 典型赛题与专项目录
+## 3. 已归档文档
 
-| 文档路径 | 核心用途 | 对应问题类 |
-|----------|----------|------------|
-| **[`tube-optimization-v2.md`](tube-optimization-v2.md)** | 国赛 B 题 3D 异构圆管套裁算法设计（列生成 + 几何 DP + ALNS + 跨批束搜索） | `tube_cut` |
-| **[`m2-polyomino.md`](m2-polyomino.md)** | 多联骨牌平面精确平铺与非标覆盖域桥梁规范 | `polyomino_cover` |
-| **[`vrp-public-baseline.md`](vrp-public-baseline.md)** | 公开 CVRPLIB / VRPTW 标准基线算法与测试复现说明 | `vrp`, `pyvrp` |
+旧 S/P/A/C 任务文档（smoke / closeout / tier 级收口与专项设计稿）已全部移入 [`_deprecated/`](_deprecated/)，仅作历史备份，不再维护，也不作为现行规范引用。
 
 ---
 

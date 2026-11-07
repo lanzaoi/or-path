@@ -42,8 +42,8 @@ def main() -> int:
     print("=== m2_gate (polyomino domain bridge · Parts 1–5) ===")
     print("ROOT =", ROOT)
     for rel in (
-        "docs/m2-polyomino.md",
-        "docs/m2-closeout.md",
+        "docs/_deprecated/m2-polyomino.md",
+        "docs/_deprecated/m2-closeout.md",
         "orpath.bat",
         "orpath/domain_registry.py",
         "tools/solve_polyomino.py",
@@ -84,7 +84,7 @@ def main() -> int:
             return 1
         print(f"OK: {title}")
 
-    close = (ROOT / "docs" / "m2-closeout.md").read_text(encoding="utf-8", errors="replace")
+    close = (ROOT / "docs" / "_deprecated" / "m2-closeout.md").read_text(encoding="utf-8", errors="replace")
     for n in ("polyomino", "Claim ladder", "M2", "m2-gate"):
         if n not in close:
             print("FAIL: m2-closeout missing", n)

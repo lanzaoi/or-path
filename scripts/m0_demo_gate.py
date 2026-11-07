@@ -58,7 +58,7 @@ def main() -> int:
         "scripts/v0_watch_gate.py",
         "scripts/orpath_watch.py",
         "orpath/web/watch.html",
-        "docs/m0-smoke.md",
+        "docs/_deprecated/m0-smoke.md",
         "ORPATH.md",
     ):
         if not (ROOT / rel).is_file():

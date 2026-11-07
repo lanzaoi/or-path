@@ -41,8 +41,8 @@ def main() -> int:
     print("ROOT =", ROOT)
     # wiring docs
     for rel in (
-        "docs/m1-smoke.md",
-        "docs/m1-closeout.md",
+        "docs/_deprecated/m1-smoke.md",
+        "docs/_deprecated/m1-closeout.md",
         "orpath.bat",
         "orpath/paths.py",
         "orpath/web/watch.html",
@@ -91,7 +91,7 @@ def main() -> int:
         return 1
 
     # light claim ladder markers in closeout
-    close = (ROOT / "docs" / "m1-closeout.md").read_text(encoding="utf-8", errors="replace")
+    close = (ROOT / "docs" / "_deprecated" / "m1-closeout.md").read_text(encoding="utf-8", errors="replace")
     for n in ("workdir", "next_actions", "Claim ladder", "M1"):
         if n not in close:
             print(f"FAIL: m1-closeout missing {n}")

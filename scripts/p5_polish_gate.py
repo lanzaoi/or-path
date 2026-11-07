@@ -26,9 +26,9 @@ def test_files() -> None:
     for rel in (
         "orpath/web/watch.html",
         "orpath/watch_snapshot.py",
-        "docs/p5-closeout.md",
-        "docs/p5-tier3-langfuse.md",
-        "docs/v0-smoke.md",
+        "docs/_deprecated/p5-closeout.md",
+        "docs/_deprecated/p5-tier3-langfuse.md",
+        "docs/_deprecated/v0-smoke.md",
         "orpath.bat",
     ):
         if not (ROOT / rel).is_file():
@@ -86,7 +86,7 @@ def test_snapshot_tier3() -> None:
 
 
 def test_closeout_honesty() -> None:
-    co = (ROOT / "docs/p5-closeout.md").read_text(encoding="utf-8", errors="replace")
+    co = (ROOT / "docs/_deprecated/p5-closeout.md").read_text(encoding="utf-8", errors="replace")
     for n in (
         "Claim ladder",
         "P1",
@@ -99,12 +99,12 @@ def test_closeout_honesty() -> None:
     ):
         if n not in co:
             _fail(f"closeout missing {n}")
-    lf = (ROOT / "docs/p5-tier3-langfuse.md").read_text(encoding="utf-8", errors="replace")
+    lf = (ROOT / "docs/_deprecated/p5-tier3-langfuse.md").read_text(encoding="utf-8", errors="replace")
     if "不替脸" not in lf and "Watch" not in lf:
         _fail("langfuse doc must stress Watch is face")
     if "ORPATH_LANGFUSE" not in lf:
         _fail("langfuse doc missing env")
-    smoke = (ROOT / "docs/v0-smoke.md").read_text(encoding="utf-8", errors="replace")
+    smoke = (ROOT / "docs/_deprecated/v0-smoke.md").read_text(encoding="utf-8", errors="replace")
     if "P5" not in smoke and "p5-gate" not in smoke:
         _fail("v0-smoke should mention P5")
     _ok("closeout + langfuse docs honest")

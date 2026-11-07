@@ -211,8 +211,8 @@ Tier-3  Langfuse 等（仍可选，P5 表面）
 | **D0 气泡** | ✅ | `snapshot.dialogue.bubbles` · `orpath/web/watch.html` `#dialogueSection` |
 | **D1 表单+API** | ✅ | `POST/GET /api/steer` · `notes/<slug>-human-steer.json` · 表单 CTA |
 | **D2 LG 合并** | ✅ | `apply_steer_to_state` · orchestrate/research/model/solve · Pi briefs · `resume_from` · pause_next |
-| **D3 Tier-2 深链** | ✅ | `tier2.deep_links` · `package_status` · Watch L4 面板 · `docs/d3-tier2-deep-link.md` |
-| **D4 E2E 收口** | ✅ | 表单 `pause_next`/`at_stage` · product `invoke_once` 验 mode · `orpath.bat dialogue-gate` · `docs/d4-dialogue-e2e.md` |
+| **D3 Tier-2 深链** | ✅ | `tier2.deep_links` · `package_status` · Watch L4 面板 · `docs/_deprecated/d3-tier2-deep-link.md` |
+| **D4 E2E 收口** | ✅ | 表单 `pause_next`/`at_stage` · product `invoke_once` 验 mode · `orpath.bat dialogue-gate` · `docs/_deprecated/d4-dialogue-e2e.md` |
 
 门禁：`orpath.bat dialogue-gate` → `scripts/dialogue_steer_gate.py`（D0–D4）· `scripts/p4_session_gate.py`  
 
@@ -221,7 +221,7 @@ Tier-3  Langfuse 等（仍可选，P5 表面）
 1. Watch 表单可写 **暂停边界**（`at_stage`）+ **pause_next**；API 平铺字段进 `lg.*`。  
 2. 产品 mock 路径：`notes/<slug>-human-steer.json` 的 `solve_mode` **覆盖** CLI mock（例 networkx），`gate_validate_ok`。  
 3. 一键门禁：`orpath.bat dialogue-gate`（`ORPATH_APPLY_STEER=1`，LIVE off）。  
-4. 手测/说明：`docs/d4-dialogue-e2e.md`。  
+4. 手测/说明：`docs/_deprecated/d4-dialogue-e2e.md`。  
 
 **人导规格切片 D0–D4 收口**（主路径可见可导可合并 + 可选深链 + E2E）。
 

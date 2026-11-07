@@ -264,8 +264,8 @@ def test_d3_tier2_deep_link() -> None:
     _ok("D3 Tier-2 panel is inside the L4 scroll container")
 
     for rel in (
-        "docs/d3-tier2-deep-link.md",
-        "docs/p4-tier2-deep-look.md",
+        "docs/_deprecated/d3-tier2-deep-link.md",
+        "docs/_deprecated/p4-tier2-deep-look.md",
     ):
         if not (ROOT / rel).is_file():
             _fail(f"missing {rel}")
@@ -308,7 +308,7 @@ def test_d3_tier2_deep_link() -> None:
         _ok("D3 snapshot SESSION=1")
         os.environ["ORPATH_PI_SESSION"] = "0"
 
-    d3 = (ROOT / "docs" / "d3-tier2-deep-link.md").read_text(encoding="utf-8")
+    d3 = (ROOT / "docs" / "_deprecated" / "d3-tier2-deep-link.md").read_text(encoding="utf-8")
     for n in ("ORPATH_PI_SESSION", "pi-kanban", "/supervise", "deep_links", "Copy cmd"):
         if n not in d3:
             _fail(f"d3 doc missing {n}")
@@ -413,10 +413,10 @@ def test_d4_e2e_product_steer() -> None:
         os.environ["ORPATH_APPLY_STEER"] = "1"
 
     # docs
-    for rel in ("docs/d4-dialogue-e2e.md", "specs/human-steer-and-pi-guidance.md"):
+    for rel in ("docs/_deprecated/d4-dialogue-e2e.md", "specs/human-steer-and-pi-guidance.md"):
         if not (ROOT / rel).is_file():
             _fail(f"missing {rel}")
-    d4 = (ROOT / "docs" / "d4-dialogue-e2e.md").read_text(encoding="utf-8")
+    d4 = (ROOT / "docs" / "_deprecated" / "d4-dialogue-e2e.md").read_text(encoding="utf-8")
     for n in ("dialogue-gate", "pause_next", "invoke_once", "networkx"):
         if n not in d4:
             _fail(f"d4 doc missing {n}")

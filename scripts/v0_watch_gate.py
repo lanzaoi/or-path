@@ -54,7 +54,7 @@ def test_files() -> None:
         "orpath/web/watch.html",
         "scripts/orpath_watch.py",
         "scripts/watch_snapshot_gate.py",
-        "docs/v0-smoke.md",
+        "docs/_deprecated/v0-smoke.md",
         "ORPATH.md",
         "README.md",
     ):
@@ -81,7 +81,7 @@ def test_bat_menu() -> None:
 def test_docs_face() -> None:
     orpath = _read("ORPATH.md")
     readme = _read("README.md")
-    smoke = _read("docs/v0-smoke.md")
+    smoke = _read("docs/_deprecated/v0-smoke.md")
 
     for label, text in (("ORPATH.md", orpath), ("README.md", readme)):
         if "orpath.bat watch" not in text and "orpath.bat watch" not in text.replace("`", ""):
@@ -105,9 +105,9 @@ def test_docs_face() -> None:
             _fail("ORPATH.md should contrast folder-only fake delivery")
 
     if "v0-smoke" not in smoke.lower() and "Live Watch" not in smoke:
-        _fail("docs/v0-smoke.md incomplete")
+        _fail("docs/_deprecated/v0-smoke.md incomplete")
     if "orpath.bat watch" not in smoke:
-        _fail("docs/v0-smoke.md must show orpath.bat watch")
+        _fail("docs/_deprecated/v0-smoke.md must show orpath.bat watch")
 
     # README should point users to watch for process
     if "watch" not in readme.lower():

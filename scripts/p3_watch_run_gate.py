@@ -39,7 +39,7 @@ def test_files() -> None:
         "scripts/orpath_watch_run.py",
         "scripts/orpath_watch.py",
         "orpath/web/watch.html",
-        "docs/v0-smoke.md",
+        "docs/_deprecated/v0-smoke.md",
         "orpath.bat",
         "scripts/orpath_menu.py",
     ):
@@ -51,7 +51,7 @@ def test_files() -> None:
     menu = (ROOT / "scripts/orpath_menu.py").read_text(encoding="utf-8", errors="replace")
     if "watch-run" not in menu and "边跑边看" not in menu:
         _fail("menu missing watch-run / 边跑边看")
-    smoke = (ROOT / "docs/v0-smoke.md").read_text(encoding="utf-8", errors="replace")
+    smoke = (ROOT / "docs/_deprecated/v0-smoke.md").read_text(encoding="utf-8", errors="replace")
     if "watch-run" not in smoke and "P3" not in smoke:
         _fail("docs/v0-smoke missing P3/watch-run")
     _ok("P3 files + wiring")

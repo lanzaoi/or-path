@@ -356,7 +356,7 @@ Tier-3 研发/作品集（可选后置）：
 | mock 默认；`--live` 可选；`--keep-watch` | ✅ |
 | 证据 `outputs/<slug>-watch-run.json`（本 slug stages_grew） | ✅ |
 | `p3_watch_run_gate` / `orpath.bat p3-gate` | ✅ |
-| `docs/v0-smoke.md` 主路径改 P3 | ✅ |
+| `docs/_deprecated/v0-smoke.md` 主路径改 P3 | ✅ |
 
 **PASS 话术：** 「这就是实时可视化主路径（watch-run）」——Tier-2 kanban 仍归 P4。
 
@@ -371,7 +371,7 @@ Tier-3 研发/作品集（可选后置）：
 | `ORPATH_PI_SESSION=1` → lead 不加 `--no-session`；默认/0 仍 ephemeral | ✅ |
 | lead 头写 `pi_session` / `sessions_root` | ✅ |
 | Watch `tier2` + UI 面板；honesty `tier2_session_off` | ✅ |
-| `docs/p4-tier2-deep-look.md`；`p4-gate` | ✅ |
+| `docs/_deprecated/p4-tier2-deep-look.md`；`p4-gate` | ✅ |
 | 强制装 kanban / 必烧 LIVE | 不做 |
 
 **PASS 话术：** 「细看 sub 用 Tier-2（session+kanban）；脸仍是 Watch」。
@@ -386,8 +386,8 @@ Tier-3 研发/作品集（可选后置）：
 |----|------|
 | UI：timeline/swim、running 脉冲、错误红条、Follow tail、Pause、移动端可滚 | ✅ |
 | 性能：事件窗口渲染 + 服务端 cap | ✅ |
-| 可选 Langfuse：`tier3` + `docs/p5-tier3-langfuse.md`（**未**默认全站 span） | ✅ 表面 |
-| claim ladder + `docs/p5-closeout.md` | ✅ |
+| 可选 Langfuse：`tier3` + `docs/_deprecated/p5-tier3-langfuse.md`（**未**默认全站 span） | ✅ 表面 |
+| claim ladder + `docs/_deprecated/p5-closeout.md` | ✅ |
 | `p5-gate` | ✅ |
 
 **PASS 话术：** 「实时可视 S1 主路径完工（P1–P3）；P4/P5 增强已交付；Langfuse 全自动埋点未做」。

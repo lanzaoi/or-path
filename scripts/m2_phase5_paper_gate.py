@@ -172,10 +172,10 @@ def test_product_paper_green() -> None:
 
 
 def test_docs() -> None:
-    for rel in ("docs/m2-polyomino.md", "docs/m2-closeout.md"):
+    for rel in ("docs/_deprecated/m2-polyomino.md", "docs/_deprecated/m2-closeout.md"):
         if not (ROOT / rel).is_file():
             _fail(f"missing {rel}")
-    t = (ROOT / "docs" / "m2-closeout.md").read_text(encoding="utf-8")
+    t = (ROOT / "docs" / "_deprecated" / "m2-closeout.md").read_text(encoding="utf-8")
     for n in ("polyomino", "Claim ladder", "m2-gate", "Phase"):
         if n not in t and n.lower() not in t.lower():
             _fail(f"closeout missing {n}")

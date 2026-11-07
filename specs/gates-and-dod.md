@@ -29,7 +29,7 @@ set PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 
 | 层级 | 内容 |
 |------|------|
-| **选型** | **S1 已冻结并工程收口 P1–P5**（见 `docs/p5-closeout.md`）；Langfuse 全自动 span **未**做 |
+| **选型** | **S1 已冻结并工程收口 P1–P5**（见 `docs/_deprecated/p5-closeout.md`）；Langfuse 全自动 span **未**做 |
 | **V0/P3** | `orpath.bat watch` + **`watch-run`** 本机实时主路径 |
 | **M0** | V0 + solution/validate + 真 sub 证据 |
 

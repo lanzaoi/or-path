@@ -230,7 +230,7 @@ def test_html_and_m1_cta() -> None:
 
 
 def test_docs() -> None:
-    t = (ROOT / "docs" / "m2-polyomino.md").read_text(encoding="utf-8")
+    t = (ROOT / "docs" / "_deprecated" / "m2-polyomino.md").read_text(encoding="utf-8")
     if "阶段 4" not in t and "Phase 4" not in t and "phase 4" not in t.lower():
         # table row **4**
         if "**4**" not in t and "Watch" not in t:

@@ -166,7 +166,7 @@ def test_negative_overlap() -> None:
 
 
 def test_docs() -> None:
-    p = ROOT / "docs" / "m2-polyomino.md"
+    p = ROOT / "docs" / "_deprecated" / "m2-polyomino.md"
     t = p.read_text(encoding="utf-8")
     if "阶段 2" not in t and "Phase 2" not in t and "phase 2" not in t.lower():
         _fail("docs missing phase 2")

@@ -173,7 +173,7 @@ def test_product_workdir_run() -> None:
 
 
 def test_docs() -> None:
-    t = (ROOT / "docs" / "m2-polyomino.md").read_text(encoding="utf-8")
+    t = (ROOT / "docs" / "_deprecated" / "m2-polyomino.md").read_text(encoding="utf-8")
     if "阶段 3" not in t and "phase 3" not in t.lower():
         _fail("docs missing phase 3")
     if "workdir" not in t.lower():

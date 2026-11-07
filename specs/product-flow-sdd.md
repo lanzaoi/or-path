@@ -248,7 +248,7 @@ menu →「实时过程台 / Live Watch」
 | V0-S1 | **选型 S1**：Watch 主脸；可选 pi-kanban（需 session）；Langfuse 后置可选；**不得**仅 Tier-2/3 宣称 V0 |
 
 **S1 未实现前：** 不得宣称可视化体验完成（选型 ≠ PASS）。  
-**补充（现状）：** Watch **P1–P5 工程收口**（见 `docs/p5-closeout.md`）；主路径 `watch-run`；Langfuse **仅可选表面/文档**，不替脸。
+**补充（现状）：** Watch **P1–P5 工程收口**（见 `docs/_deprecated/p5-closeout.md`）；主路径 `watch-run`；Langfuse **仅可选表面/文档**，不替脸。
 
 ### 9.1 M0 名称
 

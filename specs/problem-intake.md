@@ -308,7 +308,7 @@ path   # 解答形状；但 sources[] / data_assets[] 元素上的文件 path �
 | `orpath/control_plane.py` / `run_orpath.py` | seed 字段、CLI |
 | `orpath.bat` | 可选 `intake` 子命令 |
 | `fixtures/t1_intake/` 或 `fixtures/intake/` | 文本 stub + 负例 json（**小**；勿塞大 PDF 进 git） |
-| `docs/1.1-smoke.md` | 操作说明（closeout 时） |
+| `docs/_deprecated/1.1-smoke.md` | 操作说明（closeout 时） |
 
 **不写：** `pi-main/`、`openpi/` 深改、`vendor/`、`inquisitive*`。
 

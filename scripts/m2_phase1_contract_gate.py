@@ -135,9 +135,9 @@ def test_dispatch_registered() -> None:
 
 
 def test_docs() -> None:
-    p = ROOT / "docs" / "m2-polyomino.md"
+    p = ROOT / "docs" / "_deprecated" / "m2-polyomino.md"
     if not p.is_file():
-        _fail("missing docs/m2-polyomino.md")
+        _fail("missing docs/_deprecated/m2-polyomino.md")
     t = p.read_text(encoding="utf-8")
     for n in ("polyomino_cover", "phase 1", "ADAPTER", "deepseek-v4-flash"):
         if n.lower() not in t.lower() and n not in t:
@@ -145,7 +145,7 @@ def test_docs() -> None:
             if n == "deepseek-v4-flash":
                 continue
             _fail(f"docs missing {n}")
-    _ok("docs/m2-polyomino.md")
+    _ok("docs/_deprecated/m2-polyomino.md")
 
 
 def main() -> int:

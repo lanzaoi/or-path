@@ -1077,8 +1077,8 @@ def discover_pi_sessions(
         "kanban_hint": "START.bat / START.sh 启动 Web Studio",
         "supervise_hint": "tools/validate_solution.py 独立数学与物理校验",
         "fleet_hint": "LangGraph 控制面 16 站流水线",
-        "docs": "docs/d3-tier2-deep-link.md",
-        "docs_p4": "docs/p4-tier2-deep-look.md",
+        "docs": "docs/_deprecated/d3-tier2-deep-link.md",
+        "docs_p4": "docs/_deprecated/p4-tier2-deep-look.md",
         "packages": [],
         "package_status": {
             "pi-kanban": True,
@@ -2350,7 +2350,7 @@ def build_snapshot(
     lf_on = lf_raw in {"1", "true", "yes", "on"}
     tier3 = {
         "enabled": lf_on,
-        "hint": "docs/p5-tier3-langfuse.md",
+        "hint": "docs/_deprecated/p5-tier3-langfuse.md",
         "note": (
             "Langfuse wired (env on) — still secondary to Watch"
             if lf_on
