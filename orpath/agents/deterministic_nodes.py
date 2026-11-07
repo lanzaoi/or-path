@@ -593,12 +593,15 @@ def _extract_verdict(sol: dict[str, Any], data: dict[str, Any]) -> dict[str, Any
         prov_flag = meth.get("proven_optimal") if isinstance(meth, dict) else None
         prov = prov_flag if isinstance(prov_flag, bool) else None
     if prov is None:
-        # Never assume proven optimal from status alone if method indicates heuristic
+        # Respect Numbers Truth iron law: status=OPTIMAL alone does not prove optimality without exact solver certification
+        solver_name = str(sol.get("solver") or meta.get("solver") or "").lower()
         m_cls = str(meta.get("method_class") or "").lower()
-        if m_cls in ("heuristic", "metaheuristic", "simulation"):
+        if m_cls in ("heuristic", "metaheuristic", "simulation", "local_search"):
             prov = False
-        else:
+        elif any(e in solver_name or e in m_cls for e in ("cp-sat", "highs", "scip", "mip", "exact")):
             prov = str(sol.get("status") or "").upper() == "OPTIMAL"
+        else:
+            prov = False
     prov = bool(prov)
 
     recomputed: float | None = None

@@ -124,9 +124,10 @@ def _solve_ww(
     def holding(i: int, t: int) -> float:
         # Batch produced in period i covering demands i..t: the units consumed
         # in period k sit in inventory at the end of periods i..k-1 and are
-        # charged at rates h_i..h_{k-1} → d_k * (pref_h[k] - pref_h[i]).
+        # charged at rates h_i..h_{k-1} → d_k * (pref_h[k - 1] - pref_h[i - 1]).
         return sum(
-            demands[k - 1] * (pref_h[k] - pref_h[i]) for k in range(i + 1, t + 1)
+            demands[k - 1] * (pref_h[k - 1] - pref_h[i - 1])
+            for k in range(i + 1, t + 1)
         )
 
     F = [0.0] * (T + 1)

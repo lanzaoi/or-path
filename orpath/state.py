@@ -74,11 +74,6 @@ class ORPathState(TypedDict):
     gate_intake_ok: NotRequired[bool]
     human_confirm_intake: NotRequired[bool]
     intake_confirmed: NotRequired[bool]
-    # D2 human-steer (Watch dialogue → LG/Pi / problems discovered by steering)
-    # Plan 1.2: aligned with CorePipelineState artifact-pointer contract
-    domain_cartridge: NotRequired[str]
-    complexity_tier: NotRequired[Literal["A", "B", "C"]]
-    profile_path: NotRequired[str]
     workdir: NotRequired[str]
     # D2 human-steer (Watch dialogue → LG/Pi)
     human_steer_path: NotRequired[str]

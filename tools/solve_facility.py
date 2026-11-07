@@ -392,6 +392,7 @@ def solve_two_echelon_scnd(
     time_limit_s: float = 30.0,
     problem_id: str | None = None,
     co2_factor: float = DEFAULT_CO2_PER_TON_KM,
+    cost_per_km_ton: float = 1.0,
 ) -> dict[str, Any]:
     """Solve Two-Echelon Supply Chain Network Design (Plants -> DCs -> Customers).
 
@@ -528,6 +529,7 @@ def solve_two_echelon_scnd(
 
     obj_val = round(float(solver.Objective().Value()), 4)
     tot_trans = round(obj_val - tot_fixed, 4)
+    total_ton_km = round(tot_trans / max(1e-6, cost_per_km_ton), 4)
 
     # MIP incumbent bound → lower_bound / optimality_gap (Numbers Truth).
     solver_lower_bound = float(solver.Objective().BestBound())
@@ -596,8 +598,9 @@ def solve_two_echelon_scnd(
         "assignments": assignments,
         "costs": costs,
         "esg_metrics": {
-            "total_ton_km": round(tot_trans, 4),
-            "co2_emissions_kg": round(tot_trans * co2_factor, 4),
+            "total_ton_km": total_ton_km,
+            "co2_emissions_kg": round(total_ton_km * co2_factor, 4),
+            "emission_factor_kg_per_ton_km": co2_factor,
         },
         "metrics": metrics,
         "meta": {

@@ -148,10 +148,35 @@ def solve_staff_rostering(
     solver.parameters.max_time_in_seconds = float(time_limit_s)
     status = solver.Solve(model)
 
+    elapsed = time.time() - t0
+    pid = str(problem_id or DEFAULT_PROBLEM_ID)
+
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        raise RuntimeError(
-            f"CP-SAT failed on staff_rostering: {solver.StatusName(status)}"
-        )
+        return {
+            "problem_id": pid,
+            "problem_class": "staff_rostering",
+            "mode": "staff_rostering",
+            "status": "INFEASIBLE",
+            "objective": None,
+            "solver": DEFAULT_SOLVER,
+            "source": "tools/solve_staff_rostering.py",
+            "num_employees": num_employees,
+            "num_days": num_days,
+            "shifts": SHIFTS,
+            "roster": {},
+            "schedule_by_day": [],
+            "fairness_metrics": {},
+            "shift_demands": demands,
+            "max_consecutive_days": max_consec,
+            "meta": {
+                "exact": True,
+                "proven_optimal": False,
+                "method_class": "exact",
+                "time_limit_s": float(time_limit_s),
+                "solver_status": solver.StatusName(status),
+                "solve_seconds": round(elapsed, 4),
+            },
+        }
 
     status_str = "OPTIMAL" if status == cp_model.OPTIMAL else "FEASIBLE"
     objective = int(solver.ObjectiveValue())
