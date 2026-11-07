@@ -82,6 +82,7 @@ def solve_tsp(
 
     params = pywrapcp.DefaultRoutingSearchParameters()
     params.time_limit.FromMilliseconds(int(time_limit_ms))
+    params.sat_parameters.random_seed = int(random_seed)
     fs = getattr(enums.FirstSolutionStrategy, first_solution, None)
     if fs is not None:
         params.first_solution_strategy = fs
@@ -243,6 +244,7 @@ def solve_vrp(
 
     params = pywrapcp.DefaultRoutingSearchParameters()
     params.time_limit.FromMilliseconds(int(time_limit_ms))
+    params.sat_parameters.random_seed = int(random_seed)
     fs = getattr(enums.FirstSolutionStrategy, first_solution, None)
     if fs is not None:
         params.first_solution_strategy = fs

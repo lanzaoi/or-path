@@ -285,7 +285,7 @@ def render_truth_tables(state: Mapping[str, Any]) -> dict[str, Any]:
         f"| status | {sol.get('status', '-')} |",
         f"| objective (声明值) | {_format_num(sol.get('objective'))} |",
         f"| recomputed_objective | {_format_num(val.get('recomputed_objective')) if val else _format_num(sol.get('objective'))} |",
-        f"| proven_optimal | {sol.get('proven_optimal', sol.get('status', '').upper() == 'OPTIMAL')} |",
+        f"| proven_optimal | {bool((sol.get('meta') or {}).get('proven_optimal', sol.get('proven_optimal', sol.get('status', '').upper() == 'OPTIMAL')))} |",
         f"| solver | {sol.get('solver', '-')} |",
         f"| solve_time_sec | {sol.get('solve_time_sec', '-')} |",
         "",

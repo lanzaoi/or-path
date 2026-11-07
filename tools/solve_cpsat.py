@@ -108,10 +108,21 @@ def solve_tsp_cpsat(problem_id: str, *, time_limit_s: float = 30.0) -> dict[str,
                 succ[i] = j
                 break
     tour_idx = [0]
-    while len(tour_idx) < n:
-        tour_idx.append(succ[tour_idx[-1]])
-    tour_idx.append(0)
-    tour = [labels[i] for i in tour_idx]
+    visited = {0}
+    guard = 0
+    while len(tour_idx) < n and guard < 2 * n:
+        guard += 1
+        curr = tour_idx[-1]
+        nxt = succ.get(curr)
+        if nxt is None or nxt in visited:
+            break
+        tour_idx.append(nxt)
+        visited.add(nxt)
+    if len(tour_idx) == n:
+        tour_idx.append(0)
+        tour = [labels[i] for i in tour_idx]
+    else:
+        tour = None
     obj = int(solver.ObjectiveValue())
     proven = status == cp_model.OPTIMAL
     return {

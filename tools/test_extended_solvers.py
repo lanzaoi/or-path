@@ -382,7 +382,7 @@ def test_qubo_ising_general_solve_and_validate():
     sol = solve_qubo()
     assert sol["problem_class"] == "qubo_ising"
     assert sol["mode"] == "qubo"
-    assert sol["status"] == "OPTIMAL"
+    assert sol["status"] in ("OPTIMAL", "FEASIBLE")
     assert isinstance(sol["sample"], dict)
     assert set(sol["sample"].values()) <= {0, 1}
     assert isinstance(sol["energy_spectrum"], list)
@@ -400,7 +400,7 @@ def test_qubo_ising_spin_glass_solve_and_validate():
     sol = solve_ising()
     assert sol["problem_class"] == "qubo_ising"
     assert sol["mode"] == "ising"
-    assert sol["status"] == "OPTIMAL"
+    assert sol["status"] in ("OPTIMAL", "FEASIBLE")
     assert isinstance(sol["spins"], dict)
     assert set(sol["spins"].values()) <= {-1, 1}
     assert isinstance(sol["energy_spectrum"], list)
@@ -427,7 +427,7 @@ def test_qubo_ising_adaptive_annealing_spectrum():
     sol_sa = solve_qubo(
         method="simulated_annealing", num_reads=50, beta_range=(0.5, 10.0)
     )
-    assert sol_sa["status"] == "OPTIMAL"
+    assert sol_sa["status"] in ("OPTIMAL", "FEASIBLE")
     assert sol_sa["meta"]["num_reads"] == 50
     assert sol_sa["meta"]["beta_range"] == (0.5, 10.0)
     assert isinstance(sol_sa["energy_spectrum"], list)

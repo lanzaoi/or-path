@@ -158,9 +158,13 @@ def profile_inbox_assets(inbox_dir: Path, slug: str, outputs_dir: Path) -> dict[
             elif suf in STATEMENT_EXTS:
                 statements.append(rel)
 
-    # Check for tube data files (10 csvs or demand_batches)
+    # Check for microgrid or tube data files
+    all_names = {Path(df["rel_path"]).name.lower() for df in data_files}
     csv_names = {Path(df["rel_path"]).name.lower() for df in data_files if df.get("kind") == "csv"}
-    if any(k in csv_names for k in ("demand_batches.xlsx", "demand.xlsx")) or len(csv_names) >= 5:
+    if any(k in all_names for k in ("result1.xlsx", "result2.xlsx", "result3.xlsx", "result4-2.xlsx", "result4-3.xlsx")) or any("附件" in str(df.get("rel_path", "")) for df in data_files if df.get("kind") == "xlsx"):
+        detected_class = detected_class or "microgrid_dispatch"
+        has_solver_dataset = True
+    elif any(k in all_names for k in ("demand_batches.xlsx", "demand.xlsx")) or len(csv_names) >= 5:
         detected_class = detected_class or "tube_cut"
         has_solver_dataset = True
 

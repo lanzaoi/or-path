@@ -542,13 +542,21 @@ def _extract_verdict(sol: dict[str, Any], data: dict[str, Any]) -> dict[str, Any
     """Pull ``ok`` / ``recomputed_objective`` / ``proven_optimal`` / ``errors``."""
     ok = bool(data.get("ok"))
     errors = [str(e) for e in (data.get("errors") or [])]
-    prov = sol.get("proven_optimal")
+    meta = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
+    prov = meta.get("proven_optimal")
+    if not isinstance(prov, bool):
+        prov = sol.get("proven_optimal")
     if not isinstance(prov, bool):
         meth = sol.get("method") if isinstance(sol.get("method"), dict) else {}
         prov_flag = meth.get("proven_optimal") if isinstance(meth, dict) else None
         prov = prov_flag if isinstance(prov_flag, bool) else None
     if prov is None:
-        prov = str(sol.get("status") or "").upper() == "OPTIMAL"
+        # Never assume proven optimal from status alone if method indicates heuristic
+        m_cls = str(meta.get("method_class") or "").lower()
+        if m_cls in ("heuristic", "metaheuristic", "simulation"):
+            prov = False
+        else:
+            prov = str(sol.get("status") or "").upper() == "OPTIMAL"
     prov = bool(prov)
 
     recomputed: float | None = None

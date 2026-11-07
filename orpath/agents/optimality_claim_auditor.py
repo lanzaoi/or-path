@@ -165,6 +165,7 @@ _EXACT_SOLVER_KEYWORDS = {
 _HEURISTIC_KEYWORDS = {
     "alns", "ga", "genetic", "heuristic", "metaheuristic", "greedy",
     "simulated_annealing", "local_search", "tabu", "vns", "aco", "pso",
+    "mpc", "rolling_horizon", "rolling",
 }
 
 

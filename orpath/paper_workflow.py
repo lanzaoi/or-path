@@ -727,10 +727,24 @@ def draft_paper_with_writer(
             evidence_blocks = build_verified_evidence_blocks(solution, validation=None)
             summary_table = evidence_blocks.get("summary_table", "")
             breakdown_table = evidence_blocks.get("breakdown_table", "")
+            figures_block = evidence_blocks.get("figures", "")
             verified_section = (
                 f"\n\n### Authoritative Results Table (Pre-verified Python Output)\n"
                 f"{summary_table}\n\n{breakdown_table}\n"
             )
+            if figures_block:
+                verified_section += f"\n{figures_block}\n"
+
+            # Retrieve canonical mathematical formulation template
+            latex_template = ""
+            try:
+                from orpath.agents.tools_or import get_problem_formulation_template
+                import json
+                tmpl_res = json.loads(get_problem_formulation_template.invoke({"problem_class": problem_class}))
+                if tmpl_res.get("success") and tmpl_res.get("latex_formulation"):
+                    latex_template = tmpl_res.get("latex_formulation")
+            except Exception:
+                pass
 
             # Assemble domain modeling directive
             domain_hints = f"Domain: {cart.domain}. Target Complexity: Tier {cart.default_tier}."
@@ -738,12 +752,8 @@ def draft_paper_with_writer(
                 checklist_str = "\n".join(f"- {c}" for c in cart.modeling_checklist)
                 domain_hints += f"\nDomain Modeling Checklist:\n{checklist_str}"
 
-            writer = create_writer_agent(
-                model=model,
-                cartridge_tools=writer_tools,
-                domain_directive=domain_hints,
-            )
             rev_note = f"\nAddress this previous review feedback: {revision_feedback}\n" if revision_feedback else ""
+            math_hint = f"\nStandard LaTeX Mathematical Model Reference:\n```latex\n{latex_template}\n```\n" if latex_template else ""
             prompt_text = (
                 f"Task: Write a rigorous, competition/publication-grade OR academic paper for problem '{problem_id}' (class '{problem_class}').\n"
                 f"Inputs:\n"
@@ -753,18 +763,42 @@ def draft_paper_with_writer(
                 f"- validate_path: {validate_path}\n"
                 f"{rev_note}\n\n"
                 f"Verified Truth Evidence (Must include in Results):\n"
-                f"{verified_section}\n\n"
+                f"{verified_section}\n"
+                f"{math_hint}\n"
                 f"Instructions:\n"
                 f"1. Strictly conform to docs/or-paper-sop.md and write the 6 standard chapters in professional Markdown:\n"
                 f"   (1. Abstract & Key Indicators, 2. Problem statement, assumptions & notation table, 3. Mathematical formulation with LaTeX equations, "
                 f"4. Solution strategy and complexity, 5. Verified Computational Results & Sensitivity, 6. Limitations & Industrial deployment).\n"
                 f"2. Numbers Truth: all numeric results, objectives and metrics must strictly come from {solution_path} or the pre-verified table above. Do NOT invent numbers.\n"
                 f"3. Honor honesty: if solution is not proven optimal (status is FEASIBLE), report as feasible/best-found, never claim proven global optimality.\n"
-                f"4. Save the finalized paper by calling export_paper_markdown(output_path='{paper_path}', content=...). Ensure complete text is persisted.\n"
+                f"4. Directly output the complete academic paper in high-quality Markdown format.\n"
+            )
+
+            # Single-turn direct synthesis: avoid multi-turn tool-calling loop hangs on slow cloud endpoints
+            # If the model is a ChatModel instance, invoke directly
+            if model is not None and hasattr(model, "invoke"):
+                res = model.invoke([HumanMessage(content=prompt_text)])
+                content = getattr(res, "content", "") or ""
+                # Strip markdown code wrapper if wrapped entirely
+                if content.startswith("```markdown") and content.endswith("```"):
+                    content = content[11:-3].strip()
+                elif content.startswith("```") and content.endswith("```") and "\n# " in content:
+                    first_nl = content.find("\n")
+                    content = content[first_nl+1:-3].strip()
+                if len(content) > 1000 and ("# " in content or "## " in content):
+                    paper_path.parent.mkdir(parents=True, exist_ok=True)
+                    paper_path.write_text(content, encoding="utf-8")
+                    return content
+
+            # Fallback: ReAct agent if direct invoke did not return suitable text
+            writer = create_writer_agent(
+                model=model,
+                cartridge_tools=writer_tools,
+                domain_directive=domain_hints,
             )
             res = writer.invoke(
-                {"messages": [HumanMessage(content=prompt_text)]},
-                config={"recursion_limit": 20},
+                {"messages": [HumanMessage(content=prompt_text + f"\n5. Call export_paper_markdown('{paper_path}', content=...).")]},
+                config={"recursion_limit": 10},
             )
             if paper_path.is_file() and paper_path.stat().st_size > 1200:
                 return paper_path.read_text(encoding="utf-8")
@@ -824,11 +858,19 @@ def run_reviewer_agent(
             f"Follow the 10-point rubric in docs/or-paper-sop.md §6.\n"
             f"Enforce Numbers Truth: every numeric claim must come from {solution_path}.\n"
             f"Flag unproven global optimality claims as FATAL defects.\n"
-            f"Write the final peer review report directly to '{review_path}' using export_paper_markdown."
+            f"Write the final peer review report in Markdown format."
         )
+        if model is not None and hasattr(model, "invoke"):
+            res = model.invoke([HumanMessage(content=prompt_text)])
+            content = getattr(res, "content", "") or ""
+            if len(content) > 100:
+                review_path.parent.mkdir(parents=True, exist_ok=True)
+                review_path.write_text(content, encoding="utf-8")
+                return content
+
         res = reviewer.invoke(
-            {"messages": [HumanMessage(content=prompt_text)]},
-            config={"recursion_limit": 15},
+            {"messages": [HumanMessage(content=prompt_text + f" Export to '{review_path}'.")]},
+            config={"recursion_limit": 10},
         )
         if review_path.is_file() and review_path.stat().st_size > 100:
             return review_path.read_text(encoding="utf-8")

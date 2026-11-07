@@ -391,6 +391,22 @@ def _validate_vrp(problem_id: str, sol: dict) -> list[dict]:
         }
     )
 
+    depot_endpoints_ok = True
+    for ri, route in enumerate(routes):
+        r = [str(x) for x in route]
+        if not r:
+            continue
+        if r[0] != depot or r[-1] != depot:
+            depot_endpoints_ok = False
+            checks.append({
+                "name": "depot_endpoints",
+                "ok": False,
+                "detail": f"route {ri} does not start and end at depot {depot}: route={r}",
+            })
+            break
+    if depot_endpoints_ok:
+        checks.append({"name": "depot_endpoints", "ok": True})
+
     customers = [lab for lab in labels if lab != depot]
     seen: list[str] = []
     total = 0.0

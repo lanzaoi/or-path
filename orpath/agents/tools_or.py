@@ -753,10 +753,10 @@ def get_problem_formulation_template(problem_class: str) -> str:
             matched_sec = sec
             break
 
-    if not matched_sec:
+    if not matched_sec or "```latex" not in matched_sec:
         for sec in sections:
             sec_low = sec.lower()
-            if any(k.lower() in sec_low for k in match_keys):
+            if any(k.lower() in sec_low for k in match_keys) and "```latex" in sec:
                 matched_sec = sec
                 break
 

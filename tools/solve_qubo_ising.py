@@ -100,11 +100,12 @@ def solve_max_cut(
 
     max_cut_size = len(cut_edges)
 
+    is_opt = (method == "exact" and num_nodes <= 18)
     return {
         "problem_id": f"max_cut_{num_nodes}nodes_{len(edges)}edges",
         "problem_class": "qubo_ising",
         "mode": "max_cut",
-        "status": "OPTIMAL",
+        "status": "OPTIMAL" if is_opt else "FEASIBLE",
         "objective": max_cut_size,
         "solver": f"dimod-{method}",
         "source": "tools/solve_qubo_ising.py",
@@ -232,11 +233,12 @@ def solve_qubo(
     spectrum = [{"energy": round(float(r.energy), 4), "num_occurrences": int(r.num_occurrences)}
                 for r in list(sampleset.data(fields=["energy", "num_occurrences"]))[:5]]
 
+    is_opt = (method == "exact" and n <= 18)
     return {
         "problem_id": f"qubo_{n}vars",
         "problem_class": "qubo_ising",
         "mode": "qubo",
-        "status": "OPTIMAL",
+        "status": "OPTIMAL" if is_opt else "FEASIBLE",
         "objective": energy,
         "solver": f"dimod-{method}",
         "source": "tools/solve_qubo_ising.py",
@@ -307,11 +309,12 @@ def solve_ising(
     spectrum = [{"energy": round(float(r.energy), 4), "num_occurrences": int(r.num_occurrences)}
                 for r in list(sampleset.data(fields=["energy", "num_occurrences"]))[:5]]
 
+    is_opt = (method == "exact" and n <= 18)
     return {
         "problem_id": f"ising_{n}spins",
         "problem_class": "qubo_ising",
         "mode": "ising",
-        "status": "OPTIMAL",
+        "status": "OPTIMAL" if is_opt else "FEASIBLE",
         "objective": energy,
         "solver": f"dimod-{method}",
         "source": "tools/solve_qubo_ising.py",
