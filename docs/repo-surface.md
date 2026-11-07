@@ -9,7 +9,6 @@
 | `orpath/` `tools/` `scripts/` `specs/` `contracts/` `knowledge/` `fixtures/`（无 raw 大附件） | 产品代码、求解器、规范与金标 |
 | `START.bat` `START.sh` `orpath.bat` `orpath.sh` | 官方启动器与命令行调度器 |
 | `docs/`（顶层活文档 + `archive/`） | 导航见 `docs/README.md`；架构见 `docs/ARCHITECTURE.md` |
-| `tasks/` | 任务执行与阶段计划（`tasks/README.md`） |
 | `AGENTS.md` `README.md` `ORPATH.md` `requirements.txt` | 入口、开发公约与环境依赖声明 |
 | `demo/seed/` | 官方 Web Studio / Watch 默认演示种子 |
 | `inbox/README.md` | 本地放题目录指引 |
@@ -22,7 +21,7 @@
 | **`.hermes/desktop-attachments/**`** | 竞赛材料，永不上传 |
 | **`inbox/**`**（除 README） | 用户丢题面目录 |
 | **`.env` / `*.env.local`** | 密钥 |
-| **`outputs/` `notes/` `papers/` `runs/`** | 运行产物 |
+| **`outputs/` `notes/` `papers/` `runs/` `tasks/`** | 运行产物与内部执行清单（本地保留，不入版本库） |
 | **`.pi/orpath_model.json`** | 本机换模型偏好 |
 | **`.pi-subagents/` `.pi/npm/` `.pi/memory/`** | 运行时缓存 |
 | **`demo/*` except `demo/seed/**`** | 可选视觉实验室，非产品主路径 |

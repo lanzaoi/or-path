@@ -1,6 +1,6 @@
 # Multi-Agent — 原生精悍多智能体协作规范
 
-**对齐：** `AGENTS.md` · `tasks/lean_4agent_5x5_master_plan.md` · `specs/product-flow-sdd.md` · `docs/or-paper-sop.md`  
+**对齐：** `AGENTS.md` · `specs/architecture.md` · `specs/product-flow-sdd.md` · `docs/or-paper-sop.md`  
 **状态：** LAW 2026-11（已退役旧版 `.pi/` Node CLI 子进程规范）
 
 ---

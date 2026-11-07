@@ -1,6 +1,6 @@
 # OR-Path 架构总览（纯 Python 原生精悍版）
 
-> 活文档。项目最高宪章以 **`AGENTS.md`** 为准；当前实施总单见 **`tasks/lean_4agent_5x5_master_plan.md`**。历史 Node.js `pi` 包装层已永久剥离退役。
+> 活文档。项目最高宪章以 **`AGENTS.md`** 为准；历史 Node.js `pi` 包装层已永久剥离退役。
 
 ## 一句话定义
 
@@ -16,7 +16,6 @@
 
 安装根 ORPATH_HOME（本仓库）
   ├─ AGENTS.md / CLAUDE.md     项目最高法与智能体守则
-  ├─ tasks/                    执行计划总单（lean_4agent_5x5_master_plan.md）
   ├─ orpath/                   LangGraph 主控平面 (graph_product.py) · 4 精锐智能体与装备包 · Web Studio
   ├─ tools/                    27 个硬核运筹求解器 (solve_*.py) · 独立验证器 (validate_solution.py / validators/)
   ├─ knowledge/                19 份运筹建模宝典 (knowledge/skills/) + 语料种子

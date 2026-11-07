@@ -2,7 +2,7 @@
 
 Durable project law for OR-Path sessions. Product runtime is **this repo** (`START.bat` / `START.sh` / `orpath.bat` / `./orpath.sh`). Legacy Node.js `pi` CLI wrapper (`@earendil-works/pi-coding-agent` & `pi-subagents`) has been permanently stripped and retired — never reintroduce `pi` subprocess calls.
 
-> **Active Master Refactoring Plan**: `tasks/lean_4agent_5x5_master_plan.md` (consolidating bloated 60+ cloned domain agents into **4 Core Specialist Agents + Deterministic Python Gates + 10 Pluggable `DomainCartridge` Packs**).
+> **v1.0.0 Stable Architecture**: Consolidated 60+ legacy cloned domain agents into **4 Core Specialist Agents + Deterministic Python Gates + 10 Pluggable `DomainCartridge` Packs**.
 
 ## Core Assets (5 Pillars)
 
@@ -38,11 +38,11 @@ Durable project law for OR-Path sessions. Product runtime is **this repo** (`STA
 
 ## Key Specs & Docs
 
-1. **`tasks/lean_4agent_5x5_master_plan.md`** — Active 5-Phase × 25-Plan execution blueprint
+1. **`docs/ARCHITECTURE.md`** — Current native Python system architecture & lean 4-agent specification
 2. **`docs/or-paper-sop.md`** — Mandatory 6-chapter academic OR paper SOP
 3. **`knowledge/skills/or-problems.md`** — Classic OR mathematical formulations & Python modeling reference
 4. **`specs/product-flow-sdd.md` & `specs/process-visibility.md`** — End-to-end product flow & Live Watch contracts
-5. **`docs/ARCHITECTURE.md`** — Current native Python system architecture
+5. **`docs/repo-surface.md`** — Repository public boundaries & clean release rules
 
 ## Artifact Layout
 

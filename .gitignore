@@ -64,6 +64,7 @@ runtime/
 /notes/
 /papers/
 /runs/
+/tasks/
 
 # Legacy retired directories (if present locally)
 .pi/

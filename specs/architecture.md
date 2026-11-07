@@ -1,6 +1,6 @@
 # Architecture — 架构法（现行权威规范）
 
-**对齐：** `AGENTS.md` · `specs/product-flow-sdd.md` · `tasks/lean_4agent_5x5_master_plan.md`  
+**对齐：** `AGENTS.md` · `specs/product-flow-sdd.md` · `docs/ARCHITECTURE.md`  
 **状态：** LAW 2026-11（精简 4 智能体 + 10 领域装备包 + 27 工业求解器架构全量上线）
 
 ---
