@@ -46,85 +46,96 @@
 
 ---
 
-## 2. 控制面隐喻（成熟版 · 必须背）
+## 2. 控制面隐喻（现行权威 · 必须背）
 
 ```text
-LG  = 总进度表（唯一：第几站、过不过、打回哪、停不停）
-Pi  = 本站包工头（只在被请到的站内；规定 sub）
-sub = 班组（真隔离；交文件路径）
-脚本 = 计算器 + 质检章（OCR / schema / solve / validate / R1 / R2）
+LangGraph       = 总进度表（唯一：阶段迁移、硬门禁判定、打回回修、停机熔断）
+4 大常驻特种兵  = 认知与专业输出（or_analyst / or_modeler / or_writer / or_reviewer）
+10 装备包       = 领域专业工具与探针（DomainCartridge: tube, routing, scheduling, etc.）
+27 工业求解器   = 物理计算引擎（HiGHS, CP-SAT, PyVRP, ALNS, NetworkX, Nashpy 等）
+独立校验器      = 质检公章（tools/validate_solution.py + 5 类 DIMO 变异防御）
+Web Studio      = 过程脸与交互舱（START.bat/sh · Problem Workbench · Live Watch）
 ```
 
-**背诵句：**  
-**LG 翻页；Pi 只在某一页招人；打回是 LG 往回翻（有上限）；算分页永远手算。**
+**背诵口令：**  
+**LangGraph 翻页与硬门禁；4 大专家独立单兵调用；打回按纯 Python 计数器（有严格上限）；数值结果 100% 由求解器物理计算并经独立复算。**
 
-### 2.1 禁止脑图
+### 2.1 严禁的反模式
 
-| 禁止 | 后果 |
-|------|------|
-| Pi 与 LG 平级「交棒」 | 双老板、无法 resume 语义 |
-| Pi 无限自由开窗当全局编排 | 无法质检、假 MA |
-| LLM 写 objective | 作品集破产 |
-| 多入口都叫正式产品 | 假竣工 |
-| 用 lead 旁白冒充 sub 思考 | 见 process-visibility |
+| 严禁行为 | 后果与定性 |
+|----------|------------|
+| 大模型通过自然语言闲聊决定翻页 | 破坏状态确定性，严禁出现 |
+| 大模型手写或伪造 `objective` 数值 | 伪造科学数据，触犯 Numbers Truth 铁律 |
+| 大模型 Supervisor 轮询点名 | 产生大量无意义 Token 消耗与注意力漂移 |
+| 跨阶段会话上下文无限追加 | 导致长上下文注意力腐烂与记忆错乱 |
+| 虚假宣称未证明全局最优为最优 | 学术诚信缺陷，门禁直接阻断 |
 
-### 2.2 「LG 适合多智能体」在本法中的含义
+### 2.2 控制面与智能体协作模式
 
-- **是：** 适合编排多阶段协作 **流程**（图、状态、重试、resume）  
-- **否：** 必须用 LG 节点扮演所有 Agent；否取消 Pi  
-- **本产品形态：** **模式 B** = LG 进度 + Pi 站内真 sub  
-
-**分工不交换**（除非未来单独立项改产品形态）。
-
-### 2.3 站内时序
-
-```text
-LG → 站 S
-  脚本站：工具 → 写盘 → gate 字段
-  认知站：短 lead（无 write）→ 规定 sub → 路径回写 → lead 结束
-  → LG：下一站 | 回边 | HUMAN
-```
+- **控制面纯粹化**：由 LangGraph 状态图与确定性条件边（0-Token 纯 Python 代码）主导，不使用任何大模型充当路由器。
+- **智能体调用单兵化（Isolated File Handoffs）**：每个智能体以全新的局部消息列表触发，跨阶段仅通过强类型契约传递磁盘工件指针（`notes/`、`contracts/`、`outputs/`、`papers/`）。
+- **领域能力装备化（Domain Cartridge）**：不为各个领域复制全套多智能体，而是通过 10 个即插即用的领域装备包挂载专用探针与校验工具。
 
 ---
 
-## 3. 主流程总图
+## 3. 主流程总图（Master Pipeline Flow）
 
 ```text
 START
-  [opt] intake_ocr → intake_parse → (human_confirm?)
-  → orchestrate
-  → retrieve
-  → bridge_pi          # 可选 skip
-  → research           # Pi → or-researcher
-  → model              # Pi → or-modeler → schema（禁 optima）
-  → gate_schema        # 脚本；红→model≤2→HUMAN
-  → solve              # 脚本 only
-  → gate_validate      # 脚本；红→tune≤3→model≤2→HUMAN
-  → explain
-  → draft_paper        # lead/writer
-  → cite_pack          # live: or-verifier + R1/claim
-  → review_pack        # live: or-reviewer + R2
-  → revise_or_done     # 红→draft≤2；绿→provenance→END
+  │
+  ▼
+[ intake_ocr / intake_parse ] ──► [ human_confirm_intake? ] (Web Studio 拖拽与人机确认)
+  │
+  ▼
+[ orchestrate ]  (确定性前置探针、装备包选择、复杂度分轨 Tier-A/B/C)
+  │
+  ▼
+[ retrieve ]  (本地 ONNX bge-m3 + BM25 混合检索知识库与运筹技能)
+  │
+  ▼
+[ research ]  (智能体: or_analyst 读取 profile.json，输出 problem-brief.md)
+  │
+  ▼
+[ model ]  (智能体: or_modeler 生成 contracts/schema.json 或受控沙箱脚本)
+  │
+  ▼
+[ gate_schema ] ──(失败 & schema_repair < 2)──► [ model ]
+  │            ──(失败 & 达上限)──────────────► [ HUMAN_REQUIRED ]
+  ▼ (成功)
+[ solve ]  (调度 27 工业求解器，物理计算生成 outputs/solution.json)
+  │
+  ▼
+[ gate_validate ] ──(失败 & solver_tune < 3)────► [ param_retune_solve ] (调参重解)
+  │               ──(调参尽 & validate_repair < 2)─► [ model ]
+  │               ──(失败 & 达上限)──────────────► [ HUMAN_REQUIRED ]
+  ▼ (成功: 独立物理验算与 DIMO 检验 100% 通过)
+[ draft_paper ]  (智能体: or_writer 基于预渲染真数据表撰写六章学术论文)
+  │
+  ▼
+[ cite_pack & review_pack ]  (智能体: or_reviewer 对抗红队审稿与 R1/R2 门禁)
+  │
+  ▼
+[ revise_or_done ] ──(FATAL & revise_count < 2)─► [ draft_paper ]
+  │                ──(评审通过)────────────────► [ provenance ] ──► END
+  └────────────────(达上限)────────────────────► [ HUMAN_REQUIRED ]
 ```
 
-### 3.1 站类型
+### 3.1 阶段节点性质表
 
-| 站 | 类型 | sub | 硬门 |
-|----|------|-----|------|
-| intake_* | 脚本± | 可选 | 禁键、覆盖子问 |
-| orchestrate/retrieve/bridge | 脚本± | 可选 | 路径 |
-| research | 认知 | **规定** researcher | 知识相关 gate |
-| model | 认知 | **规定** modeler | schema |
-| gate_schema | 脚本 | 否 | schema |
-| solve | 脚本 | **否** | envelope |
-| gate_validate | 脚本 | 否 | validate |
-| explain | 混合 | 可选 | — |
-| draft_paper | 认知 | lead/writer | — |
-| cite_pack | 认知+脚本 | **规定** verifier | R1/claim |
-| review_pack | 认知+脚本 | **规定** reviewer | R2 |
-| revise/provenance | LG/脚本 | 否 | 计数器 |
-
-节点数以代码 `graph_product` / `t3-lg-skeleton` 为准（含 intake 时约 17）。
+| 阶段节点 | 性质 | 智能体 / 算子 | 硬门禁与产物 |
+|----------|------|---------------|--------------|
+| `intake_*` | 纯 Python | OCR / 结构探针 | 生成 `ocr.raw.md`, `profile.json` |
+| `orchestrate` | 纯 Python | 0-Token 调度规则 | 选定装备包与 Tier-A/B/C 轨道 |
+| `retrieve` | 纯 Python | 本地 ONNX / BM25 | 挂载相关 Skills 与 Modeling Guides |
+| `research` | 认知特种兵 | `or_analyst` | 输出 `problem-brief.md` |
+| `model` | 认知特种兵 | `or_modeler` | 输出 `contracts/schema.json` 或沙箱代码 |
+| `gate_schema` | 纯 Python | Schema Validator | 检验字段完整性与禁键检查 |
+| `solve` | 物理计算 | 27 工业求解器 | 输出 `outputs/solution.json` |
+| `gate_validate`| 物理验算 | `validate_solution.py` | 独立物理重算与 DIMO 5 类变异检验 |
+| `draft_paper` | 认知特种兵 | `or_writer` | 输出 6 章学术论文 `papers/<slug>.md` |
+| `review_pack` | 认知特种兵 | `or_reviewer` | 输出红队盲审报告与 R1/R2 检查章 |
+| `revise_or_done`| 纯 Python | 计数器控制边 | 物理熔断控制（上限 2 次） |
+| `provenance` | 纯 Python | 确定性记录器 | 输出不可篡改的全链路数字指纹 |
 
 ---
 
@@ -165,14 +176,20 @@ Mock：调参可短路。
 
 ---
 
-## 6. 多智能体（摘要）
+## 6. 多智能体体系（摘要）
 
-真 MA 四条：可检轨迹、隔离、toolCall 委派、数字仍工具。  
-Import：`orpath.subagent_dispatch`。  
-Harness：无 write、json mode、quarantine cosplay。  
-产品 LIVE 默认 ON；gate 强制 OFF。  
-裸 pi ≠ MA。  
-细节 → `multi-agent.md`。
+1. **4 大常驻特种兵（Workers）**：
+   - `or_analyst`：题面解构、约束辨析、装备包挂载。
+   - `or_modeler`：严密数学建模与求解代码生成，提取松弛下界。
+   - `or_writer`：基于物理计算预渲染数据表撰写六章学术论文。
+   - `or_reviewer`：红队匿名审稿，执行 R1/R2 闭合性与边界核查。
+2. **10 大领域装备包（Domain Cartridge）**：
+   - 动态装配领域专用数据探针（`profile_<domain>_data`）与方案质检工具（`inspect_<domain>_solution`），绝不复制代码膨胀。
+3. **上下文隔离与单兵调用（Isolated Handoffs）**：
+   - 严禁全局无限追加群聊，严禁 1600 字符腰斩切片。单兵调用只传紧凑文件指针与状态摘要。
+4. **数字绝不下放**：
+   - 任何智能体绝对无权手写或伪造 `objective` 数值，全部必须经由独立物理校验。
+5. **完整规范**：详见 `specs/multi-agent.md`。
 
 ---
 

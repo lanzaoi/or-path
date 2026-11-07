@@ -1,278 +1,191 @@
-# OR-Path 使用教程（详细）
+# OR-Path 官方使用指南（User Guide）
 
-面向：**第一次用的人** + **运筹队友** + **开发者**。  
-更短的入口见根目录 [`README.md`](../README.md)；命令速查见 [`ORPATH.md`](../ORPATH.md)。  
-法条见 [`specs/README.md`](../specs/README.md)。
+面向：**参赛队友** · **运筹工程师** · **算法研究员** · **系统开发者**。  
+精简入口见根目录 [`README.md`](../README.md)；命令速查见 [`ORPATH.md`](../ORPATH.md)；核心系统法条见 [`specs/README.md`](../specs/README.md)。
 
 ---
 
-## 0. 你在用什么
+## 0. 系统全景认知（What You Are Using）
+
+OR-Path 是由纯 Python 原生驱动的**多智能体运筹优化（Operations Research）自动化求解与论文生成工作舱**：
 
 ```text
-题面 → 研究/检索 → 建模(schema 无最优值) → 求解器出数字 → validate 重算 → 论文门
-LangGraph 管阶段 · Pi 子 Agent 隔离 · Watch 读盘做过程脸 · RAG 只给 Pi 提示
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 题面与数据 (PDF/TXT/CSV/XLSX) ──► 结构化深度探针 (studio_analyzer.py)       │
+│                                                │                            │
+│ ┌──────────────────────────────────────────────▼──────────────────────────┐ │
+│ │ Web Studio (Problem Workbench) 交互确认: 模式切换 / 参数覆盖 / 约束复核  │ │
+│ └──────────────────────────────────────────────┬──────────────────────────┘ │
+│                                                │                            │
+│   ┌────────────────────────────────────────────▼────────────────────────┐   │
+│   │ LangGraph 控制面: 0-Token 确定性流转分支 + 4 大常驻智能体单兵调用   │   │
+│   │                                                                     │   │
+│   │  or_analyst  ──► or_modeler ──► 27 工业求解器 ──► validate_solution │   │
+│   │                                                         │           │   │
+│   │  END ◄── provenance ◄── or_reviewer ◄── or_writer ◄─────┘           │   │
+│   └─────────────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-| 概念 | 含义 |
-|------|------|
-| **HOME** | 安装根 / 本仓库（代码、fixtures、skills） |
-| **WORKDIR** | 案例目录（`outputs/` `runs/` `notes/` `papers/`） |
-| **slug** | 一次任务的名字，贯穿产物文件名 |
-| **LIVE** | `--live` 才真拉 Pi subagent；否则是快速确定性路径 |
-| **数字真理** | 只信 `*-solution.json` + `*-validate.json` |
-
-**不是产品运行时：** Hermes 桌面、裸 `pi -p` 聊天扮多 Agent。
+| 核心实体 | 说明 |
+|----------|------|
+| **HOME** | 仓库安装根目录（算法、知识库、求解器、门禁脚本） |
+| **WORKDIR** | 运行工作区（包含 `outputs/`, `runs/`, `notes/`, `papers/`） |
+| **slug** | 案例标识符，贯穿全流程物理产物命名 |
+| **Numbers Truth** | 数字真理铁律：所有最优值与决策序列必须 100% 经物理求解器真实运算与校验器独立复算 |
+| **Web Studio** | 本地双向工作舱，支持拖拽做题、参数微调与全透明实时 Live Watch 监控 |
 
 ---
 
-## 1. 安装
+## 1. 环境准备与极速安装
 
-### 1.1 路人（L2 · Release 半肥包）
+系统已彻底退役并剥离历史 Node.js `pi` CLI 包装层，**无需安装任何 Node.js/npm 环境**，全流程 100% 运行于纯 Python 虚拟环境。
 
-当前线上 tag：**v0.2.0**。含 RAG v3 / promote-run / LIVE 管线的代码在 **main**；**v0.3.0** 半肥包见 `docs/archive/releases/v0.3.0-notes.md`（打 zip 后上传）。
+### 1.1 依赖准备
+- **Python**: 3.11 – 3.14（推荐项目内置 `.venv`）
+- **C/C++ 编译运行时**: Linux/WSL `build-essential`（用于编译安装 HiGHS / OR-Tools / PyVRP 等扩展库）
+- **大模型 API Key（用于 Live 智能体闭环）**:
+  - 科大讯飞星火 `spark-x2.6`（内置支持，极速响应与超长上下文）
+  - DeepSeek `deepseek-chat` / `deepseek-reasoner`
+  - 其他 OpenAI 兼容接口（如 Qwen、GLM）
 
-```powershell
-# v0.2.0（已发布）
-irm https://github.com/lanzaoi/or-path/releases/download/v0.2.0/install.ps1 | iex
+### 1.2 快速启动与自检
 
-cd $env:LOCALAPPDATA\Programs\orpath
-orpath.bat doctor
+```bash
+# 1. 检查运行环境健康状态
+.venv/bin/python scripts/orpath_doctor.py
+
+# 2. 一键启动 Web Studio 智能工作舱
+# Linux / macOS / WSL:
+./START.sh
+
+# Windows:
 START.bat
 ```
 
-### 1.2 开发者（L1 · git）
-
-```bat
-git clone https://github.com/lanzaoi/or-path.git
-cd or-path
-orpath.bat setup
-orpath.bat doctor
-START.bat
-```
-
-| 依赖 | 说明 |
-|------|------|
-| Python 3.11–3.13 推荐 | `.venv-314` |
-| Node ≥ 22.19 | Pi runtime |
-| `DEEPSEEK_API_KEY` | **仅 LIVE 真多 Agent 需要**；看 seed 脸 / mock **不要 key** |
-| 可选硅基 key | `ORPATH_KNOWLEDGE_EMBED=live` 时 hybrid 向量 |
-
-详情：[`install.md`](install.md)。
+启动后，系统会在本地启动 FastAPI/Uvicorn 服务并自动唤起浏览器打开：
+`http://127.0.0.1:8000`
 
 ---
 
-## 2. 三分钟上手（一键启动智能工作舱）
+## 2. 核心工作流（三种使用模式）
 
-1. `orpath.bat doctor` 应大体 PASS  
-2. 双击 **`START.bat`**（Linux / WSL 终端执行 `./START.sh`；历史 `START-*.bat` 也会自动转发至此）  
-3. 浏览器自动打开智能工作舱（默认加载经典回放与待做题工作台）  
-4. 在网页端即可直接拖拽文件题面、发起研判分析与求解，无需命令行黑窗选数字  
-5. 结束：黑窗 **Ctrl+C**；页面旧了 **Ctrl+F5**
+### 模式 A：Web Studio 网页端拖拽做题（推荐主流）
 
----
-
-## 3. 路径 A：做自己的题（Web 端拖拽一站式）
-
-### 3.1 极简方式（网页端拖拽）
-1. 双击 **`START.bat`** 启动工作舱。
-2. 将题面文件夹、CSV 数据表格或 MD 文件直接拖入网页中央的虚线拖拽区。
-3. 输入任务名称（Slug）并点击「🚀 启动全流程分析研判」。
-4. 根据系统针对题面提出的关键反问选择算法配置，确认后即可由物理求解器输出最优数值并一键下载成果。
-
-### 3.2 传统终端方式（备选）
-
-```bat
-:: 快速 no-live（确定性 model + 域 adapter）
-orpath.bat watch-run --workdir D:\orpath-cases\my1 --slug my1 --keep-watch ^
-  --auto-intake --intake-in D:\orpath-cases\my1\inbox\题.pdf
-
-:: 真 LIVE 多 Agent
-orpath.bat watch-run --workdir D:\orpath-cases\my1 --slug my1 --live --keep-watch ^
-  --auto-intake --intake-in D:\orpath-cases\my1\inbox\题.pdf
-```
-
-可显式指定域（圆管示例）：
-
-```bat
-orpath.bat watch-run --workdir D:\cases\tube --slug t1 --live --keep-watch ^
-  --auto-intake --intake-in D:\cases\tube\inbox\B.pdf ^
-  --problem-id tube_cut_b2026 --problem-class tube_cut --solve-mode tube
-```
-
-骨牌示例：
-
-```bat
-orpath.bat watch-run --workdir D:\cases\b --slug b1 --live --keep-watch ^
-  --auto-intake --intake-in D:\cases\b\B题.pdf ^
-  --problem-id polyomino_b_q1 --problem-class polyomino_cover --solve-mode polyomino
-```
-
-### 3.4 跑完看什么
-
-| 路径 | 内容 |
-|------|------|
-| `outputs/<slug>-solution.json` | **数字** |
-| `outputs/<slug>-validate.json` | 重算是否 ok |
-| `outputs/<slug>.provenance.md` | 门禁汇总 |
-| `papers/<slug>.md` | 论文草稿 |
-| `runs/<slug>/stages/` | 阶段快照 |
-| `outputs/.agents/<slug>/` | **真 MA** lead/sub 日志（仅 LIVE） |
-| `HUMAN_REQUIRED.md` | 若人停 |
-
-**Watch 与 run 必须同一 `--workdir` + `--slug`。**
+1. **拖拽题面与附件**：
+   - 将赛题文件夹（包含 PDF/TXT 题面及附带的 CSV/XLSX 数据表）直接拖入工作台正中央的虚线拖拽区。
+2. **结构化深度画像（Data Profiling）**：
+   - `orpath/studio_analyzer.py` 探针自动读取数据表，提取实体规模（客户数、机床数、零部件规格）、时间序列长度、矩阵稀疏度，并智能推荐匹配的求解算子与复杂度分轨（`Tier-A / Tier-B / Tier-C`）。
+3. **人机协同确认弹窗（Interactive Confirmation Modal）**：
+   - 弹出结构化确认卡片，支持用户微调关键配置：
+     - **求解模式切换**：如将默认模式切换为 `highs`、`cpsat` 或 `pyvrp`；
+     - **时间与精度上限**：调整超时秒数限制（Time Limit）；
+     - **断点挂起（Pause Next）**：勾选在求解或写作前暂停等待确认。
+4. **一键执行与 Live Watch 看板**：
+   - 点击「🚀 启动全流程分析研判」，页面自动切换至实时 Live Watch 仪表盘。
+   - 实时呈现 L0（阶段流转）、L1（智能体单兵时序）、L2（工具调用明细）、L3（思维分析链）与 L4（物理产物与验算报告）。
+5. **下载成果**：
+   - 求解完成后，直接在页面查看预渲染图表、数学模型，并一键导出 6 章标准学术论文（Markdown / PDF）。
 
 ---
 
-## 4. LIVE 与 no-live 怎么选
+### 模式 B：命令行极速运行（CLI Headless）
 
-| | no-live | LIVE (`--live`) |
-|--|---------|-----------------|
-| 速度 | 快（秒～分钟） | 慢（research/model/cite 各可数分钟） |
-| 真 Pi sub | 否 | 是 |
-| 适用 | 调求解器、回归、演示数字链 | 演示多 Agent、研究档写作 |
-| 证据 | stages + solution | + `.agents/*` toolCall |
-| Key | 通常不需要 | 需要模型 key |
+适用于服务器无图形界面环境或自动化批处理：
 
-脸长时间停在 research/cite **不等于死**：看 stages 是否仍增长、`.agents` 日志是否在写。
+```bash
+# 1. 运行标准测试案例（以最经典最短路为例，快速验证控制面）
+.venv/bin/python orpath/run_orpath.py --problem-id shortest_path --solve-mode networkx --slug demo_sp --fresh
 
----
+# 2. 运行 TSP 问题（采用 HiGHS MTZ 整数规划求解）
+.venv/bin/python orpath/run_orpath.py --problem-id tsp_n8 --problem-class tsp --solve-mode highs --slug demo_tsp --fresh
 
-## 5. 求解器怎么用（运筹向）
+# 3. 运行工业作业车间调度（JSSP 换模调度）
+.venv/bin/python tools/solve_dispatch.py jssp_ft06 --mode jssp
 
-统一入口：
-
-```bat
-.venv-314\Scripts\python.exe tools\solve_dispatch.py <problem_id> --mode <mode>
-.venv-314\Scripts\python.exe tools\validate_solution.py --problem-id <id> --solution path\solution.json
-```
-
-| mode | 典型问题 | 话术 |
-|------|----------|------|
-| `networkx` | 最短路 | exact · 金标 42 |
-| `cpsat` | 小 TSP | exact · 金标 45 |
-| `ortools` | VRP/TW | 搜索 FEASIBLE · 金标 58 |
-| `polyomino` | 骨牌覆盖 | CP-SAT · Q1.1=6 |
-| `tube` | 异形圆管下料 | 混合母材列生成/CP-SAT + DP/ALNS/束搜索 · FEASIBLE；无附件则 BLOCKED |
-| `mock` | CI | fixture |
-
-圆管全问重算（写 `outputs/b-tube-cut/`）：
-
-```bat
-.venv-314\Scripts\python.exe tools\solve_tube_cut_b2026.py
-```
-
-骨牌全问 pack：
-
-```bat
-.venv-314\Scripts\python.exe scripts\pack_b_polyomino_case.py --case D:\cases\b
-```
-
-清单：`orpath.bat tools-list` · 法：`specs/solvers-and-validate.md`。
-
-**禁止：** 手改 solution 的 objective 当「算过了」；无 `proven_optimal` 时写 global-optimal。
-
----
-
-## 6. 知识库 RAG（给 Pi，不是网站）
-
-**产品默认已强制 hybrid 检索**（不再空 seed）。关：`set ORPATH_KNOWLEDGE_MODE=seed`。
-
-```bat
-:: 研究档 + 重建索引（本机一次）
-set ORPATH_KNOWLEDGE_PROFILE=research
-set ORPATH_KNOWLEDGE_EMBED=auto
-orpath.bat knowledge-sync
-orpath.bat phase5-v3-gate
-
-:: 书库清单
-:: knowledge/CORPUS.md  （~400+ papers md 已入库）
-
-:: PDF → 预处理
-:: 文件放入 knowledge\inbox_pdf\
-orpath.bat knowledge-preprocess
-
-:: 跑完题沉淀战法（无 optima）
-orpath.bat promote-run --slug my1
-orpath.bat promote-run-gate
-```
-
-| 放什么 | 目录 |
-|--------|------|
-| 文献 md | `knowledge/corpus/papers/` |
-| PDF | `knowledge/inbox_pdf/` |
-| 短教训 | `knowledge/lessons/*.json`（`orpath.lesson.v1`） |
-| skill 白名单 | `knowledge/export_allowlist.txt` |
-
-关单：`docs/archive/closeouts/knowledge-rag-v3-prod-closeout.md`。
-
----
-
-## 7. Skills · MCP · 记忆（怎么配合）
-
-| 层 | 位置 | 作用 |
-|----|------|------|
-| **Skill** | `.pi/skills/` | Pi 打开的手册（选型、数字纪律、OR 算法） |
-| **RAG 副本** | `knowledge/corpus/skills/` | 仅检索；allowlist 导出 |
-| **Lesson** | `knowledge/lessons/` | 短过程教训 |
-| **MCP** | `orpath.bat mcp` / `mcp-highs` / `mcp-ortools` | 可选外挂；**主链不依赖** |
-
-数字权威永远在 solve+validate，不在 skill/MCP 散文。
-
-队友长交接（工作流串起来）：  
-[`archive/handoffs/2026-08-04_or-teammate-handoff.md`](archive/handoffs/2026-08-04_or-teammate-handoff.md)
-
----
-
-## 8. 门禁与回归（开发）
-
-```bat
-orpath.bat doctor
-orpath.bat t1-gate
-orpath.bat t2-gate
-orpath.bat m2-gate
-orpath.bat phase5-v3-gate
-orpath.bat promote-run-gate
-orpath.bat p3-gate
-```
-
-冒烟文档：`docs/v0-smoke.md` · `m1-smoke.md` · `m2-polyomino.md` · `t1-smoke.md` …
-
----
-
-## 9. 常见问题
-
-| 现象 | 原因 / 处理 |
-|------|-------------|
-| 多个浏览器标签 | 每次 watch-run 会 `start`；用 `--no-browser` 或关掉旧标签 |
-| LIVE 像卡住 | research/cite 慢；看 stages 与 `.agents` 日志是否在增长 |
-| `claims_recorded: 309` 爆红 | 旧 bug；main 已 mask 过程计数；请 pull 最新 |
-| Watch ok 但 last_error 有字 | 看最终 provenance；中间阶段可能曾红后 revise 绿 |
-| LIVE 未加 `--live` | `live=false`，秒完但不是真 MA |
-| 无 key | 仍可 doctor + seed 脸 + no-live 域 adapter |
-| tube 比强手差 | 共切启发式弱；改 `solve_tube_cut_b2026.py`，不是再装 MCP |
-
----
-
-## 10. 发布（作者）
-
-见 [`install.md`](install.md) 与 [`archive/releases/v0.3.0-notes.md`](archive/releases/v0.3.0-notes.md)。
-
-```bat
-python scripts\pack_release.py
-python scripts\l2_release_gate.py --zip dist\orpath-0.3.0-win-x64.zip
-:: gh release create v0.3.0 ...
+# 4. 断点恢复与从特定阶段重跑
+.venv/bin/python orpath/run_orpath.py --resume --thread-id demo_sp
+.venv/bin/python orpath/run_orpath.py --from-stage model --thread-id demo_sp
 ```
 
 ---
 
-## 11. 文档地图
+### 模式 C：离线回归门禁与对抗演练（Engineering CI）
 
-| 文档 | 给谁 |
-|------|------|
-| 本文 `user-guide.md` | 使用教程（你在读） |
-| `ORPATH.md` | 命令速查 |
-| `README.md` | 仓库门面 |
-| `install.md` | 安装 / L1 L2 |
-| `ARCHITECTURE.md` | 架构 |
-| `archive/handoffs/*` | 给人/Agent 的交接 |
-| `specs/*` | 硬法 |
+```bash
+# 运行核心单元测试与数学真理测试
+.venv/bin/pytest tools/test_sop_doc.py tools/test_lean_cartridges_and_graph.py -q -p no:langsmith
+
+# 运行 DIMO 5 类变异对抗拦截红队门禁
+.venv/bin/python scripts/universal_redteam_gate.py
+
+# 运行 Web Studio 工作舱全功能集成门禁
+.venv/bin/python scripts/problem_workbench_gate.py
+
+# 运行 10 领域装备包全生命周期门禁
+.venv/bin/python scripts/or_swarms_master_gate.py
+```
+
+---
+
+## 3. 27 台工业求解器快速索引表
+
+| 领域分类 | 求解器脚本 | 算法 / 求解引擎 | 典型问题类 | 默认状态宣称 |
+|----------|------------|-----------------|------------|--------------|
+| **路径与图论** | `solve_networkx.py` | Dijkstra / Bellman-Ford | 最短路 Shortest Path | `OPTIMAL` (Exact) |
+| | `solve_cpsat.py` | Google OR-Tools CP-SAT | 旅行商问题 TSP | `OPTIMAL` (Exact) |
+| | `solve_highs.py` | HiGHS MIP (MTZ Formulation) | 旅行商问题 TSP | `OPTIMAL` (Exact) |
+| | `solve_ortools.py` | OR-Tools Routing | 车辆路径 CVRP / VRPTW | `FEASIBLE` (Heuristic) |
+| | `solve_pyvrp.py` | PyVRP (Hybrid Genetic Search) | 大规模 VRPTW / 取送货 PDP | `FEASIBLE` (Bound + Gap) |
+| | `solve_network_flow.py`| NetworkX / OR-Tools | 最小费用最大流 | `OPTIMAL` (Exact) |
+| **车间与工程调度** | `solve_jssp.py` | PyJobShop / CP-SAT | 作业车间 JSSP / FJSSP (换模) | `OPTIMAL` / `FEASIBLE` |
+| | `solve_rcpsp.py` | CPM 关键路径 + Cumulative CP-SAT | 资源受限项目调度 RCPSP | `OPTIMAL` / `FEASIBLE` |
+| | `solve_staff_rostering.py`| OR-Tools CP-SAT | 护士/员工轮班排程 | `OPTIMAL` / `FEASIBLE` |
+| **选址与网络设计**| `solve_facility.py` | HiGHS MIP | 容量限制设施选址 CFLP | `OPTIMAL` (Exact) |
+| | `solve_hub_location.py`| HiGHS MIP | 轴辐式枢纽选址 p-Hub | `OPTIMAL` (Exact) |
+| | `solve_qap.py` | 线性化 MIP + 禁忌搜索 | 二次分配问题 QAP | `FEASIBLE` (Bound + Gap) |
+| **空间下料与装箱**| `solve_binpack.py` | py3dbp (3D) / rectpack (2D) / MIP (1D)| 三维集装箱/二维板材装箱 | `FEASIBLE` / `OPTIMAL` |
+| | `solve_polyomino.py` | DLX 精确覆盖 / CP-SAT | 骨牌精确平铺覆盖 | `OPTIMAL` (Exact) |
+| | `solve_tube_cut_b2026.py`| 列生成 + CP-SAT + 几何 DP + ALNS | 国赛 B 题 3D 异构圆管套裁 | `FEASIBLE` (Heuristic) |
+| **微电网与能源调度**| `solve_microgrid.py` | 凸二次规划 + 滚动时域 MPC | 园区光储充一体化削峰填谷 | `OPTIMAL` (Exact) |
+| **库存、金融与随机**| `solve_lot_sizing.py`| Wagner-Whitin DP / CLSP MIP | 多阶段批量库存规划 | `OPTIMAL` (Exact) |
+| | `solve_portfolio.py` | 凸二次规划 (QP) / 风险平价 | 马科维茨投资组合优化 | `OPTIMAL` (Exact) |
+| | `solve_stochastic_lp.py`| Extensive Form MIP / L-shaped | 两阶段随机线性规划 | `OPTIMAL` (Exact) |
+| **博弈与离散优化**| `solve_game_theory.py`| Nashpy (Lemke-Howson / 枚举) | 双矩阵纳什均衡 | `OPTIMAL` (Exact) |
+| | `solve_max_clique.py` | 补图对偶判定 + CP-SAT | 最大团 / 最大独立集 | `OPTIMAL` (Exact) |
+| | `solve_graph_coloring.py`| DSATUR 启发式 + CP-SAT | 节点着色问题 | `OPTIMAL` / `FEASIBLE` |
+| | `solve_qubo_ising.py` | 模拟退火 / 二次无约束二值优化 | QUBO / Ising 优化 | `FEASIBLE` (Heuristic) |
+
+---
+
+## 4. 运行产物全貌（Where Artifacts Live）
+
+每次任务执行完毕后，所有产物以紧凑文件指针沉淀于工作区，支持完全离线复验：
+
+```text
+outputs/
+  ├── <slug>-solution.json       # 物理求解器产出的标准 JSON 解包
+  ├── <slug>-validation.json     # 独立物理校验器的重算报告与不变量检验结论
+  ├── <slug>-review.md           # or_reviewer 红队盲审报告 (FATAL/MAJOR/MINOR 评级)
+  ├── <slug>.provenance.md       # 全链路数字指纹与审计证据
+  └── <slug>-tables.md           # Python 预渲染的真实 Markdown 数据表格
+papers/
+  └── <slug>.md                  # or_writer 撰写的 6 章学术标准完整学术论文
+notes/
+  ├── <slug>-problem-brief.md    # or_analyst 输出的问题语义分析与约束清单
+  └── <slug>-profile.json        # 题目数据特征与矩阵结构画像
+runs/<slug>/
+  └── stages/                    # 阶段快照 JSON，记录每站耗时与状态迁移
+```
+
+---
+
+## 5. 常见问题排查（Troubleshooting）
+
+1. **大模型调用报错或超时**：
+   - 检查 `.env` 文件中 `OPENAI_API_KEY` 与 `OPENAI_BASE_URL` 配置是否正确；
+   - 系统支持离线回归模式：在环境变量中设置 `ORPATH_LIVE_SUBAGENT=0`，即可无需任何 API Key 走通确定性物理门禁。
+2. **求解器提示缺少第三方包**：
+   - 执行 `.venv/bin/pip install -r requirements.txt`，确保 `scipy`, `ortools`, `highs`, `pyvrp`, `networkx` 安装齐全。
+3. **网页端拖拽题目无反应**：
+   - 检查前端服务是否正常运行；若浏览器有缓存，按 `Ctrl + F5` 强制刷新 Web Studio 界面。

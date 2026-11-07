@@ -1,163 +1,108 @@
-# Architecture — 架构法（详细）
+# Architecture — 架构法（现行权威规范）
 
-**对齐：** `product-flow-sdd.md`  
-**状态：** LAW 2026-08-01 全册重写波次
-
----
-
-## 1. 口令
-
-**Pi 当站内脑，LG 当流程，求解器当计算器，gate 当质检章，时间线当脸。**
-
-产品形态名：**带验证关卡的 Supervisor–Worker 流水线**  
-（hierarchical pipeline with tool verifiers）
+**对齐：** `AGENTS.md` · `specs/product-flow-sdd.md` · `tasks/lean_4agent_5x5_master_plan.md`  
+**状态：** LAW 2026-11（精简 4 智能体 + 10 领域装备包 + 27 工业求解器架构全量上线）
 
 ---
 
-## 2. 分层所有权（唯一控制面）
+## 1. 架构核心宣言与口令
 
-| 层 | 所有者 | 职责 | 禁止 |
-|----|--------|------|------|
-| **全局流程** | **LangGraph** + checkpointer | now→next、回边、resume、HUMAN | 聊天跳阶段 |
-| **局部 LLM 隔离** | **Pi + pi-subagents** | 站内派工、真子会话、收路径 | 全局编排；批 objective |
-| **硬质检与计算** | **Python tools** | OCR、schema、solve、validate、R1/R2、timeline 聚合 | 人格扮演 |
-| **窄共享状态** | `ORPathState` + 磁盘 | 字段有 owner | 自由黑板 |
-| **过程脸** | timeline 制品 + 可选 HTML | 读盘展示 L0–L4 | LLM 编造协作故事 |
+> **确定性 Python 管全局流程与硬验算，4 大常驻智能体负责分析/建模/撰写/评审，27 台求解器充当物理计算引擎，门禁章锁死数字真理，Web Studio 呈现全透明实时过程。**
 
-**禁止双方向盘：** 阶段跳转只听 LG。
+- **系统定位**：工业级运筹优化（Operations Research）自动化求解与学术论文生成平台。
+- **运行基石**：全纯 Python（LangGraph + FastAPI/Uvicorn），彻底剥离历史 Node.js `pi` CLI 外部包装层，直连 `.env` 原生 LLM API（科大讯飞星火 `spark-x2.6`、DeepSeek `deepseek-chat` / `deepseek-reasoner` 等）。
 
 ---
 
-## 3. 隐喻校准
-
-| 说法 | 对错 |
-|------|------|
-| Pi 是全局老板并审核数字 | ❌ |
-| Pi 是节点内包工头 | ✅ |
-| LG 是总进度与回修机 | ✅ |
-| 「审核 objective」= solve+validate | ✅ |
-| 看见思考 = 读 sub 轨迹，不是旁白 | ✅ |
+## 2. 系统五大支柱（5 Pillars）
 
 ```text
-LangGraph
-  ├─ intake_*     → 工具
-  ├─ research     → Pi 工头 → or-researcher → notes/*
-  ├─ model        → Pi 工头 → or-modeler → schema
-  ├─ GATE schema  → 代码
-  ├─ solve        → dispatch adapters
-  ├─ GATE validate→ 重算 / 回边
-  ├─ paper 站     → Pi ± verifier/reviewer + R1/R2
-  ├─ provenance
-  └─（并行制品）timeline 聚合器读盘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       1. Unified Launcher & Web Studio                      │
+│        START.bat / START.sh · orpath/web/ · Problem Workbench · Live Watch   │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+┌──────────────────────────────────────▼──────────────────────────────────────┐
+│                  4. Lean 4-Agent + 10 Domain Cartridge                      │
+│                                                                             │
+│   [ or_analyst ] ──(0-Token Gate)──► [ or_modeler ] ──(0-Token Gate)──┐     │
+│          ▲                                   ▲                        │     │
+│          └──────────(10 Domain Cartridges)───┴────────────────────────┤     │
+│                       (tube, routing, scheduling, etc.)               │     │
+│                                                                       ▼     │
+│   [ or_reviewer ] ◄──(0-Token Gate)── [ or_writer ] ◄── 2. Solvers & 3. Val │
+│                                                          (27 Solvers + DIMO)│
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+┌──────────────────────────────────────▼──────────────────────────────────────┐
+│                    5. Core Gates & High-Signal Verification                 │
+│      tools/test_*.py · universal_redteam_gate.py · problem_workbench_gate   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Pillar 1: 统一启动器与 Web Studio（`START.bat`, `START.sh`, `orpath/web/`）
+- 一键唤起前端双向工作舱：支持文件夹/文件拖拽题目摄入、深层结构化数据剖析（`studio_analyzer.py`）、人机交互确认（参数覆盖与模式切换）、后台自适应求解与全要素 Live Watch 看板。
+- 零外部 npm/node 依赖，本地内嵌静态资产与 WebSocket 实时推送。
 
-## 4. 双路径（故意）
+### Pillar 2: 27 台重型工业求解器矩阵（`tools/solve_*.py`）
+- 覆盖组合优化 7 大主流领域：图论路径、工业排产、三维下料/多维装箱、微电网储能调度、库存与批量、金融投资组合、博弈与非凸规划。
+- 引擎支持：Google OR-Tools (CP-SAT/GLOP)、HiGHS (MIP/Simplex)、PyVRP (HGS)、NetworkX、ALNS、Nashpy、Py3DBP 等。
 
-| 路径 | 用途 | LIVE |
-|------|------|------|
-| **CI / deterministic** | gate 可复现 | 强制 0 |
-| **Live multi-agent** | 真 sub 证据 | 产品默认 1 |
-| **Bridge** | 可选 LG↔Pi RPC | 历史 T2 硬证；非 M0 阻塞若 harness 已覆盖 |
+### Pillar 3: 独立物理与数学校验器（`tools/validate_solution.py`, `tools/validators/`）
+- **Numbers Truth 铁律**：最优值与物理指标严禁由大模型口头生成或评判。
+- 独立重算原始问题数据，执行 5 类 DIMO 变异对抗测试（目标篡改、约束破坏、维度伪造、状态翻转、极端扰动），零误报、零漏检。
 
-CI 可无 live；**不得**用 CI 绿宣称 live MA demo 完成。
+### Pillar 4: 原生精悍 4 智能体 + 10 领域装备包（`orpath/agents/`）
+- **4 大常驻专家**：
+  1. `or_analyst`（问题解构与装备包挂载）
+  2. `or_modeler`（数学建模与求解脚本生成）
+  3. `or_writer`（基于真实数据预渲染的六章学术论文撰写）
+  4. `or_reviewer`（红队盲审与 R1/R2 论文门禁审核）
+- **0 Token 纯 Python 确定性门禁**：取代大模型 Supervisor 轮询。
+- **10 Pluggable `DomainCartridge` 装备包**：动态向智能体注入领域专用数据探针（`profile_<domain>_data`）与方案质检工具（`inspect_<domain>_solution`），绝不复制代码膨胀。
 
----
-
-## 5. 栈锁定
-
-| 组件 | 选择 |
-|------|------|
-| Harness | Pi `@earendil-works/pi-coding-agent` via `runtime/` |
-| Subagents | `pi-subagents` pin（如 0.37.2） |
-| Glue | LangGraph（Python） |
-| Solvers | NetworkX / CP-SAT / HiGHS / OR-Tools Routing / mock / 域 adapter |
-| Agent 模型 | **DeepSeek only**（Pi） |
-| Embedding | 硅基 bge-m3@1024 |
-| 语料预处理 | MinerU Cloud（**≠** 题面主 OCR） |
-| 题面 OCR | pdf_text → ppocr → api → rapidocr |
-| L2 检索 | LightRAG + BM25/FTS + RRF |
-| 程序记忆 | Skill / `.pi/agents/or-*.md`（战法主轴；见 `memory.md`） |
-| L2 prefs | pi-memory 可选 |
-| L3 图 | Cognee Cloud **smoke 旁路**（非主记忆） |
-| UI 主 | `orpath.bat menu` |
-| UI 辅 | Pi TUI；timeline md/html |
-| OUT | Graphiti、Teams、Bus 脊柱、OpenPi 产品壳、Feynman 主开发 |
+### Pillar 5: 主力门禁与高信噪比验证集（`scripts/*_gate.py`, `tools/test_*.py`）
+- 覆盖单测、端到端全流程门禁、对抗性红队门禁（universal_redteam_gate）以及真题端到端实跑（National Contest 题集）。
 
 ---
 
-## 6. 目录职责
+## 3. 控制面分层所有权（Control Plane Ownership）
 
-| 路径 | 职责 |
-|------|------|
-| `orpath/control_plane.py` | 建图/seed/invoke |
-| `orpath/graph_product.py` | 拓扑边 |
-| `orpath/nodes.py` | 阶段节点 |
-| `orpath/subagent_dispatch.py` | MA 唯一 import |
-| `orpath/subagent_harness.py` | anti-cosplay |
-| `orpath/paper_protocol.py` | 论文环 |
-| `orpath/pi_launch_law.py` | 启动合法性 |
-| `orpath/timeline.py`（目标） | 过程聚合 |
-| `tools/` | solve/validate/intake/R* |
-| `contracts/` | JSON schema |
-| `knowledge*` | 语料检索 |
-| `fixtures/` | 金标 |
-| `.pi/agents/or-*.md` | 角色 |
-| `specs/` | 本法 |
-| `outputs/.agents/` | lead 证据 |
-| `runs/` | stage 证据 |
+| 分层 | 所有者 | 职责 | 严禁行为 |
+|------|--------|------|----------|
+| **全局流程编排** | `LangGraph` (`orpath/graph_product.py`) | 维护状态迁移、条件边分支、失败重试上限 | 严禁通过大模型自然语言聊天动态跳转阶段 |
+| **局部专家认知** | 4 大常驻 Specialist | 变量建模、求解构造、论文论述、缺陷挖掘 | 严禁大模型编写或伪造 `solution.json` 目标数值 |
+| **数值计算与硬质检** | `Python tools` (`solve_*.py`, `validate_solution.py`) | 运行算法、求解器执行、客观约束验算、图表预渲染 | 严禁大模型以自然语言“验算”代替物理执行 |
+| **状态共享存储** | `ORPathState` + 磁盘文件 | 强类型契约、紧凑路径指针传递 | 严禁无边界全局黑板与会话历史堆积膨胀 |
+| **可视化呈现** | Web Studio + Live Watch | 读取磁盘工件展示 L0–L4 级别进度与指标 | 严禁伪造不存在的思考过程或假装执行 |
 
 ---
 
-## 7. 失败模式（设计必防）
+## 4. 零截断与上下文隔离纪律（Feynman File Handoffs）
 
-1. 双编排打架  
-2. 假多 Agent（cosplay）  
-3. LLM 写 objective  
-4. 宽黑板  
-5. 无 gate 流水线中毒  
-6. 过委派无上限  
-7. 检索幻觉引用  
-8. memory 存权威最优  
-9. intake 偷解  
-10. **时间线用 LLM 编故事**  
-11. 假绑 fixture 金标当 intake 成功  
+1. **绝对零截断**：严禁在 Prompt 或回调中使用 1600 字符腰斩切片。完整数据与矩阵通过磁盘文件保存。
+2. **隔离单兵调用**：每个智能体以全新的短小 Message 触发，不继承前序专家的冗长聊天上下文，根绝注意力漂移与上下文腐烂。
+3. **文件手递手传递**：
+   - 题面剖析存入 `notes/<slug>-problem-brief.md` 与 `notes/<slug>-profile.json`
+   - 数学模型存入 `contracts/<slug>-schema.json`
+   - 计算解输出至 `outputs/<slug>-solution.json`
+   - 验算报告输出至 `outputs/<slug>-validation.json`
+   - 论文初稿与终稿沉淀于 `papers/<slug>.md`
+   - 评审意见写入 `outputs/<slug>-review.md`
 
 ---
 
-## 8. 与 Feynman 的关系
+## 5. 复杂度自适应分轨（Tier A / B / C）
 
-- `vendor/feynman`：**对照** launch/SYSTEM/手递协议  
-- **不**迁产品到 Feynman  
-- **不**把 Pi monorepo 当必须 git 提交（与 Feynman 官方「Pi 走 npm 依赖」一致）  
-- 未来 M3：`pi_launch_product` 对齐 `--system-prompt` 真注入  
-
----
-
-## 9. 参考
-
-- `product-flow-sdd.md`  
-- `process-visibility.md`  
-- ADR-0001…0006  
-- `docs/archive/design-notes/IDEA.md`（叙事；冲突以 specs 为准）
+- **Tier-A（精确凸优化 / 多项式极速轨）**：LP、凸 QP、最短路、经典 DP。直接调用解析求解器，拒绝无意义启发式迭代。
+- **Tier-B（单问 NP-Hard 组合优化轨）**：JSSP、VRPTW、RCPSP、装箱等。锁定数学松弛下界（Lower Bound），求解器求解并给出严谨 Optimality Gap。
+- **Tier-C（多问大型赛题递进轨）**：大型数模综合赛题（如圆管切割 4 问、C 题多问）。动态为每个子问生成独立 `or_modeler` 实例，严密传递跨问状态与余料资产。
 
 ---
 
-## 10. 启动与 OCR 默认（原 openpi 分册精华）
+## 6. 严禁的反模式（Anti-Patterns）
 
-| 入口 | 角色 |
-|------|------|
-| `orpath.bat` / menu | **主控制面** |
-| `START-CASE` / `START-WATCH` | 路径 A · 过程脸 |
-| `openpi` | **已删** tombstone |
-
-| 项 | 默认 |
-|----|------|
-| Live MA | ON（`--live` / env）；关：`--no-live-subagent` |
-| Intake | 有文件才开 |
-| OCR | pdf_text → ppocr → api → rapidocr（写实 backend 名） |
-
-证据：`notes/*-ocr*` · `outputs/*-intake.json` · `outputs/.agents/*` · `runs/*/stages`。  
-过程脸 → `process-visibility.md`。
-
+1. **大模型宣称全局最优**：当 `proven_optimal == False` 时，严禁在论文中使用“全局最优解”、“已求得最佳策略”等绝对化词汇。
+2. **LLM 编造计算结果**：严禁在未经过求解器和校验器的情况下自行在文本中编造表格数据或数值。
+3. **大模型当流程调度员**：严禁使用 LLM 投票或闲聊来决定下一步去哪个节点。
+4. **巨石多智能体复制**：严禁为每个细分领域复制 900 行的孤立多智能体代码体系，统一收敛至 10 个轻量级 DomainCartridge 装备包。

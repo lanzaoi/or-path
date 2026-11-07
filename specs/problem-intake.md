@@ -1,10 +1,20 @@
-# Problem Intake — 题面 OCR 与自主审读（OR-Path **1.1**）
+# Problem Intake — 题面 OCR、数据探针与自主审读（权威规范）
 
-**状态：** LAW（**1.1 CLOSED/PASS**；行为变更须先改本文件）  
-**里程碑：** **1.1**（在 1.0 之上；**不重开** T1/T2/T3/1.0 DoD）  
-**总流程对齐：** `product-flow-sdd.md` · `control-plane.md` · `contracts.md`  
-**过程可视：** intake 站必须出现在 timeline L0（`process-visibility.md`）  
-**主题：** 扫描图 / PDF / 已解压附件 → **OCR** → **自主审题 brief** →（可选人确认）→ 再进入 `orchestrate…` 环。
+**状态：** LAW 2026-11（已接入 Web Studio 拖拽做题工作舱与 `studio_analyzer.py` 结构化探针）  
+**总流程对齐：** `specs/product-flow-sdd.md` · `specs/control-plane.md` · `specs/contracts.md`  
+**过程可视：** intake 阶段必须完整投递至 Web Studio / Live Watch 看板（`specs/process-visibility.md`）  
+**主题：** 扫描图 / PDF / TXT / 题目文件夹及附件（CSV/XLSX） → **多模态 OCR / 文件提取** → **结构化探针分析** → **自主审题 brief** →（可选人确认）→ 进入建模求解主线。
+
+---
+
+## 0. 现行实现：Web Studio 拖拽做题工作舱（Problem Workbench）
+
+现代 OR-Path 支持在 Web Studio（`START.bat` / `START.sh`）直接拖拽赛题目录或题面文件：
+1. **自动识别与入库**：拖入 `fixtures/` 或外部目录后，后台自动检测 PDF/Markdown/TXT 题面与附带 CSV/XLSX 数据表。
+2. **结构化深度探针（`orpath/studio_analyzer.py`）**：自动提取节点数、矩阵形状、时间序列跨度、数据量纲与疑似物理约束。
+3. **人机协同确认弹窗**：呈现结构化画像（Profile），允许用户核对识别出的题目分类、求解模式建议，并微调时间上限后一键下发求解。
+
+---
 
 ---
 

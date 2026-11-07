@@ -1,8 +1,39 @@
-# Human Steer · Watch 对话层 · Pi 引导插件（规格）
+# Human Steer · 人机协同引导 · Web Studio 交互与断点控制（权威规范）
 
-> **状态：** Draft for review（2026-08-09）— **法条草案**，未宣称工程 DONE。  
-> **配套：** `process-visibility.md`（脸）· `control-plane.md`（LG 翻页）· `multi-agent.md`（真 sub）· `solvers-and-validate.md`（数字）· `memory.md`（禁权威 optima）。  
-> **触发：** 用户要「对话框精要 + 人导提示词 + Pi 社区引导插件」，且明确 **控制类→LG / 认知类→Pi**。
+> **状态：** LAW 2026-11（全面接入 Web Studio 可视化人机确认弹窗与断点控制；旧版 D2–D4 文件级 Steer 契约向下兼容保留）  
+> **配套：** `specs/process-visibility.md`（过程脸）· `specs/control-plane.md`（阶段机）· `specs/multi-agent.md`（4 常驻特种兵）· `specs/solvers-and-validate.md`（数字真理）  
+> **核心原则：** **控制类指令归流程（Web Studio / LangGraph），认知类提示归智能体，数值与最优解归求解器。严禁用户或模型在对话框中手写/篡改 objective。**
+
+---
+
+## 0. 现行架构：Web Studio 人机协同双向交互（Tier-1 主流形态）
+
+在现代原生纯 Python 体系下，人机协同主要通过 **Web Studio**（`START.bat` / `START.sh`，运行于 `orpath/web/`）与 **Live Watch** 对话层承载：
+
+1. **题目摄入期人机交互确认（Problem Intake Confirmation）**：
+   - 用户拖拽题目文件夹或 PDF/TXT 之后，前端实时调用 `studio_analyzer.py` 剖析出数据维度、时间序列长度、硬物理约束提示。
+   - 弹出结构化表单允许用户：切换求解模式（如从 `mock` 切换为 `networkx` / `highs` / `cpsat`）、调整时间上限（Time Limit）、显式指定 `Tier-A/B/C`。
+2. **实时断点控制与阶段放行（Pause / Steer / Resume）**：
+   - 控制面支持 `pause_next` 机制：在进入高开销阶段（如求解 `solve` 或正式撰写 `draft_paper`）前挂起，等待用户点击放行。
+   - 允许向特定阶段注入提示词（`steer_prompt`），由对应智能体（如 `or_analyst` 或 `or_modeler`）在隔离调用时作为附加上下文读取。
+3. **安全红线**：
+   - 任何人类介入均**严禁直接修改或伪造计算客观目标值（`objective`）**。
+   - 所有经过调整的模型与参数仍必须无条件经过 `validate_solution.py` 独立物理重算与 DIMO 门禁检验。
+
+---
+
+## 0.1 历史与无头通道：文件级 Steer 契约（Tier-2 Headless）
+
+在无前端或自动化回归脚本中，系统通过 `inputs/steer.json` 或工作区中的 `steer.json` 提供强类型人控通道：
+
+| 字段 | 含义 | 行为 |
+|------|------|------|
+| `mode_override` | 覆盖 `solve_mode`（如 `highs`, `networkx`） | 阶段机在进入 `solve` 节点前替换调度参数 |
+| `pause_next` | 是否在下一节点暂停 | 置位后在目标节点前停机，等待 CLI `resume` |
+| `steer_prompt` | 人工指导文字 | 注入目标节点的任务 Brief 中 |
+| `objective` | 尝试手写目标值 | **绝对拒绝（REJECT）**，触发安全报警 |
+
+---
 
 ---
 

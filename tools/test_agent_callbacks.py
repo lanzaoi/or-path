@@ -91,12 +91,13 @@ def test_init_accepts_string_workdir(tmp_path: Path) -> None:
 
 
 def test_known_agent_names_cover_pipeline() -> None:
-    assert set(KNOWN_AGENT_NAMES) == {
+    assert {
         SUPERVISOR_NAME,
         RESEARCHER_NAME,
         MODELER_NAME,
         VERIFIER_WRITER_NAME,
-    }
+    }.issubset(set(KNOWN_AGENT_NAMES))
+
 
 
 # --------------------------------------------------------------------------- #

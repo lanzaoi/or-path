@@ -6,13 +6,13 @@
 
 | 路径 | 说明 |
 |------|------|
-| `orpath/` `tools/` `scripts/` `specs/` `fixtures/`（无 raw 大附件） | 产品代码与金标壳 |
-| `START.bat` `START.sh` `orpath.bat` `pi.bat` `orpath.sh` `pi.sh` | 启动器 |
-| `.pi/agents/` `.pi/settings.json` | Pi 角色定义与默认设置 |
-| `docs/`（顶层活文档 + `archive/`） | 导航见 `docs/README.md`；架构 `docs/ARCHITECTURE.md` |
-| `AGENTS.md` `README.md` `ORPATH.md` `requirements.txt` | 入口与依赖声明 |
-| `demo/seed/` | L1/L2 默认 Watch 回放 |
-| `inbox/README.md` | 仅说明如何本地放题 |
+| `orpath/` `tools/` `scripts/` `specs/` `contracts/` `knowledge/` `fixtures/`（无 raw 大附件） | 产品代码、求解器、规范与金标 |
+| `START.bat` `START.sh` `orpath.bat` `orpath.sh` | 官方启动器与命令行调度器 |
+| `docs/`（顶层活文档 + `archive/`） | 导航见 `docs/README.md`；架构见 `docs/ARCHITECTURE.md` |
+| `tasks/` | 任务执行与阶段计划（`tasks/README.md`） |
+| `AGENTS.md` `README.md` `ORPATH.md` `requirements.txt` | 入口、开发公约与环境依赖声明 |
+| `demo/seed/` | 官方 Web Studio / Watch 默认演示种子 |
+| `inbox/README.md` | 本地放题目录指引 |
 
 ## 禁止进 Git（本机 / 机密 / 赛题）
 
@@ -48,10 +48,11 @@ docs/archive/plans/               # ★ 可公开的历史施工单（从 .herme
 
 | 文件 | 角色 |
 |------|------|
-| **`START.bat`** | 统一主入口（Windows / WSL 双环境自动兼容，直接启动 Web 工作舱） |
-| **`START.sh`** | 统一主入口（Linux / macOS / WSL 终端一键启动） |
-| **`orpath.bat` / `orpath.sh`** | 工业级命令行与门禁总入口 |
-| **`pi.bat` / `pi.sh`** | Pi TUI 交互 |
+| **`START.bat`** | 统一主入口（Windows / WSL 双环境自动兼容，直接启动 Web Studio 智能工作舱） |
+| **`START.sh`** | 统一主入口（Linux / macOS / WSL 终端一键启动 Web Studio） |
+| **`orpath.bat` / `orpath.sh`** | 工业级命令行与门禁回归总入口（CLI Headless） |
+
+历史遗留的 Node.js `pi.bat` / `pi.sh` 与冗余启动器均已永久剥离退役。
 
 已删除历史冗余入口：`START-CASE.bat`、`START-WATCH.bat`、`START-ORPATH.bat`、`START-WATCH.sh`（功能已全部融合进 Web 工作舱）。  
 `orpath.bat gui-demo` 仍为 **mock 冒烟命令**（不是独立 bat）。

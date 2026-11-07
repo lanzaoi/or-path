@@ -199,6 +199,10 @@ ROLE_TOOLS: dict[str, tuple[str, ...]] = {
         "execute_or_solver", "validate_solution_tool", "inspect", "execute_python_sandbox",
         "read_problem_file", "search_or_knowledge",
     ),
+    "hgs": (
+        "execute_or_solver", "validate_solution_tool", "inspect", "execute_python_sandbox",
+        "read_problem_file", "search_or_knowledge",
+    ),
     "realities": (
         "execute_or_solver", "validate_solution_tool", "inspect", "execute_python_sandbox",
         "read_problem_file", "search_or_knowledge",

@@ -1,157 +1,105 @@
-# Control Plane — 阶段机、回修与字段权属（详细）
+# Control Plane — 阶段状态机、流转路由与字段权属（权威规范）
 
-**对齐：** `product-flow-sdd.md`  
-**状态：** LAW 2026-08-01
-
----
-
-## 1. 入口与模块
-
-| 模块 | 职责 |
-|------|------|
-| **`orpath/control_plane.py`** | 权威：build_graph / default_initial / invoke_once（ADR-0003） |
-| `orpath/run_orpath.py` | CLI：run/status/resume/list/from-stage/fresh |
-| `orpath/graph_product.py` | 拓扑（边与条件） |
-| `orpath/nodes.py` | 阶段节点实现 |
-| `orpath/run_t1.py` / `run_t2.py` | 兼容/薄委托 |
-| `orpath/graph.py` `graph_t2.py` | shim → control_plane |
-
-```bat
-orpath.bat run --problem-id shortest_path --solve-mode mock --slug demo --thread-id demo --fresh
-orpath.bat status --thread-id demo
-orpath.bat resume --thread-id demo
-```
+**对齐：** `AGENTS.md` · `specs/product-flow-sdd.md` · ADR-0003  
+**状态：** LAW 2026-11（原生 LangGraph 纯 Python 控制面全量上线）
 
 ---
 
-## 2. 逻辑阶段图（权威叙述）
+## 1. 架构模块与职责边界
 
-实现节点名以代码为准；逻辑等价如下。
+| 模块文件 | 核心职责 | 规范要求 |
+|----------|----------|----------|
+| **`orpath/control_plane.py`** | 统一图构建器（`build_product_graph`）、初始状态种子构建（`default_initial_state`）与单步/全流执行引擎（`invoke_once`） | 阶段机唯一总管（ADR-0003） |
+| **`orpath/graph_product.py`** | 定义 LangGraph 拓扑、节点注册、确定性条件边（Conditional Edges） | 零 LLM 投票，纯 Python 布尔判断 |
+| **`orpath/nodes.py`** | 阶段节点逻辑实现（衔接 4 大常驻智能体与底层 27 求解器/验算门禁） | 保证上下文隔离，只写归属字段 |
+| **`orpath/run_orpath.py`** | 命令行驱动核心（支持 `--fresh`, `--resume`, `--from-stage`, `--problem-id`, `--solve-mode`） | 统一 CLI 控制中枢 |
+
+---
+
+## 2. 核心状态图拓扑（Topological Flow）
 
 ```text
 START
-  → [optional] intake_ocr → intake_parse → [human_confirm_intake?]
-  → orchestrate
-  → retrieve_or_seed
-  → bridge_pi                 # 可 skip
-  → research
-  → model
-  → gate_schema
-       ├─ fail & schema_repair < 2 → model
-       └─ fail & ceiling → HUMAN_REQUIRED
-  → solve
-  → gate_validate
-       ├─ fail & solver_tune < 3 → param_retune_solve（同 schema）
-       ├─ fail & validate_repair < 2 → model
-       └─ fail & ceiling → HUMAN_REQUIRED
-  → explain
-  → draft_paper
-  → cite_pack
-  → review_pack
-  → revise_or_done
-       ├─ paper FATAL & revise_count < 2 → draft_paper（再 cite/review）
-       ├─ ceiling → HUMAN 或 provenance BLOCKED
-       └─ ok → provenance → END
+  │
+  ▼
+[ intake_ocr / intake_parse ] ──► [ human_confirm_intake? ] (Web Studio 可交互确认)
+  │
+  ▼
+[ orchestrate ]  (确定性预检、装备包挂载、复杂度评级 Tier-A / B / C)
+  │
+  ▼
+[ retrieve_or_seed ]  (本地 ONNX bge-m3 + BM25 检索技能库与建模战法)
+  │
+  ▼
+[ research ]  (智能体: or_analyst 分析变量/约束/模型类，生成 problem-brief.md)
+  │
+  ▼
+[ model ]  (智能体: or_modeler 构建 contracts/schema.json 或受控 MIP/CP-SAT 脚本)
+  │
+  ▼
+[ gate_schema ] ──(失败 & schema_repair < 2)──► [ model ]
+  │            ──(失败 & 达上限)──────────────► [ HUMAN_REQUIRED ]
+  ▼ (成功)
+[ solve ]  (调度 27 工业求解器运行物理计算，生成 outputs/solution.json)
+  │
+  ▼
+[ gate_validate ] ──(失败 & solver_tune < 3)────► [ param_retune_solve ] (同 schema 调参)
+  │               ──(调参尽 & validate_repair < 2)─► [ model ]
+  │               ──(失败 & 达上限)──────────────► [ HUMAN_REQUIRED ]
+  ▼ (成功: 独立物理验算与 DIMO 检验 100% 通过)
+[ draft_paper ]  (智能体: or_writer 结合预渲染表格/轨迹图撰写 6 章学术论文)
+  │
+  ▼
+[ cite_pack & review_pack ]  (智能体: or_reviewer 对抗红队审稿与公式/符号闭合性核查)
+  │
+  ▼
+[ revise_or_done ] ──(FATAL & revise_count < 2)─► [ draft_paper ]
+  │                ──(评审通过)────────────────► [ provenance ] ──► END
+  └────────────────(达上限)────────────────────► [ HUMAN_REQUIRED ]
 ```
 
-**默认 skip_intake：** 无题面源时兼容 T1–1.0 门禁。
+---
 
-**intake 开启且无域 adapter：** solve 可 **BLOCKED**（诚实），见 `1.2-architecture-soak.md`。
+## 3. 确定性回修上限（Deterministic Ceiling Counters）
+
+为了彻底杜绝大模型在死循环中耗尽 Token 与上下文，系统强制施加纯 Python 计数器物理熔断：
+
+| 计数器字段 | 硬性上限（Max） | 触发机制 | 熔断后续 |
+|------------|-----------------|----------|----------|
+| `schema_repair` | **2 次** | Schema JSON 结构或语法校验失败 | 顶格后标记 `human_required=True`，严禁死转 |
+| `solver_tune` | **3 次** | 求解返回未达到要求但可通过超参调优 | 仅允许白名单参数微调，顶格转入 `validate_repair` |
+| `validate_repair` | **2 次** | 独立物理复算失败或硬物理约束违背 | 顶格后标记 `human_required=True` 并阻断流程 |
+| `revise_count` | **2 次** | 论文评审红队给出 `FATAL` 级别缺陷报告 | 顶格后进入人工介入或保留诚实瑕疵记录 |
+
+**绝对禁令**：严禁通过大模型自我安慰绕过计数器；严禁在门禁失败时强行将状态伪造为 `PASS`。
 
 ---
 
-## 3. 回修上限（硬）
+## 4. 强类型状态字段权属（Strict Field Ownership）
 
-| 计数器 | max | 触发 |
-|--------|-----|------|
-| `schema_repair` | **2** | schema 红 → model |
-| `solver_tune` | **3** | validate 红 → 同 schema 调参重解 |
-| `validate_repair` | **2** | 调参尽 → model |
-| `revise_count` | **2** | 论文侧 FATAL → draft |
-| 用尽 | — | `human_required=true` + provenance；**不装 PASS** |
+为防止状态被脏写与黑板污染，每个核心字段由且仅由特定节点负责写入：
 
-**禁止：** 调参与回 model 无限交错；validate 红自动 codegen 沙箱（非本阶段）。
-
----
-
-## 4. 调参环语义（非精确轨）
-
-1. 输入：schema + ValidateReport + 上次 solution  
-2. 仅改 **白名单** solver 参数（见 solvers 分册）  
-3. 再 solve；**禁止** LLM 改 objective  
-4. 追加 `outputs/<slug>-tune-log.jsonl`  
-5. 顶格 → validate_repair  
-
-Mock / networkx / cpsat / highs：**不走**启发式调参阶梯（直 model 或 HUMAN）。
+| 状态字段 / 物理工件 | 唯一合法的写入方（Owner） | 严禁篡改方 |
+|---------------------|---------------------------|------------|
+| `plan_ledger`, `tier_class` | `orchestrate` | 任何后续 LLM 节点 |
+| `ocr_raw`, `problem_brief`, `profile.json` | `intake_*` / 探针工具 | 求解器与写作智能体 |
+| `retrieval_docs`, `skill_context` | `retrieve` 节点 | 论文审稿节点 |
+| `research_path`, `problem_analysis` | `research` (`or_analyst`) | 求解器 |
+| `schema`, `schema_path` | `model` (`or_modeler`) | 求解器（求解器只读 schema） |
+| `solution`, `objective`, `status` | `solve` (底层 27 求解器) | **所有 LLM 智能体**（绝对红线） |
+| `validation_report`, `gate_validate_ok` | `gate_validate` (物理校验器) | 任何 LLM 智能体 |
+| `paper_path`, `paper_draft` | `draft_paper` (`or_writer`) | 求解器 |
+| `review_report`, `review_grade` | `review_pack` (`or_reviewer`) | 论文撰写者 |
+| `human_required`, `provenance` | 控制面条件边 / `provenance` 节点 | 无法自愈的异常场景 |
 
 ---
 
-## 5. 字段 owner（窄状态）
+## 5. Checkpointer、会话隔离与断点恢复（Resume）
 
-| 字段/制品 | 唯一写者 |
-|-----------|----------|
-| plan ledger | orchestrate |
-| ocr / brief / intake.json / gate_intake_ok | intake 工具/gate |
-| retrieval_* | retrieve |
-| research_path | research（合并 child 后可由运行时写） |
-| schema_* | **model only** |
-| solution / objective / tour/routes/path 答案 | **solve only** |
-| validate_* / gate_validate_ok | validate |
-| gate_schema_ok | schema gate |
-| tune log | validate/tune 辅助 |
-| paper / drafts / review | paper 站 |
-| cite/review live 元 | dispatch/harness |
-| human_required | gates / revise 天花板 |
-| 修理计数器 | **LG 节点递增** |
-| timeline 制品 | timeline 聚合器（只读写盘衍生，不改 solution） |
-
-**禁止：** sub / memory 覆盖 objective。
-
----
-
-## 6. 运行参数（逻辑名）
-
-| 参数 | 含义 |
-|------|------|
-| `problem_id` | fixture 或逻辑 id |
-| `problem_class` | shortest_path \| tsp \| vrp \|（扩展注册类） |
-| `solve_mode` | mock \| networkx \| cpsat \| highs \| ortools \| tube \| … |
-| `knowledge_mode` | off \| seed \| hybrid |
-| `slug` / `thread_id` | 制品与 resume 键 |
-| `ORPATH_LIVE_SUBAGENT` | 真 sub；产品默认 1；gate=0 |
-| `ORPATH_LIVE_PI` | bridge；历史 |
-| `skip_intake` | 默认 true 若无源 |
-| intake 路径 | `--intake-in` / auto inbox |
-
----
-
-## 7. Checkpointer 与磁盘
-
-| | |
-|--|--|
-| DB | `runs/orpath.sqlite`（gitignore） |
-| Stage 快照 | `runs/<thread>/stages/*.json` |
-| Manifest | `artifact_hashes.json`；脏 resume → 失败除非 force/fresh |
-| 权威数字 | **仍是 solution 文件**，不是 checkpoint blob |
-
----
-
-## 8. HUMAN_REQUIRED
-
-1. `human_required=true`  
-2. provenance 写：失败 gate、计数器、路径  
-3. runner 非 0（或约定码）  
-4. 时间线必须仍可生成（失败 run 也可视）  
-
----
-
-## 9. 与可视化
-
-每站结束应有足够字段供 `process-visibility` L0 条带使用：`node`/`stage`/`last_error`/主要 `*_path`/`gate_*`。  
-缺字段视为控制面回归缺陷。
-
----
-
-## 10. 参考
-
-`t3-lg-skeleton.md` · `product-flow-sdd.md` · ADR-0003  
+1. **持久化介质**：基于 SQLite Checkpointer（`runs/orpath.sqlite`），支持全链路状态快照保存。
+2. **断点恢复策略**：
+   - 运行中可通过 `orpath.bat resume --thread-id <slug>` 继续中断的流。
+   - 可通过 `--from-stage <stage>` 回退至特定节点重跑，同时自动执行制品哈希校验（`artifact_hashes.json`），防止依赖脏文件。
+3. **真实单兵会话**：
+   - 各阶段调用 LLM 时均拉起独立的无状态消息上下文（Stateless Invocation）。
+   - 绝不沿用 LangGraph 自带的全局无限追加式 `MessagesState`，有效防止 Token 爆炸与注意力崩溃。
