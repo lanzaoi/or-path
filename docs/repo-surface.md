@@ -21,7 +21,7 @@
 | **`.hermes/desktop-attachments/**`** | 竞赛材料，永不上传 |
 | **`inbox/**`**（除 README） | 用户丢题面目录 |
 | **`.env` / `*.env.local`** | 密钥 |
-| **`outputs/` `notes/` `papers/` `runs/` `tasks/` `eval_or_bench/results/`** | 运行产物与内部执行清单（本地保留，不入版本库） |
+| **`outputs/` `notes/` `papers/` `runs/` `eval_or_bench/results/`**（旧 `tasks/` 任务区已迁至 `docs/_deprecated/tasks/`，仍本地保留不入库） | 运行产物与内部执行清单（本地保留，不入版本库） |
 | **`docs/archive/`** | 历史开发中间记录与关单草稿（已归档本地，不入版本库） |
 | **`.pi/orpath_model.json`** | 本机换模型偏好 |
 | **`.pi-subagents/` `.pi/npm/` `.pi/memory/`** | 运行时缓存 |

@@ -25,4 +25,8 @@
 | `v0-smoke.md` | Live Watch v0 smoke 契约 |
 | `vrp-public-baseline.md` | VRP 公开基线复现说明 |
 
+## 附：旧 `tasks/` 任务区（2026-11-07 一并迁入）
+
+`tasks/` → `tasks/`（即本目录下）：早期 5×5 重构目标总单（100% DONE）、bug 扫描清单与旧任务碎片（`archive/`）。本目录 `.gitignore` 忽略，本地保留不入库。
+
 > 注意：`scripts/` 中 m0/m1/m2/p3/p5/v0/dialogue 闸门脚本仍会校验本目录文件的存在与关键内容（路径已更新），属历史回归闸门，非现行规范。

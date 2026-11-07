@@ -4,7 +4,7 @@
 > 方法：AST 枚举 207 个后端文件 / 1888 个函数，逐文件通读（核心链路 100% 精读，旧 swarm 遗产层抽样 + grep 模式扫描），
 > 重点核对：异常吞噬路径、资源句柄生命周期、subprocess 超时、路径拼接、Numbers Truth 标签、状态机边界。
 > 级别：P0 必须修 / P1 高 / P2 中 / P3 低。✅=已实证，【疑似】=推断待复核。
-> 关联：`tasks/bug_hunt_full_scan_2026-11-07.md`（全仓粗扫）、`tasks/bugs_found.md`（既有精读清单）。
+> 关联：`docs/_deprecated/tasks/bug_hunt_full_scan_2026-11-07.md`（全仓粗扫）、`docs/_deprecated/tasks/bugs_found.md`（既有精读清单）。
 
 ---
 
