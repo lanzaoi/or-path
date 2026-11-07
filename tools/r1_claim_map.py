@@ -299,10 +299,22 @@ def build_claim_map(
         if not ok:
             errors.append(f"area impossible: pieces*{4} < cells ({pcn}*4 < {cn})")
 
-    # honesty: affirmative global-opt marketing without proven flag
+    # honesty: affirmative global-opt marketing without verified mathematical proof
     opt_hits = affirmative_global_opt_hits(draft)
     if opt_hits:
-        proven = bool((solution.get("meta") or {}).get("proven_optimal"))
+        # Check verified mathematical proof via OptimalityClaimAuditor if available,
+        # fallback to solution.meta.proven_optimal
+        proven = False
+        try:
+            from orpath.agents.optimality_claim_auditor import OptimalityClaimAuditor
+            auditor = OptimalityClaimAuditor()
+            proven, reason = auditor.verify_mathematical_proof(
+                solver_metadata=solution.get("meta"),
+                solution_envelope=solution,
+            )
+        except Exception:
+            proven = bool((solution.get("meta") or {}).get("proven_optimal"))
+
         claims.append(
             {
                 "type": "optimality_language",
@@ -312,7 +324,7 @@ def build_claim_map(
             }
         )
         if not proven:
-            errors.append("global-optimal language without solution.meta.proven_optimal")
+            errors.append("global-optimal language without mathematical optimality proof")
 
     return {
         "ok": len(errors) == 0,

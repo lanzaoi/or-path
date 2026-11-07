@@ -654,20 +654,12 @@ def node_solve(state: ORPathState) -> dict:
             str(tl),
         ]
     ok, data, raw = solve(root, state["problem_id"], mode, pc, extra or None)
-    if not ok and mode not in {
-        "mock",
-        "polyomino",
-        "polyomino_cover",
-        "poly",
-        "tube",
-        "tube_cut",
-    }:
-        ok, data, raw = solve(root, state["problem_id"], "mock", pc)
     if not ok:
         return {
             "stage": "human_stop",
             "human_required": True,
-            "last_error": raw,
+            "status": "ERROR",
+            "last_error": raw or f"Solver {mode} execution failed",
         }
     out.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     tier = str(state.get("complexity_tier") or "B")

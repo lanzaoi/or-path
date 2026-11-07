@@ -501,8 +501,19 @@ def node_revise_or_done(state: ORPathState) -> dict:
         allowed_urls=allowed,
         solution_path=state["solution_path"],
     )
-    # strip affirmative global-opt marketing if not proven (keep honesty disclaimers)
-    if not (sol.get("meta") or {}).get("proven_optimal"):
+    # strip affirmative global-opt marketing if not mathematically proven (keep honesty disclaimers)
+    proof_ok = False
+    try:
+        from orpath.agents.optimality_claim_auditor import OptimalityClaimAuditor
+        auditor = OptimalityClaimAuditor()
+        proof_ok, _ = auditor.verify_mathematical_proof(
+            solver_metadata=sol.get("meta"),
+            solution_envelope=sol,
+        )
+    except Exception:
+        proof_ok = bool((sol.get("meta") or {}).get("proven_optimal"))
+
+    if not proof_ok:
         try:
             from tools.r1_claim_map import GLOBAL_OPT_RE, _NEG_LEFT_RE
         except Exception:  # noqa: BLE001
@@ -555,7 +566,7 @@ def node_revise_or_done(state: ORPathState) -> dict:
         removed_needles=bad_urls
         + (
             ["global optimal", "保证全局最优"]
-            if not (sol.get("meta") or {}).get("proven_optimal")
+            if not proof_ok
             else []
         ),
         r1_ok=r1_ok,
