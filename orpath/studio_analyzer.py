@@ -43,7 +43,7 @@ def profile_inbox_assets(inbox_dir: Path, slug: str, outputs_dir: Path) -> dict[
                 rel = p.name
 
             suf = p.suffix.lower()
-            if suf in STATEMENT_EXTS and suf != ".txt":
+            if (suf in STATEMENT_EXTS and suf != ".txt") or (suf == ".txt" and any(k in p.name.lower() for k in ("problem", "readme", "brief", "题", "说明"))):
                 statements.append(rel)
             elif suf in DATA_EXTS or (suf == ".txt" and any(k in p.name.lower() for k in ("cap", "cab", "benchmark", "demand", "matrix"))):
                 file_info: dict[str, Any] = {
