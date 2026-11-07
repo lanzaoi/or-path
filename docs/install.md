@@ -80,7 +80,7 @@ cat VERSION  # 1.0.0
 .venv/bin/python scripts/l2_release_gate.py --zip dist/orpath-1.0.0-linux-x64.zip --quick
 
 # 5. 发布 GitHub Release
-# gh release create v1.0.0 dist/orpath-1.0.0-win-x64.zip dist/orpath-1.0.0-linux-x64.zip dist/SHA256SUMS dist/install.ps1 --title "OR-Path v1.0.0 Official Release" --notes-file docs/archive/releases/v1.0.0-notes.md
+# gh release create v1.0.0 dist/orpath-1.0.0-win-x64.zip dist/orpath-1.0.0-linux-x64.zip dist/SHA256SUMS dist/install.ps1 --title "OR-Path v1.0.0 Official Release" --notes-file docs/releases/v1.0.0-notes.md
 ```
 
 ---

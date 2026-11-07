@@ -249,23 +249,24 @@ def search_or_knowledge(query: str, topk: int = 5) -> str:
 # --------------------------------------------------------------------------- #
 # Tool assembly helpers
 # --------------------------------------------------------------------------- #
-def _merge_tools(base: list[BaseTool], extra: Any = None) -> list[BaseTool]:
-    """Return ``base + extra`` de-duplicated by tool name, preserving order.
+def _merge_tools(base: list[BaseTool], *extras: Any) -> list[BaseTool]:
+    """Return ``base + extras`` de-duplicated by tool name, preserving order.
 
-    ``extra`` may be ``None``, a single ``BaseTool``, or a sequence of tools.
-    Unknown / non-tool entries are skipped silently so a supervisor can pass a
+    Each extra in ``extras`` may be ``None``, a single ``BaseTool``, or a sequence
+    of tools. Unknown / non-tool entries are skipped silently so a supervisor can pass a
     best-effort list without breaking agent construction.
     """
     merged: list[BaseTool] = list(base)
     seen = {t.name for t in merged}
 
-    if extra is None:
-        return merged
-    candidates = extra if isinstance(extra, (list, tuple, set)) else [extra]
-    for item in candidates:
-        if isinstance(item, BaseTool) and item.name not in seen:
-            seen.add(item.name)
-            merged.append(item)
+    for extra in extras:
+        if extra is None:
+            continue
+        candidates = extra if isinstance(extra, (list, tuple, set)) else [extra]
+        for item in candidates:
+            if isinstance(item, BaseTool) and item.name not in seen:
+                seen.add(item.name)
+                merged.append(item)
     return merged
 
 
@@ -437,6 +438,8 @@ def create_verifier_agent(model: Any = None, extra_tools: Any = None) -> Any:
 
 def create_writer_agent(
     model: Any = None,
+    extra_tools: list[Any] | None = None,
+    cartridge_tools: list[Any] | None = None,
     domain_directive: str = "",
 ) -> Any:
     """Create the dedicated ``or_writer`` agent (academic scientific report author).
@@ -451,11 +454,15 @@ def create_writer_agent(
 
     Args:
         model: Chat model instance. Defaults to ``get_chat_model()``.
+        extra_tools: Optional extra tools.
+        cartridge_tools: Optional domain-specific tools (DomainCartridge mount).
         domain_directive: Optional domain-specific modeling prompt fragment
             appended to the system prompt (DomainCartridge mount).
     """
     tools = _merge_tools(
-        [read_problem_file, export_paper_markdown, search_or_knowledge, get_problem_formulation_template]
+        [read_problem_file, export_paper_markdown, search_or_knowledge, get_problem_formulation_template],
+        extra_tools,
+        cartridge_tools,
     )
     prompt = (
         "你是 OR-Path 流水线中的【高水平运筹学学术论文撰写专家】(Writer)。\n\n"

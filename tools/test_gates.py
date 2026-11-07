@@ -304,21 +304,30 @@ def test_tube_dispatch_returns_after_one_successful_adapter_run(monkeypatch, tmp
         },
     }
 
-    for mod_name in ("solve_tube_cut_b2026", "tools.solve_tube_cut_b2026"):
-        if mod_name in sys.modules:
-            monkeypatch.setattr(sys.modules[mod_name], "input_readiness", lambda: {"ok": True})
-    for mod_name in ("solve_dispatch", "tools.solve_dispatch"):
-        if mod_name in sys.modules:
-            monkeypatch.setattr(
-                sys.modules[mod_name],
-                "_run_py",
-                lambda script, args, cwd: (calls.append((script, args, cwd)) or (0, "done", "")),
-            )
-            monkeypatch.setattr(
-                sys.modules[mod_name],
-                "_tube_envelope_from_outputs",
-                lambda root, problem_id, _env=mock_env: dict(_env, problem_id=problem_id),
-            )
+    monkeypatch.setattr(solve_tube_cut_b2026, "input_readiness", lambda: {"ok": True})
+    if "tools.solve_tube_cut_b2026" in sys.modules:
+        monkeypatch.setattr(sys.modules["tools.solve_tube_cut_b2026"], "input_readiness", lambda: {"ok": True})
+    monkeypatch.setattr(
+        solve_dispatch,
+        "_run_py",
+        lambda script, args, cwd: (calls.append((script, args, cwd)) or (0, "done", "")),
+    )
+    monkeypatch.setattr(
+        solve_dispatch,
+        "_tube_envelope_from_outputs",
+        lambda root, problem_id, _env=mock_env: dict(_env, problem_id=problem_id),
+    )
+    if "tools.solve_dispatch" in sys.modules:
+        monkeypatch.setattr(
+            sys.modules["tools.solve_dispatch"],
+            "_run_py",
+            lambda script, args, cwd: (calls.append((script, args, cwd)) or (0, "done", "")),
+        )
+        monkeypatch.setattr(
+            sys.modules["tools.solve_dispatch"],
+            "_tube_envelope_from_outputs",
+            lambda root, problem_id, _env=mock_env: dict(_env, problem_id=problem_id),
+        )
 
     ok, data, raw = solve_dispatch.solve(
         tmp_path, "tube_cut_b2026", "tube", "tube_cut", ["--fast"]

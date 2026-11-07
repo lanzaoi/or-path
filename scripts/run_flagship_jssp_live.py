@@ -59,21 +59,52 @@ def main() -> int:
         print(f"Error: validation failed: {val_report.get('errors')}")
         return 1
 
-    # 4. Evidence Assembly & Academic Paper Generation
-    print("4. Writer: Assembling verified truth tables and SOP 6-chapter paper...")
+    # 4. Live Multi-Agent Academic Paper Generation (or_writer)
+    print("4. Writer: Synthesizing verified truth tables and SOP 6-chapter paper with or_writer...")
     evidence = build_verified_evidence_blocks(sol, val_report)
-    paper_text = render_or_paper(
+    paper_out = papers_dir / f"{slug}.md"
+    
+    # State with force_live_agent to invoke real or_writer
+    live_state = {
+        "slug": slug,
+        "problem_id": "ft06",
+        "problem_class": "jssp",
+        "solution_path": str(sol_path),
+        "validate_path": str(val_path),
+        "force_live_agent": True,
+        "multiagent": True,
+    }
+    from orpath.paper_workflow import draft_paper_with_writer, run_reviewer_agent
+    paper_text = draft_paper_with_writer(
+        root=ROOT,
         slug=slug,
         problem_class="jssp",
         problem_id="ft06",
         solution=sol,
         solution_path=str(sol_path),
+        paper_path=paper_out,
         validate_path=str(val_path),
+        state=live_state,
     )
-    paper_out = papers_dir / f"{slug}.md"
     paper_out.write_text(paper_text, encoding="utf-8")
     paper_size = paper_out.stat().st_size
     print(f"   -> Paper written to {paper_out} ({paper_size} bytes)")
+
+    # 5. Reviewer: Adversarial peer review (or_reviewer)
+    print("5. Reviewer: Running adversarial peer review with or_reviewer...")
+    rev_path = out_dir / f"{slug}-review.md"
+    review_content = run_reviewer_agent(
+        root=ROOT,
+        slug=slug,
+        paper_path=paper_out,
+        solution_path=sol_path,
+        review_path=rev_path,
+        state=live_state,
+    )
+    if review_content:
+        print(f"   -> Review completed ({len(review_content)} chars), written to {rev_path}")
+    else:
+        print(f"   -> Review completed via automated gates")
 
     assert paper_size > 4000, f"Paper size {paper_size} bytes is under minimum expected threshold"
     print("=== [Flagship 1/3] JSSP Live Benchmark PASSED! ===")

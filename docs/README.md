@@ -46,13 +46,11 @@
 
 ---
 
-## 5. 历史归档（Historical Archive）
+## 5. 版本发布记录（Releases）
 
-以下目录包含项目迭代历史记录、早期里程碑关单报告与旧版实验证据，默认无需加载至当前上下文：
-
-- **`archive/closeouts/`**：T1–T3、1.x、M0、P5 等历史里程碑 Closeout 报告
-- **`archive/plans/`**：早期阶段开发施工单与方案设计稿
-- **`archive/tickets/`**：已闭环的重构与修复工单记录
-- **`archive/design-notes/`**：早期的系统设计演进草稿与技术选型调研笔记
-- **`archive/evidence/`**：历史运行日志与门禁测试证据文件
-- 完整归档索引参见：[`archive/README.md`](archive/README.md)
+| 版本 | 说明文档 |
+|------|----------|
+| **v1.0.0** | [**`releases/v1.0.0-notes.md`**](releases/v1.0.0-notes.md)（首个官方正式稳定版：纯 Python 架构、27 求解器、4 常驻智能体） |
+| **v0.3.5** | [`releases/v0.3.5-notes.md`](releases/v0.3.5-notes.md) |
+| **v0.3.1** | [`releases/v0.3.1-notes.md`](releases/v0.3.1-notes.md) |
+| **v0.3.0** | [`releases/v0.3.0-notes.md`](releases/v0.3.0-notes.md) |

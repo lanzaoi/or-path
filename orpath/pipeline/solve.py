@@ -94,8 +94,8 @@ def _adapter_modes() -> dict[str, str]:
             from orpath.gates import tools_dir
 
             tools = tools_dir(Path(os.environ.get("ORPATH_ROOT", ".")))
-            if str(tools) not in __import__("sys").path:
-                __import__("sys").path.insert(0, str(tools))
+            if str(tools) not in sys.path:
+                sys.path.insert(0, str(tools))
             from solve_dispatch import ADAPTER_SCRIPTS  # type: ignore[import-not-found]
 
             return dict(ADAPTER_SCRIPTS)
@@ -350,28 +350,8 @@ def node_model(state: ORPathState) -> dict:
         schema: dict | None = None
         multiagent_ran = False
         if state.get("multiagent") or state.get("use_multiagent"):
-            try:
-                from orpath.agents.supervisor import build_compiled_isolated_pipeline
-
-                pipeline_app = build_compiled_isolated_pipeline()
-                pipe_state = {
-                    "workdir": str(root),
-                    "slug": slug,
-                    "problem_id": pid,
-                    "problem_class": pc or "general_optimization",
-                    "solve_mode": sm or state.get("solve_mode") or "auto",
-                    "problem_file": str(state.get("problem_file") or ""),
-                    "research_path": str(state.get("research_path") or ""),
-                    "schema_path": str(sp),
-                    "solution_path": str(root / "outputs" / f"{slug}-solution.json"),
-                    "validate_path": str(root / "outputs" / f"{slug}-validate.json"),
-                    "paper_path": str(root / "papers" / f"{slug}.md"),
-                    "review_path": str(root / "outputs" / f"{slug}-review.md"),
-                    "lifecycle_status": "PROPOSED",
-                    "max_model_repairs": 2,
-                    "max_revisions": 2,
-                }
-                res = pipeline_app.invoke(pipe_state)
+            res = _run_isolated_pipeline(root, dict(state), sp, sm)
+            if res is not None:
                 sub_ok = bool(
                     res.get("validation_ok")
                     or res.get("lifecycle_status") in {
@@ -382,15 +362,9 @@ def node_model(state: ORPathState) -> dict:
                     }
                 )
                 multiagent_ran = True
-            except Exception as exc:
-                return {
-                    "stage": "human_stop",
-                    "human_required": True,
-                    "last_error": f"multiagent modeling failed: {exc}",
-                }
             if sp.is_file():
                 schema = json.loads(sp.read_text(encoding="utf-8"))
-            else:
+            elif res is not None:
                 schema = {
                     "slug": slug,
                     "problem_class": pc or "general_optimization",
@@ -758,36 +732,7 @@ def node_gate_validate(state: ORPathState) -> dict:
                 or "solution_blocked",
             }
 
-    # If already validated by multi-agent pipeline:
-    if state.get("gate_subagent_ok") and vpath.is_file():
-        try:
-            val_data = json.loads(vpath.read_text(encoding="utf-8"))
-            if isinstance(val_data, dict) and val_data.get("ok"):
-                lesson_path = ""
-                try:
-                    from orpath.process_memory import auto_draft_after_validate
-
-                    p = auto_draft_after_validate(root, dict(state), gate_ok=True)
-                    if p is not None:
-                        lesson_path = str(p)
-                except Exception:
-                    lesson_path = ""
-                out_ok: dict = {
-                    "stage": "explain",
-                    "validate_path": str(vpath),
-                    "gate_validate_ok": True,
-                    "last_error": "",
-                }
-                if lesson_path:
-                    out_ok["lesson_draft_path"] = lesson_path
-                return out_ok
-        except Exception:
-            pass
-
-    ok, report, msg = gate_validate(
-        root, state["problem_id"], Path(state["solution_path"]), vpath
-    )
-    if ok:
+    def _record_validation_pass() -> dict:
         lesson_path = ""
         try:
             from orpath.process_memory import auto_draft_after_validate
@@ -795,7 +740,7 @@ def node_gate_validate(state: ORPathState) -> dict:
             p = auto_draft_after_validate(root, dict(state), gate_ok=True)
             if p is not None:
                 lesson_path = str(p)
-        except Exception:  # noqa: BLE001
+        except Exception:
             lesson_path = ""
         out_ok: dict = {
             "stage": "explain",
@@ -806,6 +751,21 @@ def node_gate_validate(state: ORPathState) -> dict:
         if lesson_path:
             out_ok["lesson_draft_path"] = lesson_path
         return out_ok
+
+    # If already validated by multi-agent pipeline:
+    if state.get("gate_subagent_ok") and vpath.is_file():
+        try:
+            val_data = json.loads(vpath.read_text(encoding="utf-8"))
+            if isinstance(val_data, dict) and val_data.get("ok"):
+                return _record_validation_pass()
+        except Exception:
+            pass
+
+    ok, report, msg = gate_validate(
+        root, state["problem_id"], Path(state["solution_path"]), vpath
+    )
+    if ok:
+        return _record_validation_pass()
 
     # Q12-C: param retune then model
     tune = int(state.get("solver_tune") or 0)

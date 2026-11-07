@@ -652,3 +652,59 @@ u_i - u_j + 1 \leq (n-1)(1-x_{ij}), \quad \forall i,j, i \neq j
 ```latex
 \sum_{j} x_{ij} = \sum_{j} x_{ji}, \quad \forall i \text{（中间节点）}
 ```
+
+---
+
+## 21. 工业专项：异形管材激光共边套料切割 (Tube Cut)
+
+### 21.1 异形圆管共边套料问题数学规划模型
+
+**问题特征：** 针对带端面旋转偏角与复杂相贯线断面的异形金属管材，在多种标准母材规格（9m, 10m, 11m, 12m）及多批次生产余料跨期流转场景下，求解满足轴向相容性与非干涉约束的高利用率排样方案。
+
+**决策变量：**
+- $y_m \in \{0, 1\}$：是否使用第 $m$ 根母材
+- $x_{im} \in \{0, 1\}$：零件 $i$ 是否分配在母材 $m$ 上切割
+- $z_{ijm} \in \{0, 1\}$：在母材 $m$ 上零件 $i$ 是否紧邻置于零件 $j$ 之前
+- $o_i \in \{\text{RL}, \text{LR}, \text{RR}, \text{LL}\}$：零件 $i$ 沿轴向的端面翻转姿态选择
+- $b_{ij}(o_i, o_j) \geq 0$：相邻零件端面贴合共切带来的轴向重叠收益量（mm）
+
+**数学模型（分层字典序目标）：**
+```latex
+\min \quad & Z_1 = \sum_{m} L_m y_m \quad \text{(第一目标：最小化母材消耗总长度)} \\
+\max \quad & Z_2 = \sum_{m} \sum_{i, j} z_{ijm} \cdot b_{ij}(o_i, o_j) \quad \text{(第二目标：最大化共边切断面收益)} \\
+\min \quad & Z_3 = \sum_{m} \sum_{i, j} z_{ijm} \cdot \mathbb{I}(\text{type}_i \neq \text{type}_j) \quad \text{(第三目标：最小化刀具换型切换次数)} \\
+\text{s.t.} \quad & \sum_{m} x_{im} = 1, \quad \forall i \in \mathcal{I} \quad \text{(需求全覆盖约束)} \\
+& \sum_{i \in \mathcal{I}} l_i x_{im} - \sum_{i, j} z_{ijm} \cdot b_{ij}(o_i, o_j) \leq L_m y_m, \quad \forall m \quad \text{(母材物理容量与共边收益有效长度约束)} \\
+& \text{remnant}_m = L_m y_m - \left( \sum_{i} l_i x_{im} - \text{cocut}_m \right) \geq 0, \quad \forall m \\
+& x_{im}, y_m, z_{ijm} \in \{0, 1\}
+```
+
+### 21.2 多批次余料跨期滚动流转守恒
+
+```latex
+\text{Inventory}_{t} = \text{Inventory}_{t-1} + \sum_{m \in \mathcal{M}_t} \text{remnant}_{m, t} \cdot \mathbb{I}(\text{remnant}_{m, t} \geq L_{\min}) - \text{ConsumedRemnant}_t
+```
+
+---
+
+## 22. 工业专项：园区微电网光储充综合能源优化调度 (Microgrid Dispatch)
+
+### 22.1 日前经济调度与滚动时域 MPC 模型
+
+**决策变量：**
+- $P_{\text{grid}, t} \in \mathbb{R}$：时段 $t$ 与上级电网的交互联络线功率（正为购电，负为售电）
+- $P_{\text{ch}, t}, P_{\text{dis}, t} \geq 0$：时段 $t$ 储能电池充、放电功率
+- $u_{\text{ch}, t}, u_{\text{dis}, t} \in \{0, 1\}$：充放电互斥状态标志
+- $\text{SOC}_t \in [0, 1]$：时段 $t$ 结束时储能系统的荷电状态
+
+**数学模型（日前调度成本最小化）：**
+```latex
+\min \quad & \sum_{t=1}^{T} \left( c_{\text{buy}, t} \cdot \max(0, P_{\text{grid}, t}) - c_{\text{sell}, t} \cdot \max(0, -P_{\text{grid}, t}) + c_{\text{deg}} \cdot (P_{\text{ch}, t} + P_{\text{dis}, t}) \right) \Delta t \\
+\text{s.t.} \quad & P_{\text{grid}, t} + P_{\text{pv}, t} + P_{\text{dis}, t} = P_{\text{load}, t} + P_{\text{ch}, t}, \quad \forall t \quad \text{(母线电功率实时平衡约束)} \\
+& \text{SOC}_{t} = \text{SOC}_{t-1} + \left( \eta_{\text{ch}} P_{\text{ch}, t} - \frac{P_{\text{dis}, t}}{\eta_{\text{dis}}} \right) \frac{\Delta t}{E_{\text{cap}}}, \quad \forall t \quad \text{(电池电量动力学状态转移)} \\
+& \text{SOC}_{\min} \leq \text{SOC}_t \leq \text{SOC}_{\max}, \quad \forall t \quad \text{(电池安全容量荷电状态约束)} \\
+& 0 \leq P_{\text{ch}, t} \leq P_{\text{ch}}^{\max} u_{\text{ch}, t}, \quad 0 \leq P_{\text{dis}, t} \leq P_{\text{dis}}^{\max} u_{\text{dis}, t}, \quad \forall t \\
+& u_{\text{ch}, t} + u_{\text{dis}, t} \leq 1, \quad u_{\text{ch}, t}, u_{\text{dis}, t} \in \{0, 1\} \quad \text{(充放电互斥约束)} \\
+& -P_{\text{grid}}^{\max} \leq P_{\text{grid}, t} \leq P_{\text{grid}}^{\max}, \quad \forall t \quad \text{(变压器联络线容量约束)}
+```
+

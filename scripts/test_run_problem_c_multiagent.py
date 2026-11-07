@@ -79,20 +79,47 @@ def main() -> int:
     print(f"   -> Inspection metrics: subproblems={insp.get('subproblems_solved', [])}")
 
     # 5. Writer & Reviewer Phase: SOP 6-chapter paper generation
-    print("5. Writer & Reviewer: Rendering verified academic paper and auditing claims...")
-    evidence = build_verified_evidence_blocks(sol, val_report)
-    paper_text = render_or_paper(
+    print("5. Writer & Reviewer: Synthesizing verified academic paper with or_writer & or_reviewer...")
+    evidence = build_verified_evidence_blocks(sol, val_report, insp)
+    paper_out = papers_dir / f"{slug}.md"
+
+    live_state = {
+        "slug": slug,
+        "problem_id": "microgrid_cumcm2026_c",
+        "problem_class": "microgrid_dispatch",
+        "solution_path": str(sol_path),
+        "validate_path": str(val_path),
+        "force_live_agent": True,
+        "multiagent": True,
+    }
+    from orpath.paper_workflow import draft_paper_with_writer, run_reviewer_agent
+    paper_text = draft_paper_with_writer(
+        root=ROOT,
         slug=slug,
         problem_class="microgrid_dispatch",
         problem_id="microgrid_cumcm2026_c",
         solution=sol,
         solution_path=str(sol_path),
+        paper_path=paper_out,
         validate_path=str(val_path),
+        state=live_state,
     )
-    paper_out = papers_dir / f"{slug}.md"
     paper_out.write_text(paper_text, encoding="utf-8")
     paper_size = paper_out.stat().st_size
     print(f"   -> Paper written to {paper_out} ({paper_size} bytes)")
+
+    # Reviewer audit
+    rev_path = out_dir / f"{slug}-review.md"
+    review_content = run_reviewer_agent(
+        root=ROOT,
+        slug=slug,
+        paper_path=paper_out,
+        solution_path=sol_path,
+        review_path=rev_path,
+        state=live_state,
+    )
+    if review_content:
+        print(f"   -> Adversarial review written to {rev_path} ({len(review_content)} chars)")
 
     # Audit optimality claims
     claim_verdict = audit_text(paper_text, solver_metadata=sol.get("meta", {}), solution_envelope=sol)

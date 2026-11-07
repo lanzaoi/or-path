@@ -12,7 +12,6 @@ Validates the fixes for issues documented in outputs/frontend_health_report.md:
 import re
 import sys
 from pathlib import Path
-import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB_DIR = ROOT / "orpath" / "web"

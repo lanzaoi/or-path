@@ -63,6 +63,8 @@ EXCLUDE_DIR_NAMES = {
     "data",
     "models",
     "mineru_models",
+    "tasks",
+    "archive",
 }
 
 # Only skip these when they are top-level workdir dirs (not demo/seed/**)

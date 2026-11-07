@@ -73,20 +73,47 @@ def main() -> int:
     print(f"   -> Inspection metrics: total_stocks={insp.get('total_stocks_used')}, waste_rate={insp.get('overall_waste_rate')}")
 
     # 5. Writer & Reviewer Phase: Generate 6-chapter paper and benchmark against live-btube.md
-    print("5. Writer & Reviewer: Rendering verified academic paper and auditing claims...")
-    evidence = build_verified_evidence_blocks(sol, val_report)
-    paper_text = render_or_paper(
+    print("5. Writer & Reviewer: Synthesizing verified academic paper with or_writer & or_reviewer...")
+    evidence = build_verified_evidence_blocks(sol, val_report, insp)
+    paper_out = papers_dir / f"{slug}.md"
+
+    live_state = {
+        "slug": slug,
+        "problem_id": "tube_cut_b2026",
+        "problem_class": "tube_cut",
+        "solution_path": str(sol_path),
+        "validate_path": str(val_path),
+        "force_live_agent": True,
+        "multiagent": True,
+    }
+    from orpath.paper_workflow import draft_paper_with_writer, run_reviewer_agent
+    paper_text = draft_paper_with_writer(
+        root=ROOT,
         slug=slug,
         problem_class="tube_cut",
         problem_id="tube_cut_b2026",
         solution=sol,
         solution_path=str(sol_path),
+        paper_path=paper_out,
         validate_path=str(val_path),
+        state=live_state,
     )
-    paper_out = papers_dir / f"{slug}.md"
     paper_out.write_text(paper_text, encoding="utf-8")
     paper_size = paper_out.stat().st_size
     print(f"   -> Paper written to {paper_out} ({paper_size} bytes)")
+
+    # Reviewer audit
+    rev_path = out_dir / f"{slug}-review.md"
+    review_content = run_reviewer_agent(
+        root=ROOT,
+        slug=slug,
+        paper_path=paper_out,
+        solution_path=sol_path,
+        review_path=rev_path,
+        state=live_state,
+    )
+    if review_content:
+        print(f"   -> Adversarial review written to {rev_path} ({len(review_content)} chars)")
 
     claim_verdict = audit_text(paper_text, solver_metadata=sol.get("meta", {}), solution_envelope=sol)
     print(f"   -> Claim audit: passed={claim_verdict.passed}")

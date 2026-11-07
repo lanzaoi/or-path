@@ -291,9 +291,18 @@ def render_or_paper(
     if metrics or questions:
         lines_m = ["", "### Declared metrics (from solution.json)", ""]
         if questions:
-            for qk, qv in questions.items():
+            for qk, qv in sorted(questions.items()):
                 if isinstance(qv, dict):
-                    parts = ", ".join(f"{kk}={vv}" for kk, vv in qv.items())
+                    # Filter out giant raw sequence/stocks arrays from inline claim text
+                    clean_items = []
+                    for kk, vv in qv.items():
+                        if isinstance(vv, (list, tuple)):
+                            clean_items.append(f"{kk}=[list of {len(vv)} items]")
+                        elif isinstance(vv, dict):
+                            clean_items.append(f"{kk}={{...}}")
+                        else:
+                            clean_items.append(f"{kk}={vv}")
+                    parts = ", ".join(clean_items[:12])
                     lines_m.append(f"- Claim: `{qk}` → {parts}")
                 else:
                     lines_m.append(f"- Claim: `{qk}` = `{qv}`")
@@ -706,40 +715,69 @@ def draft_paper_with_writer(
     if is_live_paper_agent_enabled(state):
         try:
             from orpath.agents.workers import create_writer_agent
+            from orpath.agents.cartridges import resolve_cartridge, cartridge_tools
             from langchain_core.messages import HumanMessage
 
-            writer = create_writer_agent(model=model)
+            # Resolve domain cartridge and build rich evidence blocks
+            cart = resolve_cartridge(problem_class)
+            c_tools = cartridge_tools(cart.domain)
+            writer_tools = [t for t in [c_tools.get("inspect_tool"), c_tools.get("profile_tool")] if t is not None]
+            
+            # Pre-render verified truth tables and domain metrics
+            evidence_blocks = build_verified_evidence_blocks(solution, validation=None)
+            summary_table = evidence_blocks.get("summary_table", "")
+            breakdown_table = evidence_blocks.get("breakdown_table", "")
+            verified_section = (
+                f"\n\n### Authoritative Results Table (Pre-verified Python Output)\n"
+                f"{summary_table}\n\n{breakdown_table}\n"
+            )
+
+            # Assemble domain modeling directive
+            domain_hints = f"Domain: {cart.domain}. Target Complexity: Tier {cart.default_tier}."
+            if cart.modeling_checklist:
+                checklist_str = "\n".join(f"- {c}" for c in cart.modeling_checklist)
+                domain_hints += f"\nDomain Modeling Checklist:\n{checklist_str}"
+
+            writer = create_writer_agent(
+                model=model,
+                cartridge_tools=writer_tools,
+                domain_directive=domain_hints,
+            )
             rev_note = f"\nAddress this previous review feedback: {revision_feedback}\n" if revision_feedback else ""
             prompt_text = (
-                f"Task: Write a publication-grade OR academic paper for problem '{problem_id}' (class '{problem_class}').\n"
+                f"Task: Write a rigorous, competition/publication-grade OR academic paper for problem '{problem_id}' (class '{problem_class}').\n"
                 f"Inputs:\n"
                 f"- solution_path: {solution_path}\n"
                 f"- research_path: {research_path}\n"
                 f"- schema_path: {schema_path}\n"
                 f"- validate_path: {validate_path}\n"
-                f"{rev_note}\n"
+                f"{rev_note}\n\n"
+                f"Verified Truth Evidence (Must include in Results):\n"
+                f"{verified_section}\n\n"
                 f"Instructions:\n"
-                f"1. Conforming strictly to docs/or-paper-sop.md, draft the standard 6 sections:\n"
-                f"   (Abstract, Problem statement & assumptions, Mathematical formulation, "
-                f"Solution strategy and complexity, Computational results, Limitations & deployment).\n"
-                f"2. Numbers Truth: all result numbers must strictly come from {solution_path}.\n"
-                f"3. Call export_paper_markdown(output_path='{paper_path}', content=...) to persist the paper.\n"
+                f"1. Strictly conform to docs/or-paper-sop.md and write the 6 standard chapters in professional Markdown:\n"
+                f"   (1. Abstract & Key Indicators, 2. Problem statement, assumptions & notation table, 3. Mathematical formulation with LaTeX equations, "
+                f"4. Solution strategy and complexity, 5. Verified Computational Results & Sensitivity, 6. Limitations & Industrial deployment).\n"
+                f"2. Numbers Truth: all numeric results, objectives and metrics must strictly come from {solution_path} or the pre-verified table above. Do NOT invent numbers.\n"
+                f"3. Honor honesty: if solution is not proven optimal (status is FEASIBLE), report as feasible/best-found, never claim proven global optimality.\n"
+                f"4. Save the finalized paper by calling export_paper_markdown(output_path='{paper_path}', content=...). Ensure complete text is persisted.\n"
             )
             res = writer.invoke(
                 {"messages": [HumanMessage(content=prompt_text)]},
-                config={"recursion_limit": 6},
+                config={"recursion_limit": 20},
             )
-            if paper_path.is_file() and paper_path.stat().st_size > 300:
+            if paper_path.is_file() and paper_path.stat().st_size > 1200:
                 return paper_path.read_text(encoding="utf-8")
             if isinstance(res, dict) and "messages" in res and res["messages"]:
                 last_msg = res["messages"][-1]
                 content = getattr(last_msg, "content", "") or ""
-                if len(content) > 300 and ("# " in content or "## " in content):
+                if len(content) > 1200 and ("# " in content or "## " in content):
                     paper_path.parent.mkdir(parents=True, exist_ok=True)
                     paper_path.write_text(content, encoding="utf-8")
                     return content
-        except Exception:
-            pass
+        except Exception as exc:
+            import warnings
+            warnings.warn(f"Live writer agent failed: {exc}, falling back to render_or_paper", RuntimeWarning)
 
     body = render_or_paper(
         slug=slug,
@@ -790,7 +828,7 @@ def run_reviewer_agent(
         )
         res = reviewer.invoke(
             {"messages": [HumanMessage(content=prompt_text)]},
-            config={"recursion_limit": 6},
+            config={"recursion_limit": 15},
         )
         if review_path.is_file() and review_path.stat().st_size > 100:
             return review_path.read_text(encoding="utf-8")
