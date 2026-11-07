@@ -217,149 +217,155 @@ def cmd_run(args: argparse.Namespace) -> int:
             conn.close()
             return 3
 
-    if args.fresh or not args.resume:
-        live_sa = _resolve_live_subagent(args)
-        intake_sources, skip_intake = _resolve_intake_sources(root, args)
-        if skip_intake and bool(getattr(args, "auto_intake", False)):
-            print(
-                json.dumps(
-                    {
-                        "info": "auto_intake_empty",
-                        "detail": "no --intake-in and inbox/ empty — skip_intake=true",
-                        "inbox": str(root / "inbox"),
-                    },
-                    ensure_ascii=False,
-                ),
-                flush=True,
-            )
-        initial = _default_initial(
-            root=root,
-            slug=slug,
-            problem_id=args.problem_id,
-            problem_class=args.problem_class or "",
-            solve_mode=args.solve_mode,
-            knowledge_mode=(
-                __import__("orpath.nodes", fromlist=["_resolve_knowledge_mode"])._resolve_knowledge_mode(
-                    args.knowledge_mode
-                )
-            ),
-            live_pi=bool(args.live_pi),
-            live_subagent=live_sa,
-            thread_id=thread_id,
-            bridge_attachment=args.bridge_attachment,
-            skip_intake=skip_intake,
-            intake_sources=intake_sources,
-            intake_assets_dir=str(getattr(args, "intake_assets", "") or ""),
-            human_confirm_intake=bool(getattr(args, "human_confirm_intake", False)),
-            intake_confirmed=bool(getattr(args, "intake_confirmed", False)),
-        )
-        # D2: merge human-steer into seed (solve_mode / pi fields)
-        steer_seed = apply_steer_to_state(initial, workdir=root, boundary=None)
-        if steer_seed:
-            initial = {**initial, **{k: v for k, v in steer_seed.items() if k not in {"stage", "human_required", "steer_pause"}}}
-            if steer_seed.get("solve_mode"):
+    final: dict[str, Any] = {}
+    try:
+        if args.fresh or not args.resume:
+            live_sa = _resolve_live_subagent(args)
+            intake_sources, skip_intake = _resolve_intake_sources(root, args)
+            if skip_intake and bool(getattr(args, "auto_intake", False)):
                 print(
                     json.dumps(
                         {
-                            "info": "human_steer_solve_mode",
-                            "solve_mode": steer_seed.get("solve_mode"),
-                            "path": steer_seed.get("human_steer_path"),
+                            "info": "auto_intake_empty",
+                            "detail": "no --intake-in and inbox/ empty — skip_intake=true",
+                            "inbox": str(root / "inbox"),
                         },
                         ensure_ascii=False,
                     ),
                     flush=True,
                 )
-        if args.from_stage and not args.fresh:
+            initial = _default_initial(
+                root=root,
+                slug=slug,
+                problem_id=args.problem_id,
+                problem_class=args.problem_class or "",
+                solve_mode=args.solve_mode,
+                knowledge_mode=(
+                    __import__("orpath.nodes", fromlist=["_resolve_knowledge_mode"])._resolve_knowledge_mode(
+                        args.knowledge_mode
+                    )
+                ),
+                live_pi=bool(args.live_pi),
+                live_subagent=live_sa,
+                thread_id=thread_id,
+                bridge_attachment=args.bridge_attachment,
+                skip_intake=skip_intake,
+                intake_sources=intake_sources,
+                intake_assets_dir=str(getattr(args, "intake_assets", "") or ""),
+                human_confirm_intake=bool(getattr(args, "human_confirm_intake", False)),
+                intake_confirmed=bool(getattr(args, "intake_confirmed", False)),
+            )
+            # D2: merge human-steer into seed (solve_mode / pi fields)
+            steer_seed = apply_steer_to_state(initial, workdir=root, boundary=None)
+            if steer_seed:
+                initial = {**initial, **{k: v for k, v in steer_seed.items() if k not in {"stage", "human_required", "steer_pause"}}}
+                if steer_seed.get("solve_mode"):
+                    print(
+                        json.dumps(
+                            {
+                                "info": "human_steer_solve_mode",
+                                "solve_mode": steer_seed.get("solve_mode"),
+                                "path": steer_seed.get("human_steer_path"),
+                            },
+                            ensure_ascii=False,
+                        ),
+                        flush=True,
+                    )
+            if args.from_stage and not args.fresh:
+                existing = _load_state_from_checkpoint(app, thread_id)
+                if existing is None:
+                    print(
+                        json.dumps(
+                            {"error": "no_checkpoint_for_from_stage", "thread_id": thread_id}
+                        ),
+                        file=sys.stderr,
+                    )
+                    return 1
+                existing["stage"] = args.from_stage
+                existing["thread_id"] = thread_id
+                as_node = _PREDECESSORS.get(args.from_stage, "orchestrate")
+                app.update_state(cfg, existing, as_node=as_node)
+                final = app.invoke(None, cfg)
+            else:
+                final = app.invoke(initial, cfg)
+        else:
             existing = _load_state_from_checkpoint(app, thread_id)
             if existing is None:
                 print(
-                    json.dumps(
-                        {"error": "no_checkpoint_for_from_stage", "thread_id": thread_id}
-                    ),
+                    json.dumps({"error": "nothing_to_resume", "thread_id": thread_id}),
                     file=sys.stderr,
                 )
-                conn.close()
                 return 1
-            existing["stage"] = args.from_stage
-            existing["thread_id"] = thread_id
-            as_node = _PREDECESSORS.get(args.from_stage, "orchestrate")
-            app.update_state(cfg, existing, as_node=as_node)
+            if args.from_stage:
+                existing["stage"] = args.from_stage
+                as_node = _PREDECESSORS.get(args.from_stage, "orchestrate")
+                app.update_state(cfg, existing, as_node=as_node)
             final = app.invoke(None, cfg)
-        else:
-            final = app.invoke(initial, cfg)
-    else:
-        existing = _load_state_from_checkpoint(app, thread_id)
-        if existing is None:
-            print(
-                json.dumps({"error": "nothing_to_resume", "thread_id": thread_id}),
-                file=sys.stderr,
-            )
-            conn.close()
+
+        try:
+            tup = saver.get_tuple(cfg)
+            cp_id = None
+            if tup:
+                cp = tup.checkpoint
+                cp_id = getattr(cp, "id", None) or (
+                    cp.get("id") if isinstance(cp, dict) else None
+                )
+            if cp_id:
+                td = thread_dir(
+                    {"root": str(root), "thread_id": thread_id, "slug": slug}
+                )  # type: ignore[arg-type]
+                (td / "checkpoint_id.txt").write_text(str(cp_id) + "\n", encoding="utf-8")
+                prov = final.get("provenance_path")
+                if prov and Path(prov).is_file():
+                    with Path(prov).open("a", encoding="utf-8") as f:
+                        f.write(f"- orpath_checkpoint_id: {cp_id}\n")
+                final = {**final, "orpath_checkpoint_id": str(cp_id)}
+        except Exception:  # noqa: BLE001
+            pass
+
+        summary = {
+            "thread_id": thread_id,
+            "stage": final.get("stage"),
+            "human_required": final.get("human_required"),
+            "problem_class": final.get("problem_class"),
+            "solve_mode": final.get("solve_mode") or args.solve_mode,
+            "human_steer_applied": final.get("human_steer_applied"),
+            "human_steer_path": final.get("human_steer_path"),
+            "gate_validate_ok": final.get("gate_validate_ok"),
+            "gate_r1_ok": final.get("gate_r1_ok"),
+            "gate_r2_ok": final.get("gate_r2_ok"),
+            "gate_subagent_ok": final.get("gate_subagent_ok"),
+            "live_subagent": final.get("live_subagent"),
+            "solution_path": final.get("solution_path"),
+            "validate_path": final.get("validate_path"),
+            "paper_path": final.get("paper_path"),
+            "provenance_path": final.get("provenance_path"),
+            "bridge_path": final.get("bridge_path"),
+            "bridge_skipped": final.get("bridge_skipped"),
+            "runs_dir": final.get("runs_dir"),
+            "artifact_manifest_path": final.get("artifact_manifest_path"),
+            "last_snapshot_path": final.get("last_snapshot_path"),
+            "orpath_checkpoint_id": final.get("orpath_checkpoint_id"),
+            "last_error": final.get("last_error"),
+            "solver_tune": final.get("solver_tune"),
+            "product_nodes": PRODUCT_NODES,
+            "pipeline": final.get("pipeline") or "product",
+        }
+        print(json.dumps(summary, indent=2, ensure_ascii=False))
+        if final.get("human_required"):
+            return 2
+        if not final.get("provenance_path"):
             return 1
-        if args.from_stage:
-            existing["stage"] = args.from_stage
-            as_node = _PREDECESSORS.get(args.from_stage, "orchestrate")
-            app.update_state(cfg, existing, as_node=as_node)
-        final = app.invoke(None, cfg)
-
-    try:
-        tup = saver.get_tuple(cfg)
-        cp_id = None
-        if tup:
-            cp = tup.checkpoint
-            cp_id = getattr(cp, "id", None) or (
-                cp.get("id") if isinstance(cp, dict) else None
-            )
-        if cp_id:
-            td = thread_dir(
-                {"root": str(root), "thread_id": thread_id, "slug": slug}
-            )  # type: ignore[arg-type]
-            (td / "checkpoint_id.txt").write_text(str(cp_id) + "\n", encoding="utf-8")
-            prov = final.get("provenance_path")
-            if prov and Path(prov).is_file():
-                with Path(prov).open("a", encoding="utf-8") as f:
-                    f.write(f"- orpath_checkpoint_id: {cp_id}\n")
-            final = {**final, "orpath_checkpoint_id": str(cp_id)}
-    except Exception:  # noqa: BLE001
-        pass
-
-    summary = {
-        "thread_id": thread_id,
-        "stage": final.get("stage"),
-        "human_required": final.get("human_required"),
-        "problem_class": final.get("problem_class"),
-        "solve_mode": final.get("solve_mode") or args.solve_mode,
-        "human_steer_applied": final.get("human_steer_applied"),
-        "human_steer_path": final.get("human_steer_path"),
-        "gate_validate_ok": final.get("gate_validate_ok"),
-        "gate_r1_ok": final.get("gate_r1_ok"),
-        "gate_r2_ok": final.get("gate_r2_ok"),
-        "gate_subagent_ok": final.get("gate_subagent_ok"),
-        "live_subagent": final.get("live_subagent"),
-        "solution_path": final.get("solution_path"),
-        "validate_path": final.get("validate_path"),
-        "paper_path": final.get("paper_path"),
-        "provenance_path": final.get("provenance_path"),
-        "bridge_path": final.get("bridge_path"),
-        "bridge_skipped": final.get("bridge_skipped"),
-        "runs_dir": final.get("runs_dir"),
-        "artifact_manifest_path": final.get("artifact_manifest_path"),
-        "last_snapshot_path": final.get("last_snapshot_path"),
-        "orpath_checkpoint_id": final.get("orpath_checkpoint_id"),
-        "last_error": final.get("last_error"),
-        "solver_tune": final.get("solver_tune"),
-        "product_nodes": PRODUCT_NODES,
-        "pipeline": final.get("pipeline") or "product",
-    }
-    print(json.dumps(summary, indent=2, ensure_ascii=False))
-    conn.close()
-    if final.get("human_required"):
-        return 2
-    if not final.get("provenance_path"):
-        return 1
-    if not final.get("gate_validate_ok"):
-        return 1
-    return 0
+        if not final.get("gate_validate_ok"):
+            return 1
+        return 0
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            conn = None
 
 
 def cmd_intake(args: argparse.Namespace) -> int:

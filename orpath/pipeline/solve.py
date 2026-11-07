@@ -757,8 +757,16 @@ def node_gate_validate(state: ORPathState) -> dict:
         except Exception:
             pass
 
+    if not sol_path.is_file():
+        return {
+            "stage": "human_stop",
+            "human_required": True,
+            "gate_validate_ok": False,
+            "last_error": f"solution file missing or invalid: {sol_path}",
+        }
+
     ok, report, msg = gate_validate(
-        root, state["problem_id"], Path(state["solution_path"]), vpath
+        root, state["problem_id"], sol_path, vpath
     )
     if ok:
         return _record_validation_pass()

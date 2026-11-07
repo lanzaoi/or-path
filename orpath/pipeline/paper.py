@@ -217,7 +217,8 @@ def node_cite_pack(state: ORPathState) -> dict:
         paper = paths["draft"]
     fb = _fixture_base(root, state["problem_id"])
     wl = _paper_whitelist_path(root, state, fb)
-    sol = Path(state["solution_path"])
+    sol_raw = state.get("solution_path")
+    sol = Path(sol_raw) if sol_raw and str(sol_raw).strip() else (root / "outputs" / f"{slug}-solution.json")
     claim_out = root / "outputs" / ".drafts" / f"{slug}-claim-map.json"
 
     r1_ok, r1_msg = gate_r1(root, paper, wl)
@@ -476,8 +477,12 @@ def node_revise_or_done(state: ORPathState) -> dict:
             "last_error": f"paper revise exhausted: {state.get('last_error')}",
         }
 
-    paper = Path(state["paper_path"])
-    sol = json.loads(Path(state["solution_path"]).read_text(encoding="utf-8"))
+    paper = Path(state.get("paper_path") or "")
+    sol_p = Path(state.get("solution_path") or "")
+    try:
+        sol = json.loads(sol_p.read_text(encoding="utf-8")) if sol_p.is_file() else {}
+    except Exception:
+        sol = {}
     fb = _fixture_base(root, state["problem_id"])
     wl_path = _paper_whitelist_path(root, state, fb)
     allowed: list[str] = []

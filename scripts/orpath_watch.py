@@ -261,10 +261,10 @@ PROBLEM_PRESETS: list[dict[str, Any]] = [
 
 def _pick_python(home: Path) -> str:
     for rel in (
-        ".venv-314/Scripts/python.exe",
-        ".venv-314/bin/python",
         ".venv/Scripts/python.exe",
         ".venv/bin/python",
+        ".venv-314/Scripts/python.exe",
+        ".venv-314/bin/python",
     ):
         cand = home / rel
         if cand.is_file():
@@ -773,7 +773,7 @@ class WatchHandler(SimpleHTTPRequestHandler):
         self.send_error(404, "not found")
 
     def _handle_artifact_get(self, slug: str, kind: str) -> None:
-        wd = self._workdir
+        wd = self._workdir.resolve()
         mapping: dict[str, tuple[Path, str]] = {
             "brief": (wd / "notes" / f"{slug}-problem-brief.md", "markdown"),
             "ocr_raw": (wd / "notes" / f"{slug}-ocr.raw.md", "markdown"),
@@ -793,6 +793,10 @@ class WatchHandler(SimpleHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": f"unknown artifact kind: {kind}"})
             return
         target, fmt = mapping[kind]
+        target = target.resolve()
+        if not target.is_relative_to(wd):
+            self._send_json(403, {"ok": False, "error": "forbidden path traversal"})
+            return
         if not target.is_file():
             self._send_json(404, {"ok": False, "error": f"artifact not found: {target.name}"})
             return
@@ -813,7 +817,7 @@ class WatchHandler(SimpleHTTPRequestHandler):
             self._send_json(500, {"ok": False, "error": str(exc)})
 
     def _handle_artifact_download(self, slug: str, kind: str) -> None:
-        wd = self._workdir
+        wd = self._workdir.resolve()
         mapping: dict[str, tuple[Path, str]] = {
             "brief": (wd / "notes" / f"{slug}-problem-brief.md", "text/markdown"),
             "ocr_raw": (wd / "notes" / f"{slug}-ocr.raw.md", "text/markdown"),
@@ -833,6 +837,10 @@ class WatchHandler(SimpleHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": f"unknown artifact kind: {kind}"})
             return
         target, mime = mapping[kind]
+        target = target.resolve()
+        if not target.is_relative_to(wd):
+            self._send_json(403, {"ok": False, "error": "forbidden path traversal"})
+            return
         if not target.is_file():
             self._send_json(404, {"ok": False, "error": f"artifact not found: {target.name}"})
             return
@@ -994,11 +1002,20 @@ class WatchHandler(SimpleHTTPRequestHandler):
                 if not isinstance(raw_files, list) or not raw_files:
                     self._send_json(400, {"ok": False, "error": "files list required for folder mode"})
                     return
+                # Server-side defense budget against disk/memory flooding (aligns with Studio)
+                max_folder_files = 200
+                max_single_file_bytes = 10 * 1024 * 1024  # 10MB
+                max_total_bytes = 25 * 1024 * 1024        # 25MB
+                if len(raw_files) > max_folder_files:
+                    self._send_json(400, {"ok": False, "error": f"too many files: max {max_folder_files} allowed, got {len(raw_files)}"})
+                    return
+
                 slug = _sanitize_slug(str(body.get("slug") or "case-folder"))
                 inbox_dir = wd / "inbox" / slug
                 inbox_dir.mkdir(parents=True, exist_ok=True)
 
                 saved_files: list[Path] = []
+                total_bytes = 0
                 for f in raw_files:
                     if not isinstance(f, dict):
                         continue
@@ -1010,6 +1027,13 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     if "," in b64 and b64.startswith("data:"):
                         b64 = b64.split(",", 1)[1]
                     raw_bytes = base64.b64decode(b64) if b64 else b""
+                    if len(raw_bytes) > max_single_file_bytes:
+                        self._send_json(400, {"ok": False, "error": f"file exceeds 10MB limit: {rel}"})
+                        return
+                    total_bytes += len(raw_bytes)
+                    if total_bytes > max_total_bytes:
+                        self._send_json(400, {"ok": False, "error": "total folder size exceeds 25MB limit"})
+                        return
                     dest_p = inbox_dir / rel
                     dest_p.parent.mkdir(parents=True, exist_ok=True)
                     dest_p.write_bytes(raw_bytes)
@@ -1154,10 +1178,16 @@ class WatchHandler(SimpleHTTPRequestHandler):
         # Include intake source if present under inbox/<slug>/
         inbox_slug = wd / "inbox" / slug
         if inbox_slug.is_dir():
-            for f in sorted(inbox_slug.iterdir()):
-                if f.is_file():
-                    cmd.extend(["--intake-in", str(f)])
+            files = [f for f in sorted(inbox_slug.iterdir()) if f.is_file()]
+            stmt_cand = None
+            for f in files:
+                low = f.name.lower()
+                if low.endswith((".md", ".txt", ".pdf")) or any(k in low for k in ("problem", "question", "readme", "brief", "prompt", "intake")):
+                    stmt_cand = f
                     break
+            chosen_f = stmt_cand or (files[0] if files else None)
+            if chosen_f:
+                cmd.extend(["--intake-in", str(chosen_f)])
 
         # Clear existing stages before spawning so UI shows live stage-by-stage growth
         stages_dir = wd / "runs" / thread / "stages"
@@ -1609,16 +1639,26 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     db_file = self._workdir / "runs" / "orpath.sqlite"
                     db_file.parent.mkdir(parents=True, exist_ok=True)
                     saver, conn = open_sqlite_checkpointer(db_file)
-                    try:
-                        app = build_graph(checkpointer=saver)
-                        final = app.invoke(initial, cfg)
-                    finally:
-                        if conn is not None:
-                            try:
-                                conn.close()
-                            except Exception:
-                                pass
-                            conn = None
+                    graph_timeout = float(os.environ.get("ORPATH_GRAPH_TIMEOUT", "120.0"))
+                    graph_err: list[str] = []
+
+                    def _run_graph() -> None:
+                        nonlocal final
+                        try:
+                            app = build_graph(checkpointer=saver)
+                            final = app.invoke(initial, cfg)
+                        except Exception as g_exc:  # noqa: BLE001
+                            graph_err.append(f"{type(g_exc).__name__}: {g_exc}")
+
+                    g_thread = threading.Thread(target=_run_graph, daemon=True, name=f"graph-{slug}")
+                    g_thread.start()
+                    g_thread.join(graph_timeout)
+                    if g_thread.is_alive():
+                        self._send_json(504, {"ok": False, "error": f"Gateway Timeout: solver execution exceeded {graph_timeout:.0f}s limit"})
+                        return
+                    if graph_err:
+                        raise RuntimeError(graph_err[0])
+
                     try:
                         snapshot_cb.write_stage_snapshot("graph_solve", status="ok")
                     except Exception:
@@ -1654,11 +1694,34 @@ class WatchHandler(SimpleHTTPRequestHandler):
             val_ok = bool(val_doc.get("ok"))
             checks_count = len(val_doc.get("checks", []))
 
+            # Numbers Truth check
+            proven_opt = bool(
+                sol_doc.get("proven_optimal")
+                or (isinstance(sol_doc.get("meta"), dict) and sol_doc.get("meta", {}).get("proven_optimal"))
+                or (isinstance(val_doc.get("metrics"), dict) and val_doc.get("metrics", {}).get("proven_optimal"))
+            )
+
+            if obj is not None:
+                if proven_opt:
+                    objective_str = f"严格最优目标值: {obj} 单位"
+                else:
+                    objective_str = f"可行解目标值: {obj} 单位 (未证严格最优)"
+            else:
+                objective_str = "求解完成"
+
+            if checks_count > 0:
+                val_status = f"数理校验通过 ({checks_count} 项物理约束全量合格)" if val_ok else "数理校验存在警告"
+            else:
+                val_status = "数理校验通过 (基础结构与逻辑校验合格)" if val_ok else "数理校验未通过"
+
+            domain_desc = detected_class.upper() if detected_class else "运筹优化"
+            status_text = sol_doc.get("status", "OK")
             summary = {
-                "headline": f"优化路线求解完成 (求解状态: {sol_doc.get('status', 'OK')})",
-                "objective_str": f"最优目标值: {obj} 单位" if obj is not None else "求解完成",
+                "headline": f"{domain_desc} 求解完成 (求解状态: {status_text})",
+                "objective_str": objective_str,
                 "solution_detail": f"节点访问顺序: {' -> '.join(tour)}" if tour else f"求解器输出: {sol_doc.get('solver')}",
-                "validation_status": f"数理校验通过 ({checks_count} 项物理约束 100% 合格)" if val_ok else "数理校验存在警告",
+                "validation_status": val_status,
+                "proven_optimal": proven_opt,
             }
 
             self._send_json(
@@ -1668,6 +1731,7 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     "status": "COMPLETED",
                     "slug": slug,
                     "engine": engine_used,
+                    "proven_optimal": proven_opt,
                     "solution": sol_doc,
                     "validation": val_doc,
                     "plain_language_summary": summary,
