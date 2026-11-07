@@ -224,9 +224,20 @@ def _default_agents(model: Any, cartridge_tools: Any, domain_directive: str) -> 
         create_writer_agent,
     )
 
+    # Phase 3.3: open custom MIP/CP questions ride the general_or cartridge —
+    # mount the formulation-template / sandbox script authoring tools.
+    general_or_tools = None
+    if "general_or" in str(domain_directive or "") or (cartridge_tools is None):
+        try:
+            from orpath.agents.tools_or import GENERAL_OR_TOOLS
+
+            general_or_tools = list(GENERAL_OR_TOOLS)
+        except Exception:
+            general_or_tools = None
+
     return {
         ANALYST_NAME: create_analyst_agent(model=model, cartridge_tools=cartridge_tools, domain_directive=domain_directive),
-        MODELER_NAME: create_modeler_agent(model=model, cartridge_tools=cartridge_tools, domain_directive=domain_directive),
+        MODELER_NAME: create_modeler_agent(model=model, cartridge_tools=cartridge_tools, domain_directive=domain_directive, extra_tools=general_or_tools),
         WRITER_NAME: create_writer_agent(model=model, domain_directive=domain_directive),
         REVIEWER_NAME: create_reviewer_agent(model=model, domain_directive=domain_directive),
     }
@@ -479,6 +490,21 @@ def build_adaptive_graph(
         root = _resolve_root(state)
         slug = _slug(state, root)
         tier = decide_tier({**state, **common})
+        domain = str(state.get("domain_cartridge") or "")
+        general_or = domain == "general_or" or domain == ""
+        extra_lines: list[str] = []
+        if general_or:
+            extra_lines.extend([
+                "装备包: general_or (无现成专用适配器) — 自定义开放赛题闭环协议:",
+                "  ① 先用 get_problem_formulation_template / consult_or_skill 从 knowledge/skills/or-problems.md "
+                "取得最相近数学规划范式 (决策变量/目标/约束编号);",
+                "  ② 用 write_custom_solver_script 把独立 Python 求解脚本写入 outputs/<slug>-custom_solver.py "
+                "(ortools.sat.python.cp_model / highspy / pulp), 再用 execute_custom_script 运行;",
+                "  ③ 把独立重算校验脚本写入 outputs/<slug>-custom-validate.py (脱离求解器变量, 直接用原始输入数据重算"
+                "约束满足度与目标值), 运行并产出 outputs/<slug>-custom-validate.json;",
+                "  ④ solution.json 必须携带 problem_class=custom_mip 与 validation_report 指针。",
+                "严禁: 不得宣称 proven_optimal 除非 CP-SAT 返回 OPTIMAL; 不得抄写任何上游 agent 的对话文本。",
+            ])
         if tier == "A":
             focus = (
                 "求解模式: 精确求解 (成熟算子 exact)。使用 CP-SAT/HiGHS/NetworkX 等，"
@@ -497,6 +523,7 @@ def build_adaptive_graph(
             "职责: 构建 schema.json、调用已注册求解器或编写受控沙箱求解脚本、产出真实解工件。",
             focus,
             "完成: 将可独立校验的解工件写入指定路径，回复仅给一句结果摘要+工件路径。",
+            *extra_lines,
         ])
         text = _invoke_agent(agent_map["modeler"], brief)
         (root / "notes").mkdir(parents=True, exist_ok=True)

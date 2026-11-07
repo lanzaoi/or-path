@@ -20,8 +20,6 @@ production-scheduling
 pyjobshop-scheduling
 pyvrp-engine
 vrplib-instances
-cuopt-routing-api-python
-cuopt-numerical-optimization-api
 
 # promoted run methods (auto)
 or-method-shortest-path-thick-research-sp

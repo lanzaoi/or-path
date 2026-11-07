@@ -350,6 +350,7 @@ def create_modeler_agent(
     model: Any = None,
     cartridge_tools: Any = None,
     domain_directive: str = "",
+    extra_tools: Any = None,
 ) -> Any:
     """Create the ``or_modeler`` agent (mathematical-programming / algorithm expert).
 
@@ -366,7 +367,7 @@ def create_modeler_agent(
     """
     tools = _merge_tools(
         [list_available_solvers, execute_or_solver, execute_python_sandbox, read_problem_file],
-        cartridge_tools,
+        [cartridge_tools, extra_tools],
     )
     prompt = (
         "你是 OR-Path 流水线中的【数学规划与算法实现专家】(Modeler)。\n\n"

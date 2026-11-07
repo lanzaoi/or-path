@@ -152,7 +152,7 @@ flowchart TD
 
 本阶段将“换 60 个群众演员”彻底改造为“给 4 个特种兵换 10 套专业武器装备包”，消灭近万行复制粘贴代码。
 
-### - [ ] 计划 2.1：设计声明式领域装备包协议 `DomainCartridge` 与统一装配注册表
+### - [x] 计划 2.1：设计声明式领域装备包协议 `DomainCartridge` 与统一装配注册表
 * **涉及文件**：
   * `[NEW]` `orpath/agents/cartridges.py`
   * `[MODIFY]` `orpath/domain_registry.py`
@@ -174,7 +174,7 @@ flowchart TD
   2. 提供 `resolve_cartridge(problem_class_or_domain: str) -> DomainCartridge`，未知开放题型自动回退至挂载了通用 MIP/CP-SAT 沙箱与 `or-problems.md` 宝典的 `general_or` 通用装备包。
 * **阶段验收标准**：`orpath/domain_registry.py` 中全部 22 个已注册 `CANONICAL_CLASSES` 均可 100% 精确映射到对应的 `DomainCartridge`。
 
-### - [ ] 计划 2.2：精确配置 Tier-A 凸优化与精确多项式装备包（消灭“凸规划配启发式”闹剧）
+### - [x] 计划 2.2：精确配置 Tier-A 凸优化与精确多项式装备包（消灭“凸规划配启发式”闹剧）
 * **涉及文件**：
   * `[MODIFY]` `orpath/agents/cartridges.py`
 * **具体实施内容**：
@@ -183,7 +183,7 @@ flowchart TD
   3. 配置 `inventory`（无容量单品种 Wagner-Whitin DP 默认走 `Tier-A`，多品种有容量 CLSP 自动升档 `Tier-B`）及基础图论流网络（`shortest_path`, `network_flow`）为 `default_tier="A"`。
 * **阶段验收标准**：运行金融组合与随机定价任务时，系统直接走精确求解轨道，不再实例化任何伪启发式搜索角色。
 
-### - [ ] 计划 2.3：精确配置 Tier-B / Tier-C 复杂工业组合优化装备包（保留全部硬核剖析工具）
+### - [x] 计划 2.3：精确配置 Tier-B / Tier-C 复杂工业组合优化装备包（保留全部硬核剖析工具）
 * **涉及文件**：
   * `[MODIFY]` `orpath/agents/cartridges.py`
   * `[MODIFY]` `orpath/agents/domain_analytics.py`（按需补齐微网与管材套料的输入/解包探针，使 10 大领域全部对齐）
@@ -198,7 +198,7 @@ flowchart TD
      * `tube`（单问下料 Tier-B，四问赛题 Tier-C）：绑定 `solve_tube_cut_b2026` / `solve_polyomino` / `solve_binpack` + PCA 几何与余料继承探针。
 * **阶段验收标准**：全部 10 套装备包的 `profile_tool` 与 `inspect_tool` 在真实基准算例上独立调用均返回非空真实物理分解指标。
 
-### - [ ] 计划 2.4：重构压缩 `orpath/agents/domains/*.py` 近万行复制粘贴代码
+### - [x] 计划 2.4：重构压缩 `orpath/agents/domains/*.py` 近万行复制粘贴代码
 * **涉及文件**：
   * `[NEW]` `orpath/agents/contract_validator.py`
   * `[MODIFY]` `orpath/agents/domains/` 下全部 10 个领域模块及 `__init__.py`
@@ -207,7 +207,7 @@ flowchart TD
   2. 将 `facility.py`、`finance.py`、`inventory.py`、`microgrid.py`、`pricing.py`、`project.py`、`rostering.py`、`routing.py`、`scheduling.py`、`tube.py` 中每个近 900 行的重复样板彻底重写为委托调用 `cartridges.py`、`contract_validator.py` 与 `adaptive_graph.py` 的薄垫片封装层（每个文件压缩至 `< 120 行`），保留对外公开导入符号平滑兼容。
 * **阶段验收标准**：`orpath/agents/domains/` 目录总代码量从 **9,900+ 行降至 < 1,500 行**（净删超 8,000 行克隆代码）。
 
-### - [ ] 计划 2.5：剥离官僚探索账本与重型 Merkle 血缘层，回归极简工程防伪
+### - [x] 计划 2.5：剥离官僚探索账本与重型 Merkle 血缘层，回归极简工程防伪
 * **涉及文件**：
   * `[MODIFY]` `orpath/agents/budget_engine.py`
   * `[MODIFY]` `orpath/agents/lineage_relay.py`
@@ -223,7 +223,7 @@ flowchart TD
 
 本阶段终结仓库内三套管线各自为政的割裂局面，让产品主图真正具备“成熟算子精确调度 + 未知新题沙箱自编模型”的实战能力。
 
-### - [ ] 计划 3.1：重写 `orpath/pipeline/research.py` 接入前置探针与 `or_analyst`
+### - [x] 计划 3.1：重写 `orpath/pipeline/research.py` 接入前置探针与 `or_analyst`
 * **涉及文件**：
   * `[MODIFY]` `orpath/pipeline/research.py`
 * **具体实施内容**：
@@ -231,7 +231,7 @@ flowchart TD
   2. 当开启在线智能体模式（`live_subagent` 激活）时，唤醒 `or_analyst` 进行深度题意特征研判，识别决策变量、目标层级、硬软约束与潜在数据歧义，自动选定 `DomainCartridge` 与 `complexity_tier`，写入高信息密度的 `notes/<slug>-research.md`；离线 CI 模式保留快速确定性骨架回退。
 * **阶段验收标准**：面对包含多附件 Excel 的数模题，`research.md` 准确列出每个附件的真实表头字段、数据行数与约束映射关系，零凭空臆测。
 
-### - [ ] 计划 3.2：铲除 `orpath/pipeline/solve.py` 静态分支，统一接入自适应 `or_modeler`
+### - [x] 计划 3.2：铲除 `orpath/pipeline/solve.py` 静态分支，统一接入自适应 `or_modeler`
 * **涉及文件**：
   * `[MODIFY]` `orpath/pipeline/solve.py`
   * `[MODIFY]` `tools/solve_dispatch.py`
@@ -240,7 +240,7 @@ flowchart TD
   2. 统一通过 `DomainCartridge` 与 `tools/solve_dispatch.py` 调度全部 22 类标准领域算子（JSSP、PyVRP、RCPSP、CFLP、Lot-Sizing、Portfolio、Rostering、Stochastic-LP 等），并支持在 Tier-B 下同时记录松弛下界（Lower Bound）与当前最优可行解（Incumbent）的真实 Gap。
 * **阶段验收标准**：22 类注册运筹问题通过主图 `orpath/graph_product.py` 均可一键走通 `model → gate_schema → solve → gate_validate` 全链路，不再报 `unsupported class`。
 
-### - [ ] 计划 3.3：打通未知开放赛题的“建模宝典检索 + 受控 Python 沙箱自编求解”闭环
+### - [x] 计划 3.3：打通未知开放赛题的“建模宝典检索 + 受控 Python 沙箱自编求解”闭环
 * **涉及文件**：
   * `[MODIFY]` `orpath/agents/tools_or.py`
   * `[MODIFY]` `orpath/agents/adaptive_graph.py`
@@ -251,7 +251,7 @@ flowchart TD
      * 第三步：由独立校验脚本脱离求解器变量，直接用原始输入数据重算约束满足度与目标值。
 * **阶段验收标准**：输入一道未内置专用适配器的自定义带约束资源分配/排产 MIP 新题，系统自主写代码求出精确最优解并通过独立重算校验。
 
-### - [ ] 计划 3.4：收拢 `orpath/control_plane.py` 并实现“快慢双模型梯队路由”
+### - [x] 计划 3.4：收拢 `orpath/control_plane.py` 并实现“快慢双模型梯队路由”
 * **涉及文件**：
   * `[MODIFY]` `orpath/control_plane.py`
   * `[MODIFY]` `.env.example`
@@ -262,7 +262,7 @@ flowchart TD
   2. 收敛 `control_plane.py` 中冗余暴露的领域构造器入口至统一主图与自适应图。
 * **阶段验收标准**：支持在 `.env` 中配置快慢双模型或单模型无缝自动回退。
 
-### - [ ] 计划 3.5：全面对齐 CLI 与 Web Studio 交互入口
+### - [x] 计划 3.5：全面对齐 CLI 与 Web Studio 交互入口
 * **涉及文件**：
   * `[MODIFY]` `orpath/studio_analyzer.py`
   * `[MODIFY]` `scripts/orpath_watch.py`
@@ -278,7 +278,7 @@ flowchart TD
 
 本阶段确保解算结果与学术论文双双达到竞赛获奖级深度，并用代码级硬条件边杜绝一切造假与吹嘘。
 
-### - [ ] 计划 4.1：焊死物理重算与 5 类 DIMO 不变量校验的自动修模回退环
+### - [x] 计划 4.1：焊死物理重算与 5 类 DIMO 不变量校验的自动修模回退环
 * **涉及文件**：
   * `[MODIFY]` `orpath/agents/dimo_mutator.py`
   * `[MODIFY]` `orpath/graph_product.py`
@@ -287,7 +287,7 @@ flowchart TD
   2. 若达重试上限仍无法满足硬约束，诚实标记状态为 `BLOCKED` 并在报告中如实披露不可行瓶颈，绝不伪造可行解。
 * **阶段验收标准**：注入容量超限与重算偏差的沙箱脚本，`or_modeler` 能收到精确违约反馈并在下一轮自动修复至 `ok: true`。
 
-### - [ ] 计划 4.2：构建“真数据表格与可视化图表确定性装配器”
+### - [x] 计划 4.2：构建“真数据表格与可视化图表确定性装配器”
 * **涉及文件**：
   * `[MODIFY]` `orpath/paper_workflow.py`
 * **具体实施内容**：
@@ -297,7 +297,7 @@ flowchart TD
      * 自动关联求解器产出的甘特图（如 JSSP 机器排程图）、路径轨迹图或微网功率平衡曲线图路径，复制到报告产物目录并生成标准图表嵌入代码。
 * **阶段验收标准**：所有结果表格中的数字 100% 由确定性代码从 `solution.json` 直出，从根源上消灭大模型抄错小数点或张冠李戴的可能。
 
-### - [ ] 计划 4.3：升级 `or_writer` 六章 SOP 分段组装引擎（3 分钟产出 6~10 KB 深度论文）
+### - [x] 计划 4.3：升级 `or_writer` 六章 SOP 分段组装引擎（3 分钟产出 6~10 KB 深度论文）
 * **涉及文件**：
   * `[MODIFY]` `orpath/pipeline/paper.py`
   * `[MODIFY]` `orpath/paper_workflow.py`
@@ -311,7 +311,7 @@ flowchart TD
      * **第 6 章 模型局限性客观剖析与工业部署建议**。
 * **阶段验收标准**：单篇完整论文生成耗时 `< 180 秒`，正文字节数稳定在 `6,000 ~ 12,000 Bytes`，无任何断句截断或空洞套话。
 
-### - [ ] 计划 4.4：打通“确定性文本硬门 + `or_reviewer` 对抗式审稿”双重审计
+### - [x] 计划 4.4：打通“确定性文本硬门 + `or_reviewer` 对抗式审稿”双重审计
 * **涉及文件**：
   * `[MODIFY]` `orpath/agents/optimality_claim_auditor.py`
   * `[MODIFY]` `orpath/pipeline/paper.py`
@@ -320,7 +320,7 @@ flowchart TD
   2. 第二层（`or_reviewer` 深度同行挑刺）：核查数学模型符号与约束是否闭合、假设是否合理、结论是否过度外推，合并硬门结果输出结构化 `outputs/<slug>-review.md`（明确标记 `FATAL` / `MAJOR` / `MINOR` 计数与原文引用定位）。
 * **阶段验收标准**：故意在启发式解论文中写入“本文求得全局唯一最优解”或塞入虚构成本数字，双重审计 100% 标出 `**FATAL:**`。
 
-### - [ ] 计划 4.5：实现精准缺陷归因与定向打回自愈闭环（`revise_or_done`）
+### - [x] 计划 4.5：实现精准缺陷归因与定向打回自愈闭环（`revise_or_done`）
 * **涉及文件**：
   * `[MODIFY]` `orpath/pipeline/paper.py`
 * **具体实施内容**：
@@ -334,7 +334,7 @@ flowchart TD
 
 本阶段彻底挤干历史泡沫测试，用三大硬核工业案例的真实大模型实跑产物说话，并完成可视化收口。
 
-### - [ ] 计划 5.1：清理碎片化 `MockChatModel` 泡沫测试，建立四层高信噪比测试矩阵
+### - [x] 计划 5.1：清理碎片化 `MockChatModel` 泡沫测试，建立四层高信噪比测试矩阵
 * **涉及文件**：
   * `[DELETE]` 归并移除 `tools/test_task31_*.py` ~ `tools/test_task61_*.py` 中仅靠 `assert mock.calls == 11` 刷数量、与旧 60-Agent 死模板强耦合的冗余泡沫测试文件
   * `[NEW]` `tools/test_lean_cartridges_and_graph.py`
@@ -344,7 +344,7 @@ flowchart TD
   2. 新建高价值架构测试 `tools/test_lean_cartridges_and_graph.py`：验证 10 套领域装备包精准挂载、Tier-A/B/C 自适应路由、无截断指针传递、以及验算失败/审稿 `FATAL` 时的真实回退自愈逻辑，并同步更新 `scripts/or_swarms_master_gate.py`。
 * **阶段验收标准**：测试套件运行时间缩短 **50%+**，无任何测“死模板函数调用次数”的虚假指标，5 类 DIMO 变异拦截率保持 **100%**。
 
-### - [ ] 计划 5.2：王牌真跑标杆一 —— 智能制造车间作业调度（Taillard JSSP / 换模 FJSSP）
+### - [x] 计划 5.2：王牌真跑标杆一 —— 智能制造车间作业调度（Taillard JSSP / 换模 FJSSP）
 * **涉及文件**：
   * `[NEW]` `scripts/run_flagship_jssp_live.py`
 * **具体实施内容**：
@@ -352,7 +352,7 @@ flowchart TD
   2. 全程落盘并核验：`or_analyst` 工序析取图诊断 → `or_modeler` 调 `tools/solve_jssp.py` 求出精确/近优调度与 JSPLib 下界对比 → 独立校验工序偏序与机器无重叠 → 导出机器甘特图 PNG → `or_writer` & `or_reviewer` 闭环产出 `papers/flagship-jssp.md`。
 * **阶段验收标准**：`outputs/` 与 `papers/` 下实盘留存 `flagship-jssp-solution.json`、`flagship-jssp-validate.json`（`ok: true`）、甘特图与 **> 6.5 KB** 的高质量六章学术报告。
 
-### - [ ] 计划 5.3：王牌真跑标杆二 —— 智慧能源园区微电网调度（CUMCM 2026 C 题多问）
+### - [x] 计划 5.3：王牌真跑标杆二 —— 智慧能源园区微电网调度（CUMCM 2026 C 题多问）
 * **涉及文件**：
   * `[MODIFY]` `scripts/test_run_problem_c_multiagent.py`
 * **具体实施内容**：
@@ -360,7 +360,7 @@ flowchart TD
   2. 验证前置探针自动解析多张分时电价与光伏负荷表 → 调度 `tools/solve_microgrid.py` 完成日前计划与实时滚动 MPC 求解 → 独立重算 SOC 上下界与功率平衡 → 生成完整六章数模竞赛论文 `papers/cumcm2026_c.md` 并通过红队终审。
 * **阶段验收标准**：无任何人工拼凑中间文件，从原始题面一键产出通过独立物理验算的调度方案与竞赛级论文。
 
-### - [ ] 计划 5.4：王牌真跑标杆三 —— 三维异形管激光共边套料（Tube B 四问 Tier-C 对标超越）
+### - [x] 计划 5.4：王牌真跑标杆三 —— 三维异形管激光共边套料（Tube B 四问 Tier-C 对标超越）
 * **涉及文件**：
   * `[NEW]` `scripts/run_flagship_tube_live.py`
 * **具体实施内容**：
@@ -368,7 +368,7 @@ flowchart TD
   2. 将产出的解文件、审稿记录与 `papers/flagship-tube.md` 与原版 Pi 时代留存的 `papers/live-btube.md`（7.8 KB）做逐项硬核对标：验证数值指标 100% 经得起 `tube_cut` 验证器重算、LaTeX 数学建模公式完备且总耗时大幅压缩。
 * **阶段验收标准**：成文结构完整度、公式规范性与执行速度全面达到或超越旧版 `live-btube` 标杆。
 
-### - [ ] 计划 5.5：Web Studio & Live Watch 4 特种兵驾驶舱对齐、文档刷新与封版验收
+### - [x] 计划 5.5：Web Studio & Live Watch 4 特种兵驾驶舱对齐、文档刷新与封版验收
 * **涉及文件**：
   * `[MODIFY]` `orpath/watch_snapshot.py`
   * `[MODIFY]` `orpath/web/src/js/studio.js`

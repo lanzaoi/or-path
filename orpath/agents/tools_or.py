@@ -57,6 +57,8 @@ __all__ = [
     "OR_TOOLS",
     "SKILL_TOOLS",
     "consult_or_skill",
+    "write_custom_solver_script",
+    "execute_custom_script",
     "execute_or_solver",
     "execute_python_sandbox",
     "get_or_tools",
@@ -415,12 +417,120 @@ def execute_python_sandbox(code: str, timeout_sec: int = SANDBOX_DEFAULT_TIMEOUT
     )
 
 
-#: Every OR tool, ready for ``llm.bind_tools(OR_TOOLS)`` / ``create_tool_node``.
+@tool
+def write_custom_solver_script(script_path: str, code: str) -> str:
+    """Write a custom MIP/CP solver script to the workdir (Phase 3.3).
+
+    Used by ``or_modeler`` in the ``general_or`` cartridge: persists the
+    modeler-authored solver script under ``outputs/`` or ``custom_solvers/``
+    so it can be executed and audited. Paths outside the workdir are refused.
+
+    Args:
+        script_path: Relative path under the workdir, e.g. ``outputs/<slug>-custom_solver.py``.
+        code: Full Python source of the solver script.
+
+    Returns:
+        JSON with success, written path and byte length.
+    """
+    try:
+        root = _resolve_root()
+        rel = str(script_path or "").strip().replace("\\", "/")
+        if not rel or rel.startswith("/") or ".." in rel.split("/"):
+            return _json({"success": False, "detail": "script_path must be a relative path under the workdir"})
+        target = (root / rel).resolve()
+        try:
+            target.relative_to(root.resolve())
+        except ValueError:
+            return _json({"success": False, "detail": f"path escapes workdir: {script_path!r}"})
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(str(code), encoding="utf-8")
+        return _json({
+            "success": True,
+            "path": str(target),
+            "bytes": target.stat().st_size,
+        })
+    except Exception as exc:  # noqa: BLE001 - tools must never raise
+        return _json({"success": False, "detail": f"{type(exc).__name__}: {exc}"})
+
+
+@tool
+def execute_custom_script(script_path: str, timeout_sec: int = 120) -> str:
+    """Execute a modeler-authored solver/validator script file (Phase 3.3).
+
+    Runs ``sys.executable <script_path>`` with a wall-clock budget so a buggy
+    generated script cannot hang the pipeline. Use after ``write_custom_solver_script``
+    to run ``outputs/<slug>-custom_solver.py`` (solve) and
+    ``outputs/<slug>-custom-validate.py`` (independent recompute).
+
+    Args:
+        script_path: Absolute or workdir-relative script path.
+        timeout_sec: Wall-clock timeout in seconds (>0).
+
+    Returns:
+        JSON with success, returncode, stdout, stderr and timed_out flag.
+    """
+    try:
+        root = _resolve_root()
+        rel = str(script_path or "").strip().replace("\\", "/")
+        path = Path(rel)
+        if not path.is_absolute():
+            path = root / rel
+        path = path.resolve()
+        try:
+            path.relative_to(root.resolve())
+        except ValueError:
+            return _json({"success": False, "detail": f"script escapes workdir: {script_path!r}"})
+        if not path.is_file():
+            return _json({"success": False, "detail": f"script not found: {path}"})
+        timeout = int(timeout_sec) if str(timeout_sec).isdigit() and int(timeout_sec) > 0 else SANDBOX_DEFAULT_TIMEOUT_SEC
+        proc = subprocess.run(
+            [sys.executable, str(path)],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return _json({
+            "success": proc.returncode == 0,
+            "returncode": proc.returncode,
+            "stdout": proc.stdout,
+            "stderr": proc.stderr,
+            "timed_out": False,
+            "timeout_sec": timeout,
+            "script_path": str(path),
+        })
+    except subprocess.TimeoutExpired as exc:
+        return _json({
+            "success": False,
+            "returncode": None,
+            "stdout": exc.stdout or "",
+            "stderr": exc.stderr or "",
+            "timed_out": True,
+            "detail": "custom script timed out",
+        })
+    except Exception as exc:  # noqa: BLE001 - tools must never raise
+        return _json({
+            "success": False,
+            "returncode": None,
+            "stdout": "",
+            "stderr": "",
+            "timed_out": False,
+            "detail": f"{type(exc).__name__}: {exc}",
+        })
+
+
+#: Primary 4 OR tools for standard dispatch.
 OR_TOOLS: tuple[BaseTool, ...] = (
     list_available_solvers,
     execute_or_solver,
     validate_solution_tool,
     execute_python_sandbox,
+)
+
+#: Extended custom MIP/CP scripting tools (Phase 3.3).
+CUSTOM_SCRIPT_TOOLS: tuple[BaseTool, ...] = (
+    write_custom_solver_script,
+    execute_custom_script,
 )
 
 
@@ -434,7 +544,7 @@ def consult_or_skill(topic: str, subtopic: str | None = None) -> str:
     Args:
         topic: Search query or skill topic name (e.g. 'routing', 'cvrp', 'scheduling',
             'jssp', 'linear', 'mip', 'heuristics', 'alns', 'pyvrp', 'pyjobshop',
-            'cuopt', 'production', 'inventory', 'polyomino', 'tube', 'microgrid', 'big-m').
+            'production', 'inventory', 'polyomino', 'tube', 'microgrid', 'big-m').
         subtopic: Optional specific section header or subtopic to locate inside the skill.
 
     Returns:
@@ -469,7 +579,6 @@ def consult_or_skill(topic: str, subtopic: str | None = None) -> str:
         "metaheuristics": ["references/heuristics_and_metaheuristics.md", "alns-metaheuristic/SKILL.md"],
         "alns": ["alns-metaheuristic/SKILL.md"],
         "solver": ["references/solver_integration_and_production.md"],
-        "cuopt": ["cuopt-routing-api-python/SKILL.md", "cuopt-numerical-optimization-api/SKILL.md"],
         "formulation": ["references/problem_formulation_and_data.md", "or-problems.md"],
         "scope": ["references/or_algorithm_developer_scope.md"],
         "truth": ["or-numbers-truth/SKILL.md"],
@@ -725,6 +834,15 @@ def get_problem_formulation_template(problem_class: str) -> str:
 SKILL_TOOLS: tuple[BaseTool, ...] = (
     consult_or_skill,
     get_problem_formulation_template,
+)
+
+#: General_or cartridge tools for open custom MIP/CP problems (Phase 3.3).
+GENERAL_OR_TOOLS: tuple[BaseTool, ...] = (
+    get_problem_formulation_template,
+    consult_or_skill,
+    write_custom_solver_script,
+    execute_custom_script,
+    validate_solution_tool,
 )
 
 #: Complete suite of OR-Path solver and skill tools.

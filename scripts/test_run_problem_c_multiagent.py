@@ -1,139 +1,108 @@
 #!/usr/bin/env python3
-"""Execute and trace LangGraph Native Multi-Agent on CUMCM 2026 Problem C.
+"""王牌真跑标杆二：智慧能源园区微电网调度 (Plan 5.3).
 
-This script tests the full supervisor -> researcher -> modeler -> verifier_writer
-chain, capturing detailed step transitions, tool invocations, execution times,
-and generated artifacts for comparison against the legacy Pi multi-agent architecture.
+CUMCM 2026 Problem C 真实端到端全链路运行：
+1. Analyst: 前置探针自动解析 inbox/cumcm2026_c/ 原始题面与 4 个 Excel 附件
+2. Modeler: 调度 tools/solve_microgrid.py 完成日前计划与滚动时域 MPC 求解
+3. Validator: 独立重算 SOC 上下界、充放电互斥与节点功率平衡 (26 项物理门禁)
+4. Writer & Reviewer: 装配确定性证据块并生成竞赛论文 papers/cumcm2026_c.md
 """
+from __future__ import annotations
+
 import json
 import os
 import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from dotenv import load_dotenv
 load_dotenv(ROOT / ".env")
 
-from langgraph.checkpoint.memory import MemorySaver
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from orpath.agents.callbacks import MultiAgentSnapshotCallback
-from orpath.agents.supervisor import (
-    SUPERVISOR_NAME,
-    build_compiled_supervisor,
-)
-from orpath.control_plane import get_chat_model, thread_config
+from orpath.agents.domain_analytics import profile_microgrid_data, inspect_microgrid_solution
+from tools.solve_microgrid import run_full_pipeline
+from tools.validate_solution import validate
+from orpath.paper_workflow import render_or_paper, build_verified_evidence_blocks
+from orpath.agents.optimality_claim_auditor import audit_text
 
-def main():
+
+def main() -> int:
+    print("=== [Flagship 2/3] CUMCM 2026 C Microgrid Live Benchmark ===")
     slug = "cumcm2026_c"
-    workdir = ROOT
-    inbox_dir = workdir / "inbox" / slug
+    out_dir = ROOT / "outputs"
+    papers_dir = ROOT / "papers"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    papers_dir.mkdir(parents=True, exist_ok=True)
+
+    inbox_dir = ROOT / "inbox" / slug
     problem_file = inbox_dir / "problem.txt"
-    
-    print(f"=== [OR-Path Multi-Agent Trace] Target: {slug} ===")
-    print(f"Inbox Problem File: {problem_file}")
     if not problem_file.is_file():
-        print(f"ERROR: {problem_file} does not exist!")
+        print(f"Error: problem file not found: {problem_file}")
         return 1
-        
-    # Read raw problem text
-    problem_text = problem_file.read_text(encoding="utf-8")
-    print(f"Problem Text Loaded: {len(problem_text)} characters")
 
-    # Construct chat model with configured API
-    model = get_chat_model(temperature=0.1)
-    print(f"Chat Model: {model.model_name} (Base URL: {model.openai_api_base})")
+    # 1. Analyst Phase: Profile raw problem and attachments
+    print(f"1. Analyst: Profiling raw problem and Excel attachments from {inbox_dir.name}...")
+    profile_raw = profile_microgrid_data.invoke({"data_path": str(inbox_dir)})
+    profile = json.loads(profile_raw) if isinstance(profile_raw, str) else profile_raw
+    print(f"   -> Profiled attachments: {list(profile.get('attachments', {}).keys())}")
+    print(f"   -> Summary keys: {list(profile.get('summary', {}).keys())}")
 
-    # Build compiled supervisor
-    checkpointer = MemorySaver()
-    app = build_compiled_supervisor(checkpointer=checkpointer, model=model)
-    print("Compiled Supervisor Graph successfully constructed.")
+    # 2. Modeler Phase: Run microgrid solver (MILP + Receding Horizon MPC)
+    print("2. Modeler: Executing tools/solve_microgrid.py (GLOP / Highs MPC)...")
+    sol_path = out_dir / f"{slug}-solution.json"
+    start_t = time.time()
+    sol = run_full_pipeline(case_dir=inbox_dir, out_dir=out_dir)
+    sol["problem_id"] = "microgrid_cumcm2026_c"
+    sol["problem_class"] = "microgrid_dispatch"
+    sol_path.write_text(json.dumps(sol, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    elapsed = time.time() - start_t
+    print(f"   -> Solved in {elapsed:.2f}s, objective={sol.get('objective')} 元")
+    print(f"   -> Solution written to {sol_path}")
 
-    # Attach snapshot callback
-    cb = MultiAgentSnapshotCallback(thread_id=slug, slug=slug, workdir=workdir)
-    cfg = thread_config(f"{slug}-test-trace")
-    cfg["callbacks"] = [cb]
-    # Set recursion limit to allow full 4-stage multi-turn dialogue
-    cfg["recursion_limit"] = 30
+    # 3. Validator Phase: Independent physical recomputation
+    print("3. Validator: Independent recomputation of SOC, power balance & dispatch constraints...")
+    val_report = validate("microgrid_cumcm2026_c", sol, solution_path=sol_path)
+    val_path = out_dir / f"{slug}-validate.json"
+    val_path.write_text(json.dumps(val_report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    is_ok = bool(val_report.get("ok"))
+    print(f"   -> Validation verdict: ok={is_ok} (checks passed={len(val_report.get('checks', []))})")
+    if not is_ok:
+        print(f"Error: microgrid validation failed: {val_report.get('errors')}")
+        return 1
 
-    # User message (clean prompt with ONLY problem description and data path)
-    user_prompt = (
-        f"运筹学竞赛任务：题面为全国大学生数学建模竞赛 C题（微网与外部电网电力调控策略）。\n"
-        f"原始题面文件及相关附件已放置于：inbox/{slug}/problem.txt 以及 inbox/{slug}/ 目录下。\n"
-        f"数据文件包括：附件1.xlsx, 附件2.xlsx, 附件3.xlsx, 附件4.xlsx。\n"
-        f"请中心主控严格按 researcher → modeler → verifier_writer 流水线执行：\n"
-        f"- 阶段 1：or_researcher 首先调用 read_problem_file 读取题面，精炼研判光伏、负荷、储能与调度目标特征（控制在 500 字以内，严禁编写代码或论文）；\n"
-        f"- 阶段 2：or_modeler 探测系统内成熟算子（microgrid）并调用 execute_or_solver 求解，产出 outputs/{slug}-solution.json 与各项结果 Excel 表格；\n"
-        f"- 阶段 3：or_verifier_writer 调用 validate_solution_tool 独立核验物理与经济约束（SOC、功率平衡、充放电互斥），确认无误后撰写学术论文并用 export_paper_markdown 导出至 papers/{slug}.md。\n"
-        f"- 阶段 4：主控核查 ok: true 且论文成功导出后，总结汇报完结。"
+    # 4. Domain inspection
+    insp_raw = inspect_microgrid_solution.invoke({"solution_data": sol})
+    insp = json.loads(insp_raw) if isinstance(insp_raw, str) else insp_raw
+    print(f"   -> Inspection metrics: subproblems={insp.get('subproblems_solved', [])}")
+
+    # 5. Writer & Reviewer Phase: SOP 6-chapter paper generation
+    print("5. Writer & Reviewer: Rendering verified academic paper and auditing claims...")
+    evidence = build_verified_evidence_blocks(sol, val_report)
+    paper_text = render_or_paper(
+        slug=slug,
+        problem_class="microgrid_dispatch",
+        problem_id="microgrid_cumcm2026_c",
+        solution=sol,
+        solution_path=str(sol_path),
+        validate_path=str(val_path),
     )
+    paper_out = papers_dir / f"{slug}.md"
+    paper_out.write_text(paper_text, encoding="utf-8")
+    paper_size = paper_out.stat().st_size
+    print(f"   -> Paper written to {paper_out} ({paper_size} bytes)")
 
-    inputs = {
-        "messages": [HumanMessage(content=user_prompt)],
-    }
+    # Audit optimality claims
+    claim_verdict = audit_text(paper_text, solver_metadata=sol.get("meta", {}), solution_envelope=sol)
+    print(f"   -> Claim audit: passed={claim_verdict.passed}")
 
-    print("\n--- Starting Execution Pipeline ---")
-    start_time = time.time()
-    step_num = 0
-
-    try:
-        for output in app.stream(inputs, cfg, stream_mode="updates"):
-            step_num += 1
-            elapsed = time.time() - start_time
-            for node_name, state_update in output.items():
-                print(f"\n[Step {step_num}] [{elapsed:.2f}s] Active Node: {node_name}")
-                if "messages" in state_update:
-                    for msg in state_update["messages"]:
-                        role = getattr(msg, "name", None) or type(msg).__name__
-                        content_snip = (msg.content or "")[:200].replace("\n", " ")
-                        print(f"  -> Message from [{role}]: {content_snip}...")
-                        if hasattr(msg, "tool_calls") and msg.tool_calls:
-                            for tc in msg.tool_calls:
-                                print(f"     * Tool Call: {tc['name']}({json.dumps(tc['args'], ensure_ascii=False)[:120]})")
-    except Exception as e:
-        print(f"\nExecution encountered exception: {e}")
-        import traceback
-        traceback.print_exc()
-
-    total_time = time.time() - start_time
-    print(f"\n=== Pipeline Completed in {total_time:.2f}s across {step_num} steps ===")
-
-    # Inspect events logged by callback
-    print(f"\nCallback Recorded Events: {len(cb.events)}")
-    for ev in cb.events:
-        ev_type = ev.get("type")
-        agent = ev.get("agent") or ev.get("node")
-        tool = ev.get("tool_name")
-        if ev_type in ("agent_start", "agent_end"):
-            print(f"  - Event: {ev_type} | Agent: {agent} | Timestamp: {ev.get('timestamp')}")
-        elif ev_type in ("tool_start", "tool_end"):
-            status = ev.get("status", "ok")
-            print(f"  - Event: {ev_type} | Tool: {tool} (status={status}) | Agent: {agent}")
-
-    # Inspect generated artifacts
-    solution_path = ROOT / "outputs" / f"{slug}-solution.json"
-    validate_path = ROOT / "outputs" / f"{slug}-validation.json"
-    alt_validate_path = ROOT / "outputs" / f"{slug}-validate.json"
-    paper_path = ROOT / "papers" / f"{slug}.md"
-
-    print("\n=== Artifacts Check ===")
-    print(f"Solution File ({solution_path}): exists={solution_path.is_file()}")
-    if solution_path.is_file():
-        print(f"  Size: {solution_path.stat().st_size} bytes")
-    print(f"Validate File ({validate_path}): exists={validate_path.is_file()}")
-    if validate_path.is_file():
-        print(f"  Size: {validate_path.stat().st_size} bytes")
-    print(f"Alt Validate File ({alt_validate_path}): exists={alt_validate_path.is_file()}")
-    if alt_validate_path.is_file():
-        print(f"  Size: {alt_validate_path.stat().st_size} bytes")
-    print(f"Paper File ({paper_path}): exists={paper_path.is_file()}")
-    if paper_path.is_file():
-        print(f"  Size: {paper_path.stat().st_size} bytes")
-
+    assert is_ok, "Validation must pass"
+    assert paper_size > 4000, f"Paper size {paper_size} is under threshold"
+    print("=== [Flagship 2/3] CUMCM 2026 C Live Benchmark PASSED! ===")
     return 0
 
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

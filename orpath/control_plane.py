@@ -129,6 +129,36 @@ def get_chat_model(
     return ChatOpenAI(**kwargs)
 
 
+def get_tiered_chat_model(
+    role: Literal["fast", "reasoning"],
+    temperature: float = 0.2,
+    http_client: Any = None,
+    timeout: float | None = None,
+) -> Any:
+    """Phase 3.4 — fast/reasoning dual-model routing.
+
+    ``fast`` (or_analyst structured extraction, tool param assembly):
+    reads ``ORPATH_FAST_MODEL``, falls back to the primary ``ORPATH_LLM_MODEL``
+    then the provider default. ``reasoning`` (Tier-B/C modeler, writer
+    formula derivation, reviewer deep review): reads ``ORPATH_REASONING_MODEL``,
+    with the same cascade. Single-model installs work unchanged — both tiers
+    resolve to the same provider default.
+    """
+    r = str(role or "fast").strip().lower()
+    if r not in {"fast", "reasoning"}:
+        raise ValueError(f"role must be 'fast' or 'reasoning', got {role!r}")
+    env_key = "ORPATH_FAST_MODEL" if r == "fast" else "ORPATH_REASONING_MODEL"
+    model = (os.environ.get(env_key) or "").strip()
+    if not model:
+        model = (os.environ.get("ORPATH_LLM_MODEL") or "").strip()
+    return get_chat_model(
+        model or None,
+        temperature=temperature,
+        http_client=http_client,
+        timeout=timeout,
+    )
+
+
 def is_real_llm_configured() -> bool:
     """Return True if any supported LLM provider has a non-mock API key set."""
     for provider in _PROVIDER_ORDER:
@@ -369,229 +399,33 @@ def build_compiled_domain_supervisor(
 
 
 # --------------------------------------------------------------------------- #
-# Per-domain convenience aliases
-#
-# Each pair is a thin delegation to the dynamic factory above, kept as stable
-# public names for callers that prefer the explicit domain spelling.
-# --------------------------------------------------------------------------- #
-def build_tube_supervisor_graph(
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the Tube B domain supervisor graph (un-compiled)."""
-    return build_domain_supervisor_graph(
-        DOMAIN_TUBE, model=model, checkpointer=checkpointer, **kwargs
+# Per-domain convenience aliases — dynamically generated from the registry
+# (Phase 3.4 convergence): the 20 static delegation pairs above are replaced by
+# one PEP-562 ``__getattr__`` so every public alias resolves through the
+# unified ``build_domain_supervisor_graph`` / ``build_compiled_domain_supervisor``
+# factories without duplicating 200 lines of boilerplate.
+_DOMAIN_ALIAS_SPECS: dict[str, tuple[str, str]] = {
+    domain: (
+        f"build_{domain}_supervisor_graph",
+        f"build_compiled_{domain}_supervisor",
     )
+    for domain in _DOMAIN_SUPERVISOR_MODULES
+}
 
 
-def build_compiled_tube_supervisor(
-    checkpointer: Any = None,
-    model: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the Tube B domain supervisor graph."""
-    return build_compiled_domain_supervisor(
-        DOMAIN_TUBE, model=model, checkpointer=checkpointer, **kwargs
-    )
+def __getattr__(name: str) -> Any:
+    """Resolve ``build_<domain>_supervisor_graph`` / ``build_compiled_<domain>_supervisor``
+    aliases through the unified domain registry (PEP 562 module-level hook)."""
+    for domain, (graph_name, compiled_name) in _DOMAIN_ALIAS_SPECS.items():
+        if name == graph_name:
+            from functools import partial
 
+            return partial(build_domain_supervisor_graph, domain)
+        if name == compiled_name:
+            from functools import partial
 
-def build_routing_supervisor_graph(
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the Routing domain supervisor graph (un-compiled)."""
-    return build_domain_supervisor_graph(
-        DOMAIN_ROUTING, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_compiled_routing_supervisor(
-    checkpointer: Any = None,
-    model: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the Routing domain supervisor graph."""
-    return build_compiled_domain_supervisor(
-        DOMAIN_ROUTING, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_scheduling_supervisor_graph(
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the Scheduling (JSSP) domain supervisor graph (un-compiled)."""
-    return build_domain_supervisor_graph(
-        DOMAIN_SCHEDULING, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_compiled_scheduling_supervisor(
-    checkpointer: Any = None,
-    model: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the Scheduling (JSSP) domain supervisor graph."""
-    return build_compiled_domain_supervisor(
-        DOMAIN_SCHEDULING, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_project_supervisor_graph(
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the Project (RCPSP) domain supervisor graph (un-compiled)."""
-    return build_domain_supervisor_graph(
-        DOMAIN_PROJECT, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_compiled_project_supervisor(
-    checkpointer: Any = None,
-    model: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the Project (RCPSP) domain supervisor graph."""
-    return build_compiled_domain_supervisor(
-        DOMAIN_PROJECT, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_inventory_supervisor_graph(
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the Inventory (lot-sizing) domain supervisor graph (un-compiled)."""
-    return build_domain_supervisor_graph(
-        DOMAIN_INVENTORY, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_compiled_inventory_supervisor(
-    checkpointer: Any = None,
-    model: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the Inventory (lot-sizing) domain supervisor graph."""
-    return build_compiled_domain_supervisor(
-        DOMAIN_INVENTORY, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_facility_supervisor_graph(
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the Facility (location) domain supervisor graph (un-compiled)."""
-    return build_domain_supervisor_graph(
-        DOMAIN_FACILITY, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_compiled_facility_supervisor(
-    checkpointer: Any = None,
-    model: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the Facility (location) domain supervisor graph."""
-    return build_compiled_domain_supervisor(
-        DOMAIN_FACILITY, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_rostering_supervisor_graph(
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the Rostering domain supervisor graph (un-compiled)."""
-    return build_domain_supervisor_graph(
-        DOMAIN_ROSTERING, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_compiled_rostering_supervisor(
-    checkpointer: Any = None,
-    model: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the Rostering domain supervisor graph."""
-    return build_compiled_domain_supervisor(
-        DOMAIN_ROSTERING, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_microgrid_supervisor_graph(
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the Microgrid domain supervisor graph (un-compiled)."""
-    return build_domain_supervisor_graph(
-        DOMAIN_MICROGRID, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_compiled_microgrid_supervisor(
-    checkpointer: Any = None,
-    model: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the Microgrid domain supervisor graph."""
-    return build_compiled_domain_supervisor(
-        DOMAIN_MICROGRID, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_pricing_supervisor_graph(
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the Pricing domain supervisor graph (un-compiled)."""
-    return build_domain_supervisor_graph(
-        DOMAIN_PRICING, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_compiled_pricing_supervisor(
-    checkpointer: Any = None,
-    model: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the Pricing domain supervisor graph."""
-    return build_compiled_domain_supervisor(
-        DOMAIN_PRICING, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_finance_supervisor_graph(
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the Finance domain supervisor graph (un-compiled)."""
-    return build_domain_supervisor_graph(
-        DOMAIN_FINANCE, model=model, checkpointer=checkpointer, **kwargs
-    )
-
-
-def build_compiled_finance_supervisor(
-    checkpointer: Any = None,
-    model: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the Finance domain supervisor graph."""
-    return build_compiled_domain_supervisor(
-        DOMAIN_FINANCE, model=model, checkpointer=checkpointer, **kwargs
-    )
+            return partial(build_compiled_domain_supervisor, domain)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 # --------------------------------------------------------------------------- #

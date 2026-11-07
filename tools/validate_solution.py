@@ -761,7 +761,61 @@ def _validate_polyomino(problem_id: str, sol: dict) -> list[dict]:
 
 
 
-def validate(problem_id: str, solution: dict, gold: dict | None = None) -> dict:
+def _validate_custom_mip(problem_id: str, sol: dict, solution_path: "Path | None") -> list[dict]:
+    """Validate custom_mip envelopes: envelope closure + independent recompute report.
+
+    The modeler-authored validator script recomputes objective & constraints from
+    raw instance data (no solver imports) and writes ``<slug>-custom-validate.json``;
+    here we re-read it and assert objective agreement + constraint satisfaction.
+    """
+    checks: list[dict] = []
+    required = ["problem_id", "status", "objective", "solver", "source"]
+    missing = [k for k in required if k not in sol]
+    checks.append(
+        {
+            "name": "envelope",
+            "ok": not missing and str(sol.get("status", "")).upper() in {"OPTIMAL", "FEASIBLE"},
+            "detail": f"missing={missing}" if missing else None,
+        }
+    )
+    report_rel = str(sol.get("validation_report") or "")
+    if not report_rel:
+        checks.append(
+            {"name": "validation_report", "ok": False, "detail": "envelope must declare validation_report"}
+        )
+        return checks
+    root = Path(solution_path).resolve().parent.parent if solution_path is not None else None
+    rp = (Path(root) / report_rel) if root else Path(report_rel)
+    if not rp.is_file():
+        checks.append(
+            {"name": "validation_report", "ok": False, "detail": f"validator report missing: {rp}"}
+        )
+        return checks
+    try:
+        rep = json.loads(rp.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        checks.append({"name": "validation_report", "ok": False, "detail": "validator report invalid JSON"})
+        return checks
+    checks.append({"name": "validation_report", "ok": bool(rep.get("ok"))})
+    declared = sol.get("objective")
+    recomputed = rep.get("objective")
+    try:
+        checks.append(
+            {
+                "name": "recompute_objective",
+                "ok": _num_eq(float(declared), float(recomputed)),
+                "expected": declared,
+                "got": recomputed,
+            }
+        )
+    except (TypeError, ValueError):
+        checks.append(
+            {"name": "recompute_objective", "ok": False, "detail": f"objective mismatch declared={declared!r} recomputed={recomputed!r}"}
+        )
+    return checks
+
+
+def validate(problem_id: str, solution: dict, gold: dict | None = None, solution_path: "Path | None" = None) -> dict:
     pc = str(
         solution.get("problem_class")
         or (gold or {}).get("problem_class")
@@ -854,6 +908,8 @@ def validate(problem_id: str, solution: dict, gold: dict | None = None) -> dict:
     elif pc_norm == "hub_location":
         from validators.extended_solvers import validate_hub_location
         checks.extend(validate_hub_location(problem_id, solution))
+    elif pc_norm in {"custom_mip", "custom", "general_optimization"}:
+        checks.extend(_validate_custom_mip(problem_id, solution, solution_path))
     elif pc_norm == "pyvrp" or pc_norm == "vrp_pdp" or solution.get("solver") == "pyvrp-hgs":
         from validators.extended_solvers import validate_pyvrp
         checks.extend(validate_pyvrp(problem_id, solution))
@@ -911,7 +967,7 @@ def main(argv: list[str] | None = None) -> int:
             gold = _load(fixture_file(args.problem_id, "solution.json"))
         except FileNotFoundError:
             gold = None
-    report = validate(args.problem_id, sol, gold)
+    report = validate(args.problem_id, sol, gold, solution_path=args.solution)
     text = json.dumps(report, ensure_ascii=False, indent=2)
     if args.out:
         args.out.parent.mkdir(parents=True, exist_ok=True)

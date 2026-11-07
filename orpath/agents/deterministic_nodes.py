@@ -534,7 +534,7 @@ def _validate_in_process(root: Path, problem_id: str, solution_path: Path) -> tu
             gold = _json.loads(Path(gold_path).read_text(encoding="utf-8"))
     except Exception:
         gold = None
-    report = vs_validate(problem_id, sol, gold)
+    report = vs_validate(problem_id, sol, gold, solution_path=Path(solution_path))
     return report, _json.dumps(report, ensure_ascii=False, indent=2)
 
 
