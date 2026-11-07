@@ -1,0 +1,1 @@
+{"instance": "fattahi3", "family": "fattahi", "variant": null, "jobs": [[[[0, 43]], [[0, 87], [1, 95]]], [[[0, 63], [1, 53]], [[1, 73]]], [[[0, 125], [1, 135]], [[0, 43], [1, 61]]]], "machines": 2, "format": "fajsp", "source": "ScheduleOpt/benchmarks (JSPLib) flexible-jobshop", "known_optimum": 221, "lower_bound": 221, "upper_bound": 221, "status": "closed"}

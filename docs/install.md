@@ -53,7 +53,7 @@ powershell -ExecutionPolicy Bypass -File scripts\install\install.ps1 `
 ```bat
 cd %LOCALAPPDATA%\Programs\orpath
 orpath.bat doctor
-START-WATCH.bat
+START.bat
 :: 详细用法
 :: 浏览器打开 docs\user-guide.md 或仓库 docs/user-guide.md
 orpath.bat demo-m0 --slug m0
@@ -67,7 +67,7 @@ cd or-path
 git pull
 orpath.bat setup
 orpath.bat doctor
-START-WATCH.bat
+START.bat
 orpath.bat demo-m0 --slug m0
 orpath.bat watch --slug m0
 ```
@@ -106,7 +106,7 @@ python scripts\l2_release_gate.py --zip dist\orpath-0.3.5-win-x64.zip
 |------|------|
 | doctor BAD missing cli.js | `orpath.bat setup` 或 `cd runtime && npm ci` |
 | import langgraph 失败 | setup / 检查是否用了 `.venv-314` |
-| START-WATCH 空脸 | `orpath.bat demo-seed` 或 setup |
+| START 页面无数据 | `orpath.bat demo-seed` 或 setup |
 | LIVE 不跑 | `.env` 填 `DEEPSEEK_API_KEY` |
 | Node 版本警告 | 升级 ≥22.19；已有 Pi 时可先 WARN |
 

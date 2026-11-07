@@ -1,0 +1,35 @@
+{
+  "name": "battle_of_the_sexes",
+  "description": "Canonical Battle of the Sexes 2x2 Coordination Game",
+  "game_type": "coordination",
+  "row_actions": ["Opera", "Football"],
+  "col_actions": ["Opera", "Football"],
+  "row_payoffs": [
+    [3.0, 0.0],
+    [0.0, 2.0]
+  ],
+  "col_payoffs": [
+    [2.0, 0.0],
+    [0.0, 3.0]
+  ],
+  "known_equilibria": [
+    {
+      "type": "pure",
+      "row_strategy": [1.0, 0.0],
+      "col_strategy": [1.0, 0.0],
+      "expected_payoffs": [3.0, 2.0]
+    },
+    {
+      "type": "pure",
+      "row_strategy": [0.0, 1.0],
+      "col_strategy": [0.0, 1.0],
+      "expected_payoffs": [2.0, 3.0]
+    },
+    {
+      "type": "mixed",
+      "row_strategy": [0.6, 0.4],
+      "col_strategy": [0.4, 0.6],
+      "expected_payoffs": [1.2, 1.2]
+    }
+  ]
+}

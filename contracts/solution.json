@@ -4,7 +4,10 @@
       "enum": [
         "shortest_path",
         "tsp",
-        "vrp"
+        "vrp",
+        "tube_cut",
+        "polyomino_cover",
+        "microgrid_dispatch"
       ],
       "title": "ProblemClass",
       "type": "string"

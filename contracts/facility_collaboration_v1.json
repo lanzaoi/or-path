@@ -1,0 +1,165 @@
+{
+  "schema": "orpath.facility_collaboration.v1",
+  "problem_id": "beasley_cflp",
+  "numeric_authority": "local_solver_and_independent_validator",
+  "selection_rule": "lexicographic_not_agent_vote",
+  "objective_order": [
+    "hard_constraints",
+    "total_cost",
+    "num_open_facilities",
+    "total_co2_kg"
+  ],
+  "budget_scope": "discretionary_experiment_effort_excluding_baseline_and_gates",
+  "budget_percent": {
+    "auditor": 20,
+    "exact_bound": 15,
+    "heuristic": 35,
+    "realities": 30
+  },
+  "roles": {
+    "or-facility-lead": {
+      "owns": [
+        "assumption_register",
+        "experiment_registry",
+        "budget_ledger"
+      ],
+      "forbidden": [
+        "invent_objective",
+        "override_validator",
+        "agent_vote"
+      ]
+    },
+    "or-facility-auditor": {
+      "owns": [
+        "input_manifest",
+        "haversine_coordinate_integrity",
+        "capacity_nonnegativity",
+        "demand_vector_integrity",
+        "network_topology_hash"
+      ],
+      "forbidden": [
+        "author_solution_numbers",
+        "claim_optimality"
+      ]
+    },
+    "or-facility-exact-bound": {
+      "owns": [
+        "exact_lower_bound",
+        "benders_decomposition_bound",
+        "lagrangian_bound",
+        "beasley_known_optimum",
+        "bound_evidence"
+      ],
+      "forbidden": [
+        "change_customer_demand",
+        "claim_unproved_optimum"
+      ]
+    },
+    "or-facility-heuristic": {
+      "owns": [
+        "add_drop_heuristic_incumbent",
+        "clustering_incumbent",
+        "facility_allocation_plan"
+      ],
+      "forbidden": [
+        "exceed_facility_capacity",
+        "forge_optimal_status",
+        "claim_heuristic_global_optimum"
+      ]
+    },
+    "or-facility-realities": {
+      "owns": [
+        "single_source_binary_policy",
+        "multi_echelon_flow_policy",
+        "carbon_emission_accounting",
+        "reality_feasibility"
+      ],
+      "forbidden": [
+        "drop_single_source_constraint",
+        "hide_unserved_demand",
+        "claim_unvalidated_feasibility"
+      ]
+    },
+    "or-facility-redteam": {
+      "owns": [
+        "independent_recompute",
+        "tamper_tests",
+        "claim_audit"
+      ],
+      "forbidden": [
+        "repair_candidate",
+        "share_solver_state",
+        "waive_failed_gate"
+      ]
+    }
+  },
+  "handoff_order": [
+    "assumptions",
+    "audit",
+    "exact_bound",
+    "heuristic_search",
+    "realities",
+    "redteam_validate",
+    "write"
+  ],
+  "experiment_rules": {
+    "changed_factors_per_card": 1,
+    "seed_required_for_stochastic_search": true,
+    "baseline_artifact_required": true,
+    "acceptance_criteria_required_before_run": true,
+    "failed_experiments_are_retained": true,
+    "numbers_may_only_move_via_json_artifacts": true,
+    "hard_runtime_cap_required": true,
+    "timeout_is_not_no_solution": true,
+    "accepted_candidate_requires_independent_validation": true,
+    "official_candidate_must_be_lexicographically_nonworse": true,
+    "heuristic_status_must_be_feasible": true,
+    "forged_optimality_is_forbidden": true
+  },
+  "candidate_lifecycle": [
+    "PROPOSED",
+    "SOLVER_FEASIBLE",
+    "INDEPENDENTLY_VALIDATED",
+    "REDTEAM_PASSED",
+    "ACCEPTED"
+  ],
+  "registry": {
+    "experiment_cards": "experiments/facility/cards",
+    "budget_ledger": "experiments/facility/budget-ledger.json",
+    "accepted_solution": "outputs/beasley_cflp-solution.json",
+    "validation_report": "outputs/beasley_cflp-validate.json",
+    "redteam_report": "outputs/beasley_cflp-redteam.json"
+  },
+  "stop_rules": {
+    "auditor": [
+      "freeze_input_manifest_hash_before_search",
+      "fail_on_negative_or_missing_demand",
+      "fail_on_negative_capacity",
+      "fail_on_invalid_haversine_coordinates",
+      "require_network_topology_consistency_before_search"
+    ],
+    "exact_bound": [
+      "report_mip_relaxation_or_lagrangian_lower_bound_with_gap",
+      "cite_beasley_known_optimum_when_available",
+      "stop_after_time_limit_without_improvement",
+      "never_report_a_bound_without_solver_evidence"
+    ],
+    "heuristic": [
+      "stop_after_two_budget_levels_and_three_new_seeds_do_not_improve_total_cost",
+      "retain_best_feasible_incumbent_within_hard_constraints",
+      "never_report_optimal_status_for_heuristic"
+    ],
+    "realities": [
+      "stop_after_single_source_and_multi_echelon_feasibility_converge",
+      "report_unmet_realities_explicitly",
+      "never_drop_a_single_source_constraint_to_restore_feasibility"
+    ]
+  },
+  "tamper_tests": [
+    "facility_capacity_overflow_injection",
+    "demand_undersatisfaction_tamper",
+    "closed_facility_allocation_cheat",
+    "cost_deflation_forgery",
+    "single_source_fractional_cheat"
+  ]
+}

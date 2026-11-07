@@ -1,0 +1,44 @@
+请为 OR-Path 运筹项目扩展 6 台全新的工业运筹求解器，将现有 4 台扩充为 10 台。
+项目已有依赖：ortools (CP-SAT/GLOP), scipy, networkx, pulp, numpy, pandas。
+要求使用标准干净的 Python 3 编写，遵循项目现有的 Numbers Truth 规范，输出标准 JSON 格式结果。
+
+请在 tools/ 目录下编写以下 6 个独立的工业求解器脚本：
+1. tools/solve_jssp.py (作业车间调度 JSSP)：
+   - 基于 ortools.sat.python.cp_model。
+   - 输入：jobs 列表，每个 job 包含工序 (machine_id, duration)。
+   - 使用 model.NewIntervalVar 和 model.AddNoOverlap，工序间时序严格约束。
+   - 目标：最小化最大完工时间 (Makespan)。
+   - 输出：包含 status, objective (makespan), schedule 列表 (job, op, machine, start, end), solver 信息的字典。
+   - 包含 if __name__ == '__main__': 自测与 CLI 解析。
+
+2. tools/solve_binpack.py (多维装箱与背包配载)：
+   - 基于 ortools.linear_solver.pywraplp 或 cp_model。
+   - 支持 1D/多维装箱与 0-1 背包问题。
+   - 目标：使用最少箱子数，或在容量限制下最大化物品总价值。
+   - 输出：status, objective, bins 列表 (分配的物品与占用率)。
+
+3. tools/solve_facility.py (设施选址与网络设计 CFLP / p-Median)：
+   - 基于 ortools.linear_solver.pywraplp。
+   - 建立带容量约束的设施选址 (Capacitated Facility Location)。
+   - 决策：开启哪些设施 (0-1)，每个客户分配到哪个设施 (连续或 0-1 变量)。
+   - 目标：最小化固定开启成本 + 运输配送成本。
+   - 输出：status, objective, open_facilities, assignments。
+
+4. tools/solve_portfolio.py (金融与能源资产组合二次规划优化)：
+   - 基于 scipy.optimize.minimize。
+   - 马科维茨均值-方差模型 (Markowitz Mean-Variance QP)。
+   - 目标：固定期望收益下最小化风险方差，或收益风险加权比率最大化，权重和为 1 且允许/禁止卖空。
+   - 输出：status, objective, weights, expected_return, risk_variance, sharpe_ratio。
+
+5. tools/solve_network_flow.py (最小费用最大流与二分图匹配)：
+   - 基于 networkx 或 ortools。
+   - 支持网络最大流 (Max Flow)、最小费用最大流 (Min Cost Max Flow) 和二分图任务指派。
+   - 输出：status, max_flow, total_cost, flow_dict。
+
+6. tools/solve_qubo_ising.py (统计物理启发式优化与 QUBO/退火)：
+   - 基于 numpy 与 scipy。
+   - 支持将经典组合优化 (如 Max-Cut, TSP) 转化为标准 Q 矩阵 (QUBO)。
+   - 内置模拟退火 (Simulated Annealing) 与贪婪局域搜索求解器，求解伊辛基态自旋构型与最小能量。
+   - 输出：status, min_energy, ground_state, energy_history。
+
+请直接创建并完整写入上述 6 个文件，确保每个脚本直接运行 (python tools/solve_xxx.py) 均可自测成功并打印有效 JSON。

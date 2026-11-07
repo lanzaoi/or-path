@@ -8,17 +8,40 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+# also expose the repo root so the full orpath.domain_registry (22 classes)
+# resolves in subprocess mode (cwd may be a workdir without the package).
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from schema_models import FORBIDDEN_SCHEMA_KEYS, walk_forbidden_keys  # noqa: E402
 
 # Prefer package registry when available (product install)
 try:
     from orpath.domain_registry import (  # type: ignore
+        MICROGRID_SCHEMA_KEYS,
         POLYOMINO_SCHEMA_KEYS,
         is_polyomino_class,
         normalize_problem_class,
         schema_class_ok,
     )
 except Exception:  # noqa: BLE001 — tools/ may run without package on path
+    MICROGRID_SCHEMA_KEYS = frozenset(
+        {
+            "battery",
+            "storage",
+            "pv",
+            "load",
+            "prices",
+            "grid",
+            "time_horizon",
+            "intervals",
+            "efficiency",
+            "capacity",
+            "max_power",
+            "subproblems",
+            "questions",
+            "constraints",
+            "case_dir",
+        }
+    )
     POLYOMINO_SCHEMA_KEYS = frozenset(
         {
             "board",
@@ -124,6 +147,12 @@ def check_schema(data: dict) -> list[str]:
             errors.append(
                 "polyomino_cover requires structural keys "
                 "(board|board_ref|rows|cols|pieces|piece_types|…)"
+            )
+    elif pc == "microgrid_dispatch":
+        if not any(k in top for k in MICROGRID_SCHEMA_KEYS):
+            errors.append(
+                "microgrid_dispatch requires structural keys "
+                "(battery|storage|pv|load|prices|grid|time_horizon|intervals|efficiency|…)"
             )
     elif not schema_class_ok(pc):
         errors.append(f"unknown problem_class: {pc_raw or pc}")

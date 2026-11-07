@@ -105,23 +105,6 @@ def main() -> int:
         )
         print(rr.stdout)
 
-    # bridge capability evidence
-    r = run(
-        [
-            PY,
-            "-c",
-            "from orpath.pi_bridge import require_bridge_evidence; "
-            f"from pathlib import Path; p=require_bridge_evidence(Path(r'{ROOT}')); print(p)",
-        ]
-    )
-    print("bridge:", r.stdout.strip())
-
-    # T2 is a historical regression gate and all gate runs force LIVE off.
-    # Validate the committed closeout evidence here; use `orpath.bat isolation`
-    # for a strict, current-machine LIVE transcript check.
-    r = run([PY, str(ROOT / "scripts" / "t2_archived_isolation_gate.py")])
-    print(r.stdout)
-
     print("PASS: t2_gate")
     return 0
 

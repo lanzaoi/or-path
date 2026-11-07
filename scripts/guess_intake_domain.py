@@ -14,11 +14,15 @@ def main() -> int:
     n = Path(s).name.lower()
     poly_keys = ("polyomino", "tiling", "guapai", "骨牌", "多联", "覆盖")
     tube_keys = ("tube", "圆管", "bfd", "cutting")
+    microgrid_keys = ("microgrid", "微网", "电网", "调控", "储能", "光伏", "smart_grid", "dispatch", "energy")
     if any(k.lower() in n or k in s for k in poly_keys):
         print("poly")
         return 0
     if any(k.lower() in n or k in s for k in tube_keys):
         print("tube")
+        return 0
+    if any(k.lower() in n or k in s for k in microgrid_keys):
+        print("microgrid")
         return 0
     print("")
     return 0

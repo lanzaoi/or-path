@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "problem_id": "shortest_path",
+  "problem_class": "shortest_path",
+  "checks": [
+    {
+      "name": "envelope",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "shape_path",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "feasibility",
+      "ok": true
+    },
+    {
+      "name": "recompute_objective",
+      "ok": true,
+      "expected": 42.0,
+      "got": 42
+    },
+    {
+      "name": "gold_gap",
+      "ok": true,
+      "expected": 42,
+      "got": 42,
+      "detail": "gap=0.0"
+    }
+  ],
+  "errors": []
+}

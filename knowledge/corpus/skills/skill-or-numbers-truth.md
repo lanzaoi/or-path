@@ -1,8 +1,8 @@
 # Skill export: or-numbers-truth
 
 - kind: skill
-- source_path: .pi/skills/or-numbers-truth/SKILL.md
-- note: RAG **copy** for Pi retrieve only; runtime skill loading still uses `.pi/skills/` (not this file).
+- source_path: knowledge/skills/or-numbers-truth/SKILL.md
+- note: RAG **copy** for hybrid retrieve.
 
 ---
 

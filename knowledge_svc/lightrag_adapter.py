@@ -41,14 +41,22 @@ class SemanticStubIndex:
 
     def _load(self) -> None:
         if self.chunks_path.is_file():
-            for line in self.chunks_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                d = json.loads(line)
-                self._chunks[d["chunk_id"]] = d
+            try:
+                for line in self.chunks_path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if not line:
+                        continue
+                    d = json.loads(line)
+                    self._chunks[d["chunk_id"]] = d
+            except Exception as e:
+                log.warning("corrupt stub_chunks.jsonl, resetting: %s", e)
+                self._chunks.clear()
         if self.vectors_path.is_file():
-            self._vectors = json.loads(self.vectors_path.read_text(encoding="utf-8"))
+            try:
+                self._vectors = json.loads(self.vectors_path.read_text(encoding="utf-8"))
+            except Exception as e:
+                log.warning("corrupt stub_vectors.json, resetting: %s", e)
+                self._vectors.clear()
         if self.meta_path.is_file():
             try:
                 meta = json.loads(self.meta_path.read_text(encoding="utf-8"))
@@ -57,10 +65,20 @@ class SemanticStubIndex:
                 pass
 
     def _persist(self, *, embed_mode: str | None = None) -> None:
-        with self.chunks_path.open("w", encoding="utf-8") as f:
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+        tmp_chunks = self.chunks_path.with_suffix(".jsonl.tmp")
+        with tmp_chunks.open("w", encoding="utf-8") as f:
             for d in self._chunks.values():
                 f.write(json.dumps(d, ensure_ascii=False) + "\n")
-        write_json(self.vectors_path, self._vectors)
+        tmp_chunks.replace(self.chunks_path)
+
+        tmp_vecs = self.vectors_path.with_suffix(".json.tmp")
+        tmp_vecs.write_text(
+            json.dumps(self._vectors, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        tmp_vecs.replace(self.vectors_path)
+
         if embed_mode:
             self.last_embed_mode = embed_mode
         write_json(
@@ -120,17 +138,35 @@ class SemanticStubIndex:
             self._load()
         if not self._vectors:
             return []
-        if embed_fn is None:
-            embed_fn = make_embed_fn("stub" if embed_mode != "live" else "live")
+        effective_mode = embed_mode
+        if self.last_embed_mode == "stub" and embed_mode != "live":
+            effective_mode = "stub"
+        if embed_fn is None or (self.last_embed_mode == "stub" and embed_mode == "stub"):
+            embed_fn = make_embed_fn("stub" if effective_mode != "live" else "live")
         try:
             qv = embed_fn([query])[0]
-            self.last_embed_mode = embed_mode
+            self.last_embed_mode = effective_mode
         except Exception:
             qv = MockEmbedder().embed_query(query)
             self.last_embed_mode = "stub"
         scored: list[tuple[str, float]] = []
-        for cid, vec in self._vectors.items():
-            scored.append((cid, cosine_similarity(qv, vec)))
+        qnorm = sum(float(x) * float(x) for x in qv) ** 0.5
+        if qnorm > 0:
+            qv_unit = [float(x) / qnorm for x in qv]
+            nz = [(i, x) for i, x in enumerate(qv_unit) if x != 0.0]
+        else:
+            qv_unit = []
+            nz = []
+        if nz and len(nz) < len(qv_unit) // 2:
+            qlen = len(qv_unit)
+            for cid, vec in self._vectors.items():
+                if len(vec) == qlen:
+                    scored.append((cid, sum(x * vec[i] for i, x in nz)))
+                else:
+                    scored.append((cid, cosine_similarity(qv, vec)))
+        else:
+            for cid, vec in self._vectors.items():
+                scored.append((cid, cosine_similarity(qv, vec)))
         scored.sort(key=lambda x: x[1], reverse=True)
         hits: list[RetrievalHit] = []
         for cid, sc in scored[: max(1, topk)]:

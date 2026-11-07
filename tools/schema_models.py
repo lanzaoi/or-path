@@ -13,6 +13,7 @@ class ProblemClass(str, Enum):
     vrp = "vrp"
     tube_cut = "tube_cut"
     polyomino_cover = "polyomino_cover"
+    microgrid_dispatch = "microgrid_dispatch"
 
 
 class SolutionStatus(str, Enum):

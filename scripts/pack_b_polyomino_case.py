@@ -188,6 +188,12 @@ def main() -> int:
     m = full["metrics"]
     g1 = "\n".join(full.get("board_grid_q1") or [])
     g3 = "\n".join(full.get("board_grid_q3") or [])
+    q11c = " + ".join(
+        f"{k}={v}" for k, v in full["questions"]["Q1_1"].get("piece_counts", {}).items()
+    )
+    q3c = " + ".join(
+        f"{k}={v}" for k, v in full["questions"]["Q3_12x11"].get("piece_counts", {}).items()
+    )
     q21c = json.dumps(
         full["questions"]["Q2_1_12x11"]["piece_counts"], ensure_ascii=False
     )
@@ -303,7 +309,7 @@ S 支撑：每个 2×2 至少两条外侧边邻接其它骨牌。
 
 ### 3.2 问题一详解
 
-**Q1-1** Claim: q1_1_piece_total=`{m['q1_1_piece_total']}`。构成 D=`{m['q1_D']}` + L3=`{m['q1_L3']}`。  
+**Q1-1** Claim: q1_1_piece_total=`{m['q1_1_piece_total']}`。构成 `{q11c}`。  
 证明：ceil(16/3)=`{m['q1_1_lb']}`，求解器达下界且 status=OPTIMAL。
 
 Q1 布局网格：
@@ -340,7 +346,7 @@ piece_counts：`{q24c}`
 | 总成本 | q3_cost=`{m['q3_cost']}` |
 | 共享边 | q3_shared=`{m['q3_shared']}` |
 | 块数 | q3_piece_total=`{m['q3_piece_total']}` |
-| 构成 | I4=`{m['q3_I4']}`, T4=`{m['q3_T4']}`, L4=`{m['q3_L4']}`, Z4=`{m['q3_Z4']}` |
+| 构成 | `{q3c}` |
 
 全四格时 33×2.5 = q3_cost_check=`{m['q3_cost_check']}`，与 q3_cost 一致。  
 文件：`outputs/b-full/q3-12x11-solution.json`。

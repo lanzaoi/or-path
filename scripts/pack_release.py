@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Pack L2 half-fat release zip: source + runtime/node_modules + demo/seed."""
+"""Pack L2 release zip: source + core solvers + validators + demo/seed."""
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-import os
 import shutil
 import subprocess
 import sys
@@ -14,7 +13,6 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PI_CLI = ROOT / "runtime/node_modules/@earendil-works/pi-coding-agent/dist/cli.js"
 
 INCLUDE_TOP = [
     "VERSION",
@@ -26,11 +24,8 @@ INCLUDE_TOP = [
     "orpath.env.example",
     "orpath.bat",
     "orpath.sh",
-    "pi.bat",
-    "pi.sh",
-    "START-WATCH.bat",
-    "START-CASE.bat",
-    "START-ORPATH.bat",
+    "START.bat",
+    "START.sh",
     ".gitignore",
 ]
 
@@ -43,11 +38,10 @@ INCLUDE_DIRS = [
     "contracts",
     "templates",
     "knowledge_svc",
+    "knowledge",
     "docs",
     "demo",
     "experiments",
-    ".pi",
-    "runtime",
 ]
 
 EXCLUDE_DIR_NAMES = {
@@ -60,10 +54,12 @@ EXCLUDE_DIR_NAMES = {
     "vendor",
     "pi-main",
     "openpi",
-    "node_modules",  # handled specially under runtime/
+    "node_modules",
     "inbox",
     "dist",
+    ".pi",
     ".pi-subagents",
+    "runtime",
     "data",
     "models",
     "mineru_models",
@@ -107,7 +103,7 @@ def should_skip_dir(name: str) -> bool:
     return name in EXCLUDE_DIR_NAMES or name.endswith(".egg-info")
 
 
-def iter_files(root: Path, *, include_runtime_nm: bool) -> list[Path]:
+def iter_files(root: Path) -> list[Path]:
     files: list[Path] = []
     for name in INCLUDE_TOP:
         p = root / name
@@ -118,26 +114,6 @@ def iter_files(root: Path, *, include_runtime_nm: bool) -> list[Path]:
         base = root / dname
         if not base.exists():
             continue
-        if dname == "runtime":
-            # package.json etc always; node_modules optional
-            for p in base.rglob("*"):
-                if not p.is_file():
-                    continue
-                rel_parts = p.relative_to(base).parts
-                if rel_parts and rel_parts[0] == "node_modules":
-                    if not include_runtime_nm:
-                        continue
-                if any(should_skip_dir(x) for x in p.relative_to(root).parts if x != "node_modules"):
-                    # allow node_modules only under runtime
-                    if "node_modules" not in p.parts:
-                        continue
-                if p.name in EXCLUDE_FILE_NAMES:
-                    continue
-                if p.suffix == ".pyc":
-                    continue
-                files.append(p)
-            continue
-
         for p in base.rglob("*"):
             if not p.is_file():
                 continue
@@ -150,11 +126,6 @@ def iter_files(root: Path, *, include_runtime_nm: bool) -> list[Path]:
             if p.name in EXCLUDE_FILE_NAMES:
                 continue
             if p.suffix == ".pyc":
-                continue
-            # never pack .pi/npm caches
-            if ".pi" in parts and "npm" in parts:
-                continue
-            if ".pi" in parts and "memory" in parts:
                 continue
             files.append(p)
 
@@ -177,33 +148,12 @@ def sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
-def ensure_node_modules(root: Path, allow_npm: bool) -> bool:
-    if PI_CLI.is_file():
-        return True
-    if not allow_npm:
-        return False
-    npm = shutil.which("npm")
-    if not npm:
-        return False
-    print("==> npm ci in runtime/")
-    r = subprocess.run([npm, "ci"], cwd=str(root / "runtime"))
-    if r.returncode != 0:
-        r = subprocess.run([npm, "install"], cwd=str(root / "runtime"))
-    return PI_CLI.is_file()
-
-
-def pack(root: Path, dist: Path, platform: str, allow_npm: bool) -> Path:
+def pack(root: Path, dist: Path, platform: str) -> Path:
     ver = read_version(root)
     sha = git_sha(root)
-    has_nm = ensure_node_modules(root, allow_npm=allow_npm)
-    if not has_nm:
-        raise SystemExit(
-            "[ERROR] runtime Pi CLI missing. Run: cd runtime && npm ci\n"
-            "Or pack on a machine that already has node_modules."
-        )
 
     folder_name = f"orpath-{ver}-{platform}"
-    files = iter_files(root, include_runtime_nm=True)
+    files = iter_files(root)
 
     # Extra top-level install scripts inside the archive root folder
     extras: list[tuple[Path, str]] = []
@@ -218,9 +168,7 @@ def pack(root: Path, dist: Path, platform: str, allow_npm: bool) -> Path:
         "git_sha": sha,
         "platform": platform,
         "packed_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        "has_node_modules": True,
         "seed_slugs": ["m0", "live-btube"],
-        "pi_cli": str(PI_CLI.relative_to(root)).replace("\\", "/"),
         "file_count": len(files) + len(extras) + 1,
     }
 
@@ -228,7 +176,6 @@ def pack(root: Path, dist: Path, platform: str, allow_npm: bool) -> Path:
     if zip_path.exists():
         zip_path.unlink()
     print(f"==> zipping {zip_path.name} ({len(files)} files + meta)…")
-    # Stream into zip (avoid Windows MAX_PATH on staged node_modules tree)
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
         zf.writestr(
             f"{folder_name}/package-meta.json",
@@ -273,11 +220,11 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Pack OR-Path L2 release zip")
     ap.add_argument("--platform", default="win-x64", choices=["win-x64", "linux-x64", "darwin-arm64"])
     ap.add_argument("--dist", type=Path, default=ROOT / "dist")
-    ap.add_argument("--no-npm", action="store_true", help="do not run npm if node_modules missing")
+    ap.add_argument("--no-npm", action="store_true", help="legacy no-op flag kept for compatibility")
     args = ap.parse_args(argv)
 
     args.dist.mkdir(parents=True, exist_ok=True)
-    pack(ROOT, args.dist.resolve(), args.platform, allow_npm=not args.no_npm)
+    pack(ROOT, args.dist.resolve(), args.platform)
     return 0
 
 

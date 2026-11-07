@@ -1,8 +1,8 @@
 # Skill export: operations-research-algorithm-developer
 
 - kind: skill
-- source_path: .pi/skills/operations-research-algorithm-developer/SKILL.md
-- note: RAG **copy** for Pi retrieve only; runtime skill loading still uses `.pi/skills/` (not this file).
+- source_path: knowledge/skills/operations-research-algorithm-developer/SKILL.md
+- note: RAG **copy** for hybrid retrieve.
 
 ---
 

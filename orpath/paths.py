@@ -140,8 +140,9 @@ def fixture_search_roots(
 ) -> list[Path]:
     """Ordered unique roots to search for ``fixtures/t*/<problem_id>``."""
     home_p = (home or orpath_home()).resolve()
+    wd = (root or resolve_workdir()).resolve()
     out: list[Path] = []
-    for p in (root, home_p):
+    for p in (wd, home_p):
         if p is None:
             continue
         rp = Path(p).resolve()
@@ -150,17 +151,9 @@ def fixture_search_roots(
     return out
 
 
-def pi_settings_path(home: Path | None = None) -> Path:
-    return (home or orpath_home()) / ".pi" / "settings.json"
-
-
-def agents_dir(home: Path | None = None) -> Path:
-    """Pi agent *definitions* (install), not per-case lead logs."""
-    return (home or orpath_home()) / ".pi" / "agents"
-
-
 def case_agents_dir(workdir: Path | None = None, slug: str = "") -> Path:
-    """Per-case subagent lead logs: ``workdir/outputs/.agents/<slug>``."""
+    """Per-case trace logs: ``workdir/outputs/.agents/<slug>``."""
     wd = resolve_workdir(workdir)
     base = wd / "outputs" / ".agents"
     return base / slug if slug else base
+

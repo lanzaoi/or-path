@@ -72,12 +72,6 @@ rm -rf "$INSTALL_DIR"
 mkdir -p "$(dirname "$INSTALL_DIR")"
 mv "$BUNDLE" "$INSTALL_DIR"
 
-# If node_modules are wrong-arch, user can re-npm
-if [[ ! -f "$INSTALL_DIR/runtime/node_modules/@earendil-works/pi-coding-agent/dist/cli.js" ]]; then
-  echo "==> runtime Pi missing; npm ci"
-  (cd "$INSTALL_DIR/runtime" && npm ci || npm install)
-fi
-
 if [[ "$SKIP_SETUP" -eq 0 ]]; then
   echo "==> setup"
   if [[ -x "$INSTALL_DIR/orpath.sh" ]]; then

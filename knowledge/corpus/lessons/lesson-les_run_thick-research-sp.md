@@ -7,7 +7,7 @@
 
 ## Summary
 
-Promoted method from run `thick-research-sp` class=shortest_path mode=networkx: validate OK. Skill `or-method-shortest-path-thick-research-sp` + 5 paper hit(s).
+Promoted method from run `thick-research-sp` class=shortest_path mode=networkx: validate OK. Skill `or-method-shortest-path-thick-research-sp` + 3 paper hit(s).
 
 ## Key decisions
 
@@ -19,11 +19,12 @@ Promoted method from run `thick-research-sp` class=shortest_path mode=networkx: 
 - schema_field weight_key present
 - schema must not carry path/tour/routes/objective as answers
 - Research for `shortest_path` / `shortest_path`. Retrieval mode=hybrid.
+- Mandatory:** use retrieval hits for candidate methods (e.g. column generation, residual knapsack,
 - 2. Validate must recompute objective.
-- 3. Seed/retrieval chunk_ids when present must be cited in this table.
 
 ## Pitfalls
 
+- branch-and-price, co-cut geometry). Do not invent optima; methods only.
 - 1. Use deterministic solvers (networkx/cpsat/highs/ortools); never LLM optima.
 - Do not invent objective/path in prose or skill text
 

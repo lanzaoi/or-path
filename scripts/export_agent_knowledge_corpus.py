@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export selected skills + lessons into knowledge/corpus for Pi RAG (not training).
+"""Export selected skills + lessons into knowledge/corpus for OR-Path hybrid RAG (not training).
 
 Writes markdown under:
   knowledge/corpus/skills/
@@ -70,7 +70,7 @@ def load_skill_allowlist(root: Path) -> list[str]:
 
 
 def export_skills(root: Path, dest: Path, names: list[str]) -> dict:
-    skills_root = root / ".pi" / "skills"
+    skills_root = root / "knowledge" / "skills"
     dest.mkdir(parents=True, exist_ok=True)
     written: list[str] = []
     skipped: list[dict] = []
@@ -79,6 +79,10 @@ def export_skills(root: Path, dest: Path, names: list[str]) -> dict:
         if not src.is_file():
             alt = skills_root / f"{name}.md"
             src = alt if alt.is_file() else src
+        out = dest / f"skill-{name}.md"
+        if not src.is_file() and out.is_file():
+            written.append(str(out.relative_to(root)).replace("\\", "/"))
+            continue
         if not src.is_file():
             skipped.append({"name": name, "reason": "missing_skill_md"})
             continue
@@ -93,13 +97,11 @@ def export_skills(root: Path, dest: Path, names: list[str]) -> dict:
             rel = src.relative_to(root).as_posix()
         except ValueError:
             rel = src.as_posix()
-        out = dest / f"skill-{name}.md"
         header = (
             f"# Skill export: {name}\n\n"
             f"- kind: skill\n"
             f"- source_path: {rel}\n"
-            f"- note: RAG **copy** for Pi retrieve only; "
-            f"runtime skill loading still uses `.pi/skills/` (not this file).\n\n"
+            f"- note: RAG **copy** for hybrid retrieve.\n\n"
             "---\n\n"
         )
         out.write_text(header + text, encoding="utf-8")
@@ -226,11 +228,6 @@ def main(argv: list[str] | None = None) -> int:
     sk_dest = corpus / "skills"
     le_dest = corpus / "lessons"
 
-    if args.clear_exports:
-        for d in (sk_dest, le_dest):
-            if d.is_dir():
-                shutil.rmtree(d)
-
     if args.skills.strip():
         names = [x.strip() for x in args.skills.split(",") if x.strip()]
         allowlist_src = "cli --skills"
@@ -247,6 +244,15 @@ def main(argv: list[str] | None = None) -> int:
         names = load_skill_allowlist(root)
         allowlist_src = "knowledge/export_allowlist.txt"
 
+    if args.clear_exports:
+        if le_dest.is_dir():
+            shutil.rmtree(le_dest)
+        if sk_dest.is_dir():
+            allowed_files = {f"skill-{n}.md" for n in names}
+            for p in sk_dest.glob("skill-*.md"):
+                if p.name not in allowed_files:
+                    p.unlink(missing_ok=True)
+
     out: dict = {
         "root": str(root),
         "allowlist_source": allowlist_src,
@@ -255,7 +261,7 @@ def main(argv: list[str] | None = None) -> int:
         "lesson_schema_required": LESSON_SCHEMA,
         "skills": {"written": [], "skipped": []},
         "lessons": {"written": [], "skipped": []},
-        "note": "RAG copies only; Pi runtime skills still load from .pi/skills/",
+        "note": "RAG copies for hybrid retrieve",
     }
     if not args.no_skills:
         out["skills"] = export_skills(root, sk_dest, names)

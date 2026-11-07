@@ -1,0 +1,23 @@
+{
+  "name": "prisoners_dilemma",
+  "description": "Canonical Prisoner's Dilemma Game",
+  "game_type": "bimatrix",
+  "row_actions": ["Cooperate", "Defect"],
+  "col_actions": ["Cooperate", "Defect"],
+  "row_payoffs": [
+    [3.0, 0.0],
+    [5.0, 1.0]
+  ],
+  "col_payoffs": [
+    [3.0, 5.0],
+    [0.0, 1.0]
+  ],
+  "known_equilibria": [
+    {
+      "type": "pure",
+      "row_strategy": [0.0, 1.0],
+      "col_strategy": [0.0, 1.0],
+      "expected_payoffs": [1.0, 1.0]
+    }
+  ]
+}

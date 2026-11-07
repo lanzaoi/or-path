@@ -33,7 +33,7 @@ OUTPUT_GLOBS = {
 }
 
 _STAGE_ROLE_RE = re.compile(
-    r"^\d+_(?P<role>intake_ocr|intake_parse|orchestrate|retrieve|bridge_pi|research|"
+    r"^\d+_(?P<role>intake_ocr|intake_parse|orchestrate|retrieve|research|"
     r"model|gate_schema|solve|gate_validate|explain|draft_paper|cite_pack|"
     r"review_pack|revise_or_done|provenance|human_stop)\.json$",
     re.I,
@@ -43,7 +43,6 @@ _FACE_ROLES = (
     "intake_parse",
     "orchestrate",
     "retrieve",
-    "bridge_pi",
     "research",
     "model",
     "gate_schema",

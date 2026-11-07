@@ -1,7 +1,7 @@
 {
   "utc": "2026-08-03T13:02:45.754480+00:00",
   "node": "retrieve",
-  "stage": "bridge_pi",
+  "stage": "research",
   "thread_id": "live-btube",
   "slug": "live-btube",
   "human_required": false,

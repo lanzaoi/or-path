@@ -1,0 +1,16 @@
+{
+  "name": "gilmore_gomory_1961",
+  "description": "Gilmore & Gomory (1961) A Linear Programming Approach to the Cutting-Stock Problem",
+  "roll_width": 110.0,
+  "items": [
+    {"width": 20.0, "demand": 48},
+    {"width": 45.0, "demand": 35},
+    {"width": 50.0, "demand": 24},
+    {"width": 55.0, "demand": 10},
+    {"width": 75.0, "demand": 8}
+  ],
+  "known_optimal": {
+    "continuous_rolls": 44.0,
+    "integer_rolls": 45
+  }
+}

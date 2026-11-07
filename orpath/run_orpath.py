@@ -415,6 +415,8 @@ def main() -> int:
                 "polyomino",
                 "polyomino_cover",
                 "tube",
+                "microgrid",
+                "microgrid_dispatch",
             ),
             default="mock",
         )

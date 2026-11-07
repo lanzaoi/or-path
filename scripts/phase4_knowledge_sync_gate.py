@@ -128,8 +128,8 @@ def main() -> int:
         bad = [p for p in (ROOT / "knowledge" / "corpus").rglob("*.json") if p.is_file()]
         need(not bad, f"no json in corpus {bad}")
 
-        # skill runtime path still .pi
-        need((ROOT / ".pi" / "skills" / "or-numbers-truth" / "SKILL.md").is_file(), "runtime skill file remains")
+        # skill corpus path
+        need((ROOT / "knowledge" / "corpus" / "skills" / "skill-or-numbers-truth.md").is_file(), "corpus skill file remains")
 
         # bat/sh knowledge-sync label
         bat = (ROOT / "orpath.bat").read_text(encoding="utf-8", errors="replace")

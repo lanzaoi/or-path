@@ -1,85 +1,39 @@
-# OR-Path 架构（当前）
+# OR-Path 架构总览（纯 Python 原生精悍版）
 
-> 活文档。历史长文见 `docs/archive/`。法条以 **`specs/`** 为准。
+> 活文档。项目最高宪章以 **`AGENTS.md`** 为准；当前实施总单见 **`tasks/lean_4agent_5x5_master_plan.md`**。历史 Node.js `pi` 包装层已永久剥离退役。
 
-## 一句话
+## 一句话定义
 
-自然语言 / 题面 → 检索研究 → 建模（schema **无**最优值）→ **求解器出数字** → validate 重算 → 解释 / 论文。  
-**LangGraph 管阶段 · Pi 子 Agent 管隔离 · gate 管质检 · Watch 读盘做过程脸。**
+题面与附件 → **[纯 Python 前置探针]** → **`or_analyst` 研判与分档** → **`or_modeler`（装载 `DomainCartridge` 调成熟求解器或写沙箱 MIP/CP-SAT）** → **[纯 Python 独立物理验算铁闸]** → **[真数据图表硬渲染]** → **`or_writer` 六章 SOP 成文** → **[R1/R2/Claim 硬门 + `or_reviewer` 红队审稿]**。
 
-## 拓扑
+## 目录拓扑
 
 ```
-用户
-  ├─ START-CASE / START-WATCH / orpath.bat   ← 产品入口（非 Hermes）
-  └─ 案例目录 ORPATH_WORKDIR
-         outputs/  runs/<slug>/  papers/  notes/
+用户与外部入口
+  ├─ START.bat / START.sh / orpath.bat / orpath.sh   ← Web Studio & CLI 统一入口
+  └─ 案例工作区 ORPATH_WORKDIR
+         inbox/  outputs/  runs/<slug>/  papers/  notes/
 
 安装根 ORPATH_HOME（本仓库）
-  ├─ orpath/          LG 节点 · watch · control_plane
-  ├─ tools/           solve_* · validate · intake OCR
-  ├─ knowledge_svc/   Pi 用 hybrid 检索（BM25/FTS/RRF；非人用站）
-  ├─ knowledge/       corpus · seed · lessons · export_allowlist
-  ├─ scripts/         doctor · gates · pack · watch-run · knowledge-*
-  ├─ .pi/agents/      角色定义（Pi 读这里）
-  ├─ .pi/skills/      运行时 Skill（RAG 只拷白名单副本进 corpus）
-  ├─ demo/seed/       默认脸回放数据
-  ├─ fixtures/        金标 / 冒烟
-  ├─ specs/           硬法
-  └─ docs/            活文档 + archive/
+  ├─ AGENTS.md / CLAUDE.md     项目最高法与智能体守则
+  ├─ tasks/                    执行计划总单（lean_4agent_5x5_master_plan.md）
+  ├─ orpath/                   LangGraph 主控平面 (graph_product.py) · 4 精锐智能体与装备包 · Web Studio
+  ├─ tools/                    27 个硬核运筹求解器 (solve_*.py) · 独立验证器 (validate_solution.py / validators/)
+  ├─ knowledge/                19 份运筹建模宝典 (knowledge/skills/) + 语料种子
+  ├─ knowledge_svc/            本地混合检索（BM25 / FTS5 + ONNX bge-m3）
+  ├─ contracts/                领域协作与工件 JSON Schema 契约
+  ├─ scripts/                  CLI 控制器 · DIMO 红队门禁 · 三大王牌真跑脚本
+  ├─ demo/seed/ · fixtures/    回放演示种子与黄金基准测试集（Taillard, VRPLIB, PSPLib, Tube B, CUMCM C）
+  ├─ specs/ · docs/            规格契约与六章论文规范 (docs/or-paper-sop.md)
 ```
 
-## 关键合同
+## 核心架构契约
 
-| 概念 | 含义 |
+| 概念 | 工程铁律 |
 |------|------|
-| **HOME ≠ WORKDIR** | 代码/agent 定义在安装根；产物只写案例目录 |
-| **数字真理** | `objective` 等只来自 `solve_*` + `validate` JSON |
-| **真多 Agent** | 磁盘 `outputs/.agents/<slug>/` 有 sub 轨迹；裸 `pi -p` 不算 |
-| **Watch** | 无 LLM 聚合；读 workdir 快照；默认 seed = **回放** |
-| **schema 门** | 模型 JSON 禁止 objective/解形状键 |
-| **RAG（Pi）** | `knowledge_mode=hybrid` → `notes/*-retrieval.json` → research；`embed_mode` live/stub；厚路径证据 `orpath.bat thick-hybrid-gate`（slug `thick-hybrid-sp`）；**非** fine-tune；v1 关单 `knowledge-rag-v1-closeout.md` · v2 计划 `2026-08-04_knowledge-rag-v2-thick.md` |
-
-## 主链路（节点）
-
-```
-(intake?) → orchestrate → retrieve → research → model → gate_schema
-  → solve → gate_validate → explain → draft_paper → cite → review → end
-```
-
-失败可 repair（tune / 改 schema）；耗尽 → `HUMAN_REQUIRED`（见 specs）。
-
-## 域
-
-| 域 | 状态 | 入口 |
-|----|------|------|
-| shortest_path / TSP / VRP | T1–T2 金标 | fixtures + solve_dispatch |
-| **polyomino** | M2 主域桥 | `docs/m2-polyomino.md` |
-| tube_cut | 旁路演示 | seed `live-btube` obj=99000 FEASIBLE |
-
-## 发布层
-
-| 层 | 内容 |
-|----|------|
-| **L1** | `git clone` + `orpath.bat setup` |
-| **L2** | GitHub Release 半肥 zip（预装 Pi + seed）· `docs/install.md` |
-
-## 明确不做（当前）
-
-- Hermes / OpenPi 当产品壳  
-- M3 真 launch 注入、M4 记忆/MCP 史诗（未开）  
-- Docker 主路径（可选后置）  
-- 把 contest PDF / `.hermes/` / `.env` 推进 public git  
-- RAG 人用网页 / 用论文 fine-tune 模型（**禁止**话术）  
-
-## 延伸阅读
-
-- 法：`specs/product-flow-sdd.md` · `specs/process-visibility.md`  
-- ADR：`docs/adr/`  
-- 上传边界：`docs/repo-surface.md`  
-- 操作：`ORPATH.md`  
-- RAG v1 关单：`docs/archive/closeouts/knowledge-rag-v1-closeout.md`  
-- RAG v2 厚栈关单：`docs/archive/closeouts/knowledge-rag-v2-thick-closeout.md` · v3 `docs/archive/closeouts/knowledge-rag-v3-prod-closeout.md`  
-- 法：知识 `specs/knowledge-and-retrieval.md`
-
-- RAG v3 厚栈关单：`docs/archive/closeouts/knowledge-rag-v3-prod-closeout.md`（research profile · product-research-gate）
+| **4 常驻精锐智能体** | `or_analyst`、`or_modeler`、`or_writer`、`or_reviewer`，全部在独立纯净上下文运行，严禁多人群聊串味与 1600 字暴力截断 |
+| **0 Token 确定性铁闸** | 前置数据画像探针、`validate_solution.py` 物理重算、真数据 Markdown 图表装配、R1/R2/最优声称校验均由纯 Python 条件边刚性执行 |
+| **10 套可插拔 `DomainCartridge`** | 通过挂载 `orpath/agents/domain_analytics.py`（`profile_<domain>_data` & `inspect_<domain>_solution`）与领域清单赋予专业深度，严禁按领域复制粘贴 900 行雷同 Agent 图 |
+| **Tier-A / B / C 复杂度分轨** | Tier-A（LP/凸QP/最短路/WW-DP）直走精确求解；Tier-B（NP-Hard 组合优化）走松弛下界 + 搜索算 Gap；Tier-C（多问大型赛题）动态派生子问 `or_modeler` 并传递跨期状态工件 |
+| **Numbers Truth（数字真理）** | 目标函数值与物理指标 100% 来自 `tools/solve_*` + `tools/validate_solution.py`，严禁 LLM 心算或投票篡改 |
+| **HOME ≠ WORKDIR & Feynman 交接** | 状态机仅传递轻量磁盘路径指针（`< 8 KB`），完整轨迹独立落盘 `runs/<slug>/agent_logs/` |

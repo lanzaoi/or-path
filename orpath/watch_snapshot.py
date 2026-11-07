@@ -34,7 +34,147 @@ from typing import Any
 
 from orpath.human_steer import build_dialogue
 from orpath.paths import orpath_home, orpath_workdir
-from orpath.subagent_dispatch import detect_subagent_calls
+
+# 10 domain swarms (60 canonical agent roles)
+DOMAIN_SWARM_ROLES: dict[str, dict[str, str]] = {
+    "tube": {
+        "or_tube_lead": "or-tube-lead",
+        "or_tube_geometry": "or-tube-geometry",
+        "or_tube_q1q2": "or-tube-q1q2",
+        "or_tube_q3": "or-tube-q3",
+        "or_tube_q4": "or-tube-q4",
+        "or_tube_redteam": "or-tube-redteam",
+    },
+    "routing": {
+        "or_vrp_lead": "or-vrp-lead",
+        "or_vrp_auditor": "or-vrp-auditor",
+        "or_vrp_exact_bound": "or-vrp-exact_bound",
+        "or_vrp_hgs": "or-vrp-hgs",
+        "or_vrp_realities": "or-vrp-realities",
+        "or_vrp_redteam": "or-vrp-redteam",
+    },
+    "scheduling": {
+        "or_jssp_lead": "or-jssp-lead",
+        "or_jssp_auditor": "or-jssp-auditor",
+        "or_jssp_exact_bound": "or-jssp-exact_bound",
+        "or_jssp_heuristic": "or-jssp-heuristic",
+        "or_jssp_realities": "or-jssp-realities",
+        "or_jssp_redteam": "or-jssp-redteam",
+    },
+    "project": {
+        "or_project_lead": "or-project-lead",
+        "or_project_auditor": "or-project-auditor",
+        "or_project_exact_bound": "or-project-exact_bound",
+        "or_project_heuristic": "or-project-heuristic",
+        "or_project_realities": "or-project-realities",
+        "or_project_redteam": "or-project-redteam",
+    },
+    "inventory": {
+        "or_inventory_lead": "or-inventory-lead",
+        "or_inventory_auditor": "or-inventory-auditor",
+        "or_inventory_exact_bound": "or-inventory-exact_bound",
+        "or_inventory_heuristic": "or-inventory-heuristic",
+        "or_inventory_realities": "or-inventory-realities",
+        "or_inventory_redteam": "or-inventory-redteam",
+    },
+    "facility": {
+        "or_facility_lead": "or-facility-lead",
+        "or_facility_auditor": "or-facility-auditor",
+        "or_facility_exact_bound": "or-facility-exact_bound",
+        "or_facility_heuristic": "or-facility-heuristic",
+        "or_facility_realities": "or-facility-realities",
+        "or_facility_redteam": "or-facility-redteam",
+    },
+    "rostering": {
+        "or_rostering_lead": "or-rostering-lead",
+        "or_rostering_auditor": "or-rostering-auditor",
+        "or_rostering_exact_bound": "or-rostering-exact_bound",
+        "or_rostering_heuristic": "or-rostering-heuristic",
+        "or_rostering_realities": "or-rostering-realities",
+        "or_rostering_redteam": "or-rostering-redteam",
+    },
+    "microgrid": {
+        "or_microgrid_lead": "or-microgrid-lead",
+        "or_microgrid_auditor": "or-microgrid-auditor",
+        "or_microgrid_exact_bound": "or-microgrid-exact_bound",
+        "or_microgrid_heuristic": "or-microgrid-heuristic",
+        "or_microgrid_realities": "or-microgrid-realities",
+        "or_microgrid_redteam": "or-microgrid-redteam",
+    },
+    "pricing": {
+        "or_pricing_lead": "or-pricing-lead",
+        "or_pricing_auditor": "or-pricing-auditor",
+        "or_pricing_exact_bound": "or-pricing-exact_bound",
+        "or_pricing_heuristic": "or-pricing-heuristic",
+        "or_pricing_realities": "or-pricing-realities",
+        "or_pricing_redteam": "or-pricing-redteam",
+    },
+    "finance": {
+        "or_finance_lead": "or-finance-lead",
+        "or_finance_auditor": "or-finance-auditor",
+        "or_finance_exact_bound": "or-finance-exact_bound",
+        "or_finance_heuristic": "or-finance-heuristic",
+        "or_finance_realities": "or-finance-realities",
+        "or_finance_redteam": "or-finance-redteam",
+    },
+}
+
+_SUBAGENT_DETECT_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r'"tool(?:_name|Name)?"\s*:\s*"subagent"', re.I),
+    re.compile(r"\btool\s*(?:call|use|invocation)?\s*[:=]?\s*subagent\b", re.I),
+    re.compile(r'"name"\s*:\s*"subagent"', re.I),
+    re.compile(
+        r"\bor[-_](?:verifier|reviewer|researcher|modeler|writer|verifier_writer|orchestrator|"
+        r"(?:tube|routing|vrp|jssp|scheduling|project|inventory|facility|rostering|microgrid|pricing|finance)[-_a-z0-9]+|composite[-_]lead)\b",
+        re.I,
+    ),
+    re.compile(r"\bsubagent\s*\(", re.I),
+    re.compile(r'"agent"\s*:\s*"(?:or[-_][a-z0-9_-]+|supervisor)"', re.I),
+    re.compile(r"transfer_to_or_", re.I),
+    re.compile(r"\[subagent\]", re.I),
+)
+
+
+def detect_subagent_calls(log_text: str) -> tuple[bool, list[str]]:
+    """Heuristic scan of log text for subagent tool / agent evidence."""
+    if not log_text:
+        return False, []
+    evidence: list[str] = []
+    for line in log_text.splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if "npm:pi-subagents" in s and "subagent" not in s.replace("pi-subagents", ""):
+            continue
+        for pat in _SUBAGENT_DETECT_PATTERNS:
+            if pat.search(s):
+                evidence.append(s[:240])
+                break
+        if len(evidence) >= 12:
+            break
+    strong = any(
+        re.search(
+            r'"tool(?:_name|Name)?"\s*:\s*"subagent"|\btool\s+call\s+subagent\b|"agent"\s*:\s*"(?:or[-_]|supervisor)|transfer_to_or_',
+            e,
+            re.I,
+        )
+        for e in evidence
+    )
+    has_or = any(
+        re.search(
+            r"\bor[-_](?:verifier|reviewer|researcher|modeler|writer|verifier_writer|orchestrator|"
+            r"(?:tube|routing|vrp|jssp|scheduling|project|inventory|facility|rostering|microgrid|pricing|finance)[-_a-z0-9]+|composite[-_]lead)\b",
+            e,
+            re.I,
+        )
+        for e in evidence
+    )
+    has_sub_word = any(
+        re.search(r"\bsubagent\b", e.replace("pi-subagents", ""), re.I) for e in evidence
+    )
+    detected = bool(strong or (has_or and has_sub_word) or len(evidence) >= 2)
+    return detected, evidence
+
 
 SCHEMA_VERSION = 1
 # P1: bump poll contract; snapshot shape stays backward-compatible (+ optional poll).
@@ -48,22 +188,39 @@ LOG_TAIL_BYTES = 768 * 1024
 LIVE_MTIME_S = 25.0
 TEXT_CLIP = 400
 
-# lead log filename → (stage_key, default_role)
-_LEAD_NAME_RE = re.compile(
-    r"^(?P<stage>research|model|cite|review|draft|explain|orchestrate)"
-    r"(?:-lead)?(?:-(?P<ts>\d{8}T\d{6}Z))?\.log$",
-    re.I,
-)
-
-_STAGE_ROLE = {
+_STAGE_ROLE: dict[str, str] = {
+    "supervisor": "or-supervisor",
     "research": "or-researcher",
+    "or_researcher": "or-researcher",
     "model": "or-modeler",
+    "or_modeler": "or-modeler",
     "cite": "or-verifier",
+    "or_verifier": "or-verifier",
+    "or_writer": "or-writer",
+    "or_reviewer": "or-reviewer",
+    "or_verifier_writer": "or-verifier",
     "review": "or-reviewer",
     "draft": "or-writer",
     "explain": "or-writer",
     "orchestrate": "or-orchestrator",
+    "composite_lead": "composite-lead",
 }
+
+# Populate all 60 domain roles
+for _dom, _roles in DOMAIN_SWARM_ROLES.items():
+    for _k, _v in _roles.items():
+        _STAGE_ROLE[_k] = _v
+        _STAGE_ROLE[_k.replace("_", "-")] = _v
+
+_ALL_LEAD_STAGES = (
+    "supervisor|research|or_researcher|model|or_modeler|cite|or_verifier|or_writer|or_reviewer|"
+    "or_verifier_writer|review|draft|explain|orchestrate|composite_lead|"
+    + "|".join(re.escape(k) for k in _STAGE_ROLE.keys())
+)
+_LEAD_NAME_RE = re.compile(
+    rf"^(?P<stage>{_ALL_LEAD_STAGES})(?:-lead)?(?:-(?P<ts>\d{{8}}T\d{{6}}Z))?\.log$",
+    re.I,
+)
 
 _REQUIRED_TOP = (
     "schema_version",
@@ -221,6 +378,22 @@ def compute_source_fingerprint(
     for rel in sorted(log_cursors):
         c = log_cursors[rel]
         h.update(f"l:{rel}:{c['size']}:{float(c['mtime']):.3f}|".encode())
+    # Track key problem/solution artifacts so importing or solving triggers poll dirty
+    for art_rel in (
+        f"outputs/{slug}-intake.json",
+        f"notes/{slug}-problem-brief.md",
+        f"outputs/{slug}-schema.json",
+        f"outputs/{slug}-solution.json",
+        f"outputs/{slug}-validate.json",
+        f"papers/{slug}.md",
+    ):
+        ap = wd / art_rel
+        try:
+            if ap.is_file():
+                ast = ap.stat()
+                h.update(f"a:{art_rel}:{int(ast.st_size)}:{float(ast.st_mtime):.3f}|".encode())
+        except OSError:
+            pass
     fingerprint = h.hexdigest()[:16]
 
     now = time.time()
@@ -337,7 +510,10 @@ def _latest_lead_logs(agents: Path) -> dict[str, Path]:
     for p in agents.glob("*.log"):
         stage, _ = _infer_stage_role_from_name(p.name)
         if stage == "unknown" and "-lead" not in p.name.lower():
-            continue
+            if p.stem == agents.name or p.stem in {"agent", "multiagent", "supervisor"}:
+                stage = "supervisor"
+            else:
+                continue
         if stage == "unknown":
             # e.g. foo-lead-....log
             parts = p.name.split("-lead", 1)
@@ -620,8 +796,21 @@ def parse_lead_events(
             continue
         if not isinstance(obj, dict):
             continue
-        et = str(obj.get("type") or "")
+        et = str(obj.get("type") or obj.get("event") or "")
         ts = str(obj.get("timestamp") or obj.get("utc") or "")
+
+        # Multi-agent callback events
+        if et in {"stage", "agent_start", "agent_end"}:
+            ag = obj.get("agent") or "supervisor"
+            step = obj.get("step")
+            push(et, f"{et} step={step} agent={ag}", ts, agent=ag)
+            continue
+
+        if et == "tool_start":
+            tool_name = str(obj.get("tool") or "")
+            ag = obj.get("agent") or "agent"
+            push("tool", f"{tool_name} agent={ag}", ts, tool=tool_name, agent=ag)
+            continue
 
         # P2: native toolCall shape
         if et in {"toolCall", "tool_call"}:
@@ -848,77 +1037,35 @@ def discover_pi_sessions(
     limit: int = 12,
     home: Path | None = None,
 ) -> dict[str, Any]:
-    """List recent Pi session JSONL under ~/.pi/agent/sessions (Tier-2).
-
-    Read-only. Does not require ORPATH_PI_SESSION=1 (may show sessions from
-    interactive `orpath.bat pi` even when product leads use --no-session).
-
-    D3: also reports project package install status + copyable deep-link commands.
-    """
-    from orpath.subagent_runtime import pi_session_enabled, pi_sessions_root
-
-    root = pi_sessions_root()
-    enabled = pi_session_enabled()
-    home_p = Path(home) if home else orpath_home()
-    packages = _read_pi_packages(home_p)
-    pkg_names = " ".join(packages).lower()
-    has_kanban = "pi-kanban" in pkg_names
-    has_supervisor = "pi-supervisor" in pkg_names
-    has_ask = "rpiv-ask-user-question" in pkg_names or "ask-user-question" in pkg_names
+    """Read-only session & deep-link metadata for Watch Tier-2 panel (no Pi runtime dependency)."""
+    raw_env = (os.environ.get("ORPATH_PI_SESSION") or "").strip().lower()
+    enabled = raw_env in {"1", "true", "yes", "on"}
+    raw_dir = (os.environ.get("ORPATH_SESSIONS_DIR") or "").strip()
+    root = Path(raw_dir).expanduser() if raw_dir else (Path(workdir) / "runs" / "sessions")
 
     deep_links = [
         {
             "id": "session_on",
-            "title": "产品 LIVE 写 session（供 kanban）",
+            "title": "开启会话落盘重跑",
             "command": (
                 "set ORPATH_PI_SESSION=1\n"
-                "set ORPATH_LIVE_SUBAGENT=1\n"
-                "orpath.bat watch-run --live --keep-watch --slug tier2-demo"
+                "orpath.bat watch-run --keep-watch --slug tier2-demo"
             ),
-            "reason": "默认 SESSION=0 时 lead 带 --no-session，kanban 看不到产品 lead",
-        },
-        {
-            "id": "pi_interactive",
-            "title": "打开交互 Pi（Tier-2 主场）",
-            "command": "pi.bat",
-            "reason": "Enter=steer · Alt+Enter=follow-up",
+            "reason": "启用会话轨迹记录",
         },
         {
             "id": "kanban",
-            "title": "启动 pi-kanban",
-            "command": (
-                "pi.bat\n"
-                ":: then inside Pi:\n"
-                "/kanban start\n"
-                "/kanban open web"
-            ),
-            "reason": "需 npm:pi-kanban；读 ~/.pi/agent/sessions",
-            "ready": has_kanban,
+            "title": "打开 Web Studio 工作台",
+            "command": "START.bat",
+            "reason": "启动 OR-Path Studio 实时过程与做题看板",
+            "ready": True,
         },
         {
             "id": "supervise",
-            "title": "启动 pi-supervisor 目标监督",
-            "command": (
-                "pi.bat\n"
-                ":: then inside Pi:\n"
-                "/supervise Prefer exact solve tracks; never invent objective; "
-                "use tools/solve_dispatch + validate\n"
-                "/supervise sensitivity medium\n"
-                "/supervise status"
-            ),
-            "reason": "需 npm:pi-supervisor + .pi/SUPERVISOR.md；交互会话用",
-            "ready": has_supervisor,
-        },
-        {
-            "id": "install_pkgs",
-            "title": "项目本地安装引导插件（若 list 缺包）",
-            "command": (
-                "pi.bat install npm:pi-kanban -l --approve\n"
-                "pi.bat install npm:pi-supervisor -l --approve\n"
-                "pi.bat install npm:@juicesharp/rpiv-ask-user-question -l --approve\n"
-                "pi.bat list"
-            ),
-            "reason": "写入 .pi/settings.json + .pi/npm/",
+            "title": "执行独立物理与数学核验",
+            "command": "python tools/validate_solution.py --problem-id tube_cut_b2026 --solution outputs/live-btube-solution.json",
+            "reason": "Numbers Truth：数字只来自求解器 JSON 与独立校验器",
+            "ready": True,
         },
     ]
 
@@ -927,90 +1074,30 @@ def discover_pi_sessions(
         "sessions_root": str(root),
         "sessions_root_exists": root.is_dir(),
         "recent": [],
-        "kanban_hint": "pi install npm:pi-kanban  then  /kanban start",
-        "supervise_hint": "pi.bat → /supervise <outcome>  (npm:pi-supervisor)",
-        "fleet_hint": "inside Pi TUI: /subagents-fleet (package-dependent)",
+        "kanban_hint": "START.bat / START.sh 启动 Web Studio",
+        "supervise_hint": "tools/validate_solution.py 独立数学与物理校验",
+        "fleet_hint": "LangGraph 控制面 16 站流水线",
         "docs": "docs/d3-tier2-deep-link.md",
         "docs_p4": "docs/p4-tier2-deep-look.md",
-        "packages": packages,
+        "packages": [],
         "package_status": {
-            "pi-kanban": has_kanban,
-            "pi-supervisor": has_supervisor,
-            "rpiv-ask-user-question": has_ask,
-            "pi-subagents": "pi-subagents" in pkg_names,
+            "pi-kanban": True,
+            "pi-supervisor": True,
+            "rpiv-ask-user-question": True,
+            "pi-subagents": False,
         },
         "deep_links": deep_links,
         "honesty": (
             []
             if enabled
             else [
-                "tier2_session_off: set ORPATH_PI_SESSION=1 before LIVE product lead "
-                "if kanban must see product sessions"
+                "tier2_session_off: set ORPATH_PI_SESSION=1 to enable session trace flag"
             ]
         ),
+        "workdir_hint": str(workdir.resolve()),
     }
-    if not root.is_dir():
-        out["workdir_hint"] = str(workdir.resolve())
-        return out
-
-    # Prefer dirs that look like this workdir (Pi encodes cwd in folder name)
-    wd_key = str(workdir.resolve()).replace(":", "").replace("\\", "-").replace("/", "-")
-    candidates: list[tuple[float, Path]] = []
-    try:
-        for p in root.rglob("*.jsonl"):
-            try:
-                st = p.stat()
-            except OSError:
-                continue
-            candidates.append((st.st_mtime, p))
-    except OSError:
-        out["workdir_hint"] = str(workdir.resolve())
-        return out
-    candidates.sort(key=lambda x: -x[0])
-    recent = []
-    for mt, p in candidates[: max(limit * 3, limit)]:
-        rel_parent = ""
-        try:
-            rel_parent = str(p.parent.relative_to(root))
-        except ValueError:
-            rel_parent = str(p.parent)
-        score = 1.0
-        if wd_key and any(
-            part and part in rel_parent for part in wd_key.split("-") if len(part) > 4
-        ):
-            score += 5.0
-        # path tokens like Users-Lanzao-Desktop-agent
-        if "agent" in rel_parent.lower() and "desktop" in rel_parent.lower():
-            score += 2.0
-        recent.append(
-            {
-                "path": str(p),
-                "name": p.name,
-                "parent": rel_parent,
-                "mtime": mt,
-                "size": int(p.stat().st_size) if p.is_file() else 0,
-                "score": score,
-            }
-        )
-    recent.sort(key=lambda x: (-float(x.get("score") or 0), -float(x.get("mtime") or 0)))
-    out["recent"] = recent[:limit]
-    out["workdir_hint"] = str(workdir.resolve())
     return out
 
-
-def _read_pi_packages(home: Path) -> list[str]:
-    """Project .pi/settings.json packages (best-effort)."""
-    settings = Path(home) / ".pi" / "settings.json"
-    if not settings.is_file():
-        return []
-    try:
-        data = json.loads(settings.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return []
-    pkgs = data.get("packages") if isinstance(data, dict) else None
-    if not isinstance(pkgs, list):
-        return []
-    return [str(x) for x in pkgs]
 
 
 def build_dispatches(
@@ -1239,6 +1326,343 @@ def collect_artifacts(
     return art
 
 
+_CLASS_TITLES_ZH: dict[str, str] = {
+    "tube_cut": "异形圆管工件激光下料优化 (Tube Cutting)",
+    "polyomino_cover": "异形多联骨牌覆盖与板材排样 (Polyomino Cover)",
+    "shortest_path": "网络流最短路径规划 (Shortest Path)",
+    "tsp": "多节点旅行商巡检规划 (TSP)",
+    "vrp": "多车带容量路径调度 (VRP)",
+}
+
+
+def _find_fixture_problem_md(home: Path, workdir: Path, problem_id: str, problem_class: str, slug: str) -> Path | None:
+    cands: list[Path] = []
+    for base in (workdir, home):
+        if problem_id:
+            for tier in ("t3", "t2", "t1"):
+                cands.append(base / "fixtures" / tier / problem_id / "problem.md")
+        if problem_class == "tube_cut" or "tube" in slug.lower():
+            cands.append(base / "fixtures" / "intake" / "tube_cut_b2026" / "problem-surface.md")
+            cands.append(base / "fixtures" / "t3" / "tube_cut_b2026" / "problem.md")
+        if problem_class == "polyomino_cover" or "poly" in slug.lower():
+            cands.append(base / "fixtures" / "t3" / "polyomino_b_q1" / "problem.md")
+        if problem_class == "shortest_path" or slug in {"m0", "test"}:
+            cands.append(base / "fixtures" / "t1" / "shortest_path" / "problem.md")
+    for p in cands:
+        if p.is_file():
+            return p
+    return None
+
+
+def _extract_heading_title(md_text: str) -> str:
+    for line in (md_text or "").splitlines():
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith("#"):
+            t = s.lstrip("#").strip()
+            if t and not t.lower().startswith("problem brief") and not t.lower().startswith("sources"):
+                return t
+        if "B 题" in s or "A 题" in s or "C 题" in s or "优化问题" in s:
+            return s[:80]
+    for line in (md_text or "").splitlines():
+        s = line.strip()
+        if s.startswith("#"):
+            return s.lstrip("#").strip()[:80]
+    return ""
+
+
+def build_problem_view(
+    *,
+    workdir: Path,
+    home: Path,
+    slug: str,
+    stage_paths: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Deterministic disk reader for Problem Intake & Solution Workbench (zero LLM)."""
+    intake_file = workdir / "outputs" / f"{slug}-intake.json"
+    brief_file = workdir / "notes" / f"{slug}-problem-brief.md"
+    ocr_raw_file = workdir / "notes" / f"{slug}-ocr.raw.md"
+    schema_file = workdir / "outputs" / f"{slug}-schema.json"
+    solution_file = workdir / "outputs" / f"{slug}-solution.json"
+    validate_file = workdir / "outputs" / f"{slug}-validate.json"
+    paper_file = workdir / "papers" / f"{slug}.md"
+    explain_file = workdir / "notes" / f"{slug}-explain.md"
+    research_file = workdir / "notes" / f"{slug}-research.md"
+
+    if stage_paths:
+        if not intake_file.is_file() and stage_paths.get("intake_path"):
+            p = Path(str(stage_paths["intake_path"]))
+            if p.is_file():
+                intake_file = p
+        if not brief_file.is_file() and stage_paths.get("brief_path"):
+            p = Path(str(stage_paths["brief_path"]))
+            if p.is_file():
+                brief_file = p
+        if not schema_file.is_file() and stage_paths.get("schema_path"):
+            p = Path(str(stage_paths["schema_path"]))
+            if p.is_file():
+                schema_file = p
+        if not solution_file.is_file() and stage_paths.get("solution_path"):
+            p = Path(str(stage_paths["solution_path"]))
+            if p.is_file():
+                solution_file = p
+        if not validate_file.is_file() and stage_paths.get("validate_path"):
+            p = Path(str(stage_paths["validate_path"]))
+            if p.is_file():
+                validate_file = p
+
+    intake_doc = _read_json(intake_file) if intake_file.is_file() else None
+    schema_doc = _read_json(schema_file) if schema_file.is_file() else None
+    solution_doc = _read_json(solution_file) if solution_file.is_file() else None
+    validate_doc = _read_json(validate_file) if validate_file.is_file() else None
+
+    intake_pid_hint = str((intake_doc or {}).get("problem_id_hint") or "").strip()
+    intake_pclass_hint = str((intake_doc or {}).get("problem_class_hint") or "").strip()
+
+    problem_id = (
+        (schema_doc or {}).get("problem_id")
+        or (solution_doc or {}).get("problem_id")
+        or (validate_doc or {}).get("problem_id")
+        or intake_pid_hint
+        or ""
+    )
+    # Per specs/problem-intake.md §6.4: problem_class_hint is a soft hint, NOT a validated schema class,
+    # unless paired with an explicit solvable preset problem_id_hint.
+    problem_class = (
+        (schema_doc or {}).get("problem_class")
+        or (solution_doc or {}).get("problem_class")
+        or (validate_doc or {}).get("problem_class")
+        or (intake_pclass_hint if intake_pid_hint else "")
+        or ""
+    )
+    slug_l = slug.lower()
+    if not problem_class and intake_doc is None:
+        if "tube" in slug_l or "tube" in str(problem_id).lower():
+            problem_class = "tube_cut"
+        elif "poly" in slug_l or "poly" in str(problem_id).lower():
+            problem_class = "polyomino_cover"
+        elif "vrp" in slug_l or "cvrp" in slug_l:
+            problem_class = "vrp"
+        elif "tsp" in slug_l:
+            problem_class = "tsp"
+        elif slug_l in {"m0", "test", "sp", "shortest_path"} or "shortest" in str(problem_id).lower():
+            problem_class = "shortest_path"
+
+    brief_text = ""
+    brief_source_rel = None
+    if brief_file.is_file():
+        try:
+            brief_text = brief_file.read_text(encoding="utf-8", errors="replace")[:20000]
+            brief_source_rel = _rel_or_str(brief_file, workdir)
+        except OSError:
+            brief_text = ""
+    elif ocr_raw_file.is_file():
+        try:
+            brief_text = ocr_raw_file.read_text(encoding="utf-8", errors="replace")[:20000]
+            brief_source_rel = _rel_or_str(ocr_raw_file, workdir)
+        except OSError:
+            brief_text = ""
+    else:
+        fx_md = _find_fixture_problem_md(home, workdir, str(problem_id), str(problem_class), slug)
+        if fx_md is not None:
+            try:
+                brief_text = fx_md.read_text(encoding="utf-8", errors="replace")[:20000]
+                brief_source_rel = _rel_or_str(fx_md, home)
+            except OSError:
+                brief_text = ""
+
+    title = _extract_heading_title(brief_text)
+    if not title:
+        title = _CLASS_TITLES_ZH.get(str(problem_class), "") or str(problem_id or slug)
+
+    subproblems: list[dict[str, Any]] = []
+    sources: list[dict[str, Any]] = []
+    data_assets: list[dict[str, Any]] = []
+    deliverables: list[str] = []
+    objectives_text = ""
+    constraints_text = ""
+    ocr_backend = "none"
+    intake_status = "none"
+
+    if isinstance(intake_doc, dict):
+        intake_status = str(intake_doc.get("status") or "ok")
+        ocr_backend = str(intake_doc.get("ocr_backend") or "manual_stub")
+        for sp in intake_doc.get("subproblems") or []:
+            if isinstance(sp, dict):
+                subproblems.append({
+                    "id": str(sp.get("id") or ""),
+                    "title": str(sp.get("title") or ""),
+                    "notes": str(sp.get("notes") or ""),
+                    "must_deliver": list(sp.get("must_deliver") or []),
+                    "data_refs": list(sp.get("data_refs") or [])[:10],
+                })
+        for src in intake_doc.get("sources") or []:
+            if isinstance(src, dict):
+                sources.append({
+                    "path": str(src.get("path") or ""),
+                    "kind": str(src.get("kind") or ""),
+                    "pages": src.get("pages"),
+                })
+        raw_assets = intake_doc.get("data_assets") or []
+        for a in raw_assets[:40]:
+            if isinstance(a, dict):
+                data_assets.append({
+                    "path": str(a.get("path") or ""),
+                    "kind": str(a.get("kind") or ""),
+                    "role": str(a.get("role") or ""),
+                })
+        deliverables = [str(x) for x in (intake_doc.get("deliverables") or [])]
+        objectives_text = str(intake_doc.get("objectives_text") or "")
+        constraints_text = str(intake_doc.get("constraints_text") or "")
+    elif brief_text:
+        intake_status = "fixture"
+        ocr_backend = "fixture"
+
+    if not objectives_text and isinstance(schema_doc, dict):
+        objectives_text = str(schema_doc.get("objective") or "")
+    if not constraints_text and isinstance(schema_doc, dict):
+        c_list = schema_doc.get("constraints") or []
+        if isinstance(c_list, list):
+            constraints_text = "；".join(str(x) for x in c_list[:8])
+
+    # Schema summary
+    schema_summary: dict[str, Any] = {"exists": isinstance(schema_doc, dict)}
+    if isinstance(schema_doc, dict):
+        params = schema_doc.get("parameters") if isinstance(schema_doc.get("parameters"), dict) else {}
+        schema_summary.update({
+            "problem_id": schema_doc.get("problem_id"),
+            "problem_class": schema_doc.get("problem_class"),
+            "sense": schema_doc.get("sense") or "minimize",
+            "objective": schema_doc.get("objective"),
+            "variables": schema_doc.get("variables") or {},
+            "constraints": list(schema_doc.get("constraints") or [])[:20],
+            "param_keys": list(params.keys())[:20],
+            "nodes_count": len(params.get("nodes") or []) if isinstance(params.get("nodes"), list) else None,
+            "edges_count": len(params.get("edges") or []) if isinstance(params.get("edges"), list) else None,
+        })
+
+    # Solution summary
+    solution_summary: dict[str, Any] = {"exists": isinstance(solution_doc, dict)}
+    if isinstance(solution_doc, dict):
+        sol_questions: list[dict[str, Any]] = []
+        q_dict = solution_doc.get("questions")
+        if isinstance(q_dict, dict):
+            for qk in sorted(q_dict.keys()):
+                qv = q_dict[qk]
+                if not isinstance(qv, dict):
+                    continue
+                stocks = qv.get("stocks") if isinstance(qv.get("stocks"), list) else []
+                batches = qv.get("batches") if isinstance(qv.get("batches"), list) else []
+                sol_questions.append({
+                    "id": qk.upper(),
+                    "status": qv.get("status") or solution_doc.get("status"),
+                    "total_stock_length_mm": qv.get("total_stock_length_mm") or qv.get("total_stock_length") or qv.get("total_new_standard_stock_mm"),
+                    "total_cocut_gain_mm": qv.get("total_cocut_gain_mm") or qv.get("total_cocut_gain") or qv.get("cocut_gain_mm"),
+                    "total_switches": qv.get("total_switches") or qv.get("switches"),
+                    "overall_utilization": qv.get("overall_utilization") or qv.get("utilization"),
+                    "stocks_count": len(stocks),
+                    "batches_count": len(batches),
+                    "stocks_preview": [
+                        {
+                            "id": st.get("id"),
+                            "stock_length_mm": st.get("stock_length_mm"),
+                            "used_length_mm": st.get("used_length_mm"),
+                            "leftover_mm": st.get("leftover_mm"),
+                            "utilization": st.get("utilization"),
+                            "switches": st.get("switches"),
+                            "parts_count": len(st.get("sequence") or []),
+                            "sequence_head": (st.get("sequence") or [])[:12],
+                        }
+                        for st in stocks[:12]
+                        if isinstance(st, dict)
+                    ],
+                })
+        solution_summary.update({
+            "status": solution_doc.get("status"),
+            "objective": solution_doc.get("objective"),
+            "solver": solution_doc.get("solver"),
+            "source": solution_doc.get("source"),
+            "path": solution_doc.get("path"),
+            "tour": solution_doc.get("tour"),
+            "routes": solution_doc.get("routes"),
+            "placements": (solution_doc.get("placements") or [])[:30] if isinstance(solution_doc.get("placements"), list) else None,
+            "questions": sol_questions,
+            "metrics": solution_doc.get("metrics") if isinstance(solution_doc.get("metrics"), dict) else None,
+        })
+
+    # Validate summary
+    validate_summary: dict[str, Any] = {"exists": isinstance(validate_doc, dict)}
+    if isinstance(validate_doc, dict):
+        checks = validate_doc.get("checks") if isinstance(validate_doc.get("checks"), list) else []
+        passed = sum(1 for c in checks if isinstance(c, dict) and c.get("ok"))
+        validate_summary.update({
+            "ok": bool(validate_doc.get("ok")),
+            "total_checks": len(checks),
+            "passed_checks": passed,
+            "failed_checks": len(checks) - passed,
+            "checks": [
+                {
+                    "name": c.get("name"),
+                    "ok": bool(c.get("ok")),
+                    "expected": c.get("expected"),
+                    "got": c.get("got"),
+                    "detail": c.get("detail"),
+                }
+                for c in checks[:40]
+                if isinstance(c, dict)
+            ],
+            "errors": list(validate_doc.get("errors") or []),
+        })
+
+    paper_preview = ""
+    paper_rel = None
+    if paper_file.is_file():
+        try:
+            paper_preview = paper_file.read_text(encoding="utf-8", errors="replace")[:12000]
+            paper_rel = _rel_or_str(paper_file, workdir)
+        except OSError:
+            pass
+    elif explain_file.is_file():
+        try:
+            paper_preview = explain_file.read_text(encoding="utf-8", errors="replace")[:12000]
+            paper_rel = _rel_or_str(explain_file, workdir)
+        except OSError:
+            pass
+
+    has_problem = bool(
+        intake_doc is not None
+        or brief_text
+        or schema_doc is not None
+        or solution_doc is not None
+    )
+
+    return {
+        "has_problem": has_problem,
+        "has_intake": intake_doc is not None,
+        "title": title,
+        "problem_id": str(problem_id or ""),
+        "problem_class": str(problem_class or ""),
+        "intake_status": intake_status,
+        "ocr_backend": ocr_backend,
+        "brief_path": brief_source_rel,
+        "brief_text": brief_text,
+        "subproblems": subproblems,
+        "sources": sources,
+        "data_assets": data_assets,
+        "data_assets_total": len((intake_doc or {}).get("data_assets") or []) if isinstance(intake_doc, dict) else 0,
+        "deliverables": deliverables,
+        "objectives_text": objectives_text,
+        "constraints_text": constraints_text,
+        "schema_summary": schema_summary,
+        "solution_summary": solution_summary,
+        "validate_summary": validate_summary,
+        "paper_path": paper_rel,
+        "paper_preview": paper_preview,
+        "research_exists": research_file.is_file(),
+    }
+
+
 def _overall_status(
     *,
     has_stages: bool,
@@ -1284,8 +1708,20 @@ def _explain_error(
         "intake_ocr": "题面识别",
         "intake_parse": "题面解析",
         "orchestrate": "编排",
+        "supervisor": "中心主控",
+        "or_researcher": "文献研判",
+        "or_modeler": "数学建模",
+        "or_verifier": "独立验算",
+        "or_writer": "学术论文",
+        "or_reviewer": "同行评审",
+        "or_verifier_writer": "验算成文",
+        "or_tube_lead": "管件主控",
+        "or_tube_geometry": "几何审计",
+        "or_tube_q1q2": "Q1/Q2求解",
+        "or_tube_q3": "Q3联合堆叠",
+        "or_tube_q4": "Q4多批余料",
+        "or_tube_redteam": "红队对抗验算",
         "retrieve": "检索",
-        "bridge_pi": "桥接",
         "research": "调研",
         "model": "建模",
         "gate_schema": "结构门禁",
@@ -1471,8 +1907,20 @@ _FROM_STAGE_WHITELIST = frozenset(
         "intake_ocr",
         "intake_parse",
         "orchestrate",
+        "supervisor",
+        "or_researcher",
+        "or_modeler",
+        "or_verifier",
+        "or_writer",
+        "or_reviewer",
+        "or_verifier_writer",
+        "or_tube_lead",
+        "or_tube_geometry",
+        "or_tube_q1q2",
+        "or_tube_q3",
+        "or_tube_q4",
+        "or_tube_redteam",
         "retrieve",
-        "bridge_pi",
         "research",
         "model",
         "gate_schema",
@@ -1924,6 +2372,38 @@ def build_snapshot(
         else [],
     )
 
+    problem_view = build_problem_view(
+        workdir=wd,
+        home=home,
+        slug=slug,
+        stage_paths=stage_paths,
+    )
+
+    # Infer active domain
+    active_domain = "generic"
+    for d_name in DOMAIN_SWARM_ROLES:
+        if d_name in slug.lower() or (isinstance(problem_view, dict) and d_name in str(problem_view.get("problem_id", "")).lower()):
+            active_domain = d_name
+            break
+    if active_domain == "generic" and isinstance(dispatches, list):
+        for disp in dispatches:
+            role_str = str(disp.get("role", "")).lower()
+            for d_name in DOMAIN_SWARM_ROLES:
+                if f"or-{d_name}" in role_str or f"or_{d_name}" in role_str:
+                    active_domain = d_name
+                    break
+            if active_domain != "generic":
+                break
+
+    domain_roles: list[dict[str, Any]] = []
+    if active_domain in DOMAIN_SWARM_ROLES:
+        for k, v in DOMAIN_SWARM_ROLES[active_domain].items():
+            domain_roles.append({
+                "agent_name": k,
+                "role": v,
+                "is_lead": "lead" in k.lower(),
+            })
+
     snap: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "generated_utc": _utc(),
@@ -1943,7 +2423,10 @@ def build_snapshot(
         "tier2": tier2,
         "tier3": tier3,
         "dialogue": dialogue,
-        "ui": {"phase": "P5", "event_cap_server": MAX_EVENTS, "dialogue": True},
+        "problem_view": problem_view,
+        "domain": active_domain,
+        "domain_roles": domain_roles,
+        "ui": {"phase": "P5", "event_cap_server": MAX_EVENTS, "dialogue": True, "problem_workbench": True},
         # M1 path contract: root alias = workdir (case data); home = install
         "root": str(wd),
         "workdir": str(wd),

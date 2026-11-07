@@ -161,7 +161,7 @@ print("ok")
   Write-Host "PASS: OR-Path installed at $InstallDir"
   Write-Host "  cd `"$InstallDir`""
   Write-Host "  orpath.bat doctor"
-  Write-Host "  START-WATCH.bat"
+  Write-Host "  START.bat"
   Write-Host "  orpath.bat demo-m0 --slug m0"
   Write-Host "Edit .env for DEEPSEEK_API_KEY if you need LIVE multi-agent."
 } finally {

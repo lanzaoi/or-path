@@ -29,24 +29,6 @@ def child_env() -> dict[str, str]:
 
 
 def main() -> int:
-    agents = ROOT / ".pi" / "agents"
-    needed = [
-        "or-orchestrator.md",
-        "or-researcher.md",
-        "or-modeler.md",
-        "or-writer.md",
-        "or-verifier.md",
-        "or-reviewer.md",
-    ]
-    for n in needed:
-        if not (agents / n).is_file():
-            fail(f"missing agent {n}")
-
-    settings = json.loads((ROOT / ".pi" / "settings.json").read_text(encoding="utf-8"))
-    pkgs = settings.get("packages") or []
-    if not any("pi-subagents" in str(p) for p in pkgs):
-        fail("pi-subagents not in .pi/settings.json packages")
-
     sol = ROOT / "fixtures" / "t1" / "shortest_path" / "solution.json"
     data = json.loads(sol.read_text(encoding="utf-8"))
     if data.get("objective") != 42:

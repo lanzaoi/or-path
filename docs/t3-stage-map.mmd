@@ -4,12 +4,7 @@ flowchart TD
   intake_ocr -->|has sources| intake_parse
   intake_parse -->|ok| orchestrate
   intake_parse -->|needs_human or gate fail| human_stop
-  orchestrate -->|before_retrieve| bridge_pi
-  orchestrate -->|default| retrieve
-  bridge_pi -->|before_retrieve| retrieve
-  bridge_pi -->|before_research| research
-  retrieve -->|before_research| bridge_pi
-  retrieve -->|before_retrieve done| research
+  orchestrate --> retrieve --> research
   research --> model --> gate_schema
   gate_schema -->|ok| solve
   gate_schema -->|repair| model

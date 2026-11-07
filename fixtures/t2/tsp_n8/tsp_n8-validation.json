@@ -1,0 +1,35 @@
+{
+  "ok": true,
+  "problem_id": "tsp_n8",
+  "problem_class": "tsp",
+  "checks": [
+    {
+      "name": "envelope",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "shape_tour",
+      "ok": true,
+      "detail": null
+    },
+    {
+      "name": "feasibility",
+      "ok": true
+    },
+    {
+      "name": "recompute_objective",
+      "ok": true,
+      "expected": 45,
+      "got": 45
+    },
+    {
+      "name": "gold_gap",
+      "ok": true,
+      "expected": 45,
+      "got": 45,
+      "detail": "gap=0.0"
+    }
+  ],
+  "errors": []
+}

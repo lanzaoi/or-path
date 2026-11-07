@@ -31,8 +31,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from orpath.subagent_dispatch import detect_subagent_calls  # noqa: E402
-from orpath.watch_snapshot import build_snapshot, validate_snapshot_shape  # noqa: E402
+from orpath.watch_snapshot import build_snapshot, detect_subagent_calls, validate_snapshot_shape  # noqa: E402
 
 
 def _utc() -> str:

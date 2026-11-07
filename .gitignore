@@ -27,7 +27,11 @@ knowledge/bm25/
 knowledge/fts/
 knowledge/corpus/*.pdf
 knowledge/chunks/*.jsonl
+knowledge/chunks/*.json
 !knowledge/chunks/.gitkeep
+knowledge/inbox_pdf/*.pdf
+knowledge/inbox_pdf/fixture_*
+!knowledge/inbox_pdf/README.md
 # process memory local drafts (seeds under knowledge/lessons are tracked)
 memory/lessons/
 !knowledge/lessons/
@@ -50,9 +54,8 @@ mineru_models/
 # Upstream mirrors / heavy trees
 vendor/
 pi-main/
-# openpi removed 2026-07-31; keep ignore
 openpi/
-runtime/node_modules/
+runtime/
 **/node_modules/
 
 # Runtime artifacts — install/workdir ROOT only
@@ -62,10 +65,8 @@ runtime/node_modules/
 /papers/
 /runs/
 
-# Pi local runtime caches (keep .pi/agents + settings tracked)
-.pi/npm/
-.pi/memory/
-.pi/orpath_model.json
+# Legacy retired directories (if present locally)
+.pi/
 .pi-subagents/
 
 # Screenshots default-ignore (allow listed evidence)
@@ -79,6 +80,9 @@ inbox/**
 
 # Hermes IDE workspace — local only (plans live in docs/archive/plans/)
 .hermes/
+.agent/
+.refactor_backup/
+*_raw.txt
 
 # Optional local visual lab — keep demo/seed for L1/L2 default face
 demo/*

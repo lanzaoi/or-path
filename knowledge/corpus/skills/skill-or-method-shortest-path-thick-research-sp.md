@@ -1,8 +1,8 @@
 # Skill export: or-method-shortest-path-thick-research-sp
 
 - kind: skill
-- source_path: .pi/skills/or-method-shortest-path-thick-research-sp/SKILL.md
-- note: RAG **copy** for Pi retrieve only; runtime skill loading still uses `.pi/skills/` (not this file).
+- source_path: knowledge/skills/or-method-shortest-path-thick-research-sp/SKILL.md
+- note: RAG **copy** for hybrid retrieve.
 
 ---
 

@@ -34,16 +34,49 @@ def main() -> int:
     need("promote-run" in sh and "promote_run_to_skill.py" in sh, "sh promote-run")
     need((ROOT / "scripts/promote_run_to_skill.py").is_file(), "script present")
 
-    # need a finished run
+    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "PYTHONHOME")}
+    env["PYTHONNOUSERSITE"] = "1"
+    env["ORPATH_LIVE_SUBAGENT"] = "0"
+    env["ORPATH_KNOWLEDGE_EMBED"] = "stub"
+
+    # need a finished run; self-seed deterministic mock run if workdir was cleaned
+    if not (
+        (ROOT / "notes" / f"{SLUG}-research.md").is_file()
+        or (ROOT / "outputs" / f"{SLUG}-validate.json").is_file()
+    ):
+        subprocess.run(
+            [
+                str(py),
+                str(ROOT / "orpath" / "run_t2.py"),
+                "--problem-id",
+                "shortest_path",
+                "--problem-class",
+                "shortest_path",
+                "--slug",
+                SLUG,
+                "--thread-id",
+                SLUG,
+                "--solve-mode",
+                "mock",
+                "--knowledge-mode",
+                "hybrid",
+                "--fresh",
+                "--force",
+            ],
+            cwd=str(ROOT),
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=180,
+        )
+
     need(
         (ROOT / "notes" / f"{SLUG}-research.md").is_file()
         or (ROOT / "outputs" / f"{SLUG}-validate.json").is_file(),
         f"run artifacts for {SLUG}",
     )
-
-    env = {k: v for k, v in os.environ.items() if k not in ("PYTHONPATH", "PYTHONHOME")}
-    env["PYTHONNOUSERSITE"] = "1"
-    env["ORPATH_KNOWLEDGE_EMBED"] = "stub"
 
     r = subprocess.run(
         [str(py), str(ROOT / "scripts/promote_run_to_skill.py"), "--slug", SLUG],
@@ -67,7 +100,7 @@ def main() -> int:
 
     sk = str(payload.get("skill_name") or "")
     need(bool(sk), "skill_name")
-    skill_md = ROOT / ".pi" / "skills" / sk / "SKILL.md"
+    skill_md = ROOT / "knowledge" / "skills" / sk / "SKILL.md"
     need(skill_md.is_file(), f"skill md {skill_md}")
     body = skill_md.read_text(encoding="utf-8") if skill_md.is_file() else ""
     need("Compressed playbook" in body or "playbook" in body.lower(), "skill has playbook")

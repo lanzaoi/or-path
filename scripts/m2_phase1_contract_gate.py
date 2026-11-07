@@ -36,20 +36,6 @@ def _py() -> str:
     return str(cand) if cand.is_file() else sys.executable
 
 
-def test_pi_model() -> None:
-    from orpath.subagent_runtime import DEFAULT_MODEL, DEFAULT_PROVIDER
-
-    if DEFAULT_PROVIDER != "deepseek":
-        _fail(f"provider={DEFAULT_PROVIDER}")
-    if DEFAULT_MODEL != "deepseek-v4-flash":
-        _fail(f"DEFAULT_MODEL={DEFAULT_MODEL} (want deepseek-v4-flash)")
-    settings = json.loads((ROOT / ".pi" / "settings.json").read_text(encoding="utf-8"))
-    dm = (settings.get("subagents") or {}).get("defaultModel")
-    if dm != "deepseek-v4-flash":
-        _fail(f".pi/settings defaultModel={dm}")
-    _ok(f"Pi model {DEFAULT_PROVIDER}/{DEFAULT_MODEL}")
-
-
 def test_registry() -> None:
     from orpath.domain_registry import (
         is_polyomino_class,
@@ -166,7 +152,6 @@ def main() -> int:
     print("=== m2_phase1_contract_gate ===")
     os.environ.pop("PYTHONPATH", None)
     os.environ["PYTHONNOUSERSITE"] = "1"
-    test_pi_model()
     test_registry()
     test_gate_schema_polyomino()
     test_dispatch_registered()

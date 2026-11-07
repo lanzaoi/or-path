@@ -1,164 +1,44 @@
-# Multi-Agent — 多智能体法（详细）
+# Multi-Agent — 原生精悍多智能体协作规范
 
-**对齐：** `product-flow-sdd.md` · `process-visibility.md`  
-**状态：** LAW 2026-08-01
-
----
-
-## 1. 统一接缝（ADR-0005）
-
-产品代码 **只** import **`orpath.subagent_dispatch`**：
-
-| API | 用途 |
-|-----|------|
-| `live_subagent_enabled` | 是否真 spawn |
-| `run_*_subagent_lead` | research/model/cite/review |
-| `run_forced_subagent_stage` | anti-cosplay harness |
-| `STAGE_AGENTS` / `policy_snapshot` | 阶段→角色 |
-| `detect_subagent_calls` / `spawn_lead` | 检测与底层 |
-
-实现分层：`subagent_runtime` · `subagent_harness` · `paper_live_subagent` · `graph_live_subagent`。
+**对齐：** `AGENTS.md` · `tasks/lean_4agent_5x5_master_plan.md` · `specs/product-flow-sdd.md` · `docs/or-paper-sop.md`  
+**状态：** LAW 2026-11（已退役旧版 `.pi/` Node CLI 子进程规范）
 
 ---
 
-## 2. 真 MA 四条（不可降级）
+## 1. 架构核心：4 常驻精锐智能体 + 纯 Python 确定性铁闸 + 10 领域装备包
 
-演示、M0、closeout 必须能展示：
+系统严禁使用大模型“包工头（Lead/Supervisor）”轮询点名或用大模型“口头验算（Verifier）”，路由流转与数值验算全部下沉为 **0 Token 纯 Python 确定性节点与条件边**。
 
-1. **可检**子轨迹（`.pi-subagents/**` transcript 或等价 + lead log）  
-2. **上下文隔离**（research 长文 ≠ modeler 窗；**文件路径手递**）  
-3. **显式委派**（json 中 `toolCall`/`toolName`=subagent）  
-4. 最终数字仍 **solve + validate**  
+### 1.1 四大常驻 LLM 特种兵（`orpath/agents/workers.py`）
 
-### 2.1 Cosplay 定义（FAIL）
-
-| Cosplay | 真 |
-|---------|-----|
-| 一个 `-p` 长文「扮演 verifier」 | lead 调 subagent 工具 |
-| DONE 表只有角色名 | 有 runId + transcript/log |
-| 同上下文写 draft+review | 隔离会话 + 路径 |
-| 文本「or-verifier produced」无 toolCall | detect 为 false |
+| 角色标识 | 职责边界（Owns） | 绝对红线（Forbidden） | 核心绑定工具 |
+|---------|------------------|-----------------------|--------------|
+| `or_analyst` | 读取前置探针 `profile.json` 与 `knowledge/skills/`，识别变量/约束/数学分类，选定 `DomainCartridge` 与 `Tier-A/B/C` | 严禁编写求解代码、严禁猜测或编造最优目标值 | `read_problem_file`, `search_or_knowledge`, `consult_or_skill`, `profile_<domain>_data` |
+| `or_modeler` | 构建 `schema.json`，调度注册求解算子或编写受控 Python 沙箱 MIP/CP-SAT 脚本，提取松弛下界与 Gap（Tier-C 按子问动态派生隔离实例） | 严禁手写 `solution.json` 数值、严禁静默放松硬物理约束 | `execute_or_solver`, `execute_python_sandbox`, `get_problem_formulation_template`, `inspect_<domain>_solution` |
+| `or_writer` | 基于 Python 预渲染真数据表与甘特图/轨迹图，严格按 `docs/or-paper-sop.md` 六章结构撰写 6~10 KB 学术论文 | 严禁篡改表格数字、严禁在 `proven_optimal == False` 时吹嘘“全局最优” | `read_problem_file`, `consult_or_skill` |
+| `or_reviewer` | 扮演严苛同行审稿红队，联合 R1/R2/Claim 硬门核查公式闭合性、符号一致性与结论边界，输出 `FATAL / MAJOR / MINOR` | 严禁无上限互怼死循环（受 `max_retries <= 2` 硬约束） | `read_problem_file` |
 
 ---
 
-## 3. Anti-cosplay harness（硬）
+## 2. 上下文隔离与零截断铁律（Feynman File Handoffs）
 
-| 规则 | 值 |
-|------|-----|
-| Lead 工具 | **无 write/edit**（`LEAD_TOOLS_NO_WRITE`） |
-| 模式 | `--mode json` |
-| 检测 | 仅真实 tool 事件 |
-| 失败 | quarantine 假产物 → retry（默认 3）→ `gate_subagent_ok=false` |
-| 适用站 | cite、review、model；research lead 亦无 write，由 Python 合并 notes |
-
-详见 `docs/anti-cosplay-harness.md`（活文档；冲突以本 specs + 代码为准）。
+1. **零截断**：严禁对题面、坐标表、代码或模型输出施加 `1600` 字符腰斩钩子。
+2. **零群聊污染**：每个智能体均以全新局部消息列表 `invoke({"messages": [HumanMessage(task_brief)]})` 启动，历史会话独立归档至 `runs/<slug>/agent_logs/<stage>.jsonl`。
+3. **指针传递**：跨阶段仅通过强类型状态（`CorePipelineState` / `ORPathState`）传递 `notes/`、`outputs/`、`papers/` 下的文件路径与紧凑状态标志。
 
 ---
 
-## 4. 角色
+## 3. Tier-A / Tier-B / Tier-C 数学复杂度自适应轨道
 
-路径：`.pi/agents/or-*.md`
-
-| 角色 | 站 | 做 | 不做 |
-|------|-----|----|------|
-| or-orchestrator | 站内协调（若用） | 拆合、ledger | 抢 LG；心算优 |
-| or-researcher | research | 算法/约束/读 retrieval | 写 objective |
-| or-modeler | model | ProblemSchema | optimal/tour/routes/path 答案 |
-| or-writer | draft 润色可选 | 文稿 | 发明数字 |
-| or-verifier | cite | 引用辅助 | 替代 R1 脚本 |
-| or-reviewer | review | 语义批评 | 无上限互怼 |
-
-模型：Pi 侧 **DeepSeek only**（默认 **deepseek-v4-flash**；见 `orpath.subagent_runtime` / `.pi/settings.json`）。
+- **Tier-A（精确多项式 / 凸优化极速轨）**：LP、马科维茨凸 QP、两阶段随机 LP、最短路、Wagner-Whitin DP —— 直接精确求解，**严禁强塞伪启发式搜索角色**。
+- **Tier-B（单问 NP-Hard 组合优化轨）**：JSSP/FJSSP、VRPTW、RCPSP、CFLP、排班、装箱 —— 先锁松弛下界（Lower Bound）再跑 CP-SAT / PyVRP / ALNS 寻优，显式汇报真实 Optimality Gap。
+- **Tier-C（多问递进大型数模赛题轨）**：如 Tube B 四问、CUMCM C 多问 —— 按子问题依赖链动态拉起隔离 `or_modeler` 实例并传递跨问状态工件（余料账本、初始 SOC 等）。
 
 ---
 
-## 5. 手递纪律
+## 4. Live 模式与离线 CI 门禁纪律
 
-- 大块：`notes/` `outputs/` `papers/`  
-- 父会话优先 **路径**  
-- plan：`outputs/.plans/<slug>.md`  
-- Feynman 同款：prefer file handoffs  
-
----
-
-## 6. Live vs CI
-
-| | CI / gate | 产品 live |
-|--|-----------|-----------|
-| `ORPATH_LIVE_SUBAGENT` | **0** | 默认 **1**（unset 时） |
-| 制品路径可同 | 确定性写 | 真 spawn |
-| 宣称 MA | 否 | 需 toolCall 证据 |
-
-CLI：`--live-subagent` / `--no-live-subagent` / `--live-pi`（耦合 live）。
-
----
-
-## 7. 启动法（pi_launch_law）
-
-| 模式 | 何时 | 形态 |
-|------|------|------|
-| SINGLE_LEAD | 脚本重解、可写草稿 | 可含 write；**横幅诚实**；禁称 MA |
-| MULTI_AGENT_HARNESS | cite/review/model/research live | tools 含 subagent、**无 write**、json |
-
-裸 `pi -p` + LIVE=1 **≠** MA。  
-见 `orpath/pi_launch_law.py`。
-
----
-
-## 8. Research scale
-
-| scale | 条件 | 行为 |
-|-------|------|------|
-| off | knowledge off | 无 researcher |
-| narrow | seed+SP 等 | 1× researcher |
-| wide | hybrid/VRP 等 | 2× 并行，failFast 思想 false |
-| 覆盖 | `state.research_scale` | 允许 |
-
----
-
-## 9. 与「看见 sub 思考」
-
-| 产物 | 谁写 | 可视层 |
-|------|------|--------|
-| `*-lead-*.log` | spawn | L1 派工 + 可抽 L3 |
-| transcript | pi-subagents | L2 主源 |
-| harness json | harness | 索引 |
-
-生成时间线：**禁止**只用 lead 散文。  
-完整 UX → `process-visibility.md`。
-
----
-
-## 10. Bridge（历史 T2）
-
-- `orpath/pi_bridge.py` + RPC  
-- `ORPATH_LIVE_PI=1`  
-- M0 不阻塞若 harness 路径已有真 sub 证据  
-- OpenPi 截图 DoD **退役**（壳已删）  
-
----
-
-## 11. 禁止
-
-- Teams 对等互聊作 OR 核心  
-- 消息总线 Agent 社交脊柱  
-- cosplay 充 DoD  
-- 环境安装走 DeepSeek 通道  
-
----
-
-## 12. 验收命令
-
-```bat
-orpath.bat subagent-gate
-:: 期望: M1/M2/M3 glue tokens + PI_LAUNCH_LAW_PASS 等（以脚本输出为准）
-```
-
-Live 烟：
-
-```bat
-set ORPATH_LIVE_SUBAGENT=1
-orpath.bat run --problem-id shortest_path --solve-mode mock --knowledge-mode seed --slug m0-live --fresh
-:: grep outputs/.agents/m0-live for "name":"subagent"
-orpath.bat timeline --slug m0-live
-```
+| 运行场景 | 开关优先级 | 行为要求 |
+|----------|------------|----------|
+| 自动化离线门禁（CI Gates） | 显式传入 `state["live_subagent"] = False`（高于 `.env`） | 走确定性离线回路，零外网 API 阻塞 |
+| 产品 Web Studio / 王牌实跑验收 | `.env` 配有真实 API Key 且未显式关闭 `live_subagent` | 真实调用大模型完成 4 精锐智能体闭环，严禁用 `MockChatModel` 冒充实跑产物 |

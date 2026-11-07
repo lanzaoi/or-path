@@ -1,5 +1,6 @@
 {
   "problem_id": "shortest_path",
+  "problem_class": "shortest_path",
   "status": "OPTIMAL",
   "objective": 42,
   "path": [
@@ -7,7 +8,48 @@
     "A",
     "T"
   ],
-  "solver": "fixture-mock",
-  "source": "fixtures/t1/shortest_path/solution.json",
-  "problem_class": "shortest_path"
+  "edges_used": [
+    {
+      "u": "S",
+      "v": "A",
+      "w": 10
+    },
+    {
+      "u": "A",
+      "v": "T",
+      "w": 32
+    }
+  ],
+  "path_cost": 42,
+  "source": "fixtures/t1/shortest_path/graph.json",
+  "solver": "networkx-dijkstra",
+  "method": {
+    "algorithm": "dijkstra",
+    "exact": true,
+    "proven_optimal": true,
+    "method_class": "exact"
+  },
+  "verification": {
+    "floyd_warshall_dist": 42,
+    "bellman_ford_dist": 42,
+    "bruteforce_enumeration_min": 42,
+    "all_simple_paths": [
+      {
+        "path": [
+          "S",
+          "A",
+          "T"
+        ],
+        "cost": 42
+      },
+      {
+        "path": [
+          "S",
+          "T"
+        ],
+        "cost": 100
+      }
+    ],
+    "cross_check_match": true
+  }
 }

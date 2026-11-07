@@ -1,0 +1,168 @@
+{
+  "schema": "orpath.finance_collaboration.v1",
+  "problem_id": "markowitz_portfolio",
+  "numeric_authority": "local_solver_and_independent_validator",
+  "selection_rule": "lexicographic_not_agent_vote",
+  "objective_order": [
+    "hard_constraints",
+    "sharpe_ratio",
+    "portfolio_variance",
+    "cvar_tail_risk"
+  ],
+  "budget_scope": "discretionary_experiment_effort_excluding_baseline_and_gates",
+  "budget_percent": {
+    "auditor": 20,
+    "exact_bound": 15,
+    "heuristic": 35,
+    "realities": 30
+  },
+  "roles": {
+    "or-finance-lead": {
+      "owns": [
+        "assumption_register",
+        "experiment_registry",
+        "budget_ledger"
+      ],
+      "forbidden": [
+        "invent_objective",
+        "override_validator",
+        "agent_vote"
+      ]
+    },
+    "or-finance-auditor": {
+      "owns": [
+        "input_manifest",
+        "covariance_matrix_psd_integrity",
+        "asset_returns_consistency",
+        "price_series_hash",
+        "ticker_universe"
+      ],
+      "forbidden": [
+        "author_solution_numbers",
+        "claim_optimality"
+      ]
+    },
+    "or-finance-exact-bound": {
+      "owns": [
+        "exact_lower_bound",
+        "convex_qp_markowitz_bound",
+        "unconstrained_sharpe_bound",
+        "bound_evidence"
+      ],
+      "forbidden": [
+        "modify_covariance_matrix",
+        "claim_unproved_optimum"
+      ]
+    },
+    "or-finance-heuristic": {
+      "owns": [
+        "black_litterman_incumbent",
+        "risk_parity_incumbent",
+        "discrete_allocation_plan"
+      ],
+      "forbidden": [
+        "violate_weight_simplex",
+        "forge_optimal_status",
+        "claim_heuristic_global_optimum"
+      ]
+    },
+    "or-finance-realities": {
+      "owns": [
+        "transaction_slippage_policy",
+        "turnover_limit_policy",
+        "sector_exposure_ceiling_policy",
+        "reality_feasibility"
+      ],
+      "forbidden": [
+        "ignore_short_sale_ban",
+        "hide_cvar_tail_risk",
+        "claim_unvalidated_feasibility"
+      ]
+    },
+    "or-finance-redteam": {
+      "owns": [
+        "independent_recompute",
+        "tamper_tests",
+        "claim_audit"
+      ],
+      "forbidden": [
+        "repair_candidate",
+        "share_solver_state",
+        "waive_failed_gate"
+      ]
+    }
+  },
+  "handoff_order": [
+    "assumptions",
+    "audit",
+    "exact_bound",
+    "heuristic_search",
+    "realities",
+    "redteam_validate",
+    "write"
+  ],
+  "experiment_rules": {
+    "changed_factors_per_card": 1,
+    "seed_required_for_stochastic_search": true,
+    "baseline_artifact_required": true,
+    "acceptance_criteria_required_before_run": true,
+    "failed_experiments_are_retained": true,
+    "numbers_may_only_move_via_json_artifacts": true,
+    "hard_runtime_cap_required": true,
+    "timeout_is_not_no_solution": true,
+    "accepted_candidate_requires_independent_validation": true,
+    "official_candidate_must_be_lexicographically_nonworse": true,
+    "heuristic_status_must_be_feasible": true,
+    "forged_optimality_is_forbidden": true,
+    "covariance_matrix_must_be_psd_before_search": true,
+    "short_sale_ban_must_be_enforced_in_all_incumbents": true
+  },
+  "candidate_lifecycle": [
+    "PROPOSED",
+    "SOLVER_FEASIBLE",
+    "INDEPENDENTLY_VALIDATED",
+    "REDTEAM_PASSED",
+    "ACCEPTED"
+  ],
+  "registry": {
+    "experiment_cards": "experiments/finance/cards",
+    "budget_ledger": "experiments/finance/budget-ledger.json",
+    "accepted_solution": "outputs/markowitz_portfolio-solution.json",
+    "validation_report": "outputs/markowitz_portfolio-validate.json",
+    "redteam_report": "outputs/markowitz_portfolio-redteam.json"
+  },
+  "stop_rules": {
+    "auditor": [
+      "freeze_ticker_universe_and_price_series_hash_before_search",
+      "fail_on_non_psd_covariance_matrix_before_search",
+      "fail_on_asset_returns_inconsistency",
+      "fail_on_missing_or_stale_price_series",
+      "require_input_manifest_hash_consistency_before_search"
+    ],
+    "exact_bound": [
+      "report_convex_qp_markowitz_bound_with_gap",
+      "cite_unconstrained_sharpe_bound_when_available",
+      "stop_after_time_limit_without_improvement",
+      "never_report_a_bound_without_solver_evidence"
+    ],
+    "heuristic": [
+      "stop_after_two_budget_levels_and_three_new_seeds_do_not_improve_sharpe",
+      "retain_best_feasible_incumbent_within_long_only_simplex",
+      "never_report_optimal_status_for_heuristic",
+      "discrete_lot_allocation_must_respect_integer_shares_and_capital"
+    ],
+    "realities": [
+      "stop_after_slippage_turnover_and_sector_policies_converge",
+      "report_unmet_realities_explicitly",
+      "never_drop_a_cvar_tail_risk_penalty_to_restore_feasibility",
+      "short_sale_ban_must_hold_in_every_reported_candidate"
+    ]
+  },
+  "tamper_tests": [
+    "weight_simplex_violation_injection",
+    "short_position_breach_injection",
+    "sharpe_ratio_inflation_forgery",
+    "variance_risk_deflation_forgery",
+    "discrete_lot_allocation_tamper"
+  ]
+}

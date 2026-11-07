@@ -25,23 +25,36 @@ ROOT = root()
 
 
 def fixture_dir(problem_id: str) -> Path:
-    base_root = root()
-    for base in (
-        base_root / "eval_or_bench" / "instances",
-        base_root / "fixtures" / "benchmarks",
-        base_root / "fixtures" / "t3",
-        base_root / "fixtures" / "t2",
-        base_root / "fixtures" / "t1",
-    ):
-        p = base / problem_id
-        if p.is_dir():
-            return p
-    raise FileNotFoundError(f"fixture not found for problem_id={problem_id} under {base_root}")
+    from orpath.paths import fixture_search_roots
+
+    roots = fixture_search_roots()
+    # 1. Search for custom uploaded inbox datasets
+    for base_root in roots:
+        cand = base_root / "inbox" / problem_id
+        if cand.is_dir():
+            return cand
+
+    # 2. Search standard fixtures
+    for base_root in roots:
+        for base in (
+            base_root / "eval_or_bench" / "instances",
+            base_root / "fixtures" / "benchmarks",
+            base_root / "fixtures" / "t3",
+            base_root / "fixtures" / "t2",
+            base_root / "fixtures" / "t1",
+        ):
+            p = base / problem_id
+            if p.is_dir():
+                return p
+    raise FileNotFoundError(f"fixture not found for problem_id={problem_id} under roots={roots}")
 
 
 def fixture_file(problem_id: str, name: str) -> Path:
     d = fixture_dir(problem_id)
     path = d / name
     if not path.is_file():
+        sub = d / "data" / name
+        if sub.is_file():
+            return sub
         raise FileNotFoundError(f"missing {name} under {d}")
     return path

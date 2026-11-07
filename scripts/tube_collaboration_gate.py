@@ -95,12 +95,6 @@ def main() -> int:
             "or-tube-redteam",
         }
         require(set(protocol.get("roles") or {}) == expected_roles, "six Tube roles declared")
-        for role in sorted(expected_roles):
-            path = ROOT / ".pi" / "agents" / f"{role}.md"
-            require(path.is_file(), f"agent exists: {role}")
-            text = path.read_text(encoding="utf-8")
-            require(f"name: {role}" in text[:300], f"agent frontmatter name: {role}")
-            require("Forbidden" in text, f"agent has forbidden boundary: {role}")
         rules = protocol.get("experiment_rules") or {}
         require(rules.get("changed_factors_per_card") == 1, "one-factor experiment rule")
         require(rules.get("failed_experiments_are_retained") is True, "failed experiments retained")

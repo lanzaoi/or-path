@@ -15,24 +15,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+try:
+    from tools.solve_dispatch import ADAPTER_SCRIPTS
+except ImportError:
+    from solve_dispatch import ADAPTER_SCRIPTS  # type: ignore
+
 STEER_SCHEMA_VERSION = 1
 STEER_FILENAME = "human-steer.json"  # under notes/ as notes/<slug>-human-steer.json
 
-ALLOWED_SOLVE_MODES = frozenset(
-    {
-        "mock",
-        "networkx",
-        "ortools",
-        "cpsat",
-        "highs",
-        "polyomino",
-        "polyomino_cover",
-        "poly",
-        "tube",
-        "tube_cut",
-        "tube_bfd",
-    }
-)
+ALLOWED_SOLVE_MODES = frozenset(ADAPTER_SCRIPTS.keys())
 
 # at_stage / resume_from → pause BEFORE this product node
 _PAUSE_BEFORE: dict[str, str] = {
@@ -44,7 +35,6 @@ _PAUSE_BEFORE: dict[str, str] = {
     "after_validate": "explain",
     "explain": "explain",
     "retrieve": "retrieve",
-    "bridge_pi": "bridge_pi",
 }
 
 # Keys that must never appear as editable number authority via steer
@@ -66,7 +56,6 @@ _NODE_ZH = {
     "intake_parse": "题面解析",
     "orchestrate": "编排",
     "retrieve": "检索",
-    "bridge_pi": "桥接",
     "research": "调研",
     "model": "建模",
     "gate_schema": "结构门禁",
@@ -697,6 +686,8 @@ def apply_steer_to_state(
                 f"steer_pause before {boundary} (at_stage={at_stage}); "
                 "clear lg.pause_next in human-steer.json then resume"
             )
+    elif not pause_next:
+        upd["steer_pause"] = False
 
     return upd
 

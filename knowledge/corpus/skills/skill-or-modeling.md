@@ -1,8 +1,8 @@
 # Skill export: or-modeling
 
 - kind: skill
-- source_path: .pi/skills/or-modeling/SKILL.md
-- note: RAG **copy** for Pi retrieve only; runtime skill loading still uses `.pi/skills/` (not this file).
+- source_path: knowledge/skills/or-modeling/SKILL.md
+- note: RAG **copy** for hybrid retrieve.
 
 ---
 

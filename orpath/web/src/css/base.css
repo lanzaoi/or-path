@@ -1,0 +1,314 @@
+:root {
+  /* Huashu Design Modern Palette (Slate / Zinc + Refined Accents) */
+  --bg: #f8fafc;
+  --ink: #0f172a;
+  --ink-80: #334155;
+  --ink-60: #475569;
+  --ink-48: #64748b;
+  --ink-36: #94a3b8;
+  --white: #ffffff;
+  --blue: #2563eb;
+  --blue-hover: #1d4ed8;
+  --blue-light: #eff6ff;
+  --link: #2563eb;
+  --ok: #10b981;
+  --ok-hover: #059669;
+  --ok-light: #ecfdf5;
+  --fail: #ef4444;
+  --fail-light: #fef2f2;
+  --warn: #f59e0b;
+  --warn-light: #fffbeb;
+  --blocked: #8b5cf6;
+  --blocked-light: #f5f3ff;
+  --run: #f59e0b;
+  --idle: #94a3b8;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+  --border: rgba(226, 232, 240, 0.85);
+  --border-strong: #cbd5e1;
+  --border-dark: rgba(255, 255, 255, 0.12);
+  --radius-xl: 18px;
+  --radius-lg: 14px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+  --pill: 9999px;
+  --font: system-ui, -apple-system, "Inter", BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --top-h: 52px;
+  --tool-h: 48px;
+  --panel: #ffffff;
+  --text: var(--ink);
+  --muted: var(--ink-48);
+  --accent: var(--blue);
+  --cosplay: var(--fail);
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 28px -4px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+button {
+  font-family: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, opacity 0.18s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* --- Layout Modes --- */
+
+/* 1. Studio Mode (智能做题工作舱): Flex 纵向流式容器，开启原生独立滚动 */
+body.mode-studio {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  background: #f8fafc;
+}
+
+body.mode-studio header.nav {
+  flex: 0 0 auto !important;
+}
+
+body.mode-studio #studioContainer {
+  display: block !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding: 28px 24px 120px 24px;
+  box-sizing: border-box;
+}
+
+body.mode-studio #inspectorContainer,
+body.mode-studio footer {
+  display: none !important;
+}
+
+/* 2. Inspector Mode (过程检视台): 8 行经典网格视图 */
+body.mode-inspector {
+  display: grid !important;
+  grid-template-rows: auto auto auto auto auto auto minmax(0, 1fr) auto !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+body.mode-inspector #studioContainer {
+  display: none !important;
+}
+
+body.mode-inspector #inspectorContainer {
+  display: contents !important;
+}
+
+body.mode-inspector footer {
+  display: flex !important;
+}
+
+/* Row 1: Brand Header Bar - Modern Dark Glassmorphism */
+header.nav {
+  grid-row: 1;
+  min-height: var(--top-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 20px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  z-index: 50;
+  overflow: hidden;
+}
+
+.nav-brand {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-brand .brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  font-size: 13px;
+}
+
+.nav-brand span {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 12.5px;
+  margin-left: 4px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+}
+
+/* Modern Mode Switcher Pills */
+.mode-toggle-group {
+  display: flex;
+  align-items: center;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--pill);
+  padding: 3px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.mode-btn {
+  padding: 5px 14px;
+  border-radius: var(--pill);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.mode-btn:hover {
+  color: #f1f5f9;
+}
+
+.mode-btn.on {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-left: auto;
+  align-items: center;
+  overflow-x: auto;
+  max-width: min(70vw, 900px);
+  scrollbar-width: none;
+}
+
+.badges::-webkit-scrollbar {
+  display: none;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--pill);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.badge.on {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.badge.off {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.badge.st-ok {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.badge.st-fail {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.badge.st-blocked {
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.18);
+}
+
+.badge.st-running {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.2);
+  animation: badgePulse 2s infinite ease-in-out;
+}
+
+@keyframes badgePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.82; transform: scale(0.98); }
+}
+
+.badge.st-idle, .badge.st-no_product_run {
+  color: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}

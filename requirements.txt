@@ -25,7 +25,9 @@ openpyxl>=3.1
 
 # --- optional OR engines (pulled; not default claim ladder) ---
 # pyvrp>=0.9
-# pyjobshop>=0.0.9
+pyjobshop>=0.0.9
 # ALNS>=7
 # vrplib
 # stockpyl  # heavy docs deps; install with --no-deps if needed
+# Gantt chart rendering for the JSSP/FJSSP industrial scheduling engine
+matplotlib>=3.8

@@ -76,44 +76,48 @@ class FTSIndex:
             conn.close()
 
     def add_chunks(self, chunks: Iterable[Chunk]) -> int:
+        chunk_list = list(chunks)
+        if not chunk_list:
+            return 0
         conn = self._connect()
         self.ensure_schema(conn)
-        n = 0
         try:
-            for ch in chunks:
-                conn.execute("DELETE FROM chunks_fts WHERE chunk_id = ?", (ch.chunk_id,))
-                conn.execute("DELETE FROM chunks_meta WHERE chunk_id = ?", (ch.chunk_id,))
-                conn.execute(
-                    """
-                    INSERT INTO chunks_fts(chunk_id, doc_id, source_path, title, text)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (
-                        ch.chunk_id,
-                        ch.doc_id,
-                        ch.source_path,
-                        ch.title or "",
-                        ch.text,
-                    ),
+            existing = {
+                r[0]
+                for r in conn.execute("SELECT chunk_id FROM chunks_meta").fetchall()
+            }
+            to_delete = [(ch.chunk_id,) for ch in chunk_list if ch.chunk_id in existing]
+            if to_delete:
+                conn.executemany("DELETE FROM chunks_fts WHERE chunk_id = ?", to_delete)
+                conn.executemany("DELETE FROM chunks_meta WHERE chunk_id = ?", to_delete)
+            rows = [
+                (
+                    ch.chunk_id,
+                    ch.doc_id,
+                    ch.source_path,
+                    ch.title or "",
+                    ch.text,
                 )
-                conn.execute(
-                    """
-                    INSERT INTO chunks_meta(chunk_id, doc_id, source_path, title, text)
-                    VALUES (?, ?, ?, ?, ?)
-                    """,
-                    (
-                        ch.chunk_id,
-                        ch.doc_id,
-                        ch.source_path,
-                        ch.title or "",
-                        ch.text,
-                    ),
-                )
-                n += 1
+                for ch in chunk_list
+            ]
+            conn.executemany(
+                """
+                INSERT INTO chunks_fts(chunk_id, doc_id, source_path, title, text)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                rows,
+            )
+            conn.executemany(
+                """
+                INSERT INTO chunks_meta(chunk_id, doc_id, source_path, title, text)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                rows,
+            )
             conn.commit()
         finally:
             conn.close()
-        return n
+        return len(chunk_list)
 
     def search(self, query: str, topk: int = 5) -> list[RetrievalHit]:
         if not self.db_path.is_file():

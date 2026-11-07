@@ -46,7 +46,7 @@
     "ok": true,
     "log": "outputs/.agents/test/model-lead-20260731T134916Z.log",
     "evidence": [
-      "L79: {\"type\":\"agent_end\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"You are the OR-Path **stage lead** for `model` (slug=`test`).\\nYou run inside Pi with the **subagent** tool from pi-subagents.\\n\\n## Hard l"
+      "L79: {\"type\":\"agent_end\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"You are the OR-Path **stage lead** for `model` (slug=`test`).\\n\\n## Hard l"
     ],
     "detail": "detect_subagent_calls",
     "source_slug": "test",

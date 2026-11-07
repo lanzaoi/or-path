@@ -1,188 +1,128 @@
-# OR-Path: 面向高端智能制造与复杂工业决策的自主运筹多智能体系统
+# OR-Path: 面向高端智能制造与复杂工程决策的运筹优化与智能工作台系统
 
-> **2026 智能体设计大赛参赛作品 · 赛道：AI + 工业制造 / 智能决策**  
-> **核心定位：** 融合「大模型认知推理」与「运筹优化物理硬约束」的工业级多智能体协同决策平台，攻克复杂工业制造排产、异形材料智能下料、柔性车间调度等高价值离散制造场景。
+> **核心定位：** 融合「大模型认知解析 + 本地知识库检索（RAG） + 硬核运筹求解器（MILP / CP-SAT / DP / MPC） + 独立物理与数学验证器」的工程级运筹优化平台，攻克空间异形管材激光下料、离散板材/芯片多目标排样、多车带时间窗路径调度、园区光储充微电网优化调度等复杂工程决策场景。
 
 [![Release](https://img.shields.io/badge/Release-v0.3.6-blue.svg)](https://github.com/lanzaoi/or-path/releases/tag/v0.3.6)
-[![Domain](https://img.shields.io/badge/Industry-AI%20%2B%20Smart%20Manufacturing-brightgreen.svg)]()
-[![Multi-Agent](https://img.shields.io/badge/Multi--Agent-12%20Industrial%20Roles-orange.svg)]()
-[![Industrial-Validation](https://img.shields.io/badge/Physical%20Checks-748%20Constraint%20Pass-success.svg)]()
+[![Domain](https://img.shields.io/badge/Industry-AI%20%2B%20Operations%20Research-brightgreen.svg)]()
+[![Validation](https://img.shields.io/badge/Numbers%20Truth-Independent%20Validator-success.svg)]()
 
 ---
 
-## 🏭 工业背景与行业痛点
-
-在现代高端离散制造（如汽车制造、船舶工程、航空航天构件、工程机械等）中，运筹优化与工业下料排产直接决定了企业的生产效率与原材料成本：
-
-| 传统工业排产痛点 | 纯大模型 AI 的局限 | **OR-Path 破局方案（AI + 工业运筹）** |
-|:---|:---|:---|
-| **物理约束极度繁杂**：空间几何干涉、焊缝避让、热变形补偿、共切工艺等人工建模极易遗漏 | **严重幻觉与黑盒**：大模型擅长写代码但无法保证数字精确性，易输出物理不可行的“废品方案” | **双轨闭环**：LLM 负责机理认知与约束抽象，底层 OR 求解器（MILP/CP-SAT/ALNS）确保物理可行 |
-| **定制开发周期长**：工艺参数或订单一变，整套数学规划模型需运筹专家推倒重写 | **缺乏车间级交互**：无法吸收一线工程师的工艺先验与突发调度要求 | **人在回路（HITL）**：支持 Dialogue Steer 对话式干预，工程师自然语言注入经验即可自适应重算 |
-| **工业决策黑盒化**：难以溯源排产原因，缺少学术与工程级严格质检链 | **缺乏端到端工程闭环**：仅停留在聊天界面，无法直连数控机床与工业派工单 | **透明看板与数字溯源**：提供实时过程看板（Live Watch）与学术级 Provenance 资产哈希溯源 |
-
----
-
-## 🌟 评委 / 工业专家 30 秒开箱即用体验
-
-压缩包已内置完整的工业离线运行时与真实制造案例演示种子，**解压即可直接体验**，无需预先配置 API Key。
+## 🌟 30 秒开箱即用体验
 
 ```bat
-:: 1. 工业全链路环境与求解器健康诊断
+:: 1. 全链路环境与运筹求解器健康诊断
 orpath.bat doctor
 
-:: 2. 一键启动工业多智能体实时协同可视化看板（Live Watch）
-START-WATCH.bat
-:: 或命令行：orpath.bat watch --slug live-btube
+:: 2. ⚡ 一键启动智能做题工作舱与实时过程看板（拖拽题面、深度研判、求解验算一站式完成）
+START.bat
+:: Linux / macOS / WSL 环境：./START.sh
 
-:: 3. 运行 M0 工业运筹全自动多智能体演示链路
-orpath.bat demo-m0
+:: 3. 运行核心运筹与验证器测试套件
+pytest tools/ -v
 ```
 
-| 双击入口 | 工业功能说明 | 适用场景 |
-|:---|:---|:---|
-| **`START-WATCH.bat`** | **车间过程看板**（Live Watch）：浏览器实时流式呈现 12 个工业 Agent 的思考链、工具调用、排产甘特流转与状态数据 | 工业现场大屏、评审演示 |
-| **`START-CASE.bat`** | **工业案例向导**（路径 A）：输入工单/题面（PDF/图纸），自动完成工艺解析、多 Agent 求解并导出结果 Excel 与工艺报告 | 实际工业案例端到端处理 |
-| **`START-ORPATH.bat`** | **综合控制台**：聚合多问题 Benchmark、诊断与 Watch 快捷操作 | 快速命令执行 |
-
-> 📌 **看板访问**：浏览器自动打开 `http://127.0.0.1:8765`（支持 1s 毫秒级轮询与流式增量同步）；退出按 `Ctrl+C`。
+| 统一入口 | 功能说明 |
+|:---|:---|
+| **`START.bat`** / **`START.sh`** | **智能做题工作舱与过程大屏（Web Studio & Live Watch）**：一键启动并打开浏览器（`http://127.0.0.1:8765`），支持题面文件夹拖拽导入、多视角智能研判、交互式反问确认、底层求解器调用与结果报告下载 |
+| **`orpath.bat`** / **`orpath.sh`** | **命令行主控入口**：支持运行 `doctor` 健康检查、`tube-solve` 异形圆管下料求解、`demo-m0` 基准演示及各项自动化验证门禁 |
 
 ---
 
-## 🤖 12 专业化工业多智能体角色矩阵
+## 💎 四大核心工程资产
 
-系统在 `.pi/agents/` 中定义了 12 个职责严密隔离、具备独立工业领域契约的专业化 Agent：
+### 1. 统一启动入口与 Web Studio 智能工作台 (`START.bat`, `START.sh`, `orpath/web/`, `orpath/studio_analyzer.py`)
+- **原生直连大模型与本地向量检索**：直接读取 `.env` 中的讯飞星火（`spark-x2.6`）或 DeepSeek API Key，结合本地 ONNX `bge-m3` 语义向量模型与 SQLite FTS5 混合检索（`knowledge_svc/`），无需任何外部 Node CLI 包装层。
+- **全流程可视化交互**：集成了题面 OCR/文本解析、三路并行认知探针（结构拆解、方法选型、形式化建模）、工程师人在回路（Dialogue Steer）参数干预，以及毫秒级响应的实时过程台（`Live Watch`）。
 
-```mermaid
-graph TD
-    User([工业工程师 / 评委 / 人在回路]) <--> Orch[or-orchestrator 工业主控编排 Agent]
-    
-    subgraph 工业机理与认知轨
-        Orch --> Res[or-researcher 制造机理与工艺调研 Agent]
-        Orch --> Geo[or-tube-geometry 空间三维几何与展开 Agent]
-    end
+### 2. 硬核运筹求解算法库 (`tools/` & `scripts/`)
+所有优化计算均由纯正、可复现的运筹规划算法与精确/启发式求解器完成：
+- **异形圆管三维空间展开与共切动态规划**（`scripts/b_tube_solve.py`, `scripts/b_tube_geometry.py`, `tools/solve_tube_cut_b2026.py`, `tools/tube_optimization.py`）：
+  - 处理 3D 空间异形圆管端面相贯线展开、内外焊缝禁忌角度避让、轴向旋转角度离散化匹配；
+  - 支持定长组合下料（Q1/Q2）、四模式激光共线共切动态规划（Q3）及跨批次余料结转排产（Q4），材料利用率达 **99.06%–99.74%**。
+- **多联骨牌精确覆盖与芯片多目标布局优化**（`tools/solve_polyomino.py`, `tools/solve_polyomino_q3.py`）：
+  - 基于 OR-Tools CP-SAT 求解二维网格精确覆盖与无重叠排样；
+  - 支持多目标芯片/拼板布局优化（最小化采购成本、最大化共享切割边长以降低激光切割热损伤）。
+- **园区光储充微电网多时段线性规划与滚动 MPC 控制**（`tools/solve_microgrid.py`, `tools/microgrid_reporting.py`）：
+  - 基于 SciPy HiGHS 构建 96 时段（15 分钟粒度）日前光储充协同调度线性规划模型（分时电价套利、需量电费削峰、储能充放电损耗与寿命折旧、有序充电激励）；
+  - 内置日内滚动时域模型预测控制（Rolling-Horizon MPC），平抑光伏出力与负荷预测误差，并自动生成全套调度数据报表与高分辨率分析图表。
+- **经典图论与车辆路径规划引擎**（`tools/solve_ortools.py`, `tools/solve_highs.py`, `tools/solve_networkx.py`）：
+  - 覆盖网络流最短路（Shortest Path）、旅行商问题（TSP）、带容量限制车辆路径问题（CVRP）及带硬时间窗准时制配送问题（VRPTW）。
+- **作业车间调度 JSSP / 柔性作业车间调度 FJSSP 工业引擎**（`tools/solve_jssp.py`）：
+  - 基于 PyJobShop（CP-SAT）工业级调度引擎，内置 **Taillard 基准算例库**（JSSP：ft/la/abz/orb/swv/yn/ta 共 67 例；FJSSP：kacem/mk/abz 变体/Dauzère-Pérès/Chambers-Barnes 等 407 例），均附带 JSPLib 已知最优值作为参考基准；
+  - 支持 **工序换模时延**（sequence-dependent setup time）：均匀换模时间或按操作对的显式换模矩阵；
+  - 支持 **甘特图生成**（每台机床一行，输出 PNG），并输出机床利用率、总流程时间、换模总时延等指标；
+  - 严格遵循 Numbers Truth：目标值与排产方案均来自求解器，已知最优值仅作 gap 参照，绝不冒充求解结果。
 
-    subgraph 工业建模与排产求解轨
-        Orch --> Mod[or-modeler 工业约束抽象与建模 Agent]
-        Mod --> Q12[or-tube-q1q2 定长下料基准求解 Agent]
-        Mod --> Q3[or-tube-q3 激光共线共切优化 Agent]
-        Mod --> Q4[or-tube-q4 多批次动态混合排产 Agent]
-    end
+### 3. 独立物理与数学验证器 (`tools/validate_solution.py` & `tools/validators/`)
+- **坚守 Numbers Truth 铁律**：大模型绝不直接编造最优目标值或排产方案。
+- **零信任独立重算**：验证器与求解器完全解耦，直接从原始算例输入数据出发，对每一份 `*-solution.json` 执行独立的物理可行性与目标函数重算（包括圆管 748 项空间几何与焊缝干涉硬约束检验、骨牌网格覆盖无重叠检验、微电网功率平衡与 SOC 边界检验、VRP 容量与时间窗检验）。
 
-    subgraph 工业质检与红队对抗轨
-        Orch --> Ver[or-verifier 车间级 748 项物理约束质检 Agent]
-        Orch --> Red[or-tube-redteam 极端工况与边界对抗 Agent]
-    end
-
-    subgraph 制造技术报告与规范轨
-        Orch --> Wri[or-writer 工业技术报告与排产方案 Agent]
-        Orch --> Rev[or-reviewer 工艺合规与断言审查 Agent]
-    end
-
-    Ver --> Gate{748 项车间硬约束质检}
-    Gate -- 校验通过 --> Ledger[工业派工单 / 结果 Excel / 溯源账本]
-    Gate -- 发现干涉/超限 --> User
-```
-
-| 工业 Agent 角色 | 配置文件 | 工业场景核心职责 |
-|:---|:---|:---|
-| **工业主控编排者** | `or-orchestrator.md` | 工业流水线全生命周期调度、工单状态流转、子智能体协同分发与异常重试 |
-| **空间几何专家** | `or-tube-geometry.md` | 3D 异形截面数学展开、空间相贯线计算、内焊缝避让与自相交干涉算法 |
-| **制造机理调研者** | `or-researcher.md` | 工业制造标准检索、工艺白皮书解析、算法选型论证（MILP vs CP-SAT vs ALNS） |
-| **工业数学建模者** | `or-modeler.md` | 车间约束形式化抽象、目标函数构建（原材料损耗最小化、机床刀具切换次数最少化） |
-| **车间级真实验证者** | `or-verifier.md` | **748 项严苛物理与几何约束检验**，杜绝大模型数字幻觉导致机床撞刀或废品 |
-| **工业红队对抗者** | `or-tube-redteam.md` | 注入极端残料扰动、突发尺寸突变、边界死锁攻击，确保排产算法工业级鲁棒性 |
-| **下料排产专家组** | `or-tube-q1q2/q3/q4.md` | 攻克定长组合下料、共线共切材料节约优化、多批次多约束动态混合排产 |
-| **工业报告撰写者** | `or-writer.md` | 自动生成标准化技术报告、工艺参数说明、排产甘特表与数控下料派工单 |
-| **工艺规范审查者** | `or-reviewer.md` | 审查方案合规性，严格拦截未经证明的虚假最优声称（Claim Ledger） |
+### 4. 核心业务案例验证与 Pytest 单元测试 (`tools/test_*.py` & `scripts/*_gate.py`)
+- 配备完善的单元测试与端到端门禁：
+  - `tools/test_tube_optimization.py`：三维圆管母材分配、模式匹配与共切优化单元测试
+  - `tools/test_microgrid_optimization.py`：园区微电网日前规划、敏感性分析与 MPC 滚动控制测试
+  - `tools/test_polyomino_q3.py` & `tools/test_solvers_t2.py`：骨牌排样、最短路、TSP、VRP 求解与独立验证器测试
+  - `scripts/problem_workbench_gate.py` & `scripts/v0_watch_gate.py`：Web Studio 工作台与过程看板契约门禁
 
 ---
 
-## 💡 5 大核心工业技术创新特色
-
-### 1. 「AI 大模型认知 + 运筹优化物理硬约束」双轨闭环
-传统方法要么是纯大模型的“黑盒胡说”，要么是纯运筹的“僵化难用”。OR-Path 建立双轨闭环：
-- **认知层（大模型）**：负责工单图纸理解、约束解析、算法选型与自愈重试策略生成；
-- **执行层（精确求解器）**：负责底层高维度矩阵运算，所有数字结果均由 OR-Tools / HiGHS / CP-SAT 等真机求解器产出，100% 满足物理定律。
-
-### 2. 真实工业级复杂下料场景攻克（异形圆管激光智能共切）
-- 突破工业界极具挑战的**空间异形圆管旋转切割下料问题**（含旋转自由度、内外焊缝禁忌区、端面倾角、共线共切协同）；
-- **748 项几何硬约束全部通过校验**，材料利用率高达 **99.74%**（Q2）与 **99.06%**（Q1），大幅降低千万级工业原材料浪费，超越传统人工排样水平。
-
-### 3. 透明化工业过程看板（Live Watch Digital Dashboard）
-- 拒绝传统工业软件的“黑盒黑屏”，提供现代化工业数字看板；
-- 毫秒级流式展现多智能体思考过程（Thinking）、调度拓扑、算法调优迭代计数（Solver Tune）与质检状态。
-
-### 4. 人在回路与工艺经验动态注入（Dialogue Steer & HITL）
-- 针对车间突发插单、设备临时检修或工程师工艺偏好，支持通过自然语言进行 **Dialogue Steer 人机协同干预**；
-- 智能体系统无缝调整数学模型边界条件并自动回退重算，实现“老师傅经验”与“AI 智能算法”的深度融合。
-
-### 5. 工业数字孪生与学术级可信溯源（Provenance & Claim Ledger）
-- 建立从「原始工单 $\rightarrow$ 几何模型 $\rightarrow$ 求解序列 $\rightarrow$ 质检报告 $\rightarrow$ 派工单」的全链条 SHA-256 哈希指纹；
-- 配备声称账本（Claim Ledger），杜绝未经证明的全局最优虚假宣传，保障工业交付的绝对严谨可信。
-
----
-
-## 📊 典型工业制造应用场景矩阵
-
-| 工业应用领域 | 代表性问题 | 智能体应用机制 | 工业交付产物 |
-|:---|:---|:---|:---|
-| **高端构件智能下料** | 异形截面圆管切割 | 空间展开 + 共切优化 + 748 项几何质检 | `result1~4.xlsx`、数控下料排产单 |
-| **智能物流与车间配送** | 多车辆带时间窗调度 (VRP-TW) | 载重平衡 + 时间窗惩罚 + 容量约束 | 车辆行车路径图、配送时间序列表 |
-| **柔性制造单元工序调度** | 经典旅行商与最短路 (TSP/SP) | 网络流建模 + 动态规划 + 拓扑优化 | 最小化换刀路径、工序调度甘特图 |
-
----
-
-## 📂 项目结构与工业工程规范
+## 📂 项目结构
 
 ```text
 OR-Path/
-├── .pi/agents/          # 12 个工业领域智能体 Prompt 契约与角色定义
-├── orpath/              # 工业多智能体内核（17 阶段状态机、Watch 过程脸、控制面）
-│   ├── web/watch.html   # 车间实时过程看板前端
-│   ├── nodes.py         # 确定性 17 阶段工业状态机
-│   └── watch_snapshot.py# 零 LLM 依赖的高性能车间状态聚合引擎
-├── tools/               # 工业级工具库（精确求解器、3D 展开算法、748 项约束质检）
-│   ├── solve_tube_cut_b2026.py   # 圆管切割多阶段混合运筹求解器
-│   ├── validate_solution.py      # 物理与空间几何严格约束检验器
-│   └── solve_dispatch.py         # 多引擎（OR-Tools/HiGHS/CP-SAT/ALNS）智能分发
-├── specs/               # 工业系统设计规范（SDD）与智能体协作协议
-├── scripts/             # 工业全自动门禁系统、打包与持续集成工具
-├── demo/seed/           # 内置真实工业案例演示种子（圆管制造 live-btube / 基础运筹 m0）
-├── START-WATCH.bat      # 过程看板一键启动脚本
-├── START-CASE.bat       # 案例交互式向导（指定工单目录一键求解）
-└── orpath.bat           # 统一工业命令行控制入口
+├── START.bat / START.sh            # 智能做题工作舱与 Live Watch 统一启动入口
+├── orpath.bat / orpath.sh          # 命令行控制与门禁运行入口
+├── orpath/                         # 核心控制面与 Web Studio 服务
+│   ├── web/                        # Web Studio 与实时过程看板前端源码及构建产物 (watch.html)
+│   ├── studio_analyzer.py          # 原生大模型多视角题面研判引擎 (Spark X2.6 / DeepSeek + 本地 RAG)
+│   ├── graph_product.py            # 16 节点确定性 LangGraph 运筹工作流状态机
+│   ├── pipeline/                   # 审题 (intake)、检索调研 (research)、建模求解 (solve)、报告生成 (paper)
+│   └── watch_snapshot.py           # 零 LLM 依赖的高性能工作台状态聚合引擎
+├── tools/                          # 硬核运筹求解器与独立物理/数学验证器
+│   ├── solve_ortools.py            # OR-Tools 路由与组合优化求解器 (TSP / CVRP / VRPTW)
+│   ├── solve_highs.py              # HiGHS 混合整数线性规划 (MILP) 求解器
+│   ├── solve_networkx.py           # NetworkX 图论与最短路精确求解器
+│   ├── solve_polyomino.py          # CP-SAT 多联骨牌二维精确覆盖求解器
+│   ├── solve_polyomino_q3.py       # 芯片/板材多目标排样与共边最大化求解器
+│   ├── solve_tube_cut_b2026.py     # 异形圆管激光下料多阶段运筹求解器
+│   ├── tube_optimization.py        # 圆管下料动态规划与启发式核心算法库
+│   ├── solve_microgrid.py          # 园区光储充微电网日前 LP 与日内滚动 MPC 求解器
+│   ├── microgrid_reporting.py      # 微电网多维工程报表与图表生成工具
+│   ├── solve_jssp.py               # JSSP/FJSSP 工业调度引擎 (Taillard 基准 + 换模时延 + 甘特图)
+│   ├── validate_solution.py        # 独立物理与数学验证器主入口
+│   └── validators/                 # 各领域独立重算验证器 (routing / polyomino / tube / microgrid)
+├── scripts/                        # 核心业务求解脚本 (b_tube_solve.py 等) 与自动化门禁
+├── knowledge/ & knowledge_svc/     # 本地运筹学知识库 (BM25 + ONNX bge-m3 混合检索)
+├── fixtures/ & demo/seed/          # 标准测试算例与开箱即用演示种子 (live-btube / m0)
+└── specs/ & docs/                  # 系统设计规范 (SDD) 与架构文档
 ```
 
 ---
 
-## 🛠️ 工业级质量保证与全自动化门禁体系
+## 🛠️ 质量验证与测试命令
 
-项目配备了工业级的严苛门禁（Gate）体系，确保代码与模型在车间现场的高可靠性：
-
-```bat
-:: 1. 全量单元与工业工具测试（87/87 100% 通过）
+```bash
+# 1. 运行全量运筹求解器与验证器单元测试
 pytest tools/ -v
 
-:: 2. 工业多智能体协同协议与账本门禁
-python scripts/tube_collaboration_gate.py
+# 2. 环境与核心资产健康检查
+python scripts/orpath_doctor.py
 
-:: 3. 几何稳定性与极端工况对抗门禁
-python scripts/tube_geometry_stability_gate.py
-python scripts/tube_redteam_gate.py
-
-:: 4. 实时车间看板与文档契约门禁
+# 3. Web Studio 工作台与看板门禁验证
+python scripts/problem_workbench_gate.py
 python scripts/v0_watch_gate.py
 
-:: 5. 制造技术报告与学术证据链门禁
-python scripts/paper_gate.py
+# 4. 异形圆管几何稳定性、协同账本与红队边界门禁
+python scripts/tube_geometry_stability_gate.py
+python scripts/tube_collaboration_gate.py
+python scripts/tube_redteam_gate.py
 ```
 
 ---
 
-## 📋 提交与运行环境说明
+## 📋 运行环境说明
 
-- **系统平台**：Windows 10 / 11 (x64)
-- **核心依赖**：Python 3.10+、Node.js 22+ (Pi 工业运行时已内置)
-- **开源协议**：MIT License
-- **GitHub 仓库**：[https://github.com/lanzaoi/or-path](https://github.com/lanzaoi/or-path)
-- **最新 Release**：[Release v0.3.6](https://github.com/lanzaoi/or-path/releases/tag/v0.3.6)
+- **操作系统**：Windows 10 / 11 (x64)、Linux、macOS 或 WSL2
+- **核心依赖**：Python 3.10+（详见 `requirements.txt`：OR-Tools、SciPy/HiGHS、NetworkX、NumPy、Pandas、LangGraph 等）
+- **大模型配置（可选）**：复制 `.env.example` 为 `.env`，填入 `XFYUN_API_KEY`（讯飞星火 `spark-x2.6`）或 `DEEPSEEK_API_KEY` 即可启用 Web Studio 智能审题与交互式建模分析；底层运筹求解器与独立验证器支持完全离线运行。

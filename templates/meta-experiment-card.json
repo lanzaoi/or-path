@@ -1,0 +1,29 @@
+{
+  "schema": "orpath.meta_experiment_card.v1",
+  "id": "meta-YYYYMMDD-domain-001",
+  "domain": "<or-domain>",
+  "status": "PROPOSED",
+  "owner_agent": "or-<domain>-agent",
+  "changed_factor": {
+    "name": "<factor_name>",
+    "baseline": "<baseline_value>",
+    "candidate": "<candidate_value>"
+  },
+  "baseline_artifact": "outputs/<or-domain>/baseline.json",
+  "frozen_factors": [
+    "input_sha256",
+    "objective_order",
+    "units"
+  ],
+  "acceptance": {
+    "hard_gates": [
+      "strict_validate",
+      "independent_recompute"
+    ],
+    "primary": "<measurable primary criterion>",
+    "secondary": "<measurable secondary criterion>",
+    "stop": "<stopping rule fixed before the run>"
+  },
+  "output_path": "outputs/<or-domain>/meta-YYYYMMDD-domain-001.json",
+  "timeout_sec": 600
+}

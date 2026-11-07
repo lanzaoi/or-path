@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import re
 import shutil
 import subprocess
@@ -13,7 +14,6 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PI_REL = "runtime/node_modules/@earendil-works/pi-coding-agent/dist/cli.js"
 
 
 def sha256(path: Path) -> str:
@@ -62,7 +62,8 @@ def main(argv: list[str] | None = None) -> int:
     banned_hits: list[str] = []
     required = [
         "orpath.bat",
-        PI_REL.replace("\\", "/"),
+        "START.bat",
+        "tools/validate_solution.py",
         "demo/seed/live-btube/outputs/live-btube-solution.json",
         "demo/seed/m0/outputs/m0-solution.json",
         "scripts/bootstrap_orpath.py",
@@ -81,13 +82,11 @@ def main(argv: list[str] | None = None) -> int:
             for r in required:
                 if n.replace("\\", "/").endswith(r) or n.replace("\\", "/").endswith(r.replace("/", "\\")):
                     found[r] = True
-                # zip has top folder prefix
                 if n.replace("\\", "/").endswith("/" + r):
                     found[r] = True
 
         for r, ok in found.items():
             if not ok:
-                # softer match
                 if any(r in x.replace("\\", "/") for x in names):
                     found[r] = True
                     print(f"OK contains …{r}")
@@ -127,9 +126,7 @@ def main(argv: list[str] | None = None) -> int:
             tops = list((td_path / "x").iterdir()) if (td_path / "x").is_dir() else []
             root = tops[0] if tops else td_path
         print(f"==> bundle root {root}")
-        # Prefer system/venv python for bootstrap
         py = sys.executable
-        import os
 
         env = {
             **os.environ,
@@ -139,14 +136,13 @@ def main(argv: list[str] | None = None) -> int:
             "PYTHONHOME": "",
             "PYTHONNOUSERSITE": "1",
         }
-        print("==> bootstrap --skip-npm (node_modules prefilled)")
+        print("==> bootstrap")
         boot_py = py
         candidates: list[str] = []
         for which_name in ("python3.12", "python3.11", "python3", "python"):
             w = shutil.which(which_name)
             if w:
                 candidates.append(w)
-        # Common Windows install locations
         local = os.environ.get("LOCALAPPDATA", "")
         pf = os.environ.get("ProgramFiles", r"C:\Program Files")
         for base in filter(None, [local, pf, os.environ.get("USERPROFILE", "")]):
@@ -160,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
         for cand in candidates:
             try:
                 chk = subprocess.run(
-                    [cand, "-c", "import sys; v=sys.version_info; raise SystemExit(0 if (3,11)<=(v[0],v[1])<(3,14) else 1)"],
+                    [cand, "-c", "import sys; v=sys.version_info; raise SystemExit(0 if (3,10)<=(v[0],v[1])<(3,14) else 1)"],
                     capture_output=True,
                 )
                 if chk.returncode == 0:
@@ -170,7 +166,7 @@ def main(argv: list[str] | None = None) -> int:
                 continue
         print(f"  bootstrap python: {boot_py}")
         r = subprocess.run(
-            [boot_py, str(root / "scripts" / "bootstrap_orpath.py"), "--skip-npm", "--python", boot_py],
+            [boot_py, str(root / "scripts" / "bootstrap_orpath.py"), "--python", boot_py],
             cwd=str(root),
             env=env,
         )
@@ -178,7 +174,11 @@ def main(argv: list[str] | None = None) -> int:
             print("FAIL bootstrap")
             return 1
         # doctor via venv if created
-        vpy = root / ".venv-314" / "Scripts" / "python.exe"
+        vpy = root / ".venv" / "Scripts" / "python.exe"
+        if not vpy.is_file():
+            vpy = root / ".venv" / "bin" / "python"
+        if not vpy.is_file():
+            vpy = root / ".venv-314" / "Scripts" / "python.exe"
         if not vpy.is_file():
             vpy = root / ".venv-314" / "bin" / "python"
         dpy = str(vpy if vpy.is_file() else py)

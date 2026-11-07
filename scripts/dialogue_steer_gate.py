@@ -149,8 +149,7 @@ def test_watch_api_strings() -> None:
 
 
 def test_d2_apply_merge() -> None:
-    """D2: solve_mode override + Pi block + pause boundary."""
-    from orpath.graph_live_subagent import _research_steer_section
+    """D2: solve_mode override + steer block + pause boundary."""
     from orpath.human_steer import (
         apply_steer_to_state,
         format_pi_steer_block,
@@ -198,10 +197,7 @@ def test_d2_apply_merge() -> None:
         block = format_pi_steer_block(merged)
         if "dual proof" not in block or "prefer_methods" not in block:
             _fail(f"pi block weak: {block!r}")
-        sec = _research_steer_section(merged)
-        if "Human steer" not in sec or "dual proof" not in sec:
-            _fail(f"research section weak: {sec!r}")
-        _ok("D2 Pi prompt injection")
+        _ok("D2 steer prompt injection")
 
         # pause before model when at_stage=after_research
         pause = apply_steer_to_state(merged, workdir=wd, boundary="model")
@@ -270,17 +266,10 @@ def test_d3_tier2_deep_link() -> None:
     for rel in (
         "docs/d3-tier2-deep-link.md",
         "docs/p4-tier2-deep-look.md",
-        ".pi/SUPERVISOR.md",
-        ".pi/settings.json",
     ):
         if not (ROOT / rel).is_file():
             _fail(f"missing {rel}")
-    settings = json.loads((ROOT / ".pi" / "settings.json").read_text(encoding="utf-8"))
-    pkgs = " ".join(str(x) for x in (settings.get("packages") or []))
-    for need in ("pi-kanban", "pi-supervisor"):
-        if need not in pkgs:
-            _fail(f".pi/settings.json packages missing {need}: {pkgs}")
-    _ok("D3 packages + docs on disk")
+    _ok("D3 docs on disk")
 
     from orpath.watch_snapshot import build_snapshot, discover_pi_sessions
 

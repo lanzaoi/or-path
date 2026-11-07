@@ -37,7 +37,7 @@ irm https://github.com/lanzaoi/or-path/releases/download/v0.2.0/install.ps1 | ie
 
 cd $env:LOCALAPPDATA\Programs\orpath
 orpath.bat doctor
-START-WATCH.bat
+START.bat
 ```
 
 ### 1.2 开发者（L1 · git）
@@ -47,7 +47,7 @@ git clone https://github.com/lanzaoi/or-path.git
 cd or-path
 orpath.bat setup
 orpath.bat doctor
-START-WATCH.bat
+START.bat
 ```
 
 | 依赖 | 说明 |
@@ -61,36 +61,25 @@ START-WATCH.bat
 
 ---
 
-## 2. 三分钟上手（只看脸）
+## 2. 三分钟上手（一键启动智能工作舱）
 
 1. `orpath.bat doctor` 应大体 PASS  
-2. 双击 **`START-WATCH.bat`**  
-3. 浏览器打开 Watch（默认 seed **`live-btube`** 回放）  
-4. 顶栏可见阶段；**这是回放，不是现场重算竞赛**  
+2. 双击 **`START.bat`**（Linux / WSL 终端执行 `./START.sh`；历史 `START-*.bat` 也会自动转发至此）  
+3. 浏览器自动打开智能工作舱（默认加载经典回放与待做题工作台）  
+4. 在网页端即可直接拖拽文件题面、发起研判分析与求解，无需命令行黑窗选数字  
 5. 结束：黑窗 **Ctrl+C**；页面旧了 **Ctrl+F5**
 
 ---
 
-## 3. 路径 A：用自己的题（主路径）
+## 3. 路径 A：做自己的题（Web 端拖拽一站式）
 
-### 3.1 准备案例目录
+### 3.1 极简方式（网页端拖拽）
+1. 双击 **`START.bat`** 启动工作舱。
+2. 将题面文件夹、CSV 数据表格或 MD 文件直接拖入网页中央的虚线拖拽区。
+3. 输入任务名称（Slug）并点击「🚀 启动全流程分析研判」。
+4. 根据系统针对题面提出的关键反问选择算法配置，确认后即可由物理求解器输出最优数值并一键下载成果。
 
-```text
-D:\orpath-cases\my1\
-  inbox\          ← 题面 PDF/图（可选）
-  attachments\    ← 解压后的附件（可选）
-  （跑完后自动有）outputs\  runs\  notes\  papers\
-```
-
-### 3.2 双击 START-CASE
-
-1. 选 **2 新跑**（或 **1 只看脸**）  
-2. 粘贴案例目录路径（**不要加引号**）  
-3. 输入 slug（如 `my1`）  
-4. 可选题面文件  
-5. LIVE：**先 N**（稳、快）；要真多 Agent 再 **y**（慢、耗 key）
-
-### 3.3 命令行等价
+### 3.2 传统终端方式（备选）
 
 ```bat
 :: 快速 no-live（确定性 model + 域 adapter）

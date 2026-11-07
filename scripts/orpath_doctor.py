@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""OR-Path doctor: relocatable install health check (fail closed on multi-agent)."""
+"""OR-Path doctor: core OR solver + validator + Web Studio health check."""
 from __future__ import annotations
 
-import json
 import os
 import re
-import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -14,26 +11,9 @@ ROOT_HINT = Path(__file__).resolve().parents[1]
 if str(ROOT_HINT) not in sys.path:
     sys.path.insert(0, str(ROOT_HINT))
 
-from orpath.paths import agents_dir, orpath_home, orpath_workdir, pi_settings_path  # noqa: E402
+from orpath.paths import orpath_home, orpath_workdir  # noqa: E402
 
-REQUIRED_AGENTS = [
-    "or-orchestrator.md",
-    "or-researcher.md",
-    "or-modeler.md",
-    "or-writer.md",
-    "or-verifier.md",
-    "or-reviewer.md",
-    "or-tube-lead.md",
-    "or-tube-geometry.md",
-    "or-tube-q1q2.md",
-    "or-tube-q3.md",
-    "or-tube-q4.md",
-    "or-tube-redteam.md",
-]
-
-MIN_PY = (3, 11)
-MIN_NODE = (22, 19, 0)
-PI_CLI = Path("runtime/node_modules/@earendil-works/pi-coding-agent/dist/cli.js")
+MIN_PY = (3, 10)
 
 
 def _ok(msg: str) -> None:
@@ -50,30 +30,7 @@ def _warn(msg: str) -> None:
 
 def _hint_setup() -> None:
     print("  HINT fix: orpath.bat setup   (or: python scripts/bootstrap_orpath.py)")
-    print("  HINT npm:  cd runtime && npm ci")
-    print("  HINT pip:  .venv-314\\Scripts\\pip install -r requirements.txt")
-
-
-def _node_path() -> tuple[str | None, bool]:
-    node = shutil.which("node")
-    if node:
-        return node, True
-    if os.name == "nt":
-        program_files = Path(os.environ.get("ProgramFiles", r"C:\Program Files"))
-        fallback = program_files / "nodejs" / "node.exe"
-        if fallback.is_file():
-            return str(fallback), False
-    return None, False
-
-
-def _node_ver(node: str | None) -> tuple[int, ...] | None:
-    if not node:
-        return None
-    r = subprocess.run([node, "-p", "process.versions.node"], capture_output=True, text=True)
-    m = re.match(r"v?(\d+)\.(\d+)\.(\d+)", (r.stdout or "").strip())
-    if not m:
-        return None
-    return tuple(int(x) for x in m.groups())
+    print("  HINT pip: .venv/bin/pip install -r requirements.txt")
 
 
 def main() -> int:
@@ -102,6 +59,7 @@ def main() -> int:
         "langgraph",
         "langgraph.checkpoint.sqlite",
         "ortools",
+        "highspy",
         "networkx",
         "pydantic",
         "numpy",
@@ -116,41 +74,23 @@ def main() -> int:
             errors.append(f"import:{mod}")
             _hint_setup()
 
-    # node
-    node, node_from_path = _node_path()
-    nv = _node_ver(node)
-    pi_ok = (home / PI_CLI).is_file()
-    if nv is None:
-        if pi_ok:
-            _warn("node not on PATH (ok if Pi runtime already installed)")
-            warnings.append("node")
-        else:
-            _bad("node not on PATH — need Node >= 22.19 to npm install Pi")
-            errors.append("node")
-            _hint_setup()
-    elif nv < MIN_NODE:
-        msg = f"Node >= {'.'.join(map(str, MIN_NODE))} recommended, got {'.'.join(map(str, nv))}"
-        if pi_ok:
-            _warn(msg + " (Pi CLI present)")
-            warnings.append("node_version")
-        else:
-            _bad(msg)
-            errors.append("node_version")
-    else:
-        _ok(f"node {'.'.join(map(str, nv))} ({node})")
-        if not node_from_path:
-            _warn("Node is installed and system PATH is configured, but this process has a stale PATH snapshot; reopen the terminal/app")
-            warnings.append("node_path_snapshot")
-
-    # layout
+    # core assets layout (solvers, validators, Web Studio, launchers)
     for rel in (
-        "tools/solve_mock.py",
+        "START.bat",
+        "START.sh",
+        "tools/solve_ortools.py",
+        "tools/solve_highs.py",
+        "tools/solve_networkx.py",
+        "tools/solve_polyomino.py",
+        "tools/solve_polyomino_q3.py",
+        "tools/solve_tube_cut_b2026.py",
+        "tools/tube_optimization.py",
+        "tools/solve_microgrid.py",
+        "tools/microgrid_reporting.py",
         "tools/validate_solution.py",
-        "orpath/run_t2.py",
-        "scripts/t2_gate.py",
-        "scripts/t2_multiagent_isolation.py",
-        str(PI_CLI).replace("\\", "/"),
-        "pi.bat",
+        "scripts/b_tube_solve.py",
+        "scripts/b_tube_geometry.py",
+        "orpath/studio_analyzer.py",
         "orpath/watch_snapshot.py",
         "scripts/orpath_watch.py",
         "orpath/web/watch.html",
@@ -163,40 +103,6 @@ def main() -> int:
         else:
             _bad(f"missing {rel}")
             errors.append(rel)
-            if "pi-coding-agent" in rel or rel.endswith("cli.js"):
-                _hint_setup()
-
-    # agents
-    ad = agents_dir(home)
-    if not ad.is_dir():
-        _bad(f"missing agents dir {ad}")
-        errors.append("agents_dir")
-    else:
-        for name in REQUIRED_AGENTS:
-            if (ad / name).is_file():
-                _ok(f".pi/agents/{name}")
-            else:
-                _bad(f"missing .pi/agents/{name}")
-                errors.append(name)
-
-    # settings packages
-    sp = pi_settings_path(home)
-    if not sp.is_file():
-        _bad(f"missing {sp}")
-        errors.append("settings")
-    else:
-        try:
-            data = json.loads(sp.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            _bad(f"settings JSON: {exc}")
-            errors.append("settings_json")
-            data = {}
-        pkgs = [str(x) for x in (data.get("packages") or [])]
-        if any("pi-subagents" in x for x in pkgs):
-            _ok(f"packages include pi-subagents ({pkgs})")
-        else:
-            _bad(f"pi-subagents not in packages: {pkgs}")
-            errors.append("pi-subagents")
 
     # specs law present
     if (home / "specs" / "README.md").is_file():
@@ -236,24 +142,24 @@ def main() -> int:
     # .env soft
     env_path = home / ".env"
     if not env_path.is_file():
-        _warn(".env missing — copy .env.example (LIVE needs DEEPSEEK_API_KEY)")
+        _warn(".env missing — copy .env.example (Web Studio LLM needs XFYUN_API_KEY or DEEPSEEK_API_KEY)")
         warnings.append("env_missing")
     else:
         text = env_path.read_text(encoding="utf-8", errors="replace")
-        if re.search(r"(?m)^DEEPSEEK_API_KEY=\s*$", text) or "DEEPSEEK_API_KEY=" not in text:
-            _warn("DEEPSEEK_API_KEY empty/missing — mock OK; LIVE multi-agent needs key")
-            warnings.append("deepseek_key")
+        has_xfyun = bool(re.search(r"(?m)^XFYUN_API_KEY=\s*\S+", text))
+        has_deepseek = bool(re.search(r"(?m)^DEEPSEEK_API_KEY=\s*\S+", text))
+        if has_xfyun or has_deepseek:
+            _ok(".env has LLM API key configured")
         else:
-            _ok(".env has DEEPSEEK_API_KEY set")
+            _warn("XFYUN_API_KEY / DEEPSEEK_API_KEY empty — deterministic solvers OK; LLM intake needs key")
+            warnings.append("api_key")
 
     print()
     if errors:
-        print("FAIL: orpath_doctor — multi-agent install incomplete:")
+        print("FAIL: orpath_doctor — install check incomplete:")
         for e in errors:
             print(f"  - {e}")
         _hint_setup()
-        print("Do NOT open a random folder and cosplay roles.")
-        print("Set ORPATH_HOME to this install root, or run orpath.bat from the install tree.")
         return 1
 
     if warnings:

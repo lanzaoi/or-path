@@ -1099,7 +1099,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--q2-restarts", type=int, default=3)
     parser.add_argument("--q3-restarts", type=int, default=4)
     parser.add_argument("--q4-restarts", type=int, default=4)
-    parser.add_argument("--beam-width", type=int, default=12)
+    parser.add_argument(
+        "--case-dir",
+        type=Path,
+        default=None,
+        help="Optional case directory containing problem data attachments",
+    )
     parser.add_argument(
         "--fast",
         action="store_true",

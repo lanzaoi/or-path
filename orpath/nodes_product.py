@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 from orpath.nodes import (  # noqa: F401
-    node_bridge,
-    node_bridge_pi,
     node_cite_pack,
     node_draft_paper,
     node_explain,

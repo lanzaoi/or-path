@@ -22,7 +22,6 @@ PRODUCT_NODES = [
     "intake_parse",
     "orchestrate",
     "retrieve",
-    "bridge_pi",
     "research",
     "model",
     "gate_schema",
@@ -54,31 +53,6 @@ def _after_intake_parse(
     if st == "human_stop" or state.get("human_required"):
         return "human_stop"
     return "orchestrate"
-
-
-def _after_orchestrate(
-    state: ORPathState,
-) -> Literal["bridge_pi", "retrieve"]:
-    att = state.get("bridge_attachment") or "before_research"
-    if att == "before_retrieve":
-        return "bridge_pi"
-    return "retrieve"
-
-
-def _after_bridge(
-    state: ORPathState,
-) -> Literal["retrieve", "research"]:
-    att = state.get("bridge_attachment") or "before_research"
-    if att == "before_retrieve":
-        return "retrieve"
-    return "research"
-
-
-def _after_retrieve(state: ORPathState) -> Literal["bridge_pi", "research"]:
-    att = state.get("bridge_attachment") or "before_research"
-    if att == "before_research":
-        return "bridge_pi"
-    return "research"
 
 
 def _after_schema(state: ORPathState) -> Literal["solve", "model", "human_stop"]:
@@ -124,7 +98,6 @@ def build_graph_product(checkpointer: Any | None = None) -> Any:
     g.add_node("intake_parse", nodes.node_intake_parse)
     g.add_node("orchestrate", nodes.node_orchestrate)
     g.add_node("retrieve", nodes.node_retrieve)
-    g.add_node("bridge_pi", nodes.node_bridge)
     g.add_node("research", nodes.node_research)
     g.add_node("model", nodes.node_model)
     g.add_node("gate_schema", nodes.node_gate_schema)
@@ -149,21 +122,8 @@ def build_graph_product(checkpointer: Any | None = None) -> Any:
         _after_intake_parse,
         {"orchestrate": "orchestrate", "human_stop": "human_stop"},
     )
-    g.add_conditional_edges(
-        "orchestrate",
-        _after_orchestrate,
-        {"bridge_pi": "bridge_pi", "retrieve": "retrieve"},
-    )
-    g.add_conditional_edges(
-        "bridge_pi",
-        _after_bridge,
-        {"retrieve": "retrieve", "research": "research"},
-    )
-    g.add_conditional_edges(
-        "retrieve",
-        _after_retrieve,
-        {"bridge_pi": "bridge_pi", "research": "research"},
-    )
+    g.add_edge("orchestrate", "retrieve")
+    g.add_edge("retrieve", "research")
     g.add_edge("research", "model")
     g.add_edge("model", "gate_schema")
     g.add_conditional_edges(
@@ -231,21 +191,8 @@ def export_stage_map() -> dict[str, Any]:
                 "to": ["orchestrate", "human_stop"],
                 "cond": "intake_gate_or_confirm",
             },
-            {
-                "from": "orchestrate",
-                "to": ["bridge_pi", "retrieve"],
-                "cond": "bridge_attachment",
-            },
-            {
-                "from": "bridge_pi",
-                "to": ["retrieve", "research"],
-                "cond": "bridge_attachment",
-            },
-            {
-                "from": "retrieve",
-                "to": ["bridge_pi", "research"],
-                "cond": "bridge_attachment",
-            },
+            {"from": "orchestrate", "to": "retrieve"},
+            {"from": "retrieve", "to": "research"},
             {"from": "research", "to": "model"},
             {"from": "model", "to": "gate_schema"},
             {
@@ -272,7 +219,6 @@ def export_stage_map() -> dict[str, Any]:
             {"from": "provenance", "to": "END"},
         ],
         "checkpointer": "sqlite:runs/orpath.sqlite",
-        "bridge_default_attachment": "before_research",
         "intake_default": "skip when no surface; --auto-intake uses inbox/; explicit --intake-in enables front-door",
         "paper_pipeline": "draft→cite→review→revise(re-cite)→provenance",
     }
@@ -299,12 +245,7 @@ def write_stage_map_files(root: Path) -> None:
         "  intake_ocr -->|has sources| intake_parse",
         "  intake_parse -->|ok| orchestrate",
         "  intake_parse -->|needs_human or gate fail| human_stop",
-        "  orchestrate -->|before_retrieve| bridge_pi",
-        "  orchestrate -->|default| retrieve",
-        "  bridge_pi -->|before_retrieve| retrieve",
-        "  bridge_pi -->|before_research| research",
-        "  retrieve -->|before_research| bridge_pi",
-        "  retrieve -->|before_retrieve done| research",
+        "  orchestrate --> retrieve --> research",
         "  research --> model --> gate_schema",
         "  gate_schema -->|ok| solve",
         "  gate_schema -->|repair| model",

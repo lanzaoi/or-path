@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OR-Path Meta Experiment Card — Schema",
+  "description": "Generalized single-factor experiment card for any OR-Path domain. Generalizes contracts/tube_experiment_card.schema.json: one factor changes per card, the baseline artifact and frozen factors are declared before the run, acceptance criteria are fixed before the run, and every run carries a hard wall-clock timeout. Legacy Tube cards (experiment_id + budget) are mapped onto the canonical id + timeout_sec shape by the test adapter.",
+  "type": "object",
+  "required": [
+    "schema",
+    "id",
+    "domain",
+    "status",
+    "owner_agent",
+    "changed_factor",
+    "baseline_artifact",
+    "frozen_factors",
+    "acceptance",
+    "output_path",
+    "timeout_sec"
+  ],
+  "properties": {
+    "schema": {
+      "type": "string",
+      "pattern": "^orpath\\..+_experiment_card\\.v[0-9]+$",
+      "description": "Stable card id of the form orpath.<domain>_experiment_card.v<N>."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+      "minLength": 1,
+      "description": "Unique experiment card identifier (legacy Tube cards use experiment_id)."
+    },
+    "domain": {
+      "type": "string",
+      "minLength": 1,
+      "description": "OR-Path domain this experiment belongs to (e.g. tube, microgrid, polyomino)."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PROPOSED",
+        "RUNNING",
+        "PASSED",
+        "FAILED",
+        "BLOCKED",
+        "SUPERSEDED"
+      ],
+      "description": "Canonical experiment lifecycle status."
+    },
+    "owner_agent": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Agent responsible for this experiment; must be an authorized protocol role."
+    },
+    "changed_factor": {
+      "$ref": "#/definitions/changed_factor"
+    },
+    "baseline_artifact": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Path to the frozen baseline artifact this experiment is measured against."
+    },
+    "frozen_factors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "description": "Factors held constant so the change is attributable to changed_factor alone."
+    },
+    "acceptance": {
+      "type": "object",
+      "description": "Acceptance contract fixed before the run (hard gates, primary/secondary criteria, stop rule)."
+    },
+    "output_path": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Where the experiment result artifact is written."
+    },
+    "timeout_sec": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Hard wall-clock timeout in seconds. A timeout is not evidence of infeasibility."
+    }
+  },
+  "additionalProperties": true,
+  "definitions": {
+    "changed_factor": {
+      "type": "object",
+      "required": [
+        "name",
+        "baseline",
+        "candidate"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Single factor name that changes in this experiment."
+        },
+        "baseline": {
+          "description": "Baseline value of the factor."
+        },
+        "candidate": {
+          "description": "Candidate value of the factor; must differ from baseline."
+        }
+      },
+      "description": "Exactly one factor changes per experiment card; baseline and candidate must differ.",
+      "baselineMustDiffer": true
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "name": "farmer_problem",
+  "description": "Birge & Louveaux (1997) Classic Two-Stage Stochastic Farmer Problem with Recourse",
+  "total_land_acres": 500.0,
+  "crops": ["wheat", "corn", "sugar_beets"],
+  "planting_cost_per_acre": {
+    "wheat": 150.0,
+    "corn": 230.0,
+    "sugar_beets": 260.0
+  },
+  "scenarios": [
+    {
+      "name": "good",
+      "probability": 0.3333333333333333,
+      "yield_per_acre": {
+        "wheat": 3.0,
+        "corn": 3.6,
+        "sugar_beets": 24.0
+      }
+    },
+    {
+      "name": "average",
+      "probability": 0.3333333333333333,
+      "yield_per_acre": {
+        "wheat": 2.5,
+        "corn": 3.0,
+        "sugar_beets": 20.0
+      }
+    },
+    {
+      "name": "bad",
+      "probability": 0.3333333333333333,
+      "yield_per_acre": {
+        "wheat": 2.0,
+        "corn": 2.4,
+        "sugar_beets": 16.0
+      }
+    }
+  ],
+  "internal_demand": {
+    "wheat": 200.0,
+    "corn": 240.0
+  },
+  "selling_price": {
+    "wheat": 170.0,
+    "corn": 150.0,
+    "sugar_beets_quota": 36.0,
+    "sugar_beets_excess": 10.0
+  },
+  "purchase_price": {
+    "wheat": 238.0,
+    "corn": 210.0
+  },
+  "sugar_beet_quota": 6000.0,
+  "known_optimal": {
+    "expected_profit": 108390.0,
+    "first_stage_acres": {
+      "wheat": 170.0,
+      "corn": 80.0,
+      "sugar_beets": 250.0
+    }
+  }
+}

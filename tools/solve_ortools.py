@@ -59,7 +59,10 @@ def solve_tsp(
             else [str(i) for i in range(len(matrix))]
         )
     else:
-        coords = _load_json(d / "coords.json")
+        coords_path = d / "coords.json"
+        if not coords_path.is_file() and (d / "data" / "coords.json").is_file():
+            coords_path = d / "data" / "coords.json"
+        coords = _load_json(coords_path)
         if isinstance(coords, dict):
             coords = coords["coords"]
         labels = [str(c.get("id", i)) for i, c in enumerate(coords)]

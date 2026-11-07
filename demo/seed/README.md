@@ -2,7 +2,7 @@
 
 安装或 `orpath setup` 时，会把本目录下的 slug **合并拷贝**到 `ORPATH_WORKDIR`（默认=安装根），让别人也能：
 
-- `START-WATCH.bat` → 默认 **live-btube** 有过程/数字线索  
+- `START.bat`（或 `./START.sh`）→ 默认 **live-btube** 有过程/数字线索  
 - `orpath.bat watch --slug m0` → 看到 M0 mock 证据串  
 
 ## 含什么

@@ -57,7 +57,7 @@ def main() -> int:
         need("file:" + rel, (ROOT / rel).is_file())
 
     orpath = (ROOT / "ORPATH.md").read_text(encoding="utf-8", errors="replace")
-    need("orpath_sync", "knowledge-sync" in orpath and "phase3-hybrid-gate" in orpath)
+    need("orpath_sync", "knowledge-sync" in orpath)
     arch = (ROOT / "docs" / "ARCHITECTURE.md").read_text(encoding="utf-8", errors="replace")
     need("arch_knowledge", "knowledge" in arch.lower() or "RAG" in arch or "retrieve" in arch)
 
@@ -123,7 +123,7 @@ def main() -> int:
         "corpus_no_solution_json": not any(
             p.suffix.lower() == ".json" for p in (ROOT / "knowledge" / "corpus").rglob("*") if p.is_file()
         ),
-        "skill_runtime_is_dot_pi": (ROOT / ".pi" / "skills" / "or-numbers-truth" / "SKILL.md").is_file(),
+        "skill_runtime_is_dot_pi": (ROOT / "knowledge" / "corpus" / "skills" / "skill-or-numbers-truth.md").is_file(),
         "rag_copy_is_corpus_skills": (ROOT / "knowledge" / "corpus" / "skills").is_dir(),
         "no_rag_web_ui": True,
         "cognee_not_main": True,

@@ -2,7 +2,7 @@
 """Promote a finished run → compressed Skill + lesson → RAG (long-term process memory).
 
 Reads notes/outputs for <slug>, compresses *process* key points (not optima), writes:
-  .pi/skills/or-method-<class>-<slug>/SKILL.md
+  knowledge/skills/or-method-<class>-<slug>/SKILL.md
   knowledge/lessons/les_run_<slug>.json
   knowledge/export_allowlist.txt (append skill name)
 Optional: export + ingest so hybrid retrieve can hit the skill copy.
@@ -294,7 +294,7 @@ def render_skill_md(meta: dict[str, Any], *, skill_name: str) -> str:
 
 
 def write_skill(root: Path, skill_name: str, body: str) -> Path:
-    d = root / ".pi" / "skills" / skill_name
+    d = root / "knowledge" / "skills" / skill_name
     d.mkdir(parents=True, exist_ok=True)
     path = d / "SKILL.md"
     path.write_text(body, encoding="utf-8")
