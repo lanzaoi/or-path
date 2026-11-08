@@ -11,9 +11,9 @@ from typing import Any
 from orpath.state import ORPathState
 
 TUNE_STRATEGIES = [
-    ("PATH_CHEAPEST_ARC", "GUIDED_LOCAL_SEARCH", 2000),
-    ("PATH_CHEAPEST_ARC", "SIMULATED_ANNEALING", 4000),
-    ("SAVINGS", "GUIDED_LOCAL_SEARCH", 5000),
+    ("PATH_CHEAPEST_ARC", "GUIDED_LOCAL_SEARCH", 500),
+    ("PATH_CHEAPEST_ARC", "SIMULATED_ANNEALING", 1500),
+    ("SAVINGS", "GUIDED_LOCAL_SEARCH", 3000),
 ]
 
 def _root(state: ORPathState) -> Path:

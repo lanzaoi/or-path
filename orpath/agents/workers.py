@@ -117,6 +117,29 @@ ACADEMIC_WORKER_NAMES = (
 )
 
 
+def make_compact_handoff(
+    role_note: str,
+    pointers: dict[str, str],
+    summary: str,
+) -> str:
+    """Build a Feynman compact handoff packet for worker-to-worker dispatch.
+
+    Enforces zero-truncation of stored files while stopping the O(N^2) chat
+    token explosion across multi-agent handoffs.
+    """
+    lines = [
+        "【Fast-Path Handoff Pointer Packet】",
+        f"Target Role: {role_note}",
+        "Verified Artifact Pointers (load on demand from disk):",
+    ]
+    for k, v in sorted((pointers or {}).items()):
+        if v:
+            lines.append(f"  - {k}: {v}")
+    lines.append("Executive State Summary:")
+    lines.append(str(summary or "").strip()[:800])
+    return "\n".join(lines)
+
+
 # --------------------------------------------------------------------------- #
 # Small file-facing tools shared by the workers
 # --------------------------------------------------------------------------- #
@@ -151,14 +174,43 @@ def read_problem_file(file_path: str, max_chars: int = READ_PROBLEM_FILE_MAX_CHA
     if limit <= 0:
         limit = READ_PROBLEM_FILE_MAX_CHARS
 
+    root = _resolve_root()
     path = Path(file_path).expanduser()
     if not path.is_absolute():
-        path = _resolve_root() / path
+        path = root / path
+
+    # Self-healing path resolution: check plausible candidate locations if not found
+    if not path.is_file():
+        candidates = [
+            root / file_path,
+            root / "inbox" / Path(file_path).name,
+            root / "fixtures" / file_path,
+            root / "fixtures" / "t3" / file_path,
+            root / "outputs" / Path(file_path).name,
+            root / "papers" / Path(file_path).name,
+            root / "notes" / Path(file_path).name,
+            Path.cwd() / file_path,
+        ]
+        found = next((c for c in candidates if c.is_file()), None)
+        if found is not None:
+            path = found
 
     try:
         raw = path.read_bytes()
     except FileNotFoundError:
-        return f"file_path={path}\nerror=file_not_found"
+        # Provide nearby hint if available
+        nearby = []
+        try:
+            target_name = Path(file_path).name.lower()
+            for p in (root / "fixtures").rglob("*"):
+                if p.is_file() and target_name in p.name.lower():
+                    nearby.append(str(p.relative_to(root)))
+                    if len(nearby) >= 3:
+                        break
+        except Exception:
+            pass
+        hint_str = f" candidate_suggestions={nearby}" if nearby else ""
+        return f"file_path={path}\nerror=file_not_found{hint_str}"
     except IsADirectoryError:
         return f"file_path={path}\nerror=is_a_directory"
     except PermissionError:

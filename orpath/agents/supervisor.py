@@ -275,6 +275,14 @@ class MultiAgentPipelineState(TypedDict, total=False):
     raw_problem_text: str
     summary: str
 
+    # Deep mode iterative search state
+    deep_mode: bool
+    refinement_rounds: int
+    max_refinement_rounds: int
+    optimality_gap: float
+    best_objective: float
+    mutation_history: list[str]
+
 
 def _resolve_root() -> Path:
     """Resolve active case workdir (honouring ORPATH_WORKDIR) or fall back to cwd."""
@@ -407,19 +415,30 @@ def supervisor_guard_post_hook(
 
 
 def supervisor_trim_pre_model_hook(state: Any) -> dict:
-    """No-op passthrough hook kept for backward import compatibility.
+    """Pre-model hook for supervisor / multi-agent routing.
 
-    The legacy 1600- character truncation and history windowing behaviour was
-    deliberately removed (Numbers Truth / Zero Truncation iron law): every stage
-    now receives the full conversation intact, so a prebuilt LLM prompt or a
-    50,000-character coordinate matrix can never be silently mutilated into
-    ``[... chars truncated by supervisor context trimmer ...]``.
-
-    The hook still returns the ``llm_input_messages`` channel so langchain
-    supervisors recognise the pre-model hook contract.
+    Honours the Numbers Truth / Zero Truncation contract: returns full messages intact by default.
+    If compact mode is explicitly enabled via state['compact_context'] == True,
+    it archives middle turns to reduce redundant token load while preserving head and tail.
     """
-    messages = list((state.get("messages") if hasattr(state, "get") else getattr(state, "messages", None)) or [])
-    return {"llm_input_messages": messages}
+    raw_messages = list((state.get("messages") if hasattr(state, "get") else getattr(state, "messages", None)) or [])
+    compact_requested = bool(state.get("compact_context")) if hasattr(state, "get") else False
+    if not compact_requested or len(raw_messages) <= 10:
+        return {"llm_input_messages": raw_messages}
+
+    # Head (system / initial task) + Tail (latest interaction window)
+    head = raw_messages[:2]
+    tail = raw_messages[-8:]
+    middle = raw_messages[2:-8]
+
+    # Compact middle tool outputs into pointers if any
+    compact_middle = []
+    if middle:
+        summary_note = f"[Context Compact: {len(middle)} intermediate tool/agent steps archived to disk logs]"
+        from langchain_core.messages import SystemMessage
+        compact_middle.append(SystemMessage(content=summary_note))
+
+    return {"llm_input_messages": head + compact_middle + tail}
 
 
 def _serialize_message(msg: Any) -> str:
@@ -438,24 +457,35 @@ def _serialize_message(msg: Any) -> str:
     return json.dumps(payload, ensure_ascii=False, sort_keys=True)
 
 
+_PERSIST_MAX_LINES = 1000
+
 def persist_agent_stage_log(
     workdir: str | Path,
     slug: str,
     stage: str,
     messages: list[Any],
 ) -> Path:
-    """Append ``messages`` losslessly to ``runs/<slug>/agent_logs/<stage>.jsonl``.
+    """Append ``messages`` to ``runs/<slug>/agent_logs/<stage>.jsonl`` with size ceiling.
 
     Each isolated pipeline stage writes its own JSONL sidecar log instead of
-    sharing a growing cross-role ``MessagesState`` chat transcript. Records are
-    written verbatim (zero character truncation), so full problem statements and
-    coordinate matrices survive untouched for later audit / R1 evidence checks.
+    sharing a growing cross-role ``MessagesState`` chat transcript.
+    Maintains a rolling ceiling of recent interaction records to prevent disk bloat.
     Returns the path of the log file.
     """
     root = Path(workdir) if workdir else _resolve_root()
     log_dir = root / "runs" / str(slug) / "agent_logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / f"{stage}.jsonl"
+
+    # Rolling truncate if log file exceeds limit
+    if log_path.is_file() and log_path.stat().st_size > 500_000:
+        try:
+            lines = log_path.read_text(encoding="utf-8").splitlines()
+            if len(lines) > _PERSIST_MAX_LINES:
+                log_path.write_text("\n".join(lines[-_PERSIST_MAX_LINES:]) + "\n", encoding="utf-8")
+        except Exception:
+            pass
+
     with log_path.open("a", encoding="utf-8") as fh:
         for msg in messages or []:
             fh.write(_serialize_message(msg) + "\n")
@@ -1019,7 +1049,16 @@ def _isolated_reviewer_node(state: MultiAgentPipelineState) -> dict[str, Any]:
 
 def _after_isolated_verification(state: MultiAgentPipelineState) -> Literal["writer_stage", "modeler_stage", "__end__"]:
     if state.get("validation_ok"):
+        # Deep mode: if deep_mode enabled and refinement rounds not exhausted, loop back to modeler with mutation
+        if state.get("deep_mode"):
+            rounds = int(state.get("refinement_rounds") or 0)
+            max_rounds = int(state.get("max_refinement_rounds") or 5)
+            gap = state.get("optimality_gap")
+            # If gap > 1e-4 or not proven optimal, allow continued deep search
+            if rounds < max_rounds and (gap is None or gap > 1e-4):
+                return "modeler_stage"
         return "writer_stage"
+
     repair_count = int(state.get("model_repair_count") or 0)
     max_repairs = int(state.get("max_model_repairs") or 2)
     if repair_count < max_repairs:

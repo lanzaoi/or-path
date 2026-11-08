@@ -43,22 +43,40 @@ def gate_schema(root: Path, schema_path: Path) -> tuple[bool, str]:
     return code == 0, (out + err).strip()
 
 
+_GATE_CACHE: dict[str, Any] = {}
+
+def _file_hash(p: Path) -> str:
+    try:
+        return f"{p}:{p.stat().st_mtime_ns}:{p.stat().st_size}"
+    except Exception:
+        return str(p)
+
 def gate_r2(root: Path, draft: Path, solution: Path) -> tuple[bool, str]:
+    ckey = f"r2:{_file_hash(draft)}:{_file_hash(solution)}"
+    if ckey in _GATE_CACHE:
+        return _GATE_CACHE[ckey]
     code, out, err = run_py(
         tools_dir(root) / "r2_numeric_check.py",
         ["--draft", str(draft), "--solution", str(solution)],
         root,
     )
-    return code == 0, (out + err).strip()
+    res = (code == 0, (out + err).strip())
+    _GATE_CACHE[ckey] = res
+    return res
 
 
 def gate_r1(root: Path, draft: Path, whitelist: Path) -> tuple[bool, str]:
+    ckey = f"r1:{_file_hash(draft)}:{_file_hash(whitelist)}"
+    if ckey in _GATE_CACHE:
+        return _GATE_CACHE[ckey]
     code, out, err = run_py(
         tools_dir(root) / "r1_cite_check.py",
         ["--draft", str(draft), "--whitelist", str(whitelist)],
         root,
     )
-    return code == 0, (out + err).strip()
+    res = (code == 0, (out + err).strip())
+    _GATE_CACHE[ckey] = res
+    return res
 
 
 def gate_claim_map(

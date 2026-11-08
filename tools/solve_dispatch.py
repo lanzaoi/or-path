@@ -114,10 +114,13 @@ def _run_py(script: Path, args: list[str], cwd: Path) -> tuple[int, str, str]:
     cmd = [sys.executable, str(script), *args]
     env = os.environ.copy()
     env["ORPATH_WORKDIR"] = str(cwd)
-    r = subprocess.run(
-        cmd, cwd=cwd, env=env, text=True, encoding="utf-8", errors="replace", capture_output=True
-    )
-    return r.returncode, r.stdout, r.stderr
+    try:
+        r = subprocess.run(
+            cmd, cwd=cwd, env=env, text=True, encoding="utf-8", errors="replace", capture_output=True, timeout=120
+        )
+        return r.returncode, r.stdout, r.stderr
+    except subprocess.TimeoutExpired:
+        return 124, "", f"subprocess timed out after 120s: {' '.join(str(c) for c in cmd)}"
 
 
 def _try_in_proc(script_name: str, args: list[str]) -> tuple[bool, int, str, str]:
@@ -677,8 +680,23 @@ def validate(
     solution: Path,
     out: Path,
 ) -> tuple[bool, dict[str, Any], str]:
-    """Delegate to validate_solution.py (single validate seam)."""
+    """Delegate to validate_solution.py (single validate seam, prefers in-proc import)."""
     root = Path(root)
+    # 1. Try fast in-process validation first
+    try:
+        from tools import validate_solution as vs_mod
+        sol_p = Path(solution)
+        sol_dict = json.loads(sol_p.read_text(encoding="utf-8")) if sol_p.is_file() else {}
+        v_res = vs_mod.validate(problem_id=problem_id, solution=sol_dict, solution_path=sol_p)
+        out_path = Path(out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(v_res, indent=2, ensure_ascii=False), encoding="utf-8")
+        is_ok = bool(v_res.get("ok"))
+        return is_ok, v_res, json.dumps(v_res, ensure_ascii=False)
+    except Exception:
+        pass
+
+    # 2. Fallback to subprocess
     tools_dir = Path(__file__).resolve().parent
     script = tools_dir / "validate_solution.py"
     if not script.is_file():
