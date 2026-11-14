@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 # White-list extensions for auto-intake (no bulk zip/xls by default)
-_INBOX_EXTS = {".md", ".txt", ".pdf", ".png", ".jpg", ".jpeg", ".webp"}
+_INBOX_EXTS = {".md", ".txt", ".docx", ".xlsx", ".xlsm", ".pdf", ".png", ".jpg", ".jpeg", ".webp"}
 
 
 def discover_inbox_sources(root: Path, *, inbox_name: str = "inbox") -> list[str]:

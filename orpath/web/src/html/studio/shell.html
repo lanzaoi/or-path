@@ -1,0 +1,191 @@
+  <div id="studio-root">
+  <div id="studioContainer">
+    <!-- Hero Banner -->
+    <div class="studio-hero">
+      <div>
+        <h1 class="studio-hero-title">
+          <span>✨ 智能运筹做题工作舱</span>
+          <span class="studio-hero-tag">OR Studio</span>
+        </h1>
+        <p class="studio-hero-desc">
+          文件夹一键拖拽解析 · 数据探针自动对齐 · 快速单体闭环 / Deep 4-Agent 协同 · 策略自动直通求解与按需研报
+        </p>
+      </div>
+      <div>
+        <div class="studio-hero-truth">
+          <span>🛡️ 严守数字真理底线 (Numbers Truth)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dual-Mode Execution Strip: Fast Mode (4-step) OR Deep Mode (Lean 4-Agent) -->
+    <div id="studioPipelineStrip">
+      <div class="fast-progress-bar" id="studioFastProgress" data-mode="fast">
+        <div class="fast-step-item active" id="fastStepProbe" data-fast-step="probe">
+          <div class="fast-step-dot">1</div>
+          <div class="fast-step-meta">
+            <div class="fast-step-title">📥 数据探针 (Preflight)</div>
+            <div class="fast-step-sub" id="fastStepProbeSub">等待导入或输入题面</div>
+          </div>
+          <span class="fast-step-badge waiting" id="fastStepProbeState">待命</span>
+        </div>
+        <div class="fast-step-item" id="fastStepPlan" data-fast-step="plan">
+          <div class="fast-step-dot">2</div>
+          <div class="fast-step-meta">
+            <div class="fast-step-title">🧠 单体规划 (Single-Agent)</div>
+            <div class="fast-step-sub" id="fastStepPlanSub">结构化建模与策略选择</div>
+          </div>
+          <span class="fast-step-badge waiting" id="fastStepPlanState">待命</span>
+        </div>
+        <div class="fast-step-item" id="fastStepSolve" data-fast-step="solve">
+          <div class="fast-step-dot">3</div>
+          <div class="fast-step-meta">
+            <div class="fast-step-title">🧮 求解器真算 (Solver)</div>
+            <div class="fast-step-sub" id="fastStepSolveSub">确定性算子精确求解</div>
+          </div>
+          <span class="fast-step-badge waiting" id="fastStepSolveState">待命</span>
+        </div>
+        <div class="fast-step-item" id="fastStepGate" data-fast-step="gate">
+          <div class="fast-step-dot">4</div>
+          <div class="fast-step-meta">
+            <div class="fast-step-title">🚪 物理门禁 (Validation)</div>
+            <div class="fast-step-sub" id="fastStepGateSub">独立重算与 Numbers Truth</div>
+          </div>
+          <span class="fast-step-badge waiting" id="fastStepGateState">待命</span>
+        </div>
+      </div>
+
+      <div class="deep-4agent-strip" id="studioDeepStrip" data-mode="deep" hidden>
+        <div class="deep-agent-card active" id="deepCardAnalyst" data-deep-agent="or_analyst">
+          <div class="deep-agent-top">
+            <span class="deep-agent-icon">🔎</span>
+            <div>
+              <div class="deep-agent-name">or_analyst</div>
+              <div class="deep-agent-role">题面解析 · 领域挂载</div>
+            </div>
+            <span class="fast-step-badge waiting" id="deepStateAnalyst">待命</span>
+          </div>
+          <div class="deep-agent-tool" id="deepToolAnalyst">profile + cartridge</div>
+        </div>
+        <div class="deep-agent-card" id="deepCardModeler" data-deep-agent="or_modeler">
+          <div class="deep-agent-top">
+            <span class="deep-agent-icon">📐</span>
+            <div>
+              <div class="deep-agent-name">or_modeler</div>
+              <div class="deep-agent-role">数学建模 · 求解调优</div>
+            </div>
+            <span class="fast-step-badge waiting" id="deepStateModeler">待命</span>
+          </div>
+          <div class="deep-agent-tool" id="deepToolModeler">schema + solve_*</div>
+        </div>
+        <div class="deep-agent-card" id="deepCardWriter" data-deep-agent="or_writer">
+          <div class="deep-agent-top">
+            <span class="deep-agent-icon">📝</span>
+            <div>
+              <div class="deep-agent-name">or_writer</div>
+              <div class="deep-agent-role">真值表渲染 · 六章论文</div>
+            </div>
+            <span class="fast-step-badge waiting" id="deepStateWriter">待命</span>
+          </div>
+          <div class="deep-agent-tool" id="deepToolWriter">or-paper-sop</div>
+        </div>
+        <div class="deep-agent-card" id="deepCardReviewer" data-deep-agent="or_reviewer">
+          <div class="deep-agent-top">
+            <span class="deep-agent-icon">🎯</span>
+            <div>
+              <span class="deep-agent-name">or_reviewer</span>
+              <div class="deep-agent-role">R1/R2 审计 · DIMO 红队</div>
+            </div>
+            <span class="fast-step-badge waiting" id="deepStateReviewer">待命</span>
+          </div>
+          <div class="deep-agent-tool" id="deepToolReviewer">r1/r2 + dimo_mutator</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Deep Thinking & Run Mode Configuration Bar -->
+    <div id="studioAiConfigBar">
+      <div class="studio-runmode-group" id="studioRunModeGroup" role="group" aria-label="执行模式选择">
+        <button type="button" class="runmode-btn active" id="btnRunModeFast" data-run-mode="fast" title="快速单智能体模式：仅执行真算与物理门禁校验，跳过长论文撰写（结果确认后可按需补生）">⚡ 快速模式 (Fast)</button>
+        <button type="button" class="runmode-btn" id="btnRunModeDeep" data-run-mode="deep" title="深度多智能体模式：完整运行 Lean 4-Agent 与 6 章论文红队审稿闭环">🔬 深度模式 (Deep)</button>
+      </div>
+      <div class="ai-config-label">
+        <span>🤖 模型配置</span>
+      </div>
+      <div class="ai-config-inputs">
+        <input type="password" id="studioApiKeyInput" placeholder="输入 API Key (讯飞 ak-... 或 DeepSeek sk-...) · 留空使用离线探针" />
+        <select id="studioModelSelect">
+          <option value="spark-x2.6">讯飞星辰 Spark X2.6 (深度思考链)</option>
+          <option value="deepseek-reasoner">DeepSeek-R1 (深度推理链)</option>
+          <option value="deepseek-chat">DeepSeek-V3 (通用建模问答)</option>
+          <option value="offline">离线模式 (本地规则探针 · 无需Key)</option>
+        </select>
+        <button type="button" class="wb-btn" id="btnSaveApiKey">保存</button>
+      </div>
+      <div id="studioApiKeyBadge" style="background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.3)">
+        ⚠️ 离线规则探针 (未配置 API Key)
+      </div>
+    </div>
+
+    <!-- Step 1: Input Composer (Folder / Multi-file Drag & Drop + Prompt) -->
+    <div class="studio-card" id="studioStep1">
+      <div class="studio-step-header">
+        <div class="step-num-badge step-1">1</div>
+        <h2 class="studio-step-title">上传题目附件与输入需求</h2>
+        <span class="studio-step-sub">支持题目文件夹拖入 / 多选文件 (MD/PDF/CSV/XLSX/JSON)</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <!-- Left: Drag and drop folder zone -->
+        <div>
+          <div id="studioDropzone">
+            <div class="dropzone-icon">📁</div>
+            <div class="dropzone-title">点击此处选择文件，或直接将文件夹/附件拖入</div>
+            <div class="dropzone-hint">支持多层级子目录与混合文件类型（题面、坐标矩阵、需求表）</div>
+            <div style="display:flex;gap:10px;justify-content:center">
+              <button type="button" class="wb-btn" id="btnPickFiles">📄 选择多个文件</button>
+              <button type="button" class="wb-btn" id="btnPickFolder">📁 选择整个文件夹</button>
+            </div>
+            <input type="file" id="studioFileInput" multiple webkitdirectory style="display:none" />
+            <input type="file" id="studioFilesOnlyInput" multiple style="display:none" />
+          </div>
+
+          <div id="studioFileList"></div>
+
+          <!-- Quick Action Notice (Direct Next Step) -->
+          <div id="studioFileActionNotice">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+              <span style="font-size:12.5px;color:#047857;font-weight:700" id="studioFileReadyText">✅ 文件已就绪</span>
+              <button type="button" class="wb-btn primary" id="btnStudioQuickAnalyze">
+                🚀 一键分析并立即求解 ➔
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Problem Name + Prompt input -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:12px">
+            <div style="flex:1">
+              <label style="font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;color:#475569">题目任务标识 (Slug)</label>
+              <input type="text" id="studioSlugInput" value="case-my-problem" style="width:100%;height:36px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;font-family:var(--mono);outline:none;background:#f8fafc" />
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button type="button" class="wb-btn" id="btnStudioLoadPreset" style="height:36px;font-size:11.5px">📚 加载 8 工位巡检测试算例</button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <label style="font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;color:#475569">自然语言需求与业务偏好 (提示词)</label>
+            <textarea id="studioPromptInput" rows="4" placeholder="例如：请为这8个检测工位规划一条最短巡检封闭回路，优先兼顾求解速度与距离最优，站点坐标请参考附件 coords.json…" style="width:100%;flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:12.5px;line-height:1.55;resize:vertical;background:#f8fafc;outline:none"></textarea>
+          </div>
+          <div id="studioAnalyzeError" class="studio-error-box"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+            <span id="studioStep1Status" class="studio-status-text" style="color:var(--blue)"></span>
+            <button type="button" class="wb-btn primary" id="btnStudioAnalyze" style="height:38px;padding:0 24px;font-size:13px;font-weight:700">
+              🚀 一键分析并求解
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+

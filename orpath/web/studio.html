@@ -1,0 +1,3253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;" />
+  <title>OR-Path 智能做题工作舱 · Studio</title>
+  <style>
+/* === src/css/base.css === */
+:root {
+  /* Huashu Design Modern Palette (Slate / Zinc + Refined Accents) */
+  --bg: #f8fafc;
+  --ink: #0f172a;
+  --ink-80: #334155;
+  --ink-60: #475569;
+  --ink-48: #64748b;
+  --ink-36: #94a3b8;
+  --white: #ffffff;
+  --blue: #2563eb;
+  --blue-hover: #1d4ed8;
+  --blue-light: #eff6ff;
+  --link: #2563eb;
+  --ok: #10b981;
+  --ok-hover: #059669;
+  --ok-light: #ecfdf5;
+  --fail: #ef4444;
+  --fail-light: #fef2f2;
+  --warn: #f59e0b;
+  --warn-light: #fffbeb;
+  --blocked: #8b5cf6;
+  --blocked-light: #f5f3ff;
+  --run: #f59e0b;
+  --idle: #94a3b8;
+  --surface: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+  --border: rgba(226, 232, 240, 0.85);
+  --border-strong: #cbd5e1;
+  --border-dark: rgba(255, 255, 255, 0.12);
+  --radius-xl: 18px;
+  --radius-lg: 14px;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+  --pill: 9999px;
+  --font: system-ui, -apple-system, "Inter", BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --top-h: 52px;
+  --tool-h: 48px;
+  --panel: #ffffff;
+  --text: var(--ink);
+  --muted: var(--ink-48);
+  --accent: var(--blue);
+  --cosplay: var(--fail);
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 28px -4px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+button {
+  font-family: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, opacity 0.18s ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* --- Layout Modes --- */
+
+#studio-root,
+#watch-root {
+  display: contents;
+}
+
+/* 1. Studio Mode (智能做题工作舱): Flex 纵向流式容器，开启原生独立滚动 */
+body.mode-studio {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+  background: #f8fafc;
+}
+
+body.mode-studio header.nav {
+  flex: 0 0 auto !important;
+}
+
+body.mode-studio #studioContainer {
+  display: block !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding: 28px 24px 120px 24px;
+  box-sizing: border-box;
+}
+
+body.mode-studio #inspectorContainer,
+body.mode-studio footer {
+  display: none !important;
+}
+
+/* 2. Inspector Mode (过程检视台): 7 行经典网格视图 */
+body.mode-inspector {
+  display: grid !important;
+  grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  overflow: hidden !important;
+}
+
+body.mode-inspector #studioContainer {
+  display: none !important;
+}
+
+body.mode-inspector #inspectorContainer {
+  display: contents !important;
+}
+
+body.mode-inspector footer {
+  display: flex !important;
+}
+
+/* Row 1: Brand Header Bar - Modern Dark Glassmorphism */
+header.nav {
+  grid-row: 1;
+  min-height: var(--top-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 20px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  z-index: 50;
+  overflow: hidden;
+}
+
+.nav-brand {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-brand .brand-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+  font-size: 13px;
+}
+
+.nav-brand span {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 12.5px;
+  margin-left: 4px;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+}
+
+/* Modern Mode Switcher Pills */
+.mode-toggle-group {
+  display: flex;
+  align-items: center;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--pill);
+  padding: 3px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.mode-btn {
+  padding: 5px 14px;
+  border-radius: var(--pill);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  text-decoration: none;
+  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.mode-btn:hover {
+  color: #f1f5f9;
+}
+
+.mode-btn.on {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
+}
+
+.badges {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-left: auto;
+  align-items: center;
+  overflow-x: auto;
+  max-width: min(70vw, 900px);
+  scrollbar-width: none;
+}
+
+.badges::-webkit-scrollbar {
+  display: none;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--pill);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+.badge.on {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+.badge.off {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.badge.st-ok {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.badge.st-fail {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.badge.st-blocked {
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.4);
+  background: rgba(168, 85, 247, 0.18);
+}
+
+.badge.st-running {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.2);
+  animation: badgePulse 2s infinite ease-in-out;
+}
+
+@keyframes badgePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.82; transform: scale(0.98); }
+}
+
+.badge.st-idle, .badge.st-no_product_run {
+  color: rgba(255, 255, 255, 0.45);
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Shared Action Buttons */
+.wb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #0f172a;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  cursor: pointer;
+}
+.wb-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.wb-btn.primary {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #1d4ed8;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+}
+.wb-btn.primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1e40af;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+.wb-btn.success {
+  background: #059669;
+  color: #ffffff;
+  border-color: #047857;
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.25);
+}
+.wb-btn.success:hover:not(:disabled) {
+  background: #047857;
+  border-color: #065f46;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+
+/* === src/css/studio/layout.css === */
+/* ==========================================================================
+   Studio Workbench Styles (智能做题工作舱) — Huashu 5D High-Fidelity Design
+   ========================================================================== */
+
+#studioContainer {
+  max-width: 1180px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Custom Scrollbar for Studio Container (丝滑原生流体体验) */
+#studioContainer::-webkit-scrollbar {
+  width: 8px;
+}
+#studioContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+#studioContainer::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.28);
+  border-radius: var(--pill);
+}
+#studioContainer::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+/* Hero Section */
+.studio-hero {
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.85) 0%, rgba(245, 243, 255, 0.8) 50%, rgba(236, 253, 245, 0.6) 100%);
+  border: 1px solid rgba(191, 219, 254, 0.6);
+  border-radius: 18px;
+  padding: 24px 30px;
+  margin-bottom: 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.studio-hero::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.studio-hero-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studio-hero-tag {
+  font-size: 11px;
+  background: #2563eb;
+  color: #ffffff;
+  padding: 3px 10px;
+  border-radius: var(--pill);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+.studio-hero-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.studio-hero-truth {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: var(--pill);
+  font-size: 11.5px;
+  font-family: var(--mono);
+  color: #047857;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+/* AI Config Bar */
+#studioAiConfigBar {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 20px;
+  margin-bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+#studioAiConfigBar:hover {
+  box-shadow: var(--shadow-md);
+  border-color: rgba(203, 213, 225, 0.9);
+}
+
+.ai-config-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+}
+
+.ai-config-inputs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 320px;
+}
+
+#studioApiKeyInput {
+  flex: 1;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--pill);
+  font-size: 12px;
+  font-family: var(--mono);
+  outline: none;
+  background: #f8fafc;
+  color: #0f172a;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+#studioApiKeyInput:focus {
+  background: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+#studioModelSelect {
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--pill);
+  font-size: 12px;
+  background: #f8fafc;
+  color: #0f172a;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+#studioModelSelect:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+#studioApiKeyBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--pill);
+  white-space: nowrap;
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+/* Step Cards */
+.studio-card {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  padding: 26px 28px;
+  margin-bottom: 24px;
+  transition: box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+}
+
+.studio-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: rgba(203, 213, 225, 0.9);
+}
+
+.studio-step-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.step-num-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13.5px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.step-num-badge.step-1 {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+}
+
+.step-num-badge.step-2 {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
+}
+
+.step-num-badge.step-3 {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+
+.studio-step-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #0f172a;
+  margin: 0;
+}
+
+.studio-step-sub {
+  font-size: 12.5px;
+  color: #64748b;
+  margin-left: auto;
+}
+
+
+
+/* === src/css/studio/pipeline_intake.css === */
+/* Dual-Mode Execution Strip (Fast 4-Step / Deep Lean 4-Agent) */
+#studioPipelineStrip {
+  margin-bottom: 20px;
+}
+
+.fast-progress-bar,
+.deep-4agent-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.fast-progress-bar[hidden],
+.deep-4agent-strip[hidden] {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .fast-progress-bar,
+  .deep-4agent-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .fast-progress-bar,
+  .deep-4agent-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fast-step-item,
+.deep-agent-card {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.deep-agent-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+
+.deep-agent-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deep-agent-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.deep-agent-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: var(--mono);
+}
+
+.deep-agent-role {
+  font-size: 10.5px;
+  color: #64748b;
+}
+
+.deep-agent-tool {
+  font-size: 10px;
+  color: #475569;
+  background: rgba(241, 245, 249, 0.9);
+  border: 1px solid rgba(203, 213, 225, 0.6);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-family: var(--mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fast-step-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--pill);
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fast-step-item.active,
+.deep-agent-card.active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18), 0 4px 12px -2px rgba(59, 130, 246, 0.14);
+}
+
+.fast-step-item.active .fast-step-dot {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.fast-step-item.done,
+.deep-agent-card.done {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+}
+
+.fast-step-item.done .fast-step-dot {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.fast-step-item.blocked,
+.deep-agent-card.blocked {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+}
+
+.fast-step-item.blocked .fast-step-dot {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.fast-step-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.fast-step-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fast-step-sub {
+  font-size: 10.5px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fast-step-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--pill);
+  margin-left: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.fast-step-badge.waiting {
+  background: rgba(148, 163, 184, 0.12);
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.fast-step-badge.active {
+  background: rgba(59, 130, 246, 0.14);
+  color: #1d4ed8;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+}
+
+.fast-step-badge.done {
+  background: rgba(16, 185, 129, 0.14);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.fast-step-badge.blocked {
+  background: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* Run Mode Pill Switcher */
+.studio-runmode-group {
+  display: inline-flex;
+  align-items: center;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--pill);
+  padding: 3px;
+  gap: 2px;
+}
+
+.runmode-btn {
+  padding: 5px 12px;
+  border-radius: var(--pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  background: transparent;
+  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  white-space: nowrap;
+}
+
+.runmode-btn:hover {
+  color: #0f172a;
+}
+
+.runmode-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+}
+
+/* Dropzone */
+#studioDropzone {
+  border: 2px dashed #93c5fd;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.85);
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease;
+}
+
+#studioDropzone:hover,
+#studioDropzone.dragover {
+  border-color: #2563eb;
+  background: rgba(239, 246, 255, 0.85);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.12);
+}
+
+.dropzone-icon {
+  font-size: 38px;
+  margin-bottom: 8px;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+#studioDropzone:hover .dropzone-icon {
+  transform: scale(1.08);
+}
+
+.dropzone-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.dropzone-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 14px;
+}
+
+/* File list & Action Notice */
+#studioFileList {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+#studioFileActionNotice {
+  display: none;
+  margin-top: 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.05);
+}
+
+/* Status & Feedback */
+.studio-status-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.18s ease;
+}
+
+.studio-error-box {
+  display: none;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: #b91c1c;
+  font-size: 12px;
+  margin-top: 14px;
+  line-height: 1.6;
+}
+
+
+
+/* === src/css/studio/cards.css === */
+/* Diagnosis Banner */
+#studioDiagnosisBanner {
+  background: linear-gradient(135deg, rgba(245, 243, 255, 0.9) 0%, rgba(238, 242, 255, 0.7) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-left: 4px solid #7c3aed;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 3px rgba(139, 92, 246, 0.04);
+}
+
+/* Knowledge Banner */
+#studioKnowledgeBanner {
+  display: none;
+  background: linear-gradient(135deg, rgba(238, 242, 255, 0.9) 0%, rgba(245, 243, 255, 0.7) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-left: 4px solid #6366f1;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+}
+
+/* Algorithm Comparison Cards */
+#studioAlgoList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.studio-algo-item {
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.studio-algo-item:hover {
+  transform: translateY(-1px);
+}
+
+/* Data Variables Alignment List */
+#studioDataList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.studio-data-item {
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.studio-data-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+/* Clarification Questions Box */
+#studioQuestionsBox {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.studio-question-card {
+  border-bottom: 1px dashed rgba(203, 213, 225, 0.8);
+  padding-bottom: 14px;
+}
+
+.studio-question-card:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.studio-option-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.studio-option-label:hover {
+  background: rgba(241, 245, 249, 0.9);
+}
+
+/* Result Card */
+#studioResultCard {
+  background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 80%);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 24px -2px rgba(16, 185, 129, 0.08);
+}
+
+#studioResultCard.is-blocked {
+  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 80%);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 4px 24px -2px rgba(239, 68, 68, 0.08);
+}
+
+#studioHeadline {
+  font-size: 18px;
+  font-weight: 800;
+  color: #065f46;
+  margin-bottom: 8px;
+  letter-spacing: -0.015em;
+}
+
+#studioResultCard.is-blocked #studioHeadline {
+  color: #991b1b;
+}
+
+#studioObjective {
+  font-size: 32px;
+  font-weight: 800;
+  color: #047857;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
+  letter-spacing: -0.03em;
+}
+
+#studioResultCard.is-blocked #studioObjective {
+  color: #b91c1c;
+}
+
+#studioValidation {
+  font-size: 13px;
+  font-weight: 600;
+  color: #065f46;
+}
+
+#studioResultCard.is-blocked #studioValidation {
+  color: #991b1b;
+}
+
+#studioSolutionDetail {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #047857;
+  font-family: var(--mono);
+  line-height: 1.6;
+}
+
+#studioResultCard.is-blocked #studioSolutionDetail {
+  color: #7f1d1d;
+}
+
+/* Artifact Download Buttons */
+#studioDownloads {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.studio-dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #0f172a;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  cursor: pointer;
+}
+
+.studio-dl-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.studio-dl-btn:active {
+  transform: scale(0.98);
+}
+
+
+
+/* === src/css/studio/viz.css === */
+/* Dynamic OR Visualization & Convergence Dashboard */
+.studio-viz-card {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: 16px;
+  padding: 22px 26px;
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.viz-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.viz-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.viz-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.viz-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.viz-badge {
+  font-size: 11px;
+  background: rgba(139, 92, 246, 0.12);
+  color: #7c3aed;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.viz-tabs {
+  display: flex;
+  gap: 6px;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.viz-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+}
+
+.viz-tab:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.viz-tab:active {
+  transform: scale(0.97);
+}
+
+.viz-tab.active {
+  background: #ffffff;
+  color: #2563eb;
+  border-color: rgba(226, 232, 240, 0.9);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.viz-body {
+  position: relative;
+  min-height: 280px;
+}
+
+.viz-panel {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
+}
+
+.viz-panel.active {
+  display: block;
+}
+
+.viz-svg {
+  width: 100%;
+  height: auto;
+  min-width: 540px;
+  display: block;
+  user-select: none;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(241, 245, 249, 0.9);
+}
+
+.viz-tooltip-pill {
+  margin-top: 12px;
+  padding: 8px 14px;
+  background: #0f172a;
+  color: #f8fafc;
+  border-radius: 8px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  animation: fadeInPill 0.15s ease-out;
+}
+
+@keyframes fadeInPill {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.viz-tooltip-pill .viz-tt-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.viz-tooltip-pill .viz-tt-text {
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+}
+
+.gantt-bar {
+  cursor: pointer;
+  transition: opacity 0.15s ease, filter 0.15s ease;
+}
+
+.gantt-bar:hover rect {
+  filter: brightness(1.15);
+  stroke-width: 2.2px;
+}
+
+.route-node {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.route-node:hover circle {
+  stroke-width: 3.5px;
+  stroke: #2563eb;
+}
+
+.viz-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+  font-size: 13px;
+  gap: 8px;
+}
+
+
+  </style>
+</head>
+<body class="mode-studio">
+
+<!-- === src/html/header.html === -->
+  <header class="nav">
+    <div class="nav-brand">
+      <div class="brand-logo">⚡</div>
+      <span>OR-Path 智能做题工作舱 · Live Watch</span>
+    </div>
+    <div class="nav-right">
+      <div class="mode-toggle-group">
+        <a class="mode-btn" id="btnModeStudio" href="/studio">✨ 极简做题模式 (Studio)</a>
+        <a class="mode-btn" id="btnModeInspector" href="/">🛠️ 专家监视模式 (Inspector)</a>
+      </div>
+      <div class="badges" id="badges"></div>
+    </div>
+  </header>
+
+
+<!-- === src/html/studio/shell.html === -->
+  <div id="studio-root">
+  <div id="studioContainer">
+    <!-- Hero Banner -->
+    <div class="studio-hero">
+      <div>
+        <h1 class="studio-hero-title">
+          <span>✨ 智能运筹做题工作舱</span>
+          <span class="studio-hero-tag">OR Studio</span>
+        </h1>
+        <p class="studio-hero-desc">
+          文件夹一键拖拽解析 · 数据探针自动对齐 · 快速单体闭环 / Deep 4-Agent 协同 · 策略自动直通求解与按需研报
+        </p>
+      </div>
+      <div>
+        <div class="studio-hero-truth">
+          <span>🛡️ 严守数字真理底线 (Numbers Truth)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dual-Mode Execution Strip: Fast Mode (4-step) OR Deep Mode (Lean 4-Agent) -->
+    <div id="studioPipelineStrip">
+      <div class="fast-progress-bar" id="studioFastProgress" data-mode="fast">
+        <div class="fast-step-item active" id="fastStepProbe" data-fast-step="probe">
+          <div class="fast-step-dot">1</div>
+          <div class="fast-step-meta">
+            <div class="fast-step-title">📥 数据探针 (Preflight)</div>
+            <div class="fast-step-sub" id="fastStepProbeSub">等待导入或输入题面</div>
+          </div>
+          <span class="fast-step-badge waiting" id="fastStepProbeState">待命</span>
+        </div>
+        <div class="fast-step-item" id="fastStepPlan" data-fast-step="plan">
+          <div class="fast-step-dot">2</div>
+          <div class="fast-step-meta">
+            <div class="fast-step-title">🧠 单体规划 (Single-Agent)</div>
+            <div class="fast-step-sub" id="fastStepPlanSub">结构化建模与策略选择</div>
+          </div>
+          <span class="fast-step-badge waiting" id="fastStepPlanState">待命</span>
+        </div>
+        <div class="fast-step-item" id="fastStepSolve" data-fast-step="solve">
+          <div class="fast-step-dot">3</div>
+          <div class="fast-step-meta">
+            <div class="fast-step-title">🧮 求解器真算 (Solver)</div>
+            <div class="fast-step-sub" id="fastStepSolveSub">确定性算子精确求解</div>
+          </div>
+          <span class="fast-step-badge waiting" id="fastStepSolveState">待命</span>
+        </div>
+        <div class="fast-step-item" id="fastStepGate" data-fast-step="gate">
+          <div class="fast-step-dot">4</div>
+          <div class="fast-step-meta">
+            <div class="fast-step-title">🚪 物理门禁 (Validation)</div>
+            <div class="fast-step-sub" id="fastStepGateSub">独立重算与 Numbers Truth</div>
+          </div>
+          <span class="fast-step-badge waiting" id="fastStepGateState">待命</span>
+        </div>
+      </div>
+
+      <div class="deep-4agent-strip" id="studioDeepStrip" data-mode="deep" hidden>
+        <div class="deep-agent-card active" id="deepCardAnalyst" data-deep-agent="or_analyst">
+          <div class="deep-agent-top">
+            <span class="deep-agent-icon">🔎</span>
+            <div>
+              <div class="deep-agent-name">or_analyst</div>
+              <div class="deep-agent-role">题面解析 · 领域挂载</div>
+            </div>
+            <span class="fast-step-badge waiting" id="deepStateAnalyst">待命</span>
+          </div>
+          <div class="deep-agent-tool" id="deepToolAnalyst">profile + cartridge</div>
+        </div>
+        <div class="deep-agent-card" id="deepCardModeler" data-deep-agent="or_modeler">
+          <div class="deep-agent-top">
+            <span class="deep-agent-icon">📐</span>
+            <div>
+              <div class="deep-agent-name">or_modeler</div>
+              <div class="deep-agent-role">数学建模 · 求解调优</div>
+            </div>
+            <span class="fast-step-badge waiting" id="deepStateModeler">待命</span>
+          </div>
+          <div class="deep-agent-tool" id="deepToolModeler">schema + solve_*</div>
+        </div>
+        <div class="deep-agent-card" id="deepCardWriter" data-deep-agent="or_writer">
+          <div class="deep-agent-top">
+            <span class="deep-agent-icon">📝</span>
+            <div>
+              <div class="deep-agent-name">or_writer</div>
+              <div class="deep-agent-role">真值表渲染 · 六章论文</div>
+            </div>
+            <span class="fast-step-badge waiting" id="deepStateWriter">待命</span>
+          </div>
+          <div class="deep-agent-tool" id="deepToolWriter">or-paper-sop</div>
+        </div>
+        <div class="deep-agent-card" id="deepCardReviewer" data-deep-agent="or_reviewer">
+          <div class="deep-agent-top">
+            <span class="deep-agent-icon">🎯</span>
+            <div>
+              <span class="deep-agent-name">or_reviewer</span>
+              <div class="deep-agent-role">R1/R2 审计 · DIMO 红队</div>
+            </div>
+            <span class="fast-step-badge waiting" id="deepStateReviewer">待命</span>
+          </div>
+          <div class="deep-agent-tool" id="deepToolReviewer">r1/r2 + dimo_mutator</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Deep Thinking & Run Mode Configuration Bar -->
+    <div id="studioAiConfigBar">
+      <div class="studio-runmode-group" id="studioRunModeGroup" role="group" aria-label="执行模式选择">
+        <button type="button" class="runmode-btn active" id="btnRunModeFast" data-run-mode="fast" title="快速单智能体模式：仅执行真算与物理门禁校验，跳过长论文撰写（结果确认后可按需补生）">⚡ 快速模式 (Fast)</button>
+        <button type="button" class="runmode-btn" id="btnRunModeDeep" data-run-mode="deep" title="深度多智能体模式：完整运行 Lean 4-Agent 与 6 章论文红队审稿闭环">🔬 深度模式 (Deep)</button>
+      </div>
+      <div class="ai-config-label">
+        <span>🤖 模型配置</span>
+      </div>
+      <div class="ai-config-inputs">
+        <input type="password" id="studioApiKeyInput" placeholder="输入 API Key (讯飞 ak-... 或 DeepSeek sk-...) · 留空使用离线探针" />
+        <select id="studioModelSelect">
+          <option value="spark-x2.6">讯飞星辰 Spark X2.6 (深度思考链)</option>
+          <option value="deepseek-reasoner">DeepSeek-R1 (深度推理链)</option>
+          <option value="deepseek-chat">DeepSeek-V3 (通用建模问答)</option>
+          <option value="offline">离线模式 (本地规则探针 · 无需Key)</option>
+        </select>
+        <button type="button" class="wb-btn" id="btnSaveApiKey">保存</button>
+      </div>
+      <div id="studioApiKeyBadge" style="background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.3)">
+        ⚠️ 离线规则探针 (未配置 API Key)
+      </div>
+    </div>
+
+    <!-- Step 1: Input Composer (Folder / Multi-file Drag & Drop + Prompt) -->
+    <div class="studio-card" id="studioStep1">
+      <div class="studio-step-header">
+        <div class="step-num-badge step-1">1</div>
+        <h2 class="studio-step-title">上传题目附件与输入需求</h2>
+        <span class="studio-step-sub">支持题目文件夹拖入 / 多选文件 (MD/PDF/CSV/XLSX/JSON)</span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <!-- Left: Drag and drop folder zone -->
+        <div>
+          <div id="studioDropzone">
+            <div class="dropzone-icon">📁</div>
+            <div class="dropzone-title">点击此处选择文件，或直接将文件夹/附件拖入</div>
+            <div class="dropzone-hint">支持多层级子目录与混合文件类型（题面、坐标矩阵、需求表）</div>
+            <div style="display:flex;gap:10px;justify-content:center">
+              <button type="button" class="wb-btn" id="btnPickFiles">📄 选择多个文件</button>
+              <button type="button" class="wb-btn" id="btnPickFolder">📁 选择整个文件夹</button>
+            </div>
+            <input type="file" id="studioFileInput" multiple webkitdirectory style="display:none" />
+            <input type="file" id="studioFilesOnlyInput" multiple style="display:none" />
+          </div>
+
+          <div id="studioFileList"></div>
+
+          <!-- Quick Action Notice (Direct Next Step) -->
+          <div id="studioFileActionNotice">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+              <span style="font-size:12.5px;color:#047857;font-weight:700" id="studioFileReadyText">✅ 文件已就绪</span>
+              <button type="button" class="wb-btn primary" id="btnStudioQuickAnalyze">
+                🚀 一键分析并立即求解 ➔
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Problem Name + Prompt input -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:12px">
+            <div style="flex:1">
+              <label style="font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;color:#475569">题目任务标识 (Slug)</label>
+              <input type="text" id="studioSlugInput" value="case-my-problem" style="width:100%;height:36px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;font-family:var(--mono);outline:none;background:#f8fafc" />
+            </div>
+            <div style="display:flex;align-items:flex-end">
+              <button type="button" class="wb-btn" id="btnStudioLoadPreset" style="height:36px;font-size:11.5px">📚 加载 8 工位巡检测试算例</button>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column">
+            <label style="font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;color:#475569">自然语言需求与业务偏好 (提示词)</label>
+            <textarea id="studioPromptInput" rows="4" placeholder="例如：请为这8个检测工位规划一条最短巡检封闭回路，优先兼顾求解速度与距离最优，站点坐标请参考附件 coords.json…" style="width:100%;flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:12.5px;line-height:1.55;resize:vertical;background:#f8fafc;outline:none"></textarea>
+          </div>
+          <div id="studioAnalyzeError" class="studio-error-box"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+            <span id="studioStep1Status" class="studio-status-text" style="color:var(--blue)"></span>
+            <button type="button" class="wb-btn primary" id="btnStudioAnalyze" style="height:38px;padding:0 24px;font-size:13px;font-weight:700">
+              🚀 一键分析并求解
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+
+<!-- === src/html/studio/analysis.html === -->
+    <!-- Step 2: Deep Thinking Analysis & Strategy Parameter Card (Non-blocking) -->
+    <div class="studio-card" id="studioAnalysisCard" style="display:none">
+      <div class="studio-step-header">
+        <div class="step-num-badge step-2">2</div>
+        <h2 class="studio-step-title">建模思路研判与策略参数</h2>
+        <span class="studio-step-sub">全自动直通求解 · 已默认采用推荐策略（可随时微调重算）</span>
+      </div>
+
+      <div id="studioDiagnosisBanner"></div>
+      <div id="studioKnowledgeBanner" style="display:none"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+        <div>
+          <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;color:#334155">⚖️ 求解算法可行性推演对比</div>
+          <div id="studioAlgoList"></div>
+        </div>
+        <div>
+          <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;color:#334155">📊 数据探针与输入参数对齐</div>
+          <div id="studioDataList"></div>
+        </div>
+      </div>
+
+      <details style="margin-bottom:18px;background:#f8fafc;border-radius:12px;padding:12px 16px;border:1px solid var(--border)" id="studioThinkingDetails">
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;color:#334155">
+          <span>🧠 查看深度推演过程与思考链 (Deep Thinking)</span>
+          <span id="studioThinkingBadge" style="font-size:11px;padding:3px 10px;border-radius:var(--pill);font-weight:600;margin-left:auto"></span>
+        </summary>
+        <div id="studioKeyPromptBanner" style="display:none;margin:12px 0 8px 0;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;line-height:1.5">
+          💡 <strong>离线模式提示：</strong>当前未配置 API Key，展示的是基于本地知识库的确定性规则推演。在上方填入 Key 即可启动真正的深度语义推理链。
+        </div>
+        <div id="studioThinkingContent" style="margin-top:12px;font-size:11.5px;font-family:var(--mono);line-height:1.65;white-space:pre-wrap;color:#475569;background:#ffffff;padding:12px;border-radius:8px;border:1px solid #e2e8f0;max-height:220px;overflow-y:auto"></div>
+      </details>
+
+      <div style="background:#f8fafc;border-radius:14px;padding:18px 20px;margin-bottom:18px;border:1px solid var(--border)">
+        <div style="font-size:13.5px;font-weight:800;margin-bottom:14px;color:#1e293b">⚙️ 求解策略与参数预设（已自动采用推荐方向，可按需微调后重算）：</div>
+        <div id="studioQuestionsBox"></div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px;color:#475569">💬 自由补充指令（选填）：</label>
+        <input type="text" id="studioExtraPrompt" placeholder="例如：请将巡检结果用通俗报告呈现，标明总里程…" style="width:100%;height:38px;padding:0 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:12.5px;outline:none;background:#f8fafc" />
+      </div>
+
+      <div id="studioConfirmError" class="studio-error-box"></div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <span id="studioStep2Status" style="font-size:12px;color:#64748b">修改上方策略或知识库锚点后，可一键按新参数重新求解</span>
+        <button type="button" class="wb-btn success" id="btnStudioConfirmSolve" style="height:40px;padding:0 28px;font-size:14px;font-weight:700">
+          🔄 应用参数微调并重算
+        </button>
+      </div>
+    </div>
+
+
+
+<!-- === src/html/studio/result.html === -->
+    <!-- Step 3: Result & Artifacts Download Card -->
+    <div class="studio-card" id="studioResultCard" style="display:none">
+      <div class="studio-step-header">
+        <div class="step-num-badge step-3">3</div>
+        <h2 class="studio-step-title">求解成果与全维交付物</h2>
+        <span class="studio-step-sub" id="studioStep3Sub">纯真数字 · 数学验算合格</span>
+      </div>
+
+      <div id="studioResultBanner" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:14px;padding:20px 26px;margin-bottom:22px">
+        <div id="studioHeadline"></div>
+        <div style="display:flex;gap:36px;align-items:baseline;flex-wrap:wrap">
+          <div id="studioObjective"></div>
+          <div id="studioValidation"></div>
+        </div>
+        <div id="studioSolutionDetail"></div>
+      </div>
+
+      <!-- Step 3.5: Dynamic OR Visualization Cockpit -->
+      <div id="studioVizContainer" class="studio-viz-card">
+        <div class="viz-header">
+          <div class="viz-title-group">
+            <span class="viz-icon">📊</span>
+            <div>
+              <div class="viz-title">动态运筹图谱与收敛驾驶舱</div>
+              <div class="viz-subtitle">高精度纯矢量图谱 · 真实算子数据驱动 · 毫米级时序与拓扑研判</div>
+            </div>
+            <span class="viz-badge" id="vizDomainBadge">车间调度 / 路径 / 收敛</span>
+          </div>
+          <div class="viz-tabs" id="vizTabs">
+            <button type="button" class="viz-tab active" data-viz-tab="gantt" id="tabVizGantt">🏭 车间排产甘特图</button>
+            <button type="button" class="viz-tab" data-viz-tab="routes" id="tabVizRoutes">🚚 物流路线地图轨迹</button>
+            <button type="button" class="viz-tab" data-viz-tab="gap" id="tabVizGap">📈 ALNS 下界收敛曲线</button>
+          </div>
+        </div>
+        <div class="viz-body">
+          <div class="viz-panel active" id="vizPanelGantt"></div>
+          <div class="viz-panel" id="vizPanelRoutes" style="display:none"></div>
+          <div class="viz-panel" id="vizPanelGap" style="display:none"></div>
+          <div id="vizInteractiveTooltip" class="viz-tooltip-pill" style="display:none">
+            <span class="viz-tt-icon">💡</span>
+            <span class="viz-tt-text" id="vizTooltipText"></span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:22px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#1e293b">📦 成果一键打包与下载：</div>
+        <div id="studioDownloads">
+          <a class="studio-dl-btn" id="dlSolution" href="#" download>
+            📥 求解输出数据 (solution.json)
+          </a>
+          <a class="studio-dl-btn" id="dlValidation" href="#" download>
+            🛡️ 物理与数学质检报告 (validate.json)
+          </a>
+          <a class="studio-dl-btn" id="dlPaper" href="#" download>
+            📑 工业与学术研报 (paper.md)
+          </a>
+          <a class="studio-dl-btn" id="dlAnalysis" href="#" download>
+            🧠 建模研判方案 (analysis.json)
+          </a>
+          <button type="button" class="wb-btn primary" id="btnStudioGeneratePaper" hidden>
+            📑 按需生成完整学术论文
+          </button>
+          <span id="studioPaperStatus" style="font-size:12px;font-weight:600;color:#475569;align-self:center"></span>
+        </div>
+      </div>
+
+      <div style="text-align:right">
+        <a class="wb-btn" id="btnStudioViewInspector" href="/" style="font-size:12px;text-decoration:none">
+          🔍 在「专家监视模式」中查看底层控制面与验证完整细节 →
+        </a>
+      </div>
+    </div>
+  </div>
+  </div> <!-- #studio-root -->
+  <!-- ==================== END STUDIO MODE CONTAINER ==================== -->
+
+
+  <script>
+// === src/js/common.js ===
+/* ==========================================================================
+   OR-Path Common JavaScript Utilities
+   ========================================================================== */
+
+const $ = (id) => document.getElementById(id);
+
+const NODE_ZH = {
+  intake_ocr: "题面识别",
+  intake_parse: "题面解析",
+  orchestrate: "编排",
+  or_analyst: "领域研判",
+  or_modeler: "数学建模",
+  or_writer: "学术写稿",
+  or_reviewer: "审稿红队",
+  retrieve: "检索",
+  research: "调研",
+  model: "建模",
+  gate_schema: "结构门禁",
+  solve: "求解",
+  gate_validate: "校验",
+  human_stop: "人工确认",
+  explain: "解释",
+  draft_paper: "写稿",
+  cite_pack: "引用打包",
+  review_pack: "审稿",
+  revise_or_done: "修订/完成",
+  provenance: "溯源",
+  end: "结束",
+};
+
+const STATUS_ZH = {
+  ok: "正常",
+  fail: "失败",
+  blocked: "受阻",
+  running: "运行中",
+  idle: "空闲",
+  no_product_run: "尚无产品跑次",
+  available: "有思维链",
+  thinking_unavailable: "无思维链",
+};
+
+function nodeLabel(n) {
+  const k = String(n || "");
+  return NODE_ZH[k] || k;
+}
+
+function statusLabel(st) {
+  const k = String(st || "idle");
+  return STATUS_ZH[k] ? STATUS_ZH[k] : k;
+}
+
+function qs() {
+  const p = new URLSearchParams(location.search);
+  return {
+    slug: p.get("slug") || "test",
+    thread: p.get("thread") || p.get("thread_id") || "",
+  };
+}
+
+function setQS(slug, thread) {
+  const p = new URLSearchParams();
+  p.set("slug", slug);
+  if (thread) p.set("thread", thread);
+  history.replaceState(null, "", "?" + p.toString());
+}
+
+function statusClass(st) {
+  const sanitized = String(st || "idle").replace(/[^\w-]/g, "_");
+  return "badge st-" + esc(sanitized);
+}
+
+function esc(x) {
+  return String(x == null ? "" : x)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function fmtKB(bytes) {
+  if (bytes == null || isNaN(bytes)) return "? KB";
+  return Math.round(bytes / 1024) + " KB";
+}
+
+function showToast(msg, type = "info") {
+  let box = $("orToastContainer");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "orToastContainer";
+    box.setAttribute("role", "status");
+    box.setAttribute("aria-live", "polite");
+    box.style.cssText = "position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none;max-width:420px;";
+    document.body.appendChild(box);
+  }
+  const toast = document.createElement("div");
+  const bg = type === "error" ? "rgba(239, 68, 68, 0.95)" : (type === "warn" ? "rgba(245, 158, 11, 0.95)" : "rgba(15, 23, 42, 0.92)");
+  toast.style.cssText = `background:${bg};color:#fff;padding:10px 16px;border-radius:10px;font-size:12.5px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.3);backdrop-filter:blur(8px);pointer-events:auto;cursor:pointer;transition:transform 0.2s ease, opacity 0.2s ease;display:flex;align-items:center;gap:8px;line-height:1.4;`;
+  const icon = type === "error" ? "✕" : (type === "warn" ? "⚠" : "ℹ");
+  toast.innerHTML = `<span style="font-weight:700">${icon}</span> <span style="flex:1">${esc(msg)}</span>`;
+  toast.onclick = () => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(8px)";
+    setTimeout(() => toast.remove(), 200);
+  };
+  box.appendChild(toast);
+  setTimeout(() => {
+    if (toast.parentNode) {
+      toast.style.opacity = "0";
+      toast.style.transform = "translateY(8px)";
+      setTimeout(() => toast.remove(), 200);
+    }
+  }, 4000);
+}
+
+async function copyToClipboard(text) {
+  if (!text) return false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch (_) {}
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+function errorPayload(s) {
+  const e = (s && s.error) || {};
+  const cur = (s && s.current) || {};
+  const last = (e.last_error || cur.last_error || "").trim();
+  const has = e.has_error != null
+    ? !!e.has_error
+    : !!(last || cur.human_required || ["fail", "blocked"].includes(s && s.status));
+  return {
+    has_error: has,
+    last_error: last,
+    stage_seq: e.stage_seq != null ? e.stage_seq : cur.error_stage_seq,
+    node: e.node || cur.node,
+    stage: e.stage || cur.stage,
+    human_required: !!(e.human_required || cur.human_required),
+    status: e.status || (s && s.status) || "",
+    copy_text: e.copy_text || last,
+    explain: e.explain || {},
+  };
+}
+
+function iconFor(kind) {
+  const m = {
+    clock: "⏱",
+    hand: "🖐",
+    warn: "⚠",
+    gate: "🚪",
+    schema: "📐",
+    solve: "🧮",
+    paper: "📄",
+    intake: "📥",
+  };
+  return m[kind] || "⚠";
+}
+
+/**
+ * 同步顶部导航栏激活状态 (/studio vs /)
+ */
+function syncHeaderNavState() {
+  const isStudio = document.body.classList.contains("mode-studio");
+  if ($("btnModeStudio")) $("btnModeStudio").classList.toggle("on", isStudio);
+  if ($("btnModeInspector")) $("btnModeInspector").classList.toggle("on", !isStudio);
+}
+
+
+// === src/js/intake.js ===
+/* ==========================================================================
+   Shared Intake Import Client (/api/intake/import)
+   ========================================================================== */
+
+async function orpathIntakeImport(payload, signal) {
+  const fetchOpts = {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {}),
+  };
+  if (signal) fetchOpts.signal = signal;
+  const response = await fetch("/api/intake/import", fetchOpts);
+  const data = await response.json();
+  return { ok: response.ok, status: response.status, data };
+}
+
+
+// === src/js/studio/state.js ===
+// Studio shared state, AI config, run-mode & 4-stage pipeline indicator
+const studioState = {
+  runMode: (localStorage.getItem("orpath_run_mode") || "fast") === "deep" ? "deep" : "fast",
+  lastSolvedSlug: "",
+  domainKey: "default",
+  loadedFiles: [],
+  currentAnalysis: null,
+  analyzeAbortController: null,
+  confirmAbortController: null,
+  vizTabsBound: false,
+};
+
+const DOMAIN_BADGES = {
+  cutting: "下料切剖 / 共边DP",
+  routing: "物流路径 / HGS遗传",
+  scheduling: "车间排产 / 析取图",
+  project: "工程进度 / 累积资源",
+  inventory: "供应链库存 / WW-DP",
+  facility: "网络选址 / 测地距离",
+  rostering: "排班轮休 / 集合覆盖",
+  microgrid: "光储微网 / 分时电价",
+  pricing: "定价博弈 / 收益管理",
+  finance: "金融组合 / 风险平价",
+  default: "运筹建模 / 精确求解",
+};
+
+function setRunMode(mode) {
+  const m = mode === "deep" ? "deep" : "fast";
+  studioState.runMode = m;
+  try { localStorage.setItem("orpath_run_mode", m); } catch (_) {}
+  if ($("btnRunModeFast")) $("btnRunModeFast").classList.toggle("active", m === "fast");
+  if ($("btnRunModeDeep")) $("btnRunModeDeep").classList.toggle("active", m === "deep");
+  if ($("studioFastProgress")) $("studioFastProgress").hidden = (m !== "fast");
+  if ($("studioDeepStrip")) $("studioDeepStrip").hidden = (m !== "deep");
+}
+
+function updateApiKeyBadge() {
+  const apiKeyInput = $("studioApiKeyInput");
+  const modelSelect = $("studioModelSelect");
+  const apiKeyBadge = $("studioApiKeyBadge");
+  if (!apiKeyBadge) return;
+  const key = (apiKeyInput?.value || "").trim();
+  const mod = modelSelect?.value || "spark-x2.6";
+  if (mod === "offline") {
+    apiKeyBadge.style.background = "rgba(142,142,147,0.15)";
+    apiKeyBadge.style.color = "var(--ink-48)";
+    apiKeyBadge.style.borderColor = "rgba(142,142,147,0.3)";
+    apiKeyBadge.textContent = "⚪ 离线探针模式 (无需 Key)";
+  } else if (key.length > 5) {
+    apiKeyBadge.style.background = "rgba(52,199,89,0.15)";
+    apiKeyBadge.style.color = "#30d158";
+    apiKeyBadge.style.borderColor = "rgba(52,199,89,0.35)";
+    if (key.startsWith("ak-") || mod.startsWith("spark")) {
+      apiKeyBadge.textContent = "🟢 讯飞星辰深度思考已就绪 (Spark X2.6)";
+    } else {
+      apiKeyBadge.textContent = "🟢 DeepSeek 深度思考已就绪 (" + (mod === "deepseek-reasoner" ? "R1" : "V3") + ")";
+    }
+  } else {
+    apiKeyBadge.style.background = "rgba(255,159,10,0.15)";
+    apiKeyBadge.style.color = "#d97706";
+    apiKeyBadge.style.borderColor = "rgba(255,159,10,0.35)";
+    apiKeyBadge.textContent = "⚠️ 离线规则探针 (未配置 API Key)";
+  }
+}
+
+function scrollStudioToCard(card) {
+  if (!card) return;
+  card.style.display = "block";
+  setTimeout(() => {
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 60);
+}
+
+function normalizeDomainKey(raw) {
+  if (!raw) return "default";
+  const s = String(raw).toLowerCase().replace(/[-_]/g, "");
+  if (s.includes("sched") || s.includes("jssp") || s.includes("jobshop")) return "scheduling";
+  if (s.includes("rout") || s.includes("vrp") || s.includes("tsp")) return "routing";
+  if (s.includes("tube") || s.includes("cut") || s.includes("polyomino")) return "cutting";
+  if (s.includes("project") || s.includes("rcpsp") || s.includes("psplib")) return "project";
+  if (s.includes("inventory") || s.includes("lotsiz") || s.includes("wagner")) return "inventory";
+  if (s.includes("facility") || s.includes("cflp") || s.includes("hub") || s.includes("scnd")) return "facility";
+  if (s.includes("roster") || s.includes("staff") || s.includes("shift")) return "rostering";
+  if (s.includes("microgrid") || s.includes("pv") || s.includes("bess")) return "microgrid";
+  if (s.includes("pricing") || s.includes("revenue") || s.includes("yield")) return "pricing";
+  if (s.includes("finance") || s.includes("portfolio") || s.includes("markowitz")) return "finance";
+  return "default";
+}
+
+function setPipelineStage(stageKey, stateText, detailText) {
+  const fastIds = ["fastStepProbe", "fastStepPlan", "fastStepSolve", "fastStepGate"];
+  const deepIds = ["deepCardAnalyst", "deepCardModeler", "deepCardWriter", "deepCardReviewer"];
+  const stageIdxMap = {
+    probe: 0,
+    analyze: 0,
+    plan: 1,
+    solve: 2,
+    gate: 3,
+    paper: 2,
+    gate_done: 99,
+    done: 99,
+    paper_done: 99,
+    blocked: -2,
+  };
+  const activeIdx = stageIdxMap[stageKey] !== undefined ? stageIdxMap[stageKey] : 0;
+
+  function updateGroup(ids, badgeSel) {
+    ids.forEach((id, idx) => {
+      const el = $(id);
+      if (!el) return;
+      const badge = el.querySelector(badgeSel);
+      el.classList.remove("active", "done", "blocked");
+      if (activeIdx === -2) {
+        if (idx <= 2) {
+          el.classList.add("done");
+          if (badge) { badge.className = "fast-step-badge done"; badge.textContent = "已完成"; }
+        } else {
+          el.classList.add("blocked");
+          if (badge) { badge.className = "fast-step-badge blocked"; badge.textContent = stateText || "已阻断"; }
+        }
+        return;
+      }
+      if (activeIdx === 99 || idx < activeIdx) {
+        el.classList.add("done");
+        if (badge) { badge.className = "fast-step-badge done"; badge.textContent = "已完成 ✓"; }
+      } else if (idx === activeIdx) {
+        el.classList.add("active");
+        if (badge) { badge.className = "fast-step-badge active"; badge.textContent = stateText || "执行中…"; }
+      } else {
+        if (badge) { badge.className = "fast-step-badge waiting"; badge.textContent = "待命"; }
+      }
+    });
+  }
+
+  updateGroup(fastIds, ".fast-step-badge");
+  updateGroup(deepIds, ".fast-step-badge");
+  if (detailText && activeIdx >= 0 && activeIdx < fastIds.length) {
+    const subEl = $(fastIds[activeIdx] + "Sub");
+    if (subEl) subEl.textContent = detailText;
+  }
+}
+
+function initStudioConfig() {
+  const btnModeFast = $("btnRunModeFast");
+  const btnModeDeep = $("btnRunModeDeep");
+  if (btnModeFast) btnModeFast.addEventListener("click", () => setRunMode("fast"));
+  if (btnModeDeep) btnModeDeep.addEventListener("click", () => setRunMode("deep"));
+  setRunMode(studioState.runMode);
+
+  const apiKeyInput = $("studioApiKeyInput");
+  const modelSelect = $("studioModelSelect");
+  const btnSaveApiKey = $("btnSaveApiKey");
+  const savedKey = localStorage.getItem("orpath_deepseek_key") || "";
+  const savedModel = localStorage.getItem("orpath_model_name") || "spark-x2.6";
+  if (apiKeyInput) apiKeyInput.value = savedKey;
+  if (modelSelect) modelSelect.value = savedModel;
+  updateApiKeyBadge();
+
+  if (apiKeyInput) {
+    apiKeyInput.addEventListener("input", () => {
+      const val = apiKeyInput.value.trim();
+      if (val.startsWith("ak-") && modelSelect && modelSelect.value !== "spark-x2.6" && modelSelect.value !== "offline") {
+        modelSelect.value = "spark-x2.6";
+      } else if (val.startsWith("sk-") && modelSelect && modelSelect.value === "spark-x2.6") {
+        modelSelect.value = "deepseek-reasoner";
+      }
+      localStorage.setItem("orpath_deepseek_key", val);
+      updateApiKeyBadge();
+    });
+  }
+
+  if (btnSaveApiKey) {
+    btnSaveApiKey.addEventListener("click", () => {
+      localStorage.setItem("orpath_deepseek_key", (apiKeyInput?.value || "").trim());
+      localStorage.setItem("orpath_model_name", modelSelect?.value || "deepseek-reasoner");
+      updateApiKeyBadge();
+      btnSaveApiKey.textContent = "已保存 ✓";
+      setTimeout(() => { if (btnSaveApiKey) btnSaveApiKey.textContent = "保存"; }, 1500);
+    });
+  }
+
+  if (modelSelect) {
+    modelSelect.addEventListener("change", () => {
+      localStorage.setItem("orpath_model_name", modelSelect.value);
+      updateApiKeyBadge();
+    });
+  }
+}
+
+
+// === src/js/studio/files.js ===
+// Studio folder/file intake, size caps & preset loader
+// --- Studio Files & Drag-and-Drop ---
+const MAX_STUDIO_FILES = 200;
+const MAX_STUDIO_TOTAL_BYTES = 25 * 1024 * 1024; // 25 MB
+const MAX_STUDIO_FILE_BYTES = 10 * 1024 * 1024; // 10 MB per file
+const MAX_RECURSION_DEPTH = 12;
+
+
+function updateFileListUI() {
+  if (!$("studioFileList")) return;
+  if (studioState.loadedFiles.length === 0) {
+    $("studioFileList").innerHTML = `<span style="color:var(--ink-48)">尚未载入附件 (可拖入题面文件夹、坐标矩阵、需求清单或表格)</span>`;
+    if ($("studioFileActionNotice")) $("studioFileActionNotice").style.display = "none";
+    return;
+  }
+  const totalBytes = studioState.loadedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+  const kbStr = fmtKB(totalBytes);
+  $("studioFileList").innerHTML = `
+    <div style="font-weight:700;color:var(--blue);margin-bottom:6px">
+      📂 已解析待研判文件清单 (${studioState.loadedFiles.length} 个文件 · 共 ${kbStr}):
+    </div>
+    <div style="max-height:120px;overflow-y:auto;background:var(--surface-2);border-radius:6px;padding:8px 10px;font-family:var(--mono);line-height:1.6">
+      ${studioState.loadedFiles.map(f => `<div>📄 ${esc(f.rel_path)} <span style="color:var(--ink-48);font-size:10px">(${fmtKB(f.size)})</span></div>`).join("")}
+    </div>
+  `;
+
+  // 智能建议 slug 标识
+  const slugEl = $("studioSlugInput");
+  if (slugEl && (slugEl.value === "case-studio" || slugEl.value === "case-my-problem" || !slugEl.value)) {
+    const first = studioState.loadedFiles[0]?.rel_path || "";
+    const base = first.split("/")[0].split(".")[0].replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
+    if (base && base.length >= 2) slugEl.value = "case-" + base;
+  }
+
+  // 展现快捷启动横幅
+  const notice = $("studioFileActionNotice");
+  if (notice) {
+    notice.style.display = "flex";
+    const countEl = $("studioFileReadyText");
+    if (countEl) countEl.textContent = `已就绪 ${studioState.loadedFiles.length} 个文件 (${kbStr})`;
+  }
+}
+
+function readFileAsBase64(file, relPath) {
+  return new Promise((resolve) => {
+    if (file.size > MAX_STUDIO_FILE_BYTES) {
+      showToast(`文件 ${relPath} 超过 10MB 单文件限制，已跳过`, "warn");
+      resolve(null);
+      return;
+    }
+    const reader = new FileReader();
+    const timer = setTimeout(() => {
+      resolve({ rel_path: relPath, content_base64: "", size: file.size || 0 });
+    }, 5000);
+    reader.onload = () => {
+      clearTimeout(timer);
+      const b64 = (reader.result || "").split(",")[1] || "";
+      resolve({ rel_path: relPath, content_base64: b64, size: file.size || 0 });
+    };
+    reader.onerror = () => {
+      clearTimeout(timer);
+      resolve({ rel_path: relPath, content_base64: "", size: file.size || 0 });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function ingestFileList(files, preserveRelPath) {
+  if (!files || !files.length) return;
+  for (const f of files) {
+    if (studioState.loadedFiles.length >= MAX_STUDIO_FILES) {
+      showToast(`文件总数已达上限 (${MAX_STUDIO_FILES})，多余文件已忽略`, "warn");
+      break;
+    }
+    const curBytes = studioState.loadedFiles.reduce((acc, x) => acc + (x.size || 0), 0);
+    if (curBytes + (f.size || 0) > MAX_STUDIO_TOTAL_BYTES) {
+      showToast("文件总体积已达上限 (25MB)，后续文件已忽略", "warn");
+      break;
+    }
+    const rel = preserveRelPath ? (f.webkitRelativePath || f.name) : f.name;
+    const obj = await readFileAsBase64(f, rel);
+    if (obj) studioState.loadedFiles.push(obj);
+  }
+}
+
+async function scanFiles(items, rawFiles) {
+  let usedEntries = false;
+  if (items && items.length > 0 && items[0].webkitGetAsEntry) {
+    const entries = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item && item.webkitGetAsEntry) {
+        try {
+          const entry = item.webkitGetAsEntry();
+          if (entry) entries.push(entry);
+        } catch (_) {}
+      }
+    }
+    if (entries.length > 0) {
+      usedEntries = true;
+      async function readEntry(entry, path = "", depth = 0) {
+        if (depth > MAX_RECURSION_DEPTH) {
+          console.warn("Directory recursion exceeded max depth: " + path);
+          return;
+        }
+        if (studioState.loadedFiles.length >= MAX_STUDIO_FILES) {
+          showToast(`文件总数已达上限 (${MAX_STUDIO_FILES})，多余文件已忽略`, "warn");
+          return;
+        }
+        const curBytes = studioState.loadedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+        if (curBytes >= MAX_STUDIO_TOTAL_BYTES) {
+          showToast("文件总体积已达上限 (25MB)，后续文件已忽略", "warn");
+          return;
+        }
+        if (entry.isFile) {
+          const f = await new Promise((res) => entry.file(res, () => res(null)));
+          if (f) {
+            const rel = path ? `${path}/${f.name}` : f.name;
+            const obj = await readFileAsBase64(f, rel);
+            if (obj && studioState.loadedFiles.length < MAX_STUDIO_FILES) {
+              studioState.loadedFiles.push(obj);
+            }
+          }
+        } else if (entry.isDirectory) {
+          const dirReader = entry.createReader();
+          const readEntriesBatch = () => new Promise((res) => dirReader.readEntries(res, () => res([])));
+          let batch = await readEntriesBatch();
+          while (batch.length > 0) {
+            for (const sub of batch) {
+              if (studioState.loadedFiles.length >= MAX_STUDIO_FILES) break;
+              await readEntry(sub, path ? `${path}/${entry.name}` : entry.name, depth + 1);
+            }
+            if (studioState.loadedFiles.length >= MAX_STUDIO_FILES) break;
+            batch = await readEntriesBatch();
+          }
+        }
+      }
+      for (const ent of entries) {
+        await readEntry(ent, "", 0);
+      }
+    }
+  }
+  if (!usedEntries && rawFiles && rawFiles.length > 0) {
+    await ingestFileList(rawFiles, true);
+  }
+  updateFileListUI();
+}
+
+
+function initStudioFiles() {
+  const dropzone = $("studioDropzone");
+  const fileInput = $("studioFileInput");
+  const filesOnlyInput = $("studioFilesOnlyInput");
+  const fileList = $("studioFileList");
+  const btnSelectFolder = $("btnPickFolder");
+  const btnSelectFiles = $("btnPickFiles");
+  
+  if (btnSelectFolder && fileInput) {
+    btnSelectFolder.addEventListener("click", (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+  }
+  if (btnSelectFiles && filesOnlyInput) {
+    btnSelectFiles.addEventListener("click", (e) => {
+      e.stopPropagation();
+      filesOnlyInput.click();
+    });
+  }
+  if (dropzone) {
+    dropzone.addEventListener("click", () => {
+      if (fileInput) fileInput.click();
+    });
+  }
+  
+  if (dropzone) {
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("dragover");
+    });
+    dropzone.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      studioState.loadedFiles = [];
+      if (e.dataTransfer) {
+        await scanFiles(e.dataTransfer.items, e.dataTransfer.files);
+      }
+    });
+  }
+  
+  if (fileInput) {
+    fileInput.addEventListener("change", async () => {
+      studioState.loadedFiles = [];
+      await ingestFileList(fileInput.files, true);
+      fileInput.value = "";
+      updateFileListUI();
+    });
+  }
+  
+  if (filesOnlyInput) {
+    filesOnlyInput.addEventListener("change", async () => {
+      studioState.loadedFiles = [];
+      await ingestFileList(filesOnlyInput.files, false);
+      filesOnlyInput.value = "";
+      updateFileListUI();
+    });
+  }
+  
+  // --- Preset Data Loader ---
+  if ($("btnStudioLoadPreset")) {
+    $("btnStudioLoadPreset").addEventListener("click", () => {
+      $("studioSlugInput").value = "case-tsp-8";
+      $("studioPromptInput").value = "8工位智能巡检规划：请根据坐标规划一条封闭巡检路线，要求遍历8个站点并返回起点，总里程最短。";
+      const coords = { coords: [
+        { id: 0, x: 0, y: 0 }, { id: 1, x: 10, y: 5 }, { id: 2, x: 20, y: 10 },
+        { id: 3, x: 30, y: 15 }, { id: 4, x: 40, y: 20 }, { id: 5, x: 50, y: 25 },
+        { id: 6, x: 60, y: 30 }, { id: 7, x: 70, y: 35 }
+      ]};
+      const b64Coords = btoa(JSON.stringify(coords));
+      const b64Prob = btoa("# 8工位巡检问题\n问题一：访问8个工位并返回起点\n");
+      studioState.loadedFiles = [
+        { rel_path: "problem.md", content_base64: b64Prob, size: 120 },
+        { rel_path: "data/coords.json", content_base64: b64Coords, size: 240 },
+      ];
+      updateFileListUI();
+    });
+  }
+}
+
+
+// === src/js/studio/analyze.js ===
+// --- Studio Analyze ---
+
+async function triggerStudioAnalyze() {
+  if (studioState.analyzeAbortController) {
+    studioState.analyzeAbortController.abort();
+  }
+  studioState.analyzeAbortController = new AbortController();
+  const signal = studioState.analyzeAbortController.signal;
+
+  const slug = ($("studioSlugInput")?.value || "case-studio").trim();
+  const prompt = ($("studioPromptInput")?.value || "").trim();
+  const apiKey = ($("studioApiKeyInput")?.value || "").trim();
+  const model = $("studioModelSelect")?.value || "deepseek-reasoner";
+  const st1 = $("studioStep1Status");
+  const errBox = $("studioAnalyzeError");
+  if (errBox) { errBox.style.display = "none"; errBox.textContent = ""; }
+  if (st1) st1.innerHTML = `<span style="color:var(--blue)">⏳ 正在上传附件并由数据探针与深度模型研判中…</span>`;
+  if ($("btnStudioAnalyze")) { $("btnStudioAnalyze").disabled = true; $("btnStudioAnalyze").textContent = "⏳ 正在研判中…"; }
+  const btnQuick = $("btnStudioQuickAnalyze");
+  if (btnQuick) btnQuick.disabled = true;
+  setPipelineStage("analyze", "研判中…", "结构化探针与题面解析");
+
+  try {
+    if (studioState.loadedFiles.length > 0) {
+      const { data: impJson } = await orpathIntakeImport(
+        { mode: "folder", slug, files: studioState.loadedFiles },
+        signal
+      );
+      if (signal.aborted) return;
+      if (!impJson.ok) throw new Error(impJson.error || "文件夹上传失败");
+    }
+
+    let anaJson = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (signal.aborted) return;
+      const anaRes = await fetch("/api/studio/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, prompt, api_key: apiKey, model, run_mode: studioState.runMode }),
+        signal,
+      });
+      if (signal.aborted) return;
+      anaJson = await anaRes.json();
+      if (signal.aborted) return;
+      const errText = String(anaJson.error || "");
+      const rText = String(anaJson.analysis?.thinking_meta?.reasoning_text || "");
+      if ((anaRes.status === 429 || errText.includes("429") || rText.includes("HTTP 429") || rText.includes("限流")) && attempt < 2) {
+        if (st1) st1.innerHTML = `<span style="color:#d97706">⏳ 遇到 429 限流，正在自动重试 (${attempt + 1}/2)…</span>`;
+        await new Promise((resolve, reject) => {
+          const tm = setTimeout(resolve, 2000 * (attempt + 1));
+          signal.addEventListener("abort", () => {
+            clearTimeout(tm);
+            reject(new DOMException("Aborted", "AbortError"));
+          }, { once: true });
+        });
+        continue;
+      }
+      break;
+    }
+    if (signal.aborted) return;
+    if (!anaJson || !anaJson.ok) throw new Error((anaJson && anaJson.error) || "研判分析受阻");
+
+    studioState.currentAnalysis = anaJson.analysis;
+    const isLive = Boolean(studioState.currentAnalysis?.thinking_meta?.live_thinking);
+    renderStudioAnalysisCard(studioState.currentAnalysis);
+    if (st1) {
+      st1.innerHTML = isLive
+        ? '<span style="color:#059669">✅ 深度研判完成，正在自动直通真算…</span>'
+        : '<span style="color:#d97706">✅ 离线探针研判完成，正在自动直通真算…</span>';
+    }
+    await executeStudioSolve(signal);
+    if (!signal.aborted && st1) {
+      st1.innerHTML = '<span style="color:#059669">✅ 研判与自动求解已闭环完成</span>';
+    }
+  } catch (err) {
+    if (err.name === "AbortError" || signal.aborted) return;
+    if (st1) st1.innerHTML = '<span style="color:#dc2626">❌ 研判或求解受阻</span>';
+    if (errBox) {
+      errBox.style.display = "block";
+      errBox.innerHTML = `<strong>⚠️ 运行失败：</strong> ${esc(err.message)} <br/><span style="font-size:11px;opacity:0.8">请检查文件格式或 API 配置后重试。</span>`;
+    }
+  } finally {
+    if ($("btnStudioAnalyze")) { $("btnStudioAnalyze").disabled = false; $("btnStudioAnalyze").textContent = "🚀 一键分析并求解"; }
+    if (btnQuick) btnQuick.disabled = false;
+  }
+}
+
+
+function renderStudioAnalysisCard(ana) {
+  const card = $("studioAnalysisCard");
+  if (!card) return;
+  scrollStudioToCard(card);
+
+  const meta = ana.thinking_meta || {};
+  const isLive = Boolean(meta.live_thinking);
+  const badge = $("studioThinkingBadge");
+  const promptBanner = $("studioKeyPromptBanner");
+  if (badge) {
+    if (isLive) {
+      badge.style.background = "rgba(16,185,129,0.15)";
+      badge.style.color = "#047857";
+      const modelUsed = String(meta.model_used || "");
+      const modelLabel = /spark/i.test(modelUsed)
+        ? "讯飞星辰 Spark X2.6"
+        : (modelUsed && modelUsed !== "deepseek-reasoner" ? modelUsed : "DeepSeek-R1");
+      badge.textContent = `🟢 ${modelLabel} 实时思考已启用`;
+      if (promptBanner) promptBanner.style.display = "none";
+    } else {
+      badge.style.background = "rgba(255,159,10,0.15)";
+      badge.style.color = "#d97706";
+      badge.textContent = "🟡 离线规则探针 (未配置 API Key)";
+      if (promptBanner) promptBanner.style.display = "block";
+    }
+  }
+
+  const diag = ana.domain_diagnosis || {};
+  const diagBanner = $("studioDiagnosisBanner");
+  if (diagBanner) {
+    diagBanner.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+        <strong style="font-size:15px;color:#6d28d9">🎯 识别领域：${esc(diag.domain_name || diag.problem_class)}</strong>
+        <span style="font-size:11px;background:#8b5cf6;color:#fff;padding:2px 8px;border-radius:10px;font-weight:600">第一推荐：${esc(diag.recommended_algorithm)}</span>
+      </div>
+      <p style="margin:0;font-size:12px;line-height:1.5;color:var(--ink-60)">${esc(diag.rationale || '')}</p>
+    `;
+  }
+
+  const kBanner = $("studioKnowledgeBanner");
+  const kHits = ana.knowledge_hits || (meta && meta.knowledge_hits) || [];
+  const kSkills = ana.matched_skills || (meta && meta.matched_skills) || [];
+  const kLit = ana.literature_anchors || (meta && meta.literature_anchors) || [];
+  if (kBanner) {
+    kBanner.style.display = "block";
+    const renderHitRow = (kh, checked = true) => `
+      <label style="display:flex;align-items:flex-start;gap:8px;background:#fff;border:1px solid #e0e7ff;border-radius:6px;padding:7px 10px;font-size:11px;cursor:pointer">
+        <input type="checkbox" class="studio-pin-kb" ${checked ? "checked" : ""}
+          data-kb-id="${esc(kh.chunk_id || kh.id || '')}"
+          data-kb-title="${esc(kh.title || kh.chunk_id || '')}"
+          data-kb-kind="chunk"
+          data-kb-snippet="${esc((kh.snippet || '').slice(0, 180))}"
+          style="margin-top:2px;cursor:pointer" />
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;gap:6px">
+            <span style="font-weight:600;color:#1e1b4b">📄 ${esc(kh.title || kh.chunk_id)}</span>
+            <span style="font-size:10px;color:#6366f1;font-family:var(--mono)">相关度: ${esc(kh.score ?? '-')}</span>
+          </div>
+          <div style="color:var(--ink-48);line-height:1.4;font-size:10.5px">${esc(kh.snippet || '')}</div>
+        </div>
+      </label>
+    `;
+
+    kBanner.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <strong style="font-size:13px;color:#4338ca">📚 运筹知识库先验工作台 (勾选锁定项将注入建模与论文锚点)</strong>
+        <span style="font-size:10px;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:8px;font-weight:600">Hybrid BM25 + bge-m3 + Top500 顶刊</span>
+      </div>
+      ${kSkills.length > 0 ? `
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          ${kSkills.map((sk, idx) => `
+            <label style="display:inline-flex;align-items:center;gap:5px;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:600;cursor:pointer">
+              <input type="checkbox" class="studio-pin-kb" ${idx < 2 ? "checked" : ""}
+                data-kb-id="${esc(sk.id)}"
+                data-kb-title="${esc(sk.id)}"
+                data-kb-kind="skill"
+                data-kb-snippet="${esc((sk.excerpt || '').slice(0, 160))}" />
+              🛠️ Skill: ${esc(sk.id)}
+            </label>
+          `).join("")}
+        </div>
+      ` : ""}
+      <div id="studioKbItemsList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+        ${kHits.map((kh, idx) => renderHitRow(kh, idx < 2)).join("")}
+      </div>
+      ${kLit.length > 0 ? `
+        <div style="background:#f5f3ff;border:1px dashed #c4b5fd;border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:10.5px;color:#4c1d95;line-height:1.5">
+          <strong>🏛️ 匹配权威顶刊文献锚点：</strong>
+          ${kLit.map(l => `<span style="margin-right:10px">• ${esc(l.cite_label)} <em>${esc(l.title)}</em> (${esc(l.venue)})</span>`).join("")}
+        </div>
+      ` : ""}
+      <div style="display:flex;gap:6px;align-items:center">
+        <input type="text" id="studioKbSearchInput" placeholder="实时检索知识库方法/模型/割平面 (例如: cutting plane subtour, column generation)…"
+          style="flex:1;height:30px;padding:0 10px;border:1px solid #c7d2fe;border-radius:6px;font-size:11.5px;background:#fff;outline:none" />
+        <button type="button" class="wb-btn" id="btnStudioKbSearch" style="height:30px;padding:0 12px;font-size:11.5px">🔍 检索并锁定</button>
+      </div>
+    `;
+
+    const kbBtn = $("btnStudioKbSearch");
+    const kbInp = $("studioKbSearchInput");
+    const kbList = $("studioKbItemsList");
+    const doKbSearch = async () => {
+      const q = (kbInp?.value || "").trim();
+      if (!q || !kbList) return;
+      if (kbBtn) { kbBtn.disabled = true; kbBtn.textContent = "检索中…"; }
+      try {
+        const pc = encodeURIComponent(diag.problem_class || "");
+        const res = await fetch(`/api/knowledge/search?q=${encodeURIComponent(q)}&problem_class=${pc}&topk=4`);
+        const data = await res.json();
+        if (data && data.ok && Array.isArray(data.hits)) {
+          const existing = new Set(Array.from(kbList.querySelectorAll(".studio-pin-kb")).map(el => el.getAttribute("data-kb-id")));
+          const fresh = data.hits.filter(h => !existing.has(String(h.chunk_id)));
+          if (fresh.length > 0) {
+            kbList.insertAdjacentHTML("afterbegin", fresh.map(h => renderHitRow(h, true)).join(""));
+          }
+        }
+      } catch (_) {
+      } finally {
+        if (kbBtn) { kbBtn.disabled = false; kbBtn.textContent = "🔍 检索并锁定"; }
+      }
+    };
+    if (kbBtn) kbBtn.addEventListener("click", doKbSearch);
+    if (kbInp) kbInp.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); doKbSearch(); } });
+  }
+
+  const algoList = $("studioAlgoList");
+  if (algoList) {
+    algoList.innerHTML = (diag.algorithm_comparison || []).map(al => `
+      <div class="studio-algo-item" style="border:1px solid ${al.recommended ? 'var(--blue)' : 'var(--border)'};background:${al.recommended ? 'rgba(37,99,235,0.04)' : '#f8fafc'};">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <strong style="font-size:12.5px;color:#0f172a">${esc(al.name)}</strong>
+          ${al.recommended ? '<span style="font-size:10.5px;background:rgba(37,99,235,0.12);color:var(--blue);font-weight:700;padding:2px 8px;border-radius:9999px">★ 推荐方案</span>' : ''}
+        </div>
+        <div style="font-size:11.5px;color:#64748b;line-height:1.5">
+          <div><span style="color:#059669;font-weight:700">✓ 优势:</span> ${esc(al.pros || '')}</div>
+          <div><span style="color:#d97706;font-weight:700">⚠ 考量:</span> ${esc(al.cons || '')}</div>
+        </div>
+      </div>
+    `).join("");
+  }
+
+  const dataList = $("studioDataList");
+  if (dataList) {
+    dataList.innerHTML = (ana.data_alignment?.matched_variables || []).map(mv => `
+      <div class="studio-data-item">
+        <div>
+          <strong style="font-size:12.5px;color:#0f172a">${esc(mv.name)}</strong>
+          <div style="font-size:11px;color:#64748b;margin-top:2px">${esc(mv.source)} · ${esc(mv.details)}</div>
+        </div>
+        <span style="font-size:10.5px;background:rgba(16,185,129,0.15);color:#047857;border:1px solid rgba(16,185,129,0.3);padding:2px 8px;border-radius:9999px;font-weight:700">${esc(mv.status)}</span>
+      </div>
+    `).join("");
+  }
+
+  const thinkingContent = $("studioThinkingContent");
+  if (thinkingContent) {
+    thinkingContent.textContent = meta.reasoning_text || "无思考日志";
+  }
+
+  const qBox = $("studioQuestionsBox");
+  if (qBox) {
+    qBox.innerHTML = (ana.clarification_questions || []).map((q, idx) => `
+      <div class="studio-question-card">
+        <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;color:#1e293b">Q${idx + 1}. ${esc(q.question)}</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          ${(q.options || []).map(opt => `
+            <label class="studio-option-label">
+              <input type="radio" name="${esc(q.id)}" value="${esc(opt.id)}" ${opt.recommended ? 'checked' : ''} style="cursor:pointer" />
+              <span style="color:#334155;font-weight:${opt.recommended ? '600' : '400'}">${esc(opt.label)}</span>
+            </label>
+          `).join("")}
+        </div>
+      </div>
+    `).join("");
+  }
+  studioState.domainKey = normalizeDomainKey(diag.problem_class || diag.domain_name);
+  setPipelineStage("plan", "策略就绪", "推荐策略与参数已锁定");
+}
+
+function initStudioAnalyze() {
+  const btnAnalyze = $("btnStudioAnalyze");
+  if (btnAnalyze) btnAnalyze.addEventListener("click", triggerStudioAnalyze);
+  if ($("btnStudioQuickAnalyze")) $("btnStudioQuickAnalyze").addEventListener("click", triggerStudioAnalyze);
+}
+
+
+// === src/js/studio/result.js ===
+// --- Studio Solve (auto-chained after Analyze, or re-run with tweaked params) ---
+
+async function executeStudioSolve(externalSignal) {
+  if (studioState.confirmAbortController) {
+    studioState.confirmAbortController.abort();
+  }
+  studioState.confirmAbortController = new AbortController();
+  const confController = studioState.confirmAbortController;
+  const onExternalAbort = () => confController.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      confController.abort();
+      return;
+    }
+    externalSignal.addEventListener("abort", onExternalAbort, { once: true });
+  }
+
+  const slug = ($("studioSlugInput")?.value || "case-studio").trim();
+  const extraPrompt = ($("studioExtraPrompt")?.value || "").trim();
+  const st2 = $("studioStep2Status");
+  const errBox = $("studioConfirmError");
+  if (errBox) { errBox.style.display = "none"; errBox.textContent = ""; }
+
+  const selectedOptions = {};
+  if (studioState.currentAnalysis && studioState.currentAnalysis.clarification_questions) {
+    studioState.currentAnalysis.clarification_questions.forEach(q => {
+      const checked = document.querySelector(`input[name="${CSS.escape(String(q.id))}"]:checked`);
+      if (checked) selectedOptions[q.id] = checked.value;
+    });
+  }
+
+  if (st2) st2.innerHTML = `<span style="color:var(--blue)">⏳ 正在调用${studioState.runMode === "deep" ? "多智能体与" : ""}真实求解器，在物理门禁中严格验算…</span>`;
+  if ($("btnStudioConfirmSolve")) {
+    $("btnStudioConfirmSolve").disabled = true;
+    $("btnStudioConfirmSolve").textContent = "⏳ 求解中…";
+  }
+  setPipelineStage("solve", "真算中…", "执行确定性算子求解与验算");
+
+  const savedKey = ($("studioApiKeyInput")?.value || localStorage.getItem("orpath_deepseek_key") || "").trim();
+  const savedModel = ($("studioModelSelect")?.value || localStorage.getItem("orpath_model_name") || "spark-x2.6").trim();
+  const isOffline = savedModel === "offline" || !savedKey;
+
+  const confTimeout = setTimeout(() => confController.abort(), 130000);
+
+  const pinnedKnowledge = Array.from(document.querySelectorAll(".studio-pin-kb:checked")).map(el => ({
+    id: el.getAttribute("data-kb-id") || "",
+    title: el.getAttribute("data-kb-title") || "",
+    kind: el.getAttribute("data-kb-kind") || "chunk",
+    snippet: el.getAttribute("data-kb-snippet") || "",
+  })).filter(x => x.id || x.title);
+
+  try {
+    const confRes = await fetch("/api/studio/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        slug,
+        selected_options: selectedOptions,
+        extra_prompt: extraPrompt,
+        pinned_knowledge: pinnedKnowledge,
+        run_mode: studioState.runMode,
+        skip_paper: studioState.runMode === "fast",
+        api_key: savedKey,
+        model: savedModel,
+        timeout: isOffline ? 3.0 : 60.0,
+      }),
+      signal: confController.signal,
+    });
+    if (confController.signal.aborted) return;
+    const confJson = await confRes.json();
+    if (!confJson.ok) throw new Error(confJson.error || "求解失败");
+
+    const confBlocked = (
+      String(confJson.status || "").toUpperCase() === "BLOCKED" ||
+      String(confJson.solution?.status || "").toUpperCase() === "BLOCKED" ||
+      Boolean(confJson.solution?.meta?.blocked)
+    );
+    if (st2) {
+      st2.innerHTML = confBlocked
+        ? '<span style="color:#b91c1c">⛔ 求解已诚实阻断（未通过数值条件）</span>'
+        : '<span style="color:#059669">✅ 求解与严格验算已完成</span>';
+    }
+    renderStudioResultCard(slug, confJson);
+  } catch (err) {
+    if (err.name === "AbortError" && externalSignal && externalSignal.aborted) return;
+    if (st2) st2.innerHTML = '<span style="color:#dc2626">❌ 求解受阻</span>';
+    if (errBox) {
+      errBox.style.display = "block";
+      const errMsg = err.name === "AbortError" ? "求解等待超时 (130s)，请检查模型响应或降低求解规模。" : err.message;
+      errBox.innerHTML = `<strong>⚠️ 求解失败：</strong> ${esc(errMsg)} <br/><span style="font-size:11px;opacity:0.8">请检查题面参数或在高级选项中补充说明。</span>`;
+    }
+  } finally {
+    clearTimeout(confTimeout);
+    if (externalSignal) externalSignal.removeEventListener("abort", onExternalAbort);
+    if ($("btnStudioConfirmSolve")) {
+      $("btnStudioConfirmSolve").disabled = false;
+      $("btnStudioConfirmSolve").textContent = "🔄 应用参数微调并重算";
+    }
+  }
+}
+
+
+function renderStudioResultCard(slug, res) {
+  const card = $("studioResultCard");
+  if (!card) return;
+  scrollStudioToCard(card);
+  studioState.lastSolvedSlug = slug;
+
+  const summary = res.plain_language_summary || {};
+  const isBlocked = (
+    String(res.status || "").toUpperCase() === "BLOCKED" ||
+    String(res.solution?.status || "").toUpperCase() === "BLOCKED" ||
+    Boolean(res.solution?.meta?.blocked)
+  );
+  setPipelineStage(
+    isBlocked ? "blocked" : "done",
+    isBlocked ? "已阻断" : "已完成 ✓",
+    isBlocked ? "触发诚实阻断门禁" : "物理与数理门禁全量通过"
+  );
+  card.classList.toggle("is-blocked", isBlocked);
+  const blockedReason = (
+    res.blocked_reason ||
+    res.reason ||
+    res.solution?.meta?.reason ||
+    "缺少可执行的结构化算例或匹配领域适配器，系统已诚实阻断求解。"
+  );
+  const dataSource = res.data_source || res.solution?.meta?.data_source || "";
+
+  const banner = $("studioResultBanner");
+  if (banner) {
+    if (isBlocked) {
+      banner.style.background = "rgba(239,68,68,0.08)";
+      banner.style.borderColor = "rgba(239,68,68,0.35)";
+    } else {
+      banner.style.background = "rgba(16,185,129,0.08)";
+      banner.style.borderColor = "rgba(16,185,129,0.25)";
+    }
+  }
+  if ($("studioStep3Sub")) {
+    if (isBlocked) {
+      $("studioStep3Sub").textContent = "诚实阻断 · 未执行虚假数值求解";
+    } else {
+      const srcTag = dataSource ? ` · 数据来源: ${dataSource === "fixture" ? "fixture 回放" : "case 实算"}` : "";
+      $("studioStep3Sub").textContent = `纯真数字 · 数学验算合格${srcTag}`;
+    }
+  }
+
+  const isProvenOpt = !isBlocked && Boolean(
+    res.proven_optimal ??
+    res.solution?.proven_optimal ??
+    res.solution?.meta?.proven_optimal ??
+    summary.proven_optimal
+  );
+
+  if ($("studioHeadline")) {
+    if (isBlocked) {
+      $("studioHeadline").textContent = "求解已诚实阻断";
+    } else {
+      $("studioHeadline").textContent = summary.headline || (res.status === "COMPLETED" ? "运筹问题已成功求解" : "求解状态待确认");
+    }
+  }
+
+  const fallbackObj = (!isBlocked && res.solution && res.solution.objective != null)
+    ? (isProvenOpt ? `严格最优目标值: ${res.solution.objective}` : `可行解目标值: ${res.solution.objective} (未证最优)`)
+    : (isBlocked ? "无解/求解受阻" : "等待求解产物");
+
+  if ($("studioObjective")) {
+    const objText = isBlocked ? fallbackObj : (summary.objective_str || fallbackObj);
+    const optBadge = isBlocked
+      ? '<span style="font-size:11px;background:#fef2f2;color:#b91c1c;padding:3px 8px;border-radius:12px;font-weight:700;margin-left:10px;vertical-align:middle;border:1px solid #fecaca">⛔ 已诚实阻断</span>'
+      : (isProvenOpt
+        ? '<span style="font-size:11px;background:#ecfdf5;color:#047857;padding:3px 8px;border-radius:12px;font-weight:700;margin-left:10px;vertical-align:middle;border:1px solid #a7f3d0">★ 严格全局最优</span>'
+        : (res.solution && res.solution.objective != null
+          ? '<span style="font-size:11px;background:#fffbeb;color:#b45309;padding:3px 8px;border-radius:12px;font-weight:600;margin-left:10px;vertical-align:middle;border:1px solid #fde68a">⚡ 可行解 (未证最优)</span>'
+          : ''));
+    $("studioObjective").innerHTML = `${esc(objText)} ${optBadge}`;
+  }
+
+  if ($("studioValidation")) {
+    $("studioValidation").textContent = isBlocked
+      ? "求解受阻，未通过数值求解"
+      : (summary.validation_status || (res.status === "COMPLETED" ? "数理门禁校验合格" : "校验中或待完成"));
+  }
+  if ($("studioSolutionDetail")) {
+    if (isBlocked) {
+      const gaps = Array.isArray(res.gap_list) && res.gap_list.length
+        ? `（缺口项: ${res.gap_list.join("；")}）`
+        : "";
+      $("studioSolutionDetail").textContent = `${blockedReason}${gaps}`;
+    } else {
+      const srcLine = dataSource ? `[data_source=${dataSource}] ` : "";
+      $("studioSolutionDetail").textContent = `${srcLine}${summary.solution_detail || ""}`;
+    }
+  }
+
+  const dlSol = $("dlSolution");
+  if (dlSol) dlSol.href = `/api/artifact/download?slug=${encodeURIComponent(slug)}&kind=solution`;
+  const dlVal = $("dlValidation");
+  if (dlVal) dlVal.href = `/api/artifact/download?slug=${encodeURIComponent(slug)}&kind=validate`;
+  const dlPaper = $("dlPaper");
+  const paperReady = !isBlocked && Boolean(res.paper_generated);
+  if (dlPaper) {
+    dlPaper.href = `/api/artifact/download?slug=${encodeURIComponent(slug)}&kind=paper`;
+    dlPaper.hidden = !paperReady;
+  }
+  const dlAna = $("dlAnalysis");
+  if (dlAna) dlAna.href = `/api/artifact/download?slug=${encodeURIComponent(slug)}&kind=analysis`;
+
+  const btnGenPaper = $("btnStudioGeneratePaper");
+  const paperStatus = $("studioPaperStatus");
+  if (btnGenPaper) {
+    btnGenPaper.hidden = isBlocked || paperReady;
+    btnGenPaper.disabled = false;
+    btnGenPaper.textContent = "📑 按需生成完整学术论文";
+  }
+  if (paperStatus) {
+    if (isBlocked) {
+      paperStatus.textContent = "求解受阻，未生成学术论文";
+    } else if (paperReady) {
+      paperStatus.textContent = "✅ 完整学术论文已生成";
+    } else {
+      paperStatus.textContent = "快速模式已跳过写稿（数值已校验，可按需生成论文）";
+    }
+  }
+
+  const viewInsp = $("btnStudioViewInspector");
+  if (viewInsp) {
+    const q = encodeURIComponent(slug);
+    viewInsp.href = `/?slug=${q}&thread=${q}`;
+  }
+
+  renderVisualizations(res.solution);
+}
+
+
+function initStudioResult() {
+  const btnConfirm = $("btnStudioConfirmSolve");
+  if (btnConfirm) btnConfirm.addEventListener("click", () => executeStudioSolve(null));
+  const btnGenPaper = $("btnStudioGeneratePaper");
+  if (btnGenPaper) {
+    btnGenPaper.addEventListener("click", async () => {
+      const slug = studioState.lastSolvedSlug || ($("studioSlugInput")?.value || "case-studio").trim();
+      const paperStatus = $("studioPaperStatus");
+      const dlPaper = $("dlPaper");
+      const savedKey = ($("studioApiKeyInput")?.value || localStorage.getItem("orpath_deepseek_key") || "").trim();
+      const savedModel = ($("studioModelSelect")?.value || localStorage.getItem("orpath_model_name") || "spark-x2.6").trim();
+  
+      btnGenPaper.disabled = true;
+      btnGenPaper.textContent = "⏳ 正在生成学术论文与审稿打包…";
+      if (paperStatus) paperStatus.textContent = "正在调用写稿与 R1/R2 数字校验…";
+  
+      try {
+        const pr = await fetch("/api/studio/paper", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slug,
+            api_key: savedKey,
+            model: savedModel,
+          }),
+        });
+        const pj = await pr.json();
+        if (!pr.ok || !pj.paper_generated) {
+          throw new Error(pj.error || pj.paper_degraded_reason || "论文生成失败");
+        }
+        if (dlPaper) {
+          dlPaper.href = `/api/artifact/download?slug=${encodeURIComponent(slug)}&kind=paper`;
+          dlPaper.hidden = false;
+        }
+        btnGenPaper.hidden = true;
+        if (paperStatus) {
+          paperStatus.textContent = `✅ 学术论文已生成 (${pj.paper_quality || "ready"})`;
+        }
+      } catch (err) {
+        if (paperStatus) paperStatus.textContent = `❌ 论文生成受阻: ${err.message}`;
+        btnGenPaper.disabled = false;
+        btnGenPaper.textContent = "📑 按需生成完整学术论文";
+      }
+    });
+  }
+}
+
+
+// === src/js/studio/viz.js ===
+// --- Dynamic OR Visualization & Convergence Dashboard (Task 6.3 - Huashu 5D Standard) ---
+function initVizTabsOnce() {
+  if (studioState.vizTabsBound) return;
+  const tabsContainer = $("vizTabs");
+  if (!tabsContainer) return;
+  studioState.vizTabsBound = true;
+  tabsContainer.addEventListener("click", (e) => {
+    const tabBtn = e.target.closest("[data-viz-tab]");
+    if (!tabBtn) return;
+    const targetTab = tabBtn.getAttribute("data-viz-tab");
+    document.querySelectorAll("#vizTabs [data-viz-tab]").forEach(b => {
+      b.classList.toggle("active", b === tabBtn);
+    });
+    const panels = {
+      gantt: $("vizPanelGantt"),
+      routes: $("vizPanelRoutes"),
+      gap: $("vizPanelGap"),
+    };
+    for (const [k, p] of Object.entries(panels)) {
+      if (!p) continue;
+      if (k === targetTab) {
+        p.style.display = "block";
+        p.classList.add("active");
+      } else {
+        p.style.display = "none";
+        p.classList.remove("active");
+      }
+    }
+  });
+}
+
+function showVizTooltip(text) {
+  const tipBox = $("vizInteractiveTooltip");
+  const tipText = $("vizTooltipText");
+  if (!tipBox || !tipText) return;
+  tipText.textContent = text;
+  tipBox.style.display = "flex";
+}
+
+function hideVizTooltip() {
+  const tipBox = $("vizInteractiveTooltip");
+  if (tipBox) tipBox.style.display = "none";
+}
+
+function renderGanttChart(container, solution) {
+  if (!container) return;
+  const colors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#84cc16"];
+
+  if (!solution || !Array.isArray(solution.schedule) || solution.schedule.length === 0) {
+    container.innerHTML = `
+      <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
+        <div style="font-size:32px;margin-bottom:8px">🏭</div>
+        <div style="font-weight:600;font-size:13px;color:#334155">当前算例不含工序时序排程数据</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
+          甘特图专用于流水/作业车间调度（JSSP/FJSSP/RCPSP）工序可视化。<br/>根据 <strong>Numbers Truth</strong> 准则：当前输出无真实 schedule 数组，系统严禁虚构排产基准。
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const rawSched = solution.schedule;
+  const mSet = new Set();
+  rawSched.forEach(s => {
+    if (s.machine != null) mSet.add(Number(s.machine));
+  });
+  const mSorted = Array.from(mSet).sort((a, b) => a - b);
+  const machines = mSorted.map(m => `M${m} 机床/设备`);
+  const makespan = Number(solution.metrics?.makespan || Math.max(...rawSched.map(s => s.end || 0)) || 0);
+
+  const ops = rawSched.slice(0, 48).map(s => ({
+    m: mSorted.indexOf(Number(s.machine)),
+    j: Number(s.job ?? 0),
+    s: Number(s.start ?? 0),
+    e: Number(s.end ?? 0),
+    dur: Number(s.duration ?? (s.end - s.start)),
+    name: `工件${s.job ?? 0}-工序${s.task ?? s.op ?? 0}`,
+  })).filter(o => o.m >= 0);
+
+  const maxT = Math.max(makespan + 5, 20);
+  const startX = 110;
+  const plotW = 670;
+  const scaleX = plotW / maxT;
+  const numM = Math.max(1, machines.length);
+  const totalH = Math.max(260, 60 + numM * 34);
+
+  let svg = `<svg class="viz-svg" viewBox="0 0 820 ${totalH}" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<rect width="820" height="${totalH}" fill="#ffffff" rx="10"/>`;
+
+  // Horizontal grid & timeline
+  const stepT = maxT > 100 ? (maxT > 300 ? 50 : 20) : 10;
+  for (let t = 0; t <= maxT; t += stepT) {
+    const x = startX + t * scaleX;
+    svg += `<line x1="${x}" y1="20" x2="${x}" y2="${totalH - 45}" stroke="#f1f5f9" stroke-width="1"/>`;
+    svg += `<text x="${x}" y="${totalH - 30}" font-size="10" fill="#94a3b8" text-anchor="middle" font-family="var(--mono)">${t}m</text>`;
+  }
+
+  // Machine Y rows
+  machines.forEach((mLabel, mIdx) => {
+    const y = 30 + mIdx * 33;
+    svg += `<text x="${startX - 10}" y="${y + 18}" font-size="11" font-weight="600" fill="#475569" text-anchor="end">${esc(mLabel)}</text>`;
+    svg += `<line x1="${startX}" y1="${y + 26}" x2="${startX + plotW}" y2="${y + 26}" stroke="#f8fafc" stroke-width="1"/>`;
+  });
+
+  // Operation Rectangles with Hover Feedback
+  ops.forEach((op, opIdx) => {
+    const x = startX + op.s * scaleX;
+    const w = Math.max(4, op.dur * scaleX - 2);
+    const y = 30 + op.m * 33 + 2;
+    const c = colors[op.j % colors.length];
+    const desc = `${op.name} · 起止 [${op.s}m -> ${op.e}m] (时长: ${op.dur}m) · 设备: ${machines[op.m] || op.m}`;
+    svg += `
+      <g class="gantt-bar" data-op-idx="${opIdx}" data-op-desc="${esc(desc)}" tabindex="0">
+        <title>${esc(desc)}</title>
+        <rect x="${x}" y="${y}" width="${w}" height="22" rx="4" fill="${c}" fill-opacity="0.9" stroke="#ffffff" stroke-width="1.5"/>
+        ${w > 32 ? `<text x="${x + w / 2}" y="${y + 14}" font-size="9.5" font-weight="700" fill="#ffffff" text-anchor="middle" pointer-events="none">${esc(op.name.split("-")[0])}</text>` : ''}
+      </g>
+    `;
+  });
+
+  // Makespan marker
+  if (makespan > 0) {
+    const msX = startX + makespan * scaleX;
+    svg += `
+      <line x1="${msX}" y1="16" x2="${msX}" y2="${totalH - 42}" stroke="#dc2626" stroke-width="2" stroke-dasharray="4,4"/>
+      <rect x="${msX - 52}" y="6" width="104" height="20" rx="4" fill="#fef2f2" stroke="#dc2626" stroke-width="1"/>
+      <text x="${msX}" y="20" font-size="9.5" font-weight="700" fill="#dc2626" text-anchor="middle">Makespan = ${makespan}</text>
+    `;
+  }
+
+  // Legend
+  svg += `<g transform="translate(110, ${totalH - 12})">`;
+  const numLegend = Math.min(6, Math.max(1, new Set(ops.map(o => o.j)).size));
+  for (let j = 0; j < numLegend; j++) {
+    const lx = j * 105;
+    svg += `
+      <rect x="${lx}" y="-6" width="12" height="10" rx="2" fill="${colors[j % colors.length]}"/>
+      <text x="${lx + 16}" y="3" font-size="10" fill="#64748b">工件 ${j}</text>
+    `;
+  }
+  svg += `</g></svg>`;
+
+  container.innerHTML = `
+    <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span>🏭 <strong>车间排产逐机甘特图</strong> · ${machines.length} 台设备工序时序</span>
+        <span style="font-size:10px;background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">✓ 真实排产数据 (${ops.length} 项工序)</span>
+      </div>
+      <span style="font-family:var(--mono);color:#059669;font-weight:700">总完工时间 (Cmax): ${makespan}</span>
+    </div>
+    ${svg}
+  `;
+
+  // Attach hover listener for interactive tooltip
+  container.querySelectorAll(".gantt-bar").forEach(bar => {
+    bar.addEventListener("mouseenter", () => showVizTooltip(bar.getAttribute("data-op-desc") || ""));
+    bar.addEventListener("mouseleave", hideVizTooltip);
+  });
+}
+
+function renderRouteMap(container, solution) {
+  if (!container) return;
+  const hasRoutes = solution && Array.isArray(solution.routes) && solution.routes.length > 0;
+  const hasTour = solution && Array.isArray(solution.tour) && solution.tour.length > 0;
+
+  if (!hasRoutes && !hasTour) {
+    container.innerHTML = `
+      <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
+        <div style="font-size:32px;margin-bottom:8px">🗺️</div>
+        <div style="font-weight:600;font-size:13px;color:#334155">当前算例不含车辆或旅行商路径规划数据</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
+          路径图专用于车辆路径 (VRP/CVRP) 或旅行商回路 (TSP) 可视化。<br/>根据 <strong>Numbers Truth</strong> 准则：当前输出无 routes 或 tour 路径数据，系统严禁伪造路径拓扑。
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const palette = ["#2563eb", "#059669", "#7c3aed", "#d97706", "#ec4899"];
+  const depot = { x: 410, y: 140, name: "场站/起点 0" };
+
+  let normalizedRoutes = [];
+  if (hasRoutes) {
+    normalizedRoutes = solution.routes;
+  } else if (hasTour) {
+    normalizedRoutes = [{ route: solution.tour, distance: solution.objective }];
+  }
+
+  const nodeSeq = [];
+  normalizedRoutes.forEach(r => {
+    const arr = Array.isArray(r.route) ? r.route : (Array.isArray(r) ? r : []);
+    arr.forEach(n => {
+      const sid = String(n);
+      if (!nodeSeq.includes(sid)) nodeSeq.push(sid);
+    });
+  });
+
+  const numNodes = nodeSeq.length;
+  const customers = [];
+  const radiusX = 270;
+  const radiusY = 85;
+  nodeSeq.forEach((nid, idx) => {
+    const angle = (idx / Math.max(1, numNodes)) * 2 * Math.PI - Math.PI / 2;
+    const px = 410 + radiusX * Math.cos(angle);
+    const py = 140 + radiusY * Math.sin(angle);
+    customers.push({ id: nid, x: px, y: py, name: `站点 ${nid}` });
+  });
+
+  const nodeMap = new Map();
+  customers.forEach(c => nodeMap.set(String(c.id), c));
+
+  const routes = normalizedRoutes.slice(0, 6).map((r, idx) => {
+    const cColor = palette[idx % palette.length];
+    const routeArr = Array.isArray(r.route) ? r.route : (Array.isArray(r) ? r : []);
+    const routeStops = [depot];
+    routeArr.forEach(nid => {
+      const pt = nodeMap.get(String(nid));
+      if (pt) routeStops.push(pt);
+    });
+    routeStops.push(depot);
+    return {
+      id: hasRoutes ? `车队 ${idx + 1}` : "巡检回路",
+      color: cColor,
+      pts: routeStops,
+      dist: r.distance != null ? `${r.distance}` : (solution.objective != null ? `${solution.objective}` : "已规划"),
+    };
+  });
+
+  let svg = `<svg class="viz-svg" viewBox="0 0 820 280" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<rect width="820" height="280" fill="#ffffff" rx="10"/>`;
+
+  // Background concentric grid
+  svg += `<circle cx="410" cy="140" r="110" fill="none" stroke="#f1f5f9" stroke-width="1.5" stroke-dasharray="4,4"/>`;
+  svg += `<circle cx="410" cy="140" r="210" fill="none" stroke="#f8fafc" stroke-width="1.5"/>`;
+
+  // Draw route lines
+  routes.forEach(route => {
+    let pathD = "";
+    route.pts.forEach((pt, pIdx) => {
+      pathD += (pIdx === 0 ? "M " : " L ") + `${pt.x} ${pt.y}`;
+    });
+    svg += `<path d="${pathD}" fill="none" stroke="${route.color}" stroke-width="2" stroke-opacity="0.85" stroke-dasharray="6,3"/>`;
+  });
+
+  // Draw customer nodes
+  customers.forEach(c => {
+    const desc = `${c.name} · 拓扑受访节点`;
+    svg += `
+      <g class="route-node" data-node-desc="${esc(desc)}" tabindex="0" style="cursor:pointer">
+        <title>${esc(desc)}</title>
+        <circle cx="${c.x}" cy="${c.y}" r="6" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+        <text x="${c.x}" y="${c.y + 15}" font-size="9" font-family="var(--mono)" font-weight="600" fill="#475569" text-anchor="middle">${esc(c.id)}</text>
+      </g>
+    `;
+  });
+
+  // Draw Depot
+  svg += `
+    <g style="cursor:pointer">
+      <rect x="396" y="126" width="28" height="28" rx="6" fill="#dc2626" stroke="#ffffff" stroke-width="2"/>
+      <text x="410" y="144" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">★</text>
+      <text x="410" y="166" font-size="10" font-weight="700" fill="#dc2626" text-anchor="middle">起点</text>
+    </g>
+  `;
+
+  svg += `</svg>`;
+
+  const objLabel = solution.objective != null ? `目标耗费/里程: ${solution.objective}` : "路径规划完成";
+
+  container.innerHTML = `
+    <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span>🗺️ <strong>车辆/巡检路径拓扑图</strong> · ${customers.length} 个受访站点 <span style="font-size:10px;color:#94a3b8">(拓扑序排布)</span></span>
+        <span style="font-size:10px;background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">✓ 真实路径规划数据</span>
+      </div>
+      <span style="font-family:var(--mono);color:#059669;font-weight:700">${esc(objLabel)}</span>
+    </div>
+    ${svg}
+  `;
+
+  container.querySelectorAll(".route-node").forEach(node => {
+    node.addEventListener("mouseenter", () => showVizTooltip(node.getAttribute("data-node-desc") || ""));
+    node.addEventListener("mouseleave", hideVizTooltip);
+  });
+}
+
+function renderConvergenceGapCurve(container, solution) {
+  if (!container) return;
+  const rawGap = solution?.gap_history || solution?.metrics?.gap_history || solution?.meta?.gap_history;
+
+  if (!Array.isArray(rawGap) || rawGap.length < 2) {
+    container.innerHTML = `
+      <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
+        <div style="font-size:32px;margin-bottom:8px">📈</div>
+        <div style="font-weight:600;font-size:13px;color:#334155">当前求解为单阶段直接交付，无多轮迭代收敛历程</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
+          根据 <strong>Numbers Truth</strong> 准则：系统绝不伪造虚假收敛曲线与 0.00% 严密闭合结论。<br/>仅当求解器输出真实迭代历程数据（如松弛下界与上界轨迹）时呈现收敛分析。
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const iters = rawGap.map((pt, idx) => ({
+    i: pt.i ?? idx,
+    ub: Number(pt.ub ?? pt.upper_bound ?? 0),
+    lb: Number(pt.lb ?? pt.lower_bound ?? 0),
+    gap: Number(pt.gap ?? 0),
+  }));
+
+  const startX = 90;
+  const plotW = 680;
+  const startY = 35;
+  const plotH = 190;
+
+  const scaleX = plotW / Math.max(1, iters.length - 1);
+  const allVals = iters.flatMap(p => [p.ub, p.lb]).filter(v => !isNaN(v) && v > 0);
+  const minVal = allVals.length > 0 ? Math.min(...allVals) * 0.9 : 0;
+  const maxVal = allVals.length > 0 ? Math.max(...allVals) * 1.1 : 100;
+  const scaleY = plotH / Math.max(1, maxVal - minVal);
+  const getY = (val) => startY + plotH - (val - minVal) * scaleY;
+
+  let svg = `<svg class="viz-svg" viewBox="0 0 820 280" xmlns="http://www.w3.org/2000/svg">`;
+  svg += `<rect width="820" height="280" fill="#ffffff" rx="10"/>`;
+
+  iters.forEach((pt, idx) => {
+    const x = startX + idx * scaleX;
+    svg += `<line x1="${x}" y1="${startY}" x2="${x}" y2="${startY + plotH}" stroke="#f8fafc" stroke-width="1"/>`;
+    svg += `<text x="${x}" y="${startY + plotH + 18}" font-size="10" fill="#94a3b8" text-anchor="middle" font-family="var(--mono)">Iter ${pt.i}</text>`;
+  });
+
+  const ubPath = iters.map((pt, idx) => `${idx === 0 ? "M" : "L"} ${startX + idx * scaleX} ${getY(pt.ub)}`).join(" ");
+  svg += `<path d="${ubPath}" fill="none" stroke="#2563eb" stroke-width="2.5"/>`;
+
+  const lbPath = iters.map((pt, idx) => `${idx === 0 ? "M" : "L"} ${startX + idx * scaleX} ${getY(pt.lb)}`).join(" ");
+  svg += `<path d="${lbPath}" fill="none" stroke="#7c3aed" stroke-width="2.5" stroke-dasharray="4,4"/>`;
+
+  const last = iters[iters.length - 1];
+  const lastX = startX + (iters.length - 1) * scaleX;
+  const lastY = getY(last.ub);
+  const gapStr = last.gap.toFixed(2);
+
+  svg += `
+    <g>
+      <rect x="${lastX - 110}" y="${lastY - 32}" width="125" height="22" rx="6" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5"/>
+      <text x="${lastX - 48}" y="${lastY - 18}" font-size="10" font-weight="700" fill="#047857" text-anchor="middle">Gap: ${gapStr}%</text>
+    </g>
+  `;
+
+  svg += `</svg>`;
+
+  container.innerHTML = `
+    <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span>📈 <strong>数学下界与启发式上界真实收敛 Gap 曲线</strong></span>
+      <span style="font-family:var(--mono);color:#059669;font-weight:700">最终 Gap: ${gapStr}%</span>
+    </div>
+    ${svg}
+  `;
+}
+
+function renderVisualizations(solution) {
+  const badge = $("vizDomainBadge");
+  if (badge) {
+    badge.textContent = DOMAIN_BADGES[studioState.domainKey] || DOMAIN_BADGES.default;
+  }
+
+  renderGanttChart($("vizPanelGantt"), solution);
+  renderRouteMap($("vizPanelRoutes"), solution);
+  renderConvergenceGapCurve($("vizPanelGap"), solution);
+
+  initVizTabsOnce();
+}
+
+
+// === src/js/studio/boot.js ===
+// Studio workbench entrypoint
+function boot() {
+  syncHeaderNavState();
+  initStudioConfig();
+  initStudioFiles();
+  initStudioAnalyze();
+  initStudioResult();
+  initVizTabsOnce();
+  setPipelineStage("probe", "待命");
+}
+
+
+    boot();
+  </script>
+</body>
+</html>

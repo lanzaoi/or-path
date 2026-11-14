@@ -94,6 +94,7 @@ def main() -> int:
         "orpath/watch_snapshot.py",
         "scripts/orpath_watch.py",
         "orpath/web/watch.html",
+        "orpath/web/studio.html",
         "scripts/bootstrap_orpath.py",
         "VERSION",
     ):

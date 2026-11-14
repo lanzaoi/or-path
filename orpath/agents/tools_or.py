@@ -68,7 +68,7 @@ __all__ = [
 ]
 
 #: Default wall-clock budget for ``execute_python_sandbox``.
-SANDBOX_DEFAULT_TIMEOUT_SEC = 30
+SANDBOX_DEFAULT_TIMEOUT_SEC = 180
 
 #: Readable algorithm-family label per adapter script (falls back to the
 #: script stem minus the ``solve_`` prefix / ``.py`` suffix).
@@ -423,25 +423,30 @@ def write_custom_solver_script(script_path: str, code: str) -> str:
 
     Used by ``or_modeler`` in the ``general_or`` cartridge: persists the
     modeler-authored solver script under ``outputs/`` or ``custom_solvers/``
-    so it can be executed and audited. Paths outside the workdir are refused.
+    so it can be executed and audited. Accepts relative or workdir-contained
+    absolute paths; paths outside the workdir are refused.
 
     Args:
-        script_path: Relative path under the workdir, e.g. ``outputs/<slug>-custom_solver.py``.
+        script_path: Relative or workdir-contained path, e.g. ``outputs/<slug>-custom_solver.py``.
         code: Full Python source of the solver script.
 
     Returns:
         JSON with success, written path and byte length.
     """
     try:
-        root = _resolve_root()
-        rel = str(script_path or "").strip().replace("\\", "/")
-        if not rel or rel.startswith("/") or ".." in rel.split("/"):
-            return _json({"success": False, "detail": "script_path must be a relative path under the workdir"})
-        target = (root / rel).resolve()
+        root = _resolve_root().resolve()
+        raw = str(script_path or "").strip()
+        rel_norm = raw.replace("\\", "/")
+        if not raw or ".." in rel_norm.split("/") or ".." in Path(raw).parts:
+            return _json({"success": False, "detail": "script_path must not be empty or contain '..'"})
+        cand = Path(raw).expanduser()
+        target = cand.resolve() if cand.is_absolute() else (root / rel_norm).resolve()
         try:
-            target.relative_to(root.resolve())
+            rel_parts = target.relative_to(root).parts
         except ValueError:
             return _json({"success": False, "detail": f"path escapes workdir: {script_path!r}"})
+        if not rel_parts or rel_parts[0] in {"orpath", "tools", "scripts", ".git", ".venv"}:
+            return _json({"success": False, "detail": f"refusing write to protected path: {script_path!r}"})
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(str(code), encoding="utf-8")
         return _json({
@@ -454,7 +459,7 @@ def write_custom_solver_script(script_path: str, code: str) -> str:
 
 
 @tool
-def execute_custom_script(script_path: str, timeout_sec: int = 120) -> str:
+def execute_custom_script(script_path: str, timeout_sec: int = 300) -> str:
     """Execute a modeler-authored solver/validator script file (Phase 3.3).
 
     Runs ``sys.executable <script_path>`` with a wall-clock budget so a buggy
@@ -464,28 +469,31 @@ def execute_custom_script(script_path: str, timeout_sec: int = 120) -> str:
 
     Args:
         script_path: Absolute or workdir-relative script path.
-        timeout_sec: Wall-clock timeout in seconds (>0).
+        timeout_sec: Wall-clock timeout in seconds (>0, default 300).
 
     Returns:
         JSON with success, returncode, stdout, stderr and timed_out flag.
     """
     try:
-        root = _resolve_root()
+        root = _resolve_root().resolve()
         rel = str(script_path or "").strip().replace("\\", "/")
         path = Path(rel)
         if not path.is_absolute():
             path = root / rel
         path = path.resolve()
         try:
-            path.relative_to(root.resolve())
+            path.relative_to(root)
         except ValueError:
             return _json({"success": False, "detail": f"script escapes workdir: {script_path!r}"})
         if not path.is_file():
             return _json({"success": False, "detail": f"script not found: {path}"})
         timeout = int(timeout_sec) if str(timeout_sec).isdigit() and int(timeout_sec) > 0 else SANDBOX_DEFAULT_TIMEOUT_SEC
+        env = dict(os.environ)
+        env["ORPATH_WORKDIR"] = str(root)
         proc = subprocess.run(
             [sys.executable, str(path)],
             cwd=str(root),
+            env=env,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -585,6 +593,30 @@ def consult_or_skill(topic: str, subtopic: str | None = None) -> str:
         "numbers_truth": ["or-numbers-truth/SKILL.md"],
         "memory": ["or-process-memory/SKILL.md"],
         "process_memory": ["or-process-memory/SKILL.md"],
+        "reduction": ["or-reduction-playbook/SKILL.md", "or-problems.md"],
+        "transform": ["or-reduction-playbook/SKILL.md", "or-problems.md"],
+        "facility": ["or-problems.md", "references/linear_and_integer_optimization.md"],
+        "cflp": ["or-problems.md"],
+        "hub": ["or-problems.md"],
+        "rcpsp": ["pyjobshop-scheduling/SKILL.md", "or-problems.md"],
+        "rostering": ["or-problems.md", "pyjobshop-scheduling/SKILL.md"],
+        "staff_rostering": ["or-problems.md", "pyjobshop-scheduling/SKILL.md"],
+        "lotsizing": ["production-scheduling/SKILL.md", "inventory-demand-planning/SKILL.md"],
+        "lot_sizing": ["production-scheduling/SKILL.md", "inventory-demand-planning/SKILL.md"],
+        "portfolio": ["or-problems.md", "references/linear_and_integer_optimization.md"],
+        "qubo": ["or-problems.md"],
+        "ising": ["or-problems.md"],
+        "qap": ["or-problems.md"],
+        "coloring": ["or-problems.md"],
+        "clique": ["or-problems.md"],
+        "game": ["or-problems.md"],
+        "nash": ["or-problems.md"],
+        "tube": ["or-tube-cut/SKILL.md", "or-problems.md"],
+        "polyomino": ["or-polyomino/SKILL.md", "or-problems.md"],
+        "microgrid": ["or-problems.md"],
+        "stochastic": ["or-problems.md", "inventory-demand-planning/SKILL.md"],
+        "binpack": ["or-problems.md"],
+        "knapsack": ["or-problems.md"],
     }
 
     candidate_files: list[Path] = []
@@ -649,7 +681,7 @@ def consult_or_skill(topic: str, subtopic: str | None = None) -> str:
         if captured_lines:
             extracted_section = "\n".join(captured_lines)
 
-    content = extracted_section if extracted_section else full_text[:6000]
+    content = extracted_section if extracted_section else full_text[:24000]
 
     return _json({
         "success": True,
@@ -738,6 +770,24 @@ def get_problem_formulation_template(problem_class: str) -> str:
         "mpc": ["22.1", "滚动时域", "microgrid"],
         "microgrid": ["22.1", "微电网", "microgrid"],
         "microgrid_dispatch": ["22.1", "微电网", "microgrid"],
+        "rcpsp": ["调度问题", "2.4", "scheduling"],
+        "staff_rostering": ["排班", "调度问题", "2.4"],
+        "rostering": ["排班", "调度问题", "2.4"],
+        "lot_sizing": ["库存优化", "6.", "生产调度"],
+        "lotsizing": ["库存优化", "6.", "生产调度"],
+        "portfolio_opt": ["线性规划", "1.1", "投资组合"],
+        "portfolio": ["线性规划", "1.1", "投资组合"],
+        "network_flow": ["最大流", "3.2", "3.1"],
+        "qubo_ising": ["整数规划", "1.2"],
+        "qubo": ["整数规划", "1.2"],
+        "qap": ["整数规划", "1.2", "选址"],
+        "graph_coloring": ["整数规划", "1.2"],
+        "max_clique": ["整数规划", "1.2"],
+        "hub_location": ["选址", "3.4"],
+        "pyvrp": ["车辆路径", "2.2", "vrp"],
+        "polyomino_cover": ["整数规划", "1.2", "装箱"],
+        "polyomino": ["整数规划", "1.2", "装箱"],
+        "stochastic_lp": ["随机规划", "4."],
         "robust": ["鲁棒优化", "14."],
         "multi_objective": ["多目标", "18."],
         "big_m": ["大m法"],
@@ -831,6 +881,8 @@ def get_problem_formulation_template(problem_class: str) -> str:
     })
 
 
+from orpath.agents.coding_tools import CODING_TOOLS  # noqa: E402
+
 #: Dedicated OR skill tools for literature, formulation templates and reference querying.
 SKILL_TOOLS: tuple[BaseTool, ...] = (
     consult_or_skill,
@@ -844,6 +896,7 @@ GENERAL_OR_TOOLS: tuple[BaseTool, ...] = (
     write_custom_solver_script,
     execute_custom_script,
     validate_solution_tool,
+    *CODING_TOOLS,
 )
 
 #: Complete suite of OR-Path solver and skill tools.

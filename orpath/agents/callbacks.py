@@ -35,12 +35,14 @@ and the standard library, and never invokes an LLM.
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 from uuid import UUID
 
 from langchain_core.callbacks import BaseCallbackHandler
+from langgraph.checkpoint.memory import MemorySaver
 
 __all__ = [
     "KNOWN_AGENT_NAMES",
@@ -49,6 +51,8 @@ __all__ = [
     "MODELER_NAME",
     "VERIFIER_WRITER_NAME",
     "MultiAgentSnapshotCallback",
+    "get_default_supervisor_checkpointer",
+    "persist_agent_stage_log",
 ]
 
 # Canonical agent / role names used across the OR-Path multi-agent pipeline.
@@ -58,21 +62,17 @@ MODELER_NAME = "or_modeler"
 VERIFIER_WRITER_NAME = "or_verifier_writer"
 
 #: Ordered tuple of recognised agent names. Order is the pipeline order for the
-#: three workers; the supervisor sits first. Domain-specific teams (microgrid,
-#: tube, routing, …) are recognised too so their agent_start/agent_end events are
-#: captured by :class:`MultiAgentSnapshotCallback`.
+#: core workers; the supervisor sits first. Lean 4-agent specialists are recognised
+#: too so their agent_start/agent_end events are captured by
+#: :class:`MultiAgentSnapshotCallback`.
 KNOWN_AGENT_NAMES: tuple[str, ...] = (
     SUPERVISOR_NAME,
     RESEARCHER_NAME,
     MODELER_NAME,
     VERIFIER_WRITER_NAME,
-    # Microgrid Dispatch domain team
-    "or_microgrid_lead",
-    "or_microgrid_auditor",
-    "or_microgrid_exact_bound",
-    "or_microgrid_heuristic",
-    "or_microgrid_realities",
-    "or_microgrid_redteam",
+    "or_analyst",
+    "or_writer",
+    "or_reviewer",
 )
 
 #: Default cap applied to free-form text captured from tool inputs / outputs.
@@ -547,6 +547,77 @@ class MultiAgentSnapshotCallback(BaseCallbackHandler):
             for event in self.events
             if event.get("kind") in ("tool_start", "tool_end")
         ]
+
+
+_PERSIST_MAX_LINES = 80
+
+
+def _resolve_stage_root(workdir: str | Path | None = None) -> Path:
+    if workdir:
+        return Path(str(workdir))
+    raw = (os.environ.get("ORPATH_WORKDIR") or "").strip().strip('"')
+    if raw:
+        return Path(raw).expanduser().resolve()
+    return Path.cwd()
+
+
+def _serialize_message(msg: Any) -> dict[str, Any]:
+    """Serialise one agent message into a JSON-compatible dictionary."""
+    if isinstance(msg, dict):
+        return dict(msg)
+    if hasattr(msg, "model_dump"):
+        try:
+            dumped = msg.model_dump()
+            if isinstance(dumped, dict):
+                return dumped
+        except Exception:
+            pass
+    if hasattr(msg, "to_dict"):
+        try:
+            dumped = msg.to_dict()
+            if isinstance(dumped, dict):
+                return dumped
+        except Exception:
+            pass
+    return {
+        "type": getattr(msg, "type", type(msg).__name__),
+        "content": getattr(msg, "content", str(msg)),
+    }
+
+
+def persist_agent_stage_log(
+    workdir: str | Path,
+    slug: str,
+    stage: str,
+    messages: Sequence[Any],
+) -> Path:
+    """Append ``messages`` to ``runs/<slug>/agent_logs/<stage>.jsonl`` with size ceiling.
+
+    Each isolated pipeline stage writes its own JSONL sidecar log instead of
+    sharing a growing cross-role chat transcript.
+    """
+    root = _resolve_stage_root(workdir)
+    log_dir = root / "runs" / str(slug) / "agent_logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / f"{stage}.jsonl"
+
+    if log_path.is_file() and log_path.stat().st_size > 500_000:
+        try:
+            lines = log_path.read_text(encoding="utf-8").splitlines()
+            if len(lines) > _PERSIST_MAX_LINES:
+                log_path.write_text("\n".join(lines[-_PERSIST_MAX_LINES:]) + "\n", encoding="utf-8")
+        except Exception:
+            pass
+
+    with log_path.open("a", encoding="utf-8") as fh:
+        for msg in messages or []:
+            fh.write(json.dumps(_serialize_message(msg), ensure_ascii=False, sort_keys=True) + "\n")
+    return log_path
+
+
+def get_default_supervisor_checkpointer() -> MemorySaver:
+    """Return a fresh in-memory checkpointer (``MemorySaver``)."""
+    return MemorySaver()
 
 
 if __name__ == "__main__":  # pragma: no cover - manual smoke check

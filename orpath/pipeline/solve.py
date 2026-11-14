@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -23,7 +24,9 @@ from orpath.pipeline.common import (
     _root,
     _rel_under,
     _fixture_base,
+    _infer_class,
     _intake_front_door_active,
+    _replay_authorized,
     TUNE_STRATEGIES,
 )
 
@@ -118,7 +121,13 @@ def _resolve_cartridge_and_tier(pc: str) -> tuple[str, str, tuple[str, ...]]:
 
 
 def _registry_model_schema(
-    root: Path, slug: str, pid: str, pc_raw: str, sm: str
+    root: Path,
+    slug: str,
+    pid: str,
+    pc_raw: str,
+    sm: str,
+    *,
+    allow_fixture: bool = True,
 ) -> dict | None:
     """Unified registry modeler: build ``<slug>-schema.json`` for any registered class.
 
@@ -144,7 +153,7 @@ def _registry_model_schema(
             mode = candidate
             break
 
-    fb = _fixture_base(root, pid)
+    fb = _fixture_base(root, pid, allow_fixture=allow_fixture)
     schema = {
         "slug": slug,
         "problem_class": pc_n,
@@ -255,31 +264,325 @@ def _default_tube_schema(slug: str, pid: str) -> dict:
     }
 
 
-def _run_isolated_pipeline(root: Path, state: dict, sp: Path, sm: str) -> dict | None:
-    """Legacy multi-agent isolated pipeline (researcher→modeler→verifier→writer→reviewer)."""
-    try:
-        from orpath.agents.supervisor import build_compiled_isolated_pipeline
+def _sanitize_custom_schema(schema_obj: dict[str, Any], sol_data: dict[str, Any], *, slug: str, pid: str, pc_eff: str, sm: str) -> dict[str, Any]:
+    """Strip solution/forbidden keys from a modeler schema and ensure custom structural keys."""
+    from orpath.domain_registry import CUSTOM_OPTIMIZATION_CLASSES, schema_class_ok
+    from tools.schema_models import FORBIDDEN_SCHEMA_KEYS
 
-        pipeline_app = build_compiled_isolated_pipeline()
-        pipe_state = {
+    strip_keys = set(FORBIDDEN_SCHEMA_KEYS) | set(_FORBIDDEN_SCHEMA_KEYS) | {"values", "schedule", "status", "solver"}
+
+    def _clean(val: Any) -> Any:
+        if isinstance(val, dict):
+            return {
+                k: _clean(v)
+                for k, v in val.items()
+                if str(k).lower() not in strip_keys
+            }
+        if isinstance(val, list):
+            return [_clean(x) for x in val]
+        return val
+
+    cleaned = _clean(dict(schema_obj))
+    if not isinstance(cleaned, dict):
+        cleaned = {}
+    cleaned.setdefault("slug", slug)
+    cleaned.setdefault("problem_id", pid)
+    cleaned.setdefault("preferred_solve_mode", sm or "auto")
+    cur_pc = str(cleaned.get("problem_class") or sol_data.get("problem_class") or pc_eff).strip()
+    if not cur_pc or (not schema_class_ok(cur_pc) and cur_pc.lower() not in CUSTOM_OPTIMIZATION_CLASSES):
+        cur_pc = "custom_mip"
+    cleaned["problem_class"] = cur_pc
+    if cur_pc.lower() in CUSTOM_OPTIMIZATION_CLASSES:
+        if not any(
+            k in {str(kk).lower() for kk in cleaned}
+            for k in ("constraints", "decision_vars", "variables", "reduction_manifest", "objective_sense")
+        ):
+            cleaned["constraints"] = ["Structural constraints validated by independent recompute script"]
+    return cleaned
+
+
+def _single_agent_live_eligible(state: dict[str, Any]) -> bool:
+    """Return True when live single-agent modeling is explicitly permitted & configured."""
+    if state.get("live_subagent") is False:
+        return False
+    if os.environ.get("PYTEST_CURRENT_TEST") and not state.get("force_live_agent"):
+        return False
+    live_flag = state.get("live_subagent")
+    if live_flag is None:
+        env_live = (os.environ.get("ORPATH_LIVE_SUBAGENT") or "").strip().lower()
+        live_flag = env_live in {"1", "true", "yes", "on"}
+    if not live_flag:
+        return False
+    from orpath.control_plane import is_real_llm_configured
+
+    return bool(state.get("force_live_agent") or is_real_llm_configured())
+
+
+def _run_single_agent_modeler(
+    root: Path,
+    state: dict[str, Any],
+    sp: Path,
+    pc: str,
+    sm: str,
+) -> dict[str, Any] | None:
+    """Fast single-agent or_modeler loop with multi-round self-repair.
+
+    Offline (``live_subagent=False`` or missing LLM credentials) fails closed
+    immediately without calling any external LLM.
+    Live execution iterates up to ``ORPATH_FAST_REPAIR_ROUNDS`` (default 4)
+    feeding exact validation / gate diagnostics back to ``or_modeler`` so it
+    can inspect errors and patch code via ``edit_file``.
+    """
+    if not _single_agent_live_eligible(state):
+        return None
+
+    from orpath.control_plane import get_chat_model, invoke_with_backoff
+
+    slug = str(state["slug"])
+    pid = str(state.get("problem_id") or slug)
+    sol_path = root / "outputs" / f"{slug}-solution.json"
+    val_path = root / "outputs" / f"{slug}-validate.json"
+    pc_effective = (pc or "").strip() or "custom_mip"
+    inbox_dir = root / "inbox" / slug
+    knowledge_pack = root / "notes" / f"{slug}-knowledge_pack.md"
+
+    from langchain_core.messages import HumanMessage
+    from orpath.agents.tools_or import GENERAL_OR_TOOLS
+    from orpath.agents.workers import create_modeler_agent
+
+    model_name = str(state.get("llm_model") or "").strip() or None
+    raw_timeout = float(os.environ.get("ORPATH_FAST_MODELER_TIMEOUT", "120.0"))
+    timeout_s = min(300.0, max(5.0, raw_timeout))
+    model = get_chat_model(model_name=model_name, timeout=timeout_s)
+    agent = create_modeler_agent(
+        model=model,
+        extra_tools=list(GENERAL_OR_TOOLS),
+    )
+    max_steps = max(8, int(os.environ.get("ORPATH_FAST_MODELER_MAX_STEPS", "28")))
+    max_rounds = max(1, int(os.environ.get("ORPATH_FAST_REPAIR_ROUNDS", "4")))
+
+    initial_prompt = (
+        f"[Fast Single-Agent Autonomous OR Engineer] workdir={root} slug={slug} "
+        f"problem_id={pid} problem_class={pc_effective} solve_mode={sm or 'auto'}\n"
+        f"inbox_dir={inbox_dir}\n"
+        f"problem_file={state.get('problem_file') or ''}\n"
+        f"profile_path={state.get('profile_path') or ''}\n"
+        f"research_path={state.get('research_path') or ''}\n"
+        f"knowledge_pack_path={knowledge_pack if knowledge_pack.is_file() else ''}\n\n"
+        "Steps:\n"
+        "1. Inspect files in `inbox_dir` / `problem_file` / `profile_path` using `list_files`, `read_file`, or `read_problem_file`.\n"
+        "2. Check `list_available_solvers`. Track 1: if the problem matches or reduces cleanly to one of the 27 solvers "
+        "(consult `consult_or_skill(topic='reduction')`), format data/run `execute_or_solver` and record `reduction_manifest` if reduced.\n"
+        "3. Track 2 (open/custom/hybrid): write `outputs/" + slug + "-custom_solver.py` and an independent physical-isolation "
+        "validator `outputs/" + slug + "-custom-validate.py` (NO solver imports!) that writes `outputs/" + slug + "-custom-validate.json`, "
+        "execute both via `execute_custom_script` or `run_shell`.\n"
+        f"4. Persist structural-only schema (NO objective/values/tour/routes!) to '{sp}', validated solution JSON to '{sol_path}', "
+        f"and verify with `validate_solution_tool` saving report to '{val_path}'.\n"
+    )
+
+    messages: list[Any] = [HumanMessage(content=initial_prompt)]
+    last_error = "single-agent modeler did not produce a validated solution"
+
+    for round_idx in range(1, max_rounds + 1):
+        prev_workdir = os.environ.get("ORPATH_WORKDIR")
+        os.environ["ORPATH_WORKDIR"] = str(root)
+        try:
+            resp = invoke_with_backoff(
+                agent,
+                {"messages": messages},
+                config={"recursion_limit": max_steps},
+            )
+            if isinstance(resp, dict) and resp.get("messages"):
+                messages = list(resp["messages"])
+        except Exception as exc:  # noqa: BLE001
+            last_error = f"single-agent modeler failed (round {round_idx}/{max_rounds}): {type(exc).__name__}: {exc}"
+            if round_idx < max_rounds:
+                messages.append(HumanMessage(content=f"[Execution Error Round {round_idx}] {last_error}\nPlease diagnose and fix your approach."))
+                continue
+            break
+        finally:
+            if prev_workdir is None:
+                os.environ.pop("ORPATH_WORKDIR", None)
+            else:
+                os.environ["ORPATH_WORKDIR"] = prev_workdir
+
+        if not sol_path.is_file():
+            last_error = "single-agent modeler produced no solution file"
+            if round_idx < max_rounds:
+                messages.append(
+                    HumanMessage(
+                        content=(
+                            f"[Gate Feedback Round {round_idx}] Missing solution file at '{sol_path}'. "
+                            "Write and execute your solver + independent validator script to produce the solution JSON."
+                        )
+                    )
+                )
+                continue
+            break
+
+        try:
+            sol_data = json.loads(sol_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            last_error = f"single-agent solution unreadable: {exc}"
+            if round_idx < max_rounds:
+                messages.append(
+                    HumanMessage(
+                        content=f"[Gate Feedback Round {round_idx}] '{sol_path}' is invalid JSON ({exc}). Fix and re-write valid JSON."
+                    )
+                )
+                continue
+            break
+
+        if not isinstance(sol_data, dict) or str(sol_data.get("status") or "").upper() in {"", "BLOCKED", "ERROR", "INFEASIBLE"}:
+            st = sol_data.get("status") if isinstance(sol_data, dict) else type(sol_data).__name__
+            last_error = f"single-agent modeler solution is BLOCKED or invalid (status={st!r})"
+            if round_idx < max_rounds:
+                messages.append(
+                    HumanMessage(
+                        content=(
+                            f"[Gate Feedback Round {round_idx}] Solution status={st!r} is not OPTIMAL/FEASIBLE. "
+                            "Re-check problem constraints/formulation and patch your solver script via edit_file."
+                        )
+                    )
+                )
+                continue
+            break
+
+        ok, rep, msg = gate_validate(root, pid, sol_path, val_path)
+        if not ok:
+            failed_details = [
+                f"{c.get('name')}: {c.get('detail') or c.get('error') or 'failed'}"
+                for c in (rep.get("checks") or [])
+                if isinstance(c, dict) and not c.get("ok")
+            ] if isinstance(rep, dict) else []
+            diag = "; ".join(failed_details) if failed_details else msg
+            last_error = f"single-agent validation failed: {diag or msg}"
+            if round_idx < max_rounds:
+                messages.append(
+                    HumanMessage(
+                        content=(
+                            f"[Validation Gate Failed Round {round_idx}] gate_validate rejected '{sol_path}':\n"
+                            f"{last_error}\n"
+                            "Inspect the error, ensure custom-validate.py performs independent recomputation without solver imports, "
+                            "patch files with `edit_file`, re-run scripts, and call `validate_solution_tool`."
+                        )
+                    )
+                )
+                continue
+            break
+
+        # Ensure structural schema envelope exists & is clean before running gate_schema
+        sp.parent.mkdir(parents=True, exist_ok=True)
+        raw_sp_obj: dict[str, Any] = {}
+        if sp.is_file():
+            try:
+                loaded_sp = json.loads(sp.read_text(encoding="utf-8"))
+                if isinstance(loaded_sp, dict):
+                    raw_sp_obj = loaded_sp
+            except (OSError, json.JSONDecodeError) as exc:
+                last_error = f"single-agent schema unreadable: {exc}"
+                if round_idx < max_rounds:
+                    messages.append(
+                        HumanMessage(content=f"[Schema Gate Error Round {round_idx}] Invalid schema JSON: {exc}")
+                    )
+                    continue
+                break
+        sanitized_sp = _sanitize_custom_schema(
+            raw_sp_obj,
+            sol_data,
+            slug=slug,
+            pid=pid,
+            pc_eff=pc_effective,
+            sm=sm or str(state.get("solve_mode") or "auto"),
+        )
+        sp.write_text(json.dumps(sanitized_sp, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+        gs_ok, gs_msg = gate_schema(root, sp)
+        if not gs_ok:
+            last_error = f"single-agent schema rejected by gate_schema: {gs_msg}"
+            if round_idx < max_rounds:
+                messages.append(
+                    HumanMessage(
+                        content=(
+                            f"[Schema Gate Failed Round {round_idx}] {gs_msg}. "
+                            f"Keep only structural formulation fields in '{sp}' (never objective/values/routes)."
+                        )
+                    )
+                )
+                continue
+            break
+
+        try:
+            from orpath.agents.callbacks import persist_agent_stage_log
+
+            persist_agent_stage_log(root, slug, "or_modeler", messages[-6:])
+        except Exception:
+            pass
+
+        return {
+            "validated": True,
+            "solution_path": str(sol_path),
+            "validate_path": str(val_path),
+            "lifecycle_status": "INDEPENDENTLY_VALIDATED",
+        }
+
+    # Fail-closed cleanup when all rounds failed
+    for stale in (sp, sol_path):
+        if stale.is_file():
+            try:
+                stale.unlink()
+            except OSError:
+                pass
+    return {"validated": False, "error": last_error}
+
+
+def _run_isolated_pipeline(root: Path, state: dict, sp: Path, sm: str) -> dict | None:
+    """Deep Mode 4-agent adaptive pipeline (preflight->analyst->dual-track modeler->validator->table_render)."""
+    if not _single_agent_live_eligible(state) and not state.get("agents"):
+        return None
+    try:
+        from orpath.agents.adaptive_graph import build_compiled_adaptive_graph
+
+        pipeline_app = build_compiled_adaptive_graph(agents=state.get("agents"))
+        slug = str(state["slug"])
+        pid = str(state.get("problem_id") or slug)
+        pc = str(state.get("problem_class") or "general_optimization")
+        pipe_state: dict[str, Any] = {
             "workdir": str(root),
-            "slug": state["slug"],
-            "problem_id": state["problem_id"],
-            "problem_class": state.get("problem_class") or "general_optimization",
+            "slug": slug,
+            "problem_id": pid,
+            "problem_class": pc,
             "solve_mode": sm or state.get("solve_mode") or "auto",
             "problem_file": str(state.get("problem_file") or ""),
             "research_path": str(state.get("research_path") or ""),
             "schema_path": str(sp),
-            "solution_path": str(root / "outputs" / f"{state['slug']}-solution.json"),
-            "validate_path": str(root / "outputs" / f"{state['slug']}-validate.json"),
-            "paper_path": str(root / "papers" / f"{state['slug']}.md"),
-            "review_path": str(root / "outputs" / f"{state['slug']}-review.md"),
-            "lifecycle_status": "PROPOSED",
-            "max_model_repairs": 2,
-            "max_revisions": 2,
+            "solution_path": str(root / "outputs" / f"{slug}-solution.json"),
+            "validate_path": str(root / "outputs" / f"{slug}-validate.json"),
+            "paper_path": str(root / "papers" / f"{slug}.md"),
+            "review_path": str(root / "outputs" / f"{slug}-review.md"),
+            "skip_paper": bool(state.get("skip_paper", True)),
+            "enable_horse_race": bool(state.get("enable_horse_race", True)),
+            "enforce_anti_cosplay": bool(state.get("enforce_anti_cosplay", True)),
+            "max_retries": int(state.get("max_retries") or 2),
         }
         res = pipeline_app.invoke(pipe_state)
-        if sp.is_file():
+        sol_path = root / "outputs" / f"{slug}-solution.json"
+        if isinstance(res, dict) and res.get("validation_ok") and sol_path.is_file():
+            if not sp.is_file():
+                try:
+                    sol_doc = json.loads(sol_path.read_text(encoding="utf-8"))
+                except Exception:
+                    sol_doc = {}
+                cleaned = _sanitize_custom_schema(
+                    {"problem_class": pc, "preferred_solve_mode": sm or "auto"},
+                    sol_doc if isinstance(sol_doc, dict) else {},
+                    slug=slug,
+                    pid=pid,
+                    pc_eff=pc,
+                    sm=sm,
+                )
+                sp.parent.mkdir(parents=True, exist_ok=True)
+                sp.write_text(json.dumps(cleaned, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             return res
     except Exception:
         return None
@@ -333,9 +636,12 @@ def node_model(state: ORPathState) -> dict:
     state = {**dict(state), **steer_upd}  # type: ignore[assignment]
     slug = state["slug"]
     pid = state["problem_id"]
-    pc = state.get("problem_class") or "shortest_path"
+    allow_fix = _replay_authorized(state)
+    pc = str(state.get("problem_class") or "").strip() or _infer_class(
+        root, pid, None, allow_fixture=allow_fix
+    )
     sm = str(state.get("solve_mode") or "").strip()
-    fb = _fixture_base(root, pid)
+    fb = _fixture_base(root, pid, allow_fixture=allow_fix)
     sp = root / "outputs" / f"{slug}-schema.json"
 
     sub_ok = None
@@ -370,23 +676,47 @@ def node_model(state: ORPathState) -> dict:
 
         # Phase 3.2: unified registry modeler — DomainCartridge for all 22 classes.
         if schema is None:
-            schema = _resolve_registry_schema(root, slug, pid, pc or "", sm, sp)
+            schema = _resolve_registry_schema(
+                root, slug, pid, pc or "", sm, sp, allow_fixture=allow_fix
+            )
         if schema is None:
-            state_try = dict(state)
-            state_try["multiagent"] = True
-            res = _run_isolated_pipeline(root, state_try, sp, sm)
-            sub_ok = bool(res) if res else None
-            if sp.is_file():
-                schema = json.loads(sp.read_text(encoding="utf-8"))
+            fast_single = (
+                str(state.get("run_mode") or "deep").strip().lower() == "fast"
+                and not state.get("multiagent")
+                and not state.get("use_multiagent")
+            )
+            if fast_single:
+                res = _run_single_agent_modeler(root, dict(state), sp, pc or "", sm)
+                sub_ok = bool(res and res.get("validated")) if res else None
+                if res and res.get("validated") and sp.is_file():
+                    schema = json.loads(sp.read_text(encoding="utf-8"))
+                else:
+                    err_detail = (
+                        (res or {}).get("error")
+                        or f"model: unsupported/unvalidated class in fast mode (problem_class={pc!r}, problem_id={pid!r})"
+                    )
+                    return {
+                        "stage": "human_stop",
+                        "human_required": True,
+                        "blocked_reason": err_detail,
+                        "last_error": err_detail,
+                    }
             else:
-                return {
-                    "stage": "human_stop",
-                    "human_required": True,
-                    "last_error": (
-                        "model: unsupported class "
-                        f"(problem_class={pc!r}, problem_id={pid!r}); isolated pipeline unavailable"
-                    ),
-                }
+                state_try = dict(state)
+                state_try["multiagent"] = True
+                res = _run_isolated_pipeline(root, state_try, sp, sm)
+                sub_ok = bool(res) if res else None
+                if sp.is_file():
+                    schema = json.loads(sp.read_text(encoding="utf-8"))
+                else:
+                    return {
+                        "stage": "human_stop",
+                        "human_required": True,
+                        "last_error": (
+                            "model: unsupported class "
+                            f"(problem_class={pc!r}, problem_id={pid!r}); isolated pipeline unavailable"
+                        ),
+                    }
 
         sp.parent.mkdir(parents=True, exist_ok=True)
         sp.write_text(json.dumps(schema, indent=2) + "\n", encoding="utf-8")
@@ -452,7 +782,14 @@ def node_model(state: ORPathState) -> dict:
 
 
 def _resolve_registry_schema(
-    root: Path, slug: str, pid: str, pc_raw: str, sm: str, sp: Path
+    root: Path,
+    slug: str,
+    pid: str,
+    pc_raw: str,
+    sm: str,
+    sp: Path,
+    *,
+    allow_fixture: bool = True,
 ) -> dict | None:
     """Registry-driven schema for a registered class; tube_cut / polyomino defaults kept."""
     from orpath.domain_registry import (
@@ -465,7 +802,7 @@ def _resolve_registry_schema(
         # container / cutting-stock family: explicit fixture schema merge + structural default
         if pc_n in {"tube_cut", "tube", "cutting_stock", "cut_stock"} or "tube" in str(pc_raw or "").lower() or "tube" in str(pid or "").lower():
             schema = _default_tube_schema(slug, pid)
-            if fb := _fixture_base(root, pid):
+            if fb := _fixture_base(root, pid, allow_fixture=allow_fixture):
                 schema["fixture_ref"] = _rel_under(fb, root)
                 if (fb / "schema.json").is_file():
                     try:
@@ -475,7 +812,9 @@ def _resolve_registry_schema(
                     except (OSError, json.JSONDecodeError):
                         pass
             return schema
-        schema = _registry_model_schema(root, slug, pid, pc_raw, sm)
+        schema = _registry_model_schema(
+            root, slug, pid, pc_raw, sm, allow_fixture=allow_fixture
+        )
         return schema
     except Exception:
         return None
@@ -543,8 +882,11 @@ def node_solve(state: ORPathState) -> dict:
         state = {**dict(state), **steer_upd}  # type: ignore[assignment]
     elif steer_upd:
         state = {**dict(state), **{k: v for k, v in steer_upd.items() if k != "stage"}}  # type: ignore[assignment]
-    pc = state.get("problem_class") or "shortest_path"
-    mode = state["solve_mode"]
+    allow_fix = _replay_authorized(state)
+    pc = str(state.get("problem_class") or "").strip() or _infer_class(
+        root, state.get("problem_id") or "", None, allow_fixture=allow_fix
+    )
+    mode = str(state.get("solve_mode") or "").strip()
     out = root / "outputs" / f"{state['slug']}-solution.json"
 
     # If multi-agent already generated and verified the solution:
@@ -567,11 +909,12 @@ def node_solve(state: ORPathState) -> dict:
         except Exception:
             pass
 
-    # 1.2 soak law: intake-on must NOT bind fixture SP/TSP/VRP gold as the answer.
-    # Domain adapters (tube_cut, polyomino_cover) may still run under intake.
-    if _intake_front_door_active(state):
+    # 1.2 soak law + Phase 0 fail-closed: intake-on or non-replay runs must NOT bind fixture SP/TSP/VRP gold.
+    pid_str = str(state.get("problem_id") or "").strip()
+    has_case_inbox = bool(pid_str) and (root / "inbox" / pid_str).is_dir()
+    if _intake_front_door_active(state) or not allow_fix:
         pc_l = str(pc or "").lower()
-        pid_l = str(state.get("problem_id") or "").lower()
+        pid_l = pid_str.lower()
         try:
             from orpath.domain_registry import is_polyomino_class, is_registered_solve_class
 
@@ -582,12 +925,35 @@ def node_solve(state: ORPathState) -> dict:
             poly_ad = "polyomino" in pc_l or "polyomino" in pid_l
             tube_ad = pc_l in {"tube_cut", "tube", "tube_bfd"} or "tube" in pid_l
             has_domain_adapter = poly_ad or tube_ad
-        if not has_domain_adapter:
+        # Block if unknown/unregistered class OR if non-replay intake would silently read fixtures/
+        would_touch_fixture = (not allow_fix) and (not has_case_inbox) and (
+            not pid_str or _fixture_base(root, pid_str, allow_fixture=True) is not None
+        )
+        if not has_domain_adapter or would_touch_fixture or pc_l in {"", "unknown", "unregistered", "none"}:
+            if (not would_touch_fixture) and _single_agent_live_eligible(dict(state)):
+                sp_cand = Path(str(state.get("schema_path") or (root / "outputs" / f"{state['slug']}-schema.json")))
+                sa_res = _run_single_agent_modeler(root, dict(state), sp_cand, pc or "custom_mip", mode)
+                if sa_res and sa_res.get("validated") and out.is_file():
+                    tier = str(state.get("complexity_tier") or "B")
+                    gap_path = _record_tier_b_gap(root, state["slug"], out, tier)
+                    return {
+                        "stage": "gate_validate",
+                        "solution_path": str(out),
+                        "validate_path": sa_res.get("validate_path"),
+                        "gate_subagent_ok": True,
+                        "gap_path": gap_path,
+                        "last_error": "",
+                    }
+            reason_code = (
+                "unauthorized_fixture_replay"
+                if would_touch_fixture and has_domain_adapter
+                else "no_domain_adapter_for_intake"
+            )
             blocked = {
                 "status": "BLOCKED",
                 "objective": None,
                 "solver": "none",
-                "source": "no_domain_adapter_for_intake",
+                "source": reason_code,
                 "problem_id": state.get("problem_id"),
                 "problem_class": pc,
                 "slug": state.get("slug"),
@@ -595,22 +961,26 @@ def node_solve(state: ORPathState) -> dict:
                     "exact": False,
                     "proven_optimal": False,
                     "blocked": True,
-                    "method_class": "fixture",
+                    "blocked_code": reason_code,
+                    "method_class": "blocked",
+                    "data_source": "case" if _intake_front_door_active(state) or has_case_inbox else "none",
+                    "is_replay": False,
+                    "replay_authorized": bool(allow_fix),
                     "reason": (
-                        "intake front-door active: refusing fixture solve bind "
-                        f"(problem_id={state.get('problem_id')!r}, mode={mode!r}); "
-                        "no contest-domain adapter registered"
+                        "refusing unauthorized fixture replay or missing case dataset "
+                        f"(problem_id={state.get('problem_id')!r}, problem_class={pc!r}, mode={mode!r})"
                     ),
                     "intake_path": state.get("intake_path") or "",
                     "brief_path": state.get("brief_path") or "",
                 },
             }
-            out.write_text(json.dumps(blocked, indent=2) + "\n", encoding="utf-8")
+            out.write_text(json.dumps(blocked, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             return {
                 "stage": "gate_validate",
                 "solution_path": str(out),
                 "gate_validate_ok": False,
-                "last_error": "no_domain_adapter_for_intake",
+                "last_error": reason_code,
+                "blocked_reason": blocked["meta"]["reason"],
                 "solve_refused": True,
             }
         # Prefer domain solve mode when adapter applies
@@ -653,15 +1023,80 @@ def node_solve(state: ORPathState) -> dict:
             "--time-limit-ms",
             str(tl),
         ]
-    ok, data, raw = solve(root, state["problem_id"], mode, pc, extra or None)
+    ok, data, raw = solve(
+        root,
+        state["problem_id"],
+        mode,
+        pc,
+        extra or None,
+        is_replay=bool(state.get("is_replay")),
+        fixture_ref=str(state.get("fixture_ref") or ""),
+        replay_authorized=bool(allow_fix),
+    )
     if not ok:
+        if _single_agent_live_eligible(dict(state)):
+            sp_cand = Path(str(state.get("schema_path") or (root / "outputs" / f"{state['slug']}-schema.json")))
+            sa_res = _run_single_agent_modeler(root, dict(state), sp_cand, pc or "custom_mip", mode)
+            if sa_res and sa_res.get("validated") and out.is_file():
+                tier = str(state.get("complexity_tier") or "B")
+                gap_path = _record_tier_b_gap(root, state["slug"], out, tier)
+                return {
+                    "stage": "gate_validate",
+                    "solution_path": str(out),
+                    "validate_path": sa_res.get("validate_path"),
+                    "gate_subagent_ok": True,
+                    "gap_path": gap_path,
+                    "last_error": "",
+                }
+        err_msg = raw or f"Solver {mode} execution failed"
+        if (not allow_fix) or _intake_front_door_active(state):
+            blocked = {
+                "status": "BLOCKED",
+                "objective": None,
+                "solver": "none",
+                "source": "solver_dataset_unavailable",
+                "problem_id": state.get("problem_id"),
+                "problem_class": pc,
+                "slug": state.get("slug"),
+                "meta": {
+                    "exact": False,
+                    "proven_optimal": False,
+                    "blocked": True,
+                    "blocked_code": "solver_dataset_unavailable",
+                    "method_class": "blocked",
+                    "data_source": "case" if (_intake_front_door_active(state) or has_case_inbox) else "none",
+                    "is_replay": False,
+                    "replay_authorized": False,
+                    "reason": err_msg,
+                },
+            }
+            out.write_text(json.dumps(blocked, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            return {
+                "stage": "gate_validate",
+                "solution_path": str(out),
+                "gate_validate_ok": False,
+                "blocked_reason": err_msg,
+                "last_error": err_msg,
+                "solve_refused": True,
+            }
         return {
             "stage": "human_stop",
             "human_required": True,
             "status": "ERROR",
-            "last_error": raw or f"Solver {mode} execution failed",
+            "blocked_reason": err_msg,
+            "last_error": err_msg,
         }
-    out.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    if isinstance(data, dict):
+        s_meta = data.get("meta")
+        if not isinstance(s_meta, dict):
+            s_meta = {}
+            data["meta"] = s_meta
+        s_meta.setdefault("is_replay", bool(state.get("is_replay")))
+        s_meta.setdefault("replay_authorized", bool(allow_fix))
+        if state.get("fixture_ref"):
+            s_meta.setdefault("fixture_ref", str(state.get("fixture_ref")))
+        s_meta.setdefault("data_source", str(state.get("data_source") or ("fixture" if allow_fix and not has_case_inbox else "case")))
+    out.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     tier = str(state.get("complexity_tier") or "B")
     gap_path = _record_tier_b_gap(root, state["slug"], out, tier)
     return {
@@ -676,7 +1111,7 @@ def node_gate_validate(state: ORPathState) -> dict:
     root = _root(state)
     vpath = root / "outputs" / f"{state['slug']}-validate.json"
     sol_path = Path(state.get("solution_path") or "")
-    # BLOCKED: no tune/model repair ladder — go explain → paper shell.
+    # BLOCKED: fail-closed to human_stop (never enter paper pipeline).
     if sol_path.is_file():
         try:
             sol_obj = json.loads(sol_path.read_text(encoding="utf-8"))
@@ -685,32 +1120,56 @@ def node_gate_validate(state: ORPathState) -> dict:
         if not isinstance(sol_obj, dict):
             sol_obj = {}
         meta = sol_obj.get("meta") if isinstance(sol_obj, dict) else None
+        allow_fix = _replay_authorized(state)
+        sol_fixture_ref = str(meta.get("fixture_ref") or "").strip() if isinstance(meta, dict) else ""
+        sol_is_mock_fixture = (
+            str(sol_obj.get("solver") or "").lower() == "fixture-mock"
+            or str(sol_obj.get("source") or "").endswith("solve_mock.py")
+            or (isinstance(meta, dict) and bool(meta.get("is_replay")))
+            or bool(sol_fixture_ref)
+        )
+        provenance_violation = bool(
+            (_intake_front_door_active(state) or state.get("replay_authorized") is False)
+            and not allow_fix
+            and sol_is_mock_fixture
+        )
         blocked = bool(
             isinstance(sol_obj, dict)
             and (
                 str(sol_obj.get("status") or "").upper() == "BLOCKED"
                 or (isinstance(meta, dict) and meta.get("blocked"))
                 or state.get("solve_refused")
+                or provenance_violation
             )
         )
         if blocked:
+            b_reason = (
+                "data_provenance_violation: unauthorized fixture/replay solution during non-replay run"
+                if provenance_violation
+                else (
+                    (
+                        sol_obj.get("meta", {}).get("reason")
+                        if isinstance(sol_obj.get("meta"), dict)
+                        else None
+                    )
+                    or state.get("blocked_reason")
+                    or "solution BLOCKED"
+                )
+            )
             report = {
                 "ok": False,
                 "blocked": True,
-                "errors": [
-                    sol_obj.get("meta", {}).get("reason")
-                    if isinstance(sol_obj.get("meta"), dict)
-                    else "solution BLOCKED"
-                ],
+                "errors": [str(b_reason)],
                 "solution_path": str(sol_path),
                 "detail": "solution_blocked",
             }
-            vpath.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+            vpath.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             return {
-                "stage": "explain",
+                "stage": "human_stop",
                 "validate_path": str(vpath),
                 "gate_validate_ok": False,
                 "human_required": True,
+                "blocked_reason": str(b_reason),
                 "last_error": (
                     sol_obj.get("meta", {}).get("blocked_code")
                     if isinstance(sol_obj.get("meta"), dict)

@@ -498,14 +498,19 @@ def solve(
     extra_args: list[str] | None = None,
     *,
     normalize: bool = True,
+    is_replay: bool = False,
+    fixture_ref: str = "",
+    replay_authorized: bool | None = None,
 ) -> tuple[bool, dict[str, Any], str]:
     """Run adapter and return (ok, solution_dict, raw_text)."""
     root = Path(root)
-    mode_l = (mode or "mock").lower().strip()
+    mode_l = (mode or "").lower().strip()
     pc_l = (problem_class or "").lower().strip()
     pid_l = (problem_id or "").lower()
-    # auto-route domain adapters when mode is generic/unknown
-    if mode_l not in ADAPTER_SCRIPTS:
+    if not mode_l and not pc_l and not pid_l:
+        return False, {}, "unknown solve mode: <empty>"
+    # auto-route domain adapters only when mode is explicitly generic ('auto') or empty with known class
+    if mode_l in {"", "auto"}:
         if "tube" in pid_l or pc_l in {"tube_cut", "tube", "cutting_stock", "cut_stock"}:
             mode_l = "tube"
         elif (
@@ -547,8 +552,10 @@ def solve(
             mode_l = "game_theory"
         elif "hub" in pid_l or pc_l in {"hub_location", "hub", "hlp", "p_hub", "phub", "usahlp"}:
             mode_l = "hub_location"
+        elif pc_l in {"tsp", "vrp", "shortest_path"}:
+            mode_l = "ortools" if pc_l in {"tsp", "vrp"} else "networkx"
         else:
-            mode_l = "ortools"
+            return False, {}, f"unknown solve mode: {mode}"
     # class forces polyomino even if mode was ortools by default
     if mode_l == "ortools" and (
         pc_l in {"polyomino", "polyomino_cover", "poly"} or "polyomino" in pid_l
@@ -668,6 +675,16 @@ def solve(
         data = normalize_solution(data, mode=mode_l)
         data.setdefault("source", f"tools/{script_name}")
         data.setdefault("problem_id", problem_id)
+    if is_replay or fixture_ref or replay_authorized is not None:
+        s_meta = data.get("meta")
+        if not isinstance(s_meta, dict):
+            s_meta = {}
+            data["meta"] = s_meta
+        s_meta["is_replay"] = bool(is_replay)
+        if fixture_ref:
+            s_meta["fixture_ref"] = str(fixture_ref)
+        if replay_authorized is not None:
+            s_meta["replay_authorized"] = bool(replay_authorized)
     ok_e, e_errs = validate_envelope(data)
     if not ok_e:
         return False, data, "envelope: " + "; ".join(e_errs)

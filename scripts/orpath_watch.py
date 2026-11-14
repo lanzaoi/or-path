@@ -2,6 +2,7 @@
 """OR-Path Live Watch HTTP face (V0 Tier-1 + P1 poll + model pref).
 
   GET  /                         → orpath/web/watch.html
+  GET  /studio                   → orpath/web/studio.html
   GET  /api/health
   GET  /api/poll
   GET  /api/snapshot
@@ -54,209 +55,24 @@ from orpath.watch_snapshot import (  # noqa: E402
 
 WEB_DIR = ROOT / "orpath" / "web"
 HTML_NAME = "watch.html"
+STUDIO_HTML_NAME = "studio.html"
 DEFAULT_PORT = 8765
 MAX_PORT_TRIES = 20
 SSE_INTERVAL_S = 0.5
 
-PROBLEM_PRESETS: list[dict[str, Any]] = [
-    {
-        "id": "live-btube",
-        "title": "2026 校赛 B 题：异形圆管工件激光下料优化（Q1–Q4 全链路）",
-        "desc": "10 种空间三维圆管工件，4 种标准母材（9–12m），含定长下料、四模式端部共切、余料跨批排产及 16 项物理质检报告。",
-        "slug": "live-btube",
-        "problem_id": "b-tube-cut",
-        "problem_class": "tube_cut",
-        "solve_mode": "tube",
-        "seed_slug": "live-btube",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/intake/tube_cut_b2026/problem-surface.md",
-        "tags": ["工业激光下料", "Q1–Q4 四问", "已含完整解与论文"],
-    },
-    {
-        "id": "tube-surface",
-        "title": "异形圆管下料题面审读（从 Markdown 原文一键导入解析）",
-        "desc": "从原始竞赛题面触发 OCR/结构化审读，自动提取 Q1–Q4 子问题、母材约束与交付表结构。",
-        "slug": "case-btube-intake",
-        "problem_id": "b-tube-cut",
-        "problem_class": "tube_cut",
-        "solve_mode": "tube",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/intake/tube_cut_b2026/problem-surface.md",
-        "tags": ["题面审读 1.1", "圆管切割", "支持重算"],
-    },
-    {
-        "id": "polyomino-q1",
-        "title": "异形多联骨牌覆盖与板材排样（M2 Polyomino 工业排样）",
-        "desc": "离散制造板材/模具网格精确覆盖问题，基于 CP-SAT 整数规划求解无重叠最优拼排方案。",
-        "slug": "case-polyomino",
-        "problem_id": "polyomino_b_q1",
-        "problem_class": "polyomino_cover",
-        "solve_mode": "polyomino",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/t3/polyomino_b_q1/problem.md",
-        "tags": ["M2 主域桥", "CP-SAT 精确覆盖", "二维排样"],
-    },
-    {
-        "id": "structure-q4",
-        "title": "多批次工业下料与余料结转标准赛题（Q1–Q4 结构化模板）",
-        "desc": "四问递进式工业排产题面，仅用于 1.1 题面结构化拆解验收（无对应求解器算例参数，禁止假绑金标）。",
-        "slug": "case-structure-q4",
-        "problem_id": "",
-        "problem_class": "intake_only",
-        "solve_mode": "none",
-        "intake_only": True,
-        "can_solve": False,
-        "source_rel": "fixtures/intake/structure_q4/source.txt",
-        "tags": ["四问提取", "题面解析演示", "仅审题演示 (Intake Only)"],
-    },
-    {
-        "id": "pdf-sample",
-        "title": "PDF 扫描/文本题面 OCR 导入示例（sample_text.pdf）",
-        "desc": "演示真实 PDF 题面文件经 pdf_text / RapidOCR 识别并生成结构化 Problem Brief 与 intake.json（仅审题演示）。",
-        "slug": "case-pdf-ocr",
-        "problem_id": "",
-        "problem_class": "intake_only",
-        "solve_mode": "none",
-        "intake_only": True,
-        "can_solve": False,
-        "source_rel": "fixtures/intake/ocr/sample_text.pdf",
-        "tags": ["PDF 识别", "OCR 管道", "仅审题演示 (Intake Only)"],
-    },
-    {
-        "id": "cvrp-n32",
-        "title": "带容量多车物流路径优化（CVRPLIB A-n32-k5）",
-        "desc": "32 节点、5 辆额定载重车队的经典工业配送车辆路径问题，OR-Tools 启发式/元启发式求解与容量重算校验。",
-        "slug": "case-cvrp",
-        "problem_id": "cvrplib_a_n32_k5",
-        "problem_class": "vrp",
-        "solve_mode": "ortools",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/t3/cvrplib_a_n32_k5/problem.md",
-        "tags": ["物流调度", "CVRP", "OR-Tools"],
-    },
-    {
-        "id": "vrp-tw",
-        "title": "带时间窗准时制配送调度（VRPTW 工业物流）",
-        "desc": "含严格到达时间窗与车载容量双重硬约束的厂内/城配多车路径规划问题。",
-        "slug": "case-vrptw",
-        "problem_id": "vrp_tw",
-        "problem_class": "vrp",
-        "solve_mode": "ortools",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/t3/vrp_tw/problem.md",
-        "tags": ["时间窗约束", "VRPTW", "准时制排程"],
-    },
-    {
-        "id": "tsp-n8",
-        "title": "多工位设备巡检回路规划（TSP n=8）",
-        "desc": "8 站点闭环最短巡检路径问题，支持 OR-Tools / HiGHS 建模求解与回路完整性独立验证。",
-        "slug": "case-tsp8",
-        "problem_id": "tsp_n8",
-        "problem_class": "tsp",
-        "solve_mode": "ortools",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/t2/tsp_n8/problem.md",
-        "tags": ["设备巡检", "TSP", "闭环校验"],
-    },
-    {
-        "id": "m0-sp",
-        "title": "网络流最短路径规划（M0 基准金标案例）",
-        "desc": "有向加权图最短路径标准基准案例，含完整知识检索、数学建模、求解与校验闭环。",
-        "slug": "m0",
-        "problem_id": "shortest_path",
-        "problem_class": "shortest_path",
-        "solve_mode": "networkx",
-        "seed_slug": "m0",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/t1/shortest_path/problem.md",
-        "tags": ["M0 金标", "网络流", "秒级验算"],
-    },
-    {
-        "id": "taillard-ft06",
-        "title": "作业车间调度优化（Taillard / FT06 基准）",
-        "desc": "经典 6 工件 6 机器作业车间调度问题（JSSP），基于 CP-SAT / PyJobShop 求解最优完工时间 (Makespan=55) 与甘特图排产。",
-        "slug": "case-jssp-ft06",
-        "problem_id": "ft06",
-        "problem_class": "job_shop",
-        "solve_mode": "jssp",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/benchmarks/taillard/jssp/ft06.json",
-        "tags": ["车间调度", "JSSP", "CP-SAT", "Taillard"],
-    },
-    {
-        "id": "cflp-cap41",
-        "title": "有容量限制选址分配（OR-Library CFLP cap41）",
-        "desc": "16 候选厂址、50 客户需求点的经典容量选址问题（CFLP），基于 MIP 混合整数规划实现设施固定投资与运输总成本联合最优。",
-        "slug": "case-cflp-cap41",
-        "problem_id": "cap41",
-        "problem_class": "facility_location",
-        "solve_mode": "facility",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/benchmarks/orlib_cflp/cap41.txt",
-        "tags": ["设施选址", "CFLP", "OR-Library", "供应链网络"],
-    },
-    {
-        "id": "max-clique-dimacs",
-        "title": "最大团与最大独立集图优化（DIMACS myciel3）",
-        "desc": "DIMACS 图基准 myciel3 实例，运用 NetworkX 分支定界与 OR-Tools CP-SAT 对偶互补验证最大团 (omega=2) 与最大独立集 (alpha=5)。",
-        "slug": "case-max-clique",
-        "problem_id": "myciel3",
-        "problem_class": "max_clique",
-        "solve_mode": "max_clique",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/benchmarks/dimacs/myciel3.col",
-        "tags": ["图论优化", "最大团", "DIMACS", "对偶验证"],
-    },
-    {
-        "id": "hub-cab10",
-        "title": "枢纽辐射网络选址优化（CAB 10 城市航网）",
-        "desc": "美国民航局 (CAB) 10 城市客流数据集，p=3 枢纽辐射中继网络非线性转运折扣优化，基于 OR-Tools MIP 严格求解。",
-        "slug": "case-hub-cab10",
-        "problem_id": "CAB10",
-        "problem_class": "hub_location",
-        "solve_mode": "hub_location",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/benchmarks/hub_location/CAB10.json",
-        "tags": ["航空物流", "p-Hub 选址", "CAB 基准", "MIP"],
-    },
-    {
-        "id": "qap-nug12",
-        "title": "二次指派与厂区设备布局优化（QAPLIB nug12）",
-        "desc": "经典 12 设施 12 选址二次指派问题（QAP），基于 SciPy 快速近似二次规划与 2-opt 局部搜索混合求解物料搬运能耗最优布局。",
-        "slug": "case-qap-nug12",
-        "problem_id": "nug12",
-        "problem_class": "qap",
-        "solve_mode": "qap",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/benchmarks/qaplib/nug12.dat",
-        "tags": ["车间布局", "QAPLIB", "二次指派", "物料搬运"],
-    },
-    {
-        "id": "rcpsp-j30",
-        "title": "多资源约束项目排程（PSPLib j301_1）",
-        "desc": "32 工序、4 种有限可再生资源的标准 PSPLib 项目网络，CP-SAT 精确求解无资源冲突最短工期与关键路径识别。",
-        "slug": "case-rcpsp-j30",
-        "problem_id": "j301_1",
-        "problem_class": "rcpsp",
-        "solve_mode": "rcpsp",
-        "intake_only": False,
-        "can_solve": True,
-        "source_rel": "fixtures/benchmarks/psplib/j301_1.sm",
-        "tags": ["工程排期", "RCPSP", "关键路径", "PSPLib"],
-    },
-]
+def _load_problem_presets() -> list[dict[str, Any]]:
+    """Load golden problem presets from fixtures/intake/presets.json."""
+    preset_path = ROOT / "fixtures" / "intake" / "presets.json"
+    if not preset_path.is_file():
+        return []
+    try:
+        data = json.loads(preset_path.read_text(encoding="utf-8"))
+        return list(data) if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+PROBLEM_PRESETS: list[dict[str, Any]] = _load_problem_presets()
 
 
 def _pick_python(home: Path) -> str:
@@ -284,50 +100,14 @@ def _guess_domain_info(filename_or_text: str) -> dict[str, Any]:
     NEVER invent or bind a golden fixture problem_id (shortest_path, b-tube-cut, etc.)
     from free-form text or uploaded files.
     """
-    low = (filename_or_text or "").lower()
-    hint_class = "unknown"
-    if any(k in low for k in ("polyomino", "tiling", "guapai", "骨牌", "多联", "排样", "覆盖")):
-        hint_class = "polyomino_cover"
-    elif any(k in low for k in ("tube", "圆管", "母材", "共切", "下料", "cutting")):
-        hint_class = "tube_cut"
-    elif any(k in low for k in ("vrp_tw", "vrptw", "时间窗", "time window", "cvrp", "vrp", "车辆路径", "车队", "capacity")):
-        hint_class = "vrp"
-    elif any(k in low for k in ("tsp", "旅行商", "巡检")):
-        hint_class = "tsp"
-    elif any(k in low for k in ("shortest_path", "最短路", "dijkstra")):
-        hint_class = "shortest_path"
-    elif any(k in low for k in ("job_shop", "jssp", "fjssp", "taillard", "车间", "工件", "流水车间", "工序", "makespan")):
-        hint_class = "job_shop"
-    elif any(k in low for k in ("facility_location", "facility", "cflp", "选址", "厂址", "配送中心选址", "sscflp", "scnd")):
-        hint_class = "facility_location"
-    elif any(k in low for k in ("rcpsp", "psplib", "项目排程", "工期", "关键路径", ".sm")):
-        hint_class = "rcpsp"
-    elif any(k in low for k in ("hub_location", "hub", "枢纽", "cab10", "中继网络")):
-        hint_class = "hub_location"
-    elif any(k in low for k in ("qap", "quadratic_assignment", "二次指派", "设备布局", "布局优化", "qaplib")):
-        hint_class = "qap"
-    elif any(k in low for k in ("max_clique", "clique", "最大团", "独立集", "independent_set")):
-        hint_class = "max_clique"
-    elif any(k in low for k in ("graph_coloring", "vertex_coloring", "着色", "色数", "chromatic", "dsatur")):
-        hint_class = "graph_coloring"
-    elif any(k in low for k in ("lot_sizing", "wagner", "clsp", "ulsp", "批量", "订货批量", "ww12")):
-        hint_class = "lot_sizing"
-    elif any(k in low for k in ("portfolio", "markowitz", "投资组合", "sharpe", "夏普")):
-        hint_class = "portfolio_opt"
-    elif any(k in low for k in ("qubo", "ising", "伊辛", "max_cut", "最大割", "partitioning")):
-        hint_class = "qubo_ising"
-    elif any(k in low for k in ("network_flow", "min_cost_flow", "最小费用流", "二分图匹配", "多商品流")):
-        hint_class = "network_flow"
-    elif any(k in low for k in ("bin_packing", "binpack", "装箱", "装载")):
-        hint_class = "bin_packing"
-    elif any(k in low for k in ("stochastic", "farmer", "两阶段随机", "随机规划")):
-        hint_class = "stochastic_lp"
-    elif any(k in low for k in ("staff_rostering", "rostering", "shift", "排班", "轮班", "护士排班")):
-        hint_class = "staff_rostering"
-    elif any(k in low for k in ("game_theory", "nash", "纳什", "博弈", "bimatrix")):
-        hint_class = "game_theory"
-    elif any(k in low for k in ("microgrid", "微网", "电网", "调控", "储能", "光伏", "smart_grid")):
-        hint_class = "microgrid"
+    from orpath.studio_domain_catalog import detect_problem_class_from_text
+
+    detected = detect_problem_class_from_text(filename_or_text or "")
+    if detected == "unregistered":
+        low = (filename_or_text or "").lower()
+        if any(k in low for k in ("电网", "调控", "smart_grid")):
+            detected = "microgrid_dispatch"
+    hint_class = "unknown" if detected == "unregistered" else detected
     return {
         "domain": "unregistered",
         "problem_id": "",
@@ -574,6 +354,10 @@ class WatchHandler(SimpleHTTPRequestHandler):
             self._handle_studio_confirm(body)
             return
 
+        if path == "/api/studio/paper":
+            self._handle_studio_paper(body)
+            return
+
         if path != "/api/model":
             self.send_error(404, "not found")
             return
@@ -627,6 +411,7 @@ class WatchHandler(SimpleHTTPRequestHandler):
                         "/api/intake/run",
                         "/api/studio/analyze",
                         "/api/studio/confirm",
+                        "/api/studio/paper",
                         "/api/knowledge/search",
                         "/api/artifact/download",
                     ],
@@ -748,6 +533,16 @@ class WatchHandler(SimpleHTTPRequestHandler):
             except Exception:
                 pass
             self._send_html_file(WEB_DIR / HTML_NAME)
+            return
+
+        if path in {"/studio", "/studio.html"}:
+            try:
+                sys.path.insert(0, str(ROOT))
+                from orpath.web.build import build
+                build()
+            except Exception:
+                pass
+            self._send_html_file(WEB_DIR / STUDIO_HTML_NAME)
             return
 
         if path.startswith("/static/") or path.startswith("/src/"):
@@ -1115,10 +910,15 @@ class WatchHandler(SimpleHTTPRequestHandler):
                 stmt_sources = [
                     inbox_dir / st for st in dp.get("statement_files", []) if (inbox_dir / st).is_file()
                 ]
-                if not stmt_sources and saved_files:
-                    stmt_sources = [saved_files[0]]
-
-                res = standalone_intake(root=wd, slug=slug, sources=stmt_sources, assets_dir=inbox_dir)
+                if stmt_sources:
+                    res = standalone_intake(root=wd, slug=slug, sources=stmt_sources, assets_dir=inbox_dir)
+                else:
+                    res = {
+                        "ok": True,
+                        "status": "data_only",
+                        "note": "未上传文字/文档题面，已跳过文本 OCR，仅保留结构化数据探针。",
+                        "subproblems": 0,
+                    }
                 pv = build_problem_view(workdir=wd, home=home, slug=slug)
                 pv["data_profile"] = dp
                 self._send_json(
@@ -1252,7 +1052,7 @@ class WatchHandler(SimpleHTTPRequestHandler):
             stmt_cand = None
             for f in files:
                 low = f.name.lower()
-                if low.endswith((".md", ".txt", ".pdf")) or any(k in low for k in ("problem", "question", "readme", "brief", "prompt", "intake")):
+                if low.endswith((".md", ".txt", ".docx", ".pdf")) or any(k in low for k in ("problem", "question", "readme", "brief", "prompt", "intake")):
                     stmt_cand = f
                     break
             chosen_f = stmt_cand or (files[0] if files else None)
@@ -1336,7 +1136,7 @@ class WatchHandler(SimpleHTTPRequestHandler):
                 self._send_json(400, {"ok": False, "error": f"forbidden number key in prompt: {kw}"})
                 return
 
-        # 2. Write initial human steer with pause_next=True at_stage=after_research
+        # 2. Record non-blocking initial steer context (never pause execution)
         notes_dir = self._workdir / "notes"
         notes_dir.mkdir(parents=True, exist_ok=True)
         steer_doc = {
@@ -1345,8 +1145,8 @@ class WatchHandler(SimpleHTTPRequestHandler):
             "source": "studio_analyze",
             "utc": datetime.now(timezone.utc).isoformat(),
             "lg": {
-                "pause_next": True,
-                "at_stage": "after_research",
+                "pause_next": False,
+                "at_stage": "manual",
             },
             "pi": {
                 "notes": prompt,
@@ -1355,7 +1155,7 @@ class WatchHandler(SimpleHTTPRequestHandler):
         steer_file = notes_dir / f"{slug}-human-steer.json"
         steer_file.write_text(json.dumps(steer_doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
-        # 3. Run deep analysis
+        # 3. Run deep analysis directly without pausing the pipeline
         from orpath.studio_analyzer import run_deep_analysis
 
         api_key = str(body.get("api_key") or "").strip()
@@ -1377,69 +1177,22 @@ class WatchHandler(SimpleHTTPRequestHandler):
             model=model,
             base_url=base_url,
         )
-        detected_class = ana.get("domain_diagnosis", {}).get("problem_class") or "tsp"
-        rec_algo = ana.get("domain_diagnosis", {}).get("recommended_algorithm") or "mock"
 
-        # 4. Invoke LangGraph up to the pause
-        try:
-            from orpath.control_plane import (
-                build_graph,
-                default_initial,
-                open_sqlite_checkpointer,
-                thread_config,
-            )
-
-            # Clear stages for clean pause observation
-            stages_dir = self._workdir / "runs" / slug / "stages"
-            if stages_dir.is_dir():
-                for old_st in stages_dir.glob("*.json"):
-                    try:
-                        old_st.unlink()
-                    except OSError:
-                        pass
-
-            db_file = self._workdir / "runs" / "orpath.sqlite"
-            db_file.parent.mkdir(parents=True, exist_ok=True)
-            saver, conn = open_sqlite_checkpointer(db_file)
-            try:
-                app = build_graph(checkpointer=saver)
-                cfg = thread_config(slug)
-
-                k_mode = os.environ.get("ORPATH_KNOWLEDGE_MODE", "hybrid").strip().lower()
-                if k_mode not in {"off", "seed", "hybrid"}:
-                    k_mode = "hybrid"
-
-                initial = default_initial(
-                    root=self._workdir,
-                    slug=slug,
-                    problem_id=slug,
-                    problem_class=detected_class,
-                    solve_mode=rec_algo if rec_algo != "none" else "mock",
-                    knowledge_mode=k_mode,
-                    live_subagent=False,
-                    thread_id=slug,
-                )
-                final = app.invoke(initial, cfg)
-                human_req = bool(final.get("human_required"))
-            finally:
-                if conn is not None:
-                    try:
-                        conn.close()
-                    except Exception:
-                        pass
-                    conn = None
-        except Exception as exc:  # noqa: BLE001
-            self._send_json(500, {"ok": False, "error": f"graph pause run failed: {exc}"})
-            return
+        run_mode_raw = str(body.get("run_mode") or "fast").strip().lower()
+        run_mode = "deep" if run_mode_raw == "deep" else "fast"
+        data_prof = ana.get("data_profile") if isinstance(ana, dict) and isinstance(ana.get("data_profile"), dict) else {}
+        data_src = "case" if data_prof.get("has_solver_dataset") else ""
 
         self._send_json(
             200,
             {
                 "ok": True,
                 "slug": slug,
+                "run_mode": run_mode,
+                "data_source": data_src,
                 "analysis": ana,
-                "human_required": human_req,
-                "paused_at": "after_research",
+                "human_required": False,
+                "paused_at": "",
             },
         )
 
@@ -1451,6 +1204,12 @@ class WatchHandler(SimpleHTTPRequestHandler):
         slug = _sanitize_slug(str(body.get("slug") or "studio-run"))
         selected_options = body.get("selected_options") if isinstance(body.get("selected_options"), dict) else {}
         extra_prompt = str(body.get("extra_prompt") or "").strip()
+        run_mode_raw = str(body.get("run_mode") or "fast").strip().lower()
+        run_mode = "deep" if run_mode_raw == "deep" else "fast"
+        if "skip_paper" in body and body.get("skip_paper") is not None:
+            skip_paper = bool(body.get("skip_paper"))
+        else:
+            skip_paper = (run_mode == "fast")
 
         # 1. Strictly forbid number authority in prompt & body
         forbid = find_forbidden_keys(body)
@@ -1477,10 +1236,63 @@ class WatchHandler(SimpleHTTPRequestHandler):
             prof = profile_inbox_assets(self._workdir / "inbox" / slug, slug, self._workdir / "outputs")
 
         has_solver_dataset = bool(prof.get("has_solver_dataset"))
-        detected_class = prof.get("detected_runnable_class") or "tsp"
-        chosen_algo = str(selected_options.get("q_algorithm") or "ortools").strip().lower()
-        if chosen_algo not in ALLOWED_SOLVE_MODES:
-            chosen_algo = "ortools" if detected_class in {"tsp", "vrp"} else "mock"
+        ana_file = self._workdir / "outputs" / f"{slug}-studio-analysis.json"
+        ana_class = ""
+        if ana_file.is_file():
+            try:
+                ana_doc = json.loads(ana_file.read_text(encoding="utf-8"))
+                ana_class = str((ana_doc.get("domain_diagnosis") or {}).get("problem_class") or "").strip()
+            except Exception:
+                ana_class = ""
+        detected_class = str(prof.get("detected_runnable_class") or ana_class or "unregistered").strip()
+        raw_algo = str(selected_options.get("q_algorithm") or "").strip().lower()
+        chosen_algo = raw_algo if raw_algo in ALLOWED_SOLVE_MODES else ""
+        if not chosen_algo:
+            from orpath.domain_registry import normalize_problem_class
+            from orpath.pipeline.solve import _SOLVE_MODE_BY_CLASS
+
+            canon_cls = normalize_problem_class(detected_class)
+            _watch_overrides = {"tsp": "ortools", "facility_location": "facility"}
+            chosen_algo = _watch_overrides.get(canon_cls) or _SOLVE_MODE_BY_CLASS.get(canon_cls, "")
+        api_key = str(body.get("api_key") or "").strip()
+        chosen_model = str(body.get("model") or "").strip()
+        base_url = str(body.get("base_url") or "").strip()
+        if api_key.startswith("ak-"):
+            os.environ["XFYUN_API_KEY"] = api_key
+            if not chosen_model or chosen_model == "deepseek-reasoner":
+                chosen_model = "spark-x2.6"
+        elif api_key.startswith("sk-"):
+            os.environ["DEEPSEEK_API_KEY"] = api_key
+        if base_url:
+            if api_key.startswith("ak-"):
+                os.environ["XFYUN_BASE_URL"] = base_url
+            elif api_key.startswith("sk-"):
+                os.environ["DEEPSEEK_BASE_URL"] = base_url
+
+        if body.get("live_subagent") is not None:
+            live_agent_enabled = bool(body.get("live_subagent"))
+        elif body.get("force_live_agent"):
+            live_agent_enabled = True
+        elif chosen_model.lower() == "offline":
+            live_agent_enabled = False
+        elif os.environ.get("PYTEST_CURRENT_TEST"):
+            live_agent_enabled = False
+        else:
+            from orpath.control_plane import is_real_llm_configured
+
+            live_agent_enabled = bool(api_key or is_real_llm_configured())
+
+        inbox_case_dir = self._workdir / "inbox" / slug
+        has_case_files = has_solver_dataset or (
+            inbox_case_dir.is_dir() and any(p.is_file() for p in inbox_case_dir.rglob("*"))
+        )
+        can_run_single_agent = bool(live_agent_enabled and has_case_files)
+
+        can_run_solver = bool(
+            has_solver_dataset
+            and detected_class not in {"", "unknown", "unregistered", "none"}
+            and chosen_algo in ALLOWED_SOLVE_MODES
+        )
 
         # 3. Write updated steer with pause_next=False (+ optional pinned_knowledge)
         raw_pinned = body.get("pinned_knowledge") if isinstance(body.get("pinned_knowledge"), list) else []
@@ -1531,8 +1343,8 @@ class WatchHandler(SimpleHTTPRequestHandler):
         except Exception:
             pass
 
-        # Scenario A: Runnable dataset exists
-        if has_solver_dataset:
+        # Scenario A: Runnable dataset OR live autonomous single-agent modeling
+        if can_run_solver or can_run_single_agent:
             conn = None
             try:
                 from orpath.agents.callbacks import (
@@ -1550,49 +1362,43 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     thread_config,
                 )
 
-                # Optional user credentials passed from the Web Studio UI
-                api_key = str(body.get("api_key") or "").strip()
-                chosen_model = str(body.get("model") or "").strip()
-                base_url = str(body.get("base_url") or "").strip()
-                if api_key.startswith("ak-"):
-                    os.environ["XFYUN_API_KEY"] = api_key
-                    if not chosen_model or chosen_model == "deepseek-reasoner":
-                        chosen_model = "spark-x2.6"
-                elif api_key.startswith("sk-"):
-                    os.environ["DEEPSEEK_API_KEY"] = api_key
-                if base_url:
-                    if api_key.startswith("ak-"):
-                        os.environ["XFYUN_BASE_URL"] = base_url
-                    elif api_key.startswith("sk-"):
-                        os.environ["DEEPSEEK_BASE_URL"] = base_url
-
                 k_mode = os.environ.get("ORPATH_KNOWLEDGE_MODE", "hybrid").strip().lower()
                 if k_mode not in {"off", "seed", "hybrid"}:
                     k_mode = "hybrid"
 
+                eff_class = (
+                    detected_class
+                    if detected_class not in {"", "unknown", "unregistered", "none"}
+                    else ("custom_mip" if can_run_single_agent else detected_class)
+                )
+                eff_mode = chosen_algo or ("auto" if can_run_single_agent else "")
                 initial = default_initial(
                     root=self._workdir,
                     slug=slug,
                     problem_id=slug,
-                    problem_class=detected_class,
-                    solve_mode=chosen_algo,
+                    problem_class=eff_class,
+                    solve_mode=eff_mode,
                     knowledge_mode=k_mode,
-                    live_subagent=False,
+                    live_subagent=live_agent_enabled,
                     thread_id=slug,
+                    is_replay=False,
+                    replay_authorized=False,
+                    run_mode=run_mode,
+                    skip_paper=skip_paper,
                 )
+                if body.get("force_live_agent"):
+                    initial["force_live_agent"] = True
+                if chosen_model and chosen_model.lower() != "offline":
+                    initial["llm_model"] = chosen_model
 
-                # --- Task 9: multi-agent execution engine + snapshot callback ---
-                # ORPATH_ENGINE selects the execution engine:
-                #   * "multiagent" (default / unspecified) → prefer the compiled
-                #     supervisor graph (build_compiled_multiagent);
-                #   * "graph" → deterministic product pipeline only.
-                # Any multiagent error — or a regression where the run completes
-                # without producing the canonical solution artifact — falls back
-                # smoothly to the existing build_graph solve, so
-                # outputs/<slug>-solution.json + -validate.json stay guaranteed.
+                # --- Task 9 / Phase 1: execution engine selection ---
+                # In Phase 1 fast mode (`run_mode == "fast"`), skip `_run_multiagent`
+                # (`build_compiled_multiagent`) completely to avoid the 60s swarm stall
+                # before deterministic solver execution. In `run_mode == "deep"`,
+                # honor `engine` / `ORPATH_ENGINE` (`multiagent` vs `graph`).
                 engine_param = str(body.get("engine") or "").strip().lower()
                 engine_env = (engine_param or os.environ.get("ORPATH_ENGINE", "multiagent")).strip().lower()
-                use_multiagent = engine_env in ("", "multiagent")
+                use_multiagent = (run_mode != "fast") and (engine_env in ("", "multiagent"))
                 snapshot_cb = MultiAgentSnapshotCallback(
                     thread_id=slug, slug=slug, workdir=self._workdir
                 )
@@ -1661,21 +1467,10 @@ class WatchHandler(SimpleHTTPRequestHandler):
                             ma_cfg = thread_config(f"{slug}-multiagent")
                             ma_cfg["callbacks"] = [snapshot_cb]
                             ma_input = dict(initial)
-                            ma_input["messages"] = [
-                                (
-                                    "user",
-                                    (
-                                        f"运筹学工作台求解任务：slug={slug}，"
-                                        f"problem_id={slug}，problem_class={detected_class}，"
-                                        f"solve_mode={chosen_algo}，题面与数据位于 "
-                                        f"{self._workdir / 'inbox' / slug}。"
-                                        "严格按 researcher → modeler → verifier_writer "
-                                        "流水线执行，产出 "
-                                        f"outputs/{slug}-solution.json 与 "
-                                        f"outputs/{slug}-validate.json。"
-                                    ),
-                                )
-                            ]
+                            ma_input.setdefault("workdir", str(self._workdir))
+                            ma_input.setdefault("skip_paper", bool(skip_paper))
+                            ma_input.setdefault("enable_horse_race", True)
+                            ma_input.setdefault("enforce_anti_cosplay", True)
                             snapshot_cb.write_stage_snapshot(SUPERVISOR_NAME, status="running")
                             res = app_ma.invoke(ma_input, ma_cfg)
                             if abort_event.is_set():
@@ -1736,7 +1531,9 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     db_file = self._workdir / "runs" / "orpath.sqlite"
                     db_file.parent.mkdir(parents=True, exist_ok=True)
                     saver, conn = open_sqlite_checkpointer(db_file)
-                    graph_timeout = float(os.environ.get("ORPATH_GRAPH_TIMEOUT", "120.0"))
+                    graph_timeout = float(
+                        os.environ.get("ORPATH_GRAPH_TIMEOUT", "300.0" if live_agent_enabled else "120.0")
+                    )
                     graph_err: list[str] = []
 
                     def _run_graph() -> None:
@@ -1774,7 +1571,49 @@ class WatchHandler(SimpleHTTPRequestHandler):
 
             sol_file = self._workdir / "outputs" / f"{slug}-solution.json"
             if not sol_file.is_file():
-                self._send_json(500, {"ok": False, "error": "solution file was not produced"})
+                b_reason = str(
+                    (final or {}).get("blocked_reason")
+                    or (final or {}).get("last_error")
+                    or "求解器未能根据当前附件数据产出可执行算例，系统已诚实阻断并禁止回退夹具。"
+                )
+                blocked_sol = {
+                    "status": "BLOCKED",
+                    "objective": None,
+                    "solver": "none",
+                    "source": "studio_solver_blocked",
+                    "problem_id": slug,
+                    "problem_class": detected_class or "unregistered",
+                    "slug": slug,
+                    "meta": {
+                        "blocked": True,
+                        "is_replay": False,
+                        "data_source": "case",
+                        "reason": b_reason,
+                        "gap_list": [b_reason],
+                    },
+                }
+                sol_file.parent.mkdir(parents=True, exist_ok=True)
+                sol_file.write_text(json.dumps(blocked_sol, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                self._send_json(
+                    200,
+                    {
+                        "ok": True,
+                        "status": "BLOCKED",
+                        "slug": slug,
+                        "engine": engine_used,
+                        "run_mode": run_mode,
+                        "skip_paper": skip_paper,
+                        "paper_generated": False,
+                        "paper_path": "",
+                        "paper_quality": "skipped",
+                        "objective": None,
+                        "reason": b_reason,
+                        "blocked_reason": b_reason,
+                        "gap_list": [b_reason],
+                        "data_source": "case",
+                        "solution": blocked_sol,
+                    },
+                )
                 return
             sol_doc = json.loads(sol_file.read_text(encoding="utf-8"))
 
@@ -1821,6 +1660,44 @@ class WatchHandler(SimpleHTTPRequestHandler):
                 "proven_optimal": proven_opt,
             }
 
+            sol_status_up = str(sol_doc.get("status") or "").strip().upper()
+            if sol_status_up in {"BLOCKED", "ERROR", "INFEASIBLE"}:
+                b_reason = str(
+                    (sol_doc.get("meta") or {}).get("reason")
+                    if isinstance(sol_doc.get("meta"), dict)
+                    else ""
+                ) or str((final or {}).get("blocked_reason") or (final or {}).get("last_error") or f"求解器返回状态 {sol_status_up}")
+                self._send_json(
+                    200,
+                    {
+                        "ok": True,
+                        "status": "BLOCKED",
+                        "slug": slug,
+                        "engine": engine_used,
+                        "run_mode": run_mode,
+                        "skip_paper": skip_paper,
+                        "paper_generated": False,
+                        "paper_path": "",
+                        "paper_quality": "skipped",
+                        "objective": None,
+                        "reason": b_reason,
+                        "blocked_reason": b_reason,
+                        "gap_list": [b_reason],
+                        "data_source": "case",
+                        "solution": sol_doc,
+                        "validation": val_doc,
+                    },
+                )
+                return
+
+            res_paper_path = "" if skip_paper else str((final or {}).get("paper_path") or "")
+            paper_generated = bool((not skip_paper) and res_paper_path and Path(res_paper_path).is_file())
+            res_paper_quality = (
+                "skipped"
+                if skip_paper
+                else str((final or {}).get("paper_quality") or ("template_render" if paper_generated else "skipped"))
+            )
+            data_src = str((final or {}).get("data_source") or (sol_doc.get("meta") or {}).get("data_source") or "case")
             self._send_json(
                 200,
                 {
@@ -1828,7 +1705,15 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     "status": "COMPLETED",
                     "slug": slug,
                     "engine": engine_used,
+                    "run_mode": run_mode,
+                    "skip_paper": skip_paper,
+                    "paper_generated": paper_generated,
+                    "paper_path": res_paper_path if paper_generated else "",
+                    "paper_quality": res_paper_quality,
+                    "data_source": data_src,
+                    "blocked_reason": "",
                     "proven_optimal": proven_opt,
+                    "objective": sol_doc.get("objective"),
                     "solution": sol_doc,
                     "validation": val_doc,
                     "plain_language_summary": summary,
@@ -1836,20 +1721,29 @@ class WatchHandler(SimpleHTTPRequestHandler):
             )
             return
 
-        # Scenario B: No solver dataset -> honestly BLOCKED
+        # Scenario B: No solver dataset or unregistered domain -> honestly BLOCKED
         out_dir = self._workdir / "outputs"
         out_dir.mkdir(parents=True, exist_ok=True)
+        if not has_solver_dataset:
+            b_reason = "题面未提供结构化坐标、距离矩阵或可解析算例附件，系统已完成定性建模研判，诚实阻断无依据的数值求解。"
+            gaps = ["缺少结构化数值算例附件（CSV/JSON/Excel 算例数据）"]
+        else:
+            b_reason = f"识别领域为 {detected_class or 'unregistered'}，当前无已注册的匹配数值适配器或可执行求解模式（{chosen_algo or 'none'}），系统诚实阻断并禁止假绑内置金标。"
+            gaps = [f"未注册可执行领域适配器: problem_class={detected_class or 'unregistered'}"]
         blocked_sol = {
             "status": "BLOCKED",
             "objective": None,
             "solver": "none",
-            "source": "studio_no_solver_dataset",
+            "source": "studio_no_solver_dataset" if not has_solver_dataset else "studio_unregistered_domain",
             "problem_id": slug,
-            "problem_class": detected_class or "unknown",
+            "problem_class": detected_class or "unregistered",
             "slug": slug,
             "meta": {
                 "blocked": True,
-                "reason": "题面未提供结构化坐标或距离矩阵算例附件，系统已完成定性数学建模与思路研判，根据系统硬法诚实限制假绑数值求解。",
+                "is_replay": False,
+                "data_source": "case",
+                "reason": b_reason,
+                "gap_list": gaps,
             },
         }
         (out_dir / f"{slug}-solution.json").write_text(
@@ -1861,9 +1755,230 @@ class WatchHandler(SimpleHTTPRequestHandler):
                 "ok": True,
                 "status": "BLOCKED",
                 "slug": slug,
+                "run_mode": run_mode,
+                "skip_paper": skip_paper,
+                "paper_generated": False,
+                "paper_path": "",
+                "paper_quality": "skipped",
                 "objective": None,
-                "reason": "题面未提供结构化数值算例，已形成定性模型框架并诚实停止数值虚构。",
+                "reason": b_reason,
+                "blocked_reason": b_reason,
+                "gap_list": gaps,
+                "data_source": "case",
                 "solution": blocked_sol,
+            },
+        )
+
+    def _handle_studio_paper(self, body: dict[str, Any]) -> None:
+        """Deferred / on-demand academic paper generation over a validated solve."""
+        if not isinstance(body, dict):
+            self._send_json(400, {"ok": False, "error": "body must be object"})
+            return
+
+        slug_raw = str(body.get("slug") or "").strip()
+        if not slug_raw:
+            self._send_json(400, {"ok": False, "error": "slug is required"})
+            return
+        slug = _sanitize_slug(slug_raw)
+        thread_id = str(body.get("thread_id") or "").strip() or slug
+        from_stage = str(body.get("from_stage") or "draft_paper").strip()
+        if from_stage not in {"explain", "draft_paper", "cite_pack", "review_pack", "provenance"}:
+            from_stage = "draft_paper"
+
+        sol_file = self._workdir / "outputs" / f"{slug}-solution.json"
+        if not sol_file.is_file():
+            self._send_json(
+                400,
+                {"ok": False, "error": f"solution missing for slug={slug!r}: {sol_file}"},
+            )
+            return
+        try:
+            sol_doc = json.loads(sol_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            self._send_json(400, {"ok": False, "error": f"invalid solution json: {exc}"})
+            return
+
+        sol_meta = sol_doc.get("meta") if isinstance(sol_doc, dict) and isinstance(sol_doc.get("meta"), dict) else {}
+        if not isinstance(sol_doc, dict) or str(sol_doc.get("status") or "").upper() == "BLOCKED" or sol_meta.get("blocked"):
+            reason = str(sol_meta.get("reason") or "solution is BLOCKED")
+            self._send_json(
+                400,
+                {"ok": False, "error": f"cannot generate paper for BLOCKED solution: {reason}"},
+            )
+            return
+
+        api_key = str(body.get("api_key") or "").strip()
+        chosen_model = str(body.get("model") or "").strip()
+        base_url = str(body.get("base_url") or "").strip()
+        is_offline_model = chosen_model.lower() == "offline"
+        if api_key and not is_offline_model:
+            if api_key.startswith("ak-") or "spark" in chosen_model.lower():
+                os.environ["XFYUN_API_KEY"] = api_key
+                if not chosen_model or chosen_model == "deepseek-reasoner":
+                    chosen_model = "spark-x2.6"
+                if base_url:
+                    os.environ["XFYUN_BASE_URL"] = base_url
+            elif api_key.startswith("sk-") or "deepseek" in chosen_model.lower():
+                os.environ["DEEPSEEK_API_KEY"] = api_key
+                if base_url:
+                    os.environ["DEEPSEEK_BASE_URL"] = base_url
+            else:
+                os.environ["OPENAI_API_KEY"] = api_key
+                if base_url:
+                    os.environ["OPENAI_BASE_URL"] = base_url
+        elif base_url and not is_offline_model:
+            if "spark" in chosen_model.lower():
+                os.environ["XFYUN_BASE_URL"] = base_url
+            elif "deepseek" in chosen_model.lower():
+                os.environ["DEEPSEEK_BASE_URL"] = base_url
+            else:
+                os.environ["OPENAI_BASE_URL"] = base_url
+
+        conn = None
+        try:
+            from orpath.control_plane import (
+                PREDECESSORS,
+                build_graph,
+                default_initial,
+                is_real_llm_configured,
+                open_sqlite_checkpointer,
+                thread_config,
+            )
+
+            k_mode = os.environ.get("ORPATH_KNOWLEDGE_MODE", "hybrid").strip().lower()
+            if k_mode not in {"off", "seed", "hybrid"}:
+                k_mode = "hybrid"
+
+            live_sa: bool | None
+            if is_offline_model:
+                live_sa = False
+            elif "live_subagent" in body and body.get("live_subagent") is not None:
+                live_sa = bool(body.get("live_subagent"))
+            elif api_key:
+                live_sa = True
+            else:
+                live_sa = bool(is_real_llm_configured())
+
+            db_file = self._workdir / "runs" / "orpath.sqlite"
+            db_file.parent.mkdir(parents=True, exist_ok=True)
+            saver, conn = open_sqlite_checkpointer(db_file)
+            app = build_graph(checkpointer=saver)
+            cfg = thread_config(thread_id)
+
+            snap = app.get_state(cfg)
+            seed: dict[str, Any] | None = (
+                dict(snap.values)
+                if snap is not None and snap.values and snap.values.get("slug")
+                else None
+            )
+            outputs_dir = self._workdir / "outputs"
+            if seed is None:
+                seed = default_initial(
+                    root=self._workdir,
+                    slug=slug,
+                    problem_id=str(sol_doc.get("problem_id") or slug),
+                    problem_class=str(sol_doc.get("problem_class") or ""),
+                    solve_mode=str(sol_doc.get("solver") or sol_doc.get("solve_mode") or "auto"),
+                    knowledge_mode=k_mode,
+                    live_subagent=live_sa,
+                    thread_id=thread_id,
+                    is_replay=bool(sol_meta.get("is_replay")),
+                    fixture_ref=str(sol_meta.get("fixture_ref") or ""),
+                    replay_authorized=bool(sol_meta.get("replay_authorized", True)),
+                    run_mode="deep",
+                    skip_paper=False,
+                )
+                if (outputs_dir / f"{slug}-schema.json").is_file():
+                    seed["schema_path"] = str(outputs_dir / f"{slug}-schema.json")
+                    seed["gate_schema_ok"] = True
+                seed["solution_path"] = str(sol_file)
+                if (outputs_dir / f"{slug}-validate.json").is_file():
+                    seed["validate_path"] = str(outputs_dir / f"{slug}-validate.json")
+                seed["gate_validate_ok"] = True
+                notes_dir = self._workdir / "notes"
+                for _key, _fname in (
+                    ("research_path", f"{slug}-research.md"),
+                    ("retrieval_path", f"{slug}-retrieval.json"),
+                    ("explain_path", f"{slug}-explain.md"),
+                ):
+                    if (outputs_dir / _fname).is_file():
+                        seed[_key] = str(outputs_dir / _fname)
+                    elif (notes_dir / _fname).is_file():
+                        seed[_key] = str(notes_dir / _fname)
+                if (outputs_dir / f"{slug}-plan.md").is_file():
+                    seed["plan_path"] = str(outputs_dir / f"{slug}-plan.md")
+                elif (outputs_dir / ".plans" / f"{slug}.md").is_file():
+                    seed["plan_path"] = str(outputs_dir / ".plans" / f"{slug}.md")
+            else:
+                seed["skip_paper"] = False
+                seed["run_mode"] = "deep"
+                seed["paper_quality"] = ""
+                seed["paper_degraded_reason"] = ""
+                seed["revise_count"] = 0
+                seed["live_subagent"] = live_sa
+                if not seed.get("solution_path"):
+                    seed["solution_path"] = str(sol_file)
+                seed["gate_validate_ok"] = True
+
+            if is_offline_model:
+                seed["llm_model"] = ""
+            elif chosen_model:
+                seed["llm_model"] = chosen_model
+            seed["human_required"] = False
+            seed["steer_pause"] = False
+            seed["last_error"] = ""
+            if body.get("force_live_agent"):
+                seed["force_live_agent"] = True
+            seed["stage"] = from_stage
+            as_node = PREDECESSORS.get(from_stage, "explain")
+            app.update_state(cfg, seed, as_node=as_node)
+
+            paper_timeout = float(os.environ.get("ORPATH_PAPER_TIMEOUT", "180.0"))
+            paper_err: list[str] = []
+            final_box: dict[str, Any] = {}
+
+            def _run_paper() -> None:
+                try:
+                    final_box["final"] = app.invoke(None, cfg)
+                except Exception as p_exc:  # noqa: BLE001
+                    paper_err.append(f"{type(p_exc).__name__}: {p_exc}")
+
+            p_thread = threading.Thread(target=_run_paper, daemon=True, name=f"paper-{slug}")
+            p_thread.start()
+            p_thread.join(paper_timeout)
+            if p_thread.is_alive():
+                self._send_json(504, {"ok": False, "error": f"Gateway Timeout: paper generation exceeded {paper_timeout:.0f}s"})
+                return
+            if paper_err:
+                self._send_json(500, {"ok": False, "error": paper_err[0]})
+                return
+            final = final_box.get("final") or {}
+        except Exception as exc:  # noqa: BLE001
+            self._send_json(500, {"ok": False, "error": f"paper generation failed: {exc}"})
+            return
+        finally:
+            if conn is not None:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                conn = None
+
+        paper_p = str((final or {}).get("paper_path") or "")
+        paper_ok = bool(paper_p and Path(paper_p).is_file())
+        self._send_json(
+            200,
+            {
+                "ok": bool(paper_ok and not (final or {}).get("human_required")),
+                "slug": slug,
+                "thread_id": thread_id,
+                "paper_path": paper_p,
+                "paper_generated": paper_ok,
+                "paper_quality": str((final or {}).get("paper_quality") or ("template_render" if paper_ok else "skipped")),
+                "paper_degraded_reason": str((final or {}).get("paper_degraded_reason") or ""),
+                "gate_r1_ok": bool((final or {}).get("gate_r1_ok")),
+                "gate_r2_ok": bool((final or {}).get("gate_r2_ok")),
+                "provenance_path": str((final or {}).get("provenance_path") or ""),
             },
         )
 

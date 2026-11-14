@@ -145,7 +145,6 @@ if /i "%CMD%"=="status" goto :status
 if /i "%CMD%"=="list" goto :list
 if /i "%CMD%"=="gui-demo" goto :gui_demo
 if /i "%CMD%"=="paper" goto :paper
-if /i "%CMD%"=="t2" goto :t2
 if /i "%CMD%"=="knowledge-sync" goto :knowledge_sync
 if /i "%CMD%"=="knowledge-rebuild" goto :knowledge_rebuild
 if /i "%CMD%"=="knowledge-export" goto :knowledge_export
@@ -161,31 +160,11 @@ if /i "%CMD%"=="tools-list" goto :tools_list
 if /i "%CMD%"=="mcp" goto :mcp
 if /i "%CMD%"=="mcp-ortools" goto :mcp_ortools
 if /i "%CMD%"=="pack-release" goto :pack_release
-
-REM --- Verification Gates & Benchmarks ---
-if /i "%CMD%"=="workbench-gate" goto :workbench_gate
-if /i "%CMD%"=="problem-workbench-gate" goto :workbench_gate
-if /i "%CMD%"=="v0-watch-gate" goto :v0_watch_gate
-if /i "%CMD%"=="watch-gate" goto :v0_watch_gate
-if /i "%CMD%"=="dialogue-gate" goto :dialogue_gate
-if /i "%CMD%"=="steer-gate" goto :dialogue_gate
-if /i "%CMD%"=="t1-gate" goto :t1_gate
-if /i "%CMD%"=="t2-gate" goto :t2_gate
-if /i "%CMD%"=="gate" goto :t2_gate
-if /i "%CMD%"=="m0-gate" goto :m0_gate
-if /i "%CMD%"=="m1-gate" goto :m1_gate
-if /i "%CMD%"=="m2-gate" goto :m2_gate
-if /i "%CMD%"=="p3-gate" goto :p3_gate
-if /i "%CMD%"=="p5-gate" goto :p5_gate
-if /i "%CMD%"=="tube-geometry-gate" goto :tube_geometry_gate
-if /i "%CMD%"=="tube-collab-gate" goto :tube_collab_gate
-if /i "%CMD%"=="tube-redteam-gate" goto :tube_redteam_gate
-if /i "%CMD%"=="tube-live-gate" goto :tube_live_gate
+if /i "%CMD%"=="test" goto :pytest
+if /i "%CMD%"=="pytest" goto :pytest
 if /i "%CMD%"=="tube-benchmark" goto :tube_benchmark
 if /i "%CMD%"=="bench" goto :bench
 if /i "%CMD%"=="vrp-baseline" goto :vrp_baseline
-if /i "%CMD%"=="l2-gate" goto :l2_gate
-if /i "%CMD%"=="promote-run-gate" goto :promote_run_gate
 
 goto :help
 
@@ -256,12 +235,7 @@ echo     orpath.bat validate            独立物理与数学重算验证器 (Nu
 echo     orpath.bat doctor              运行 Python 环境、求解器与工作台健康检查
 echo     orpath.bat setup               初始化虚拟环境、释放演示种子并运行 doctor
 echo     orpath.bat knowledge-sync      同步本地混合知识库 (BM25 + ONNX bge-m3)
-echo.
-echo   [4. 核心验证门禁]
-echo     orpath.bat workbench-gate      Web Studio 智能做题工作舱契约门禁
-echo     orpath.bat v0-watch-gate       Live Watch 实时过程看板门禁
-echo     orpath.bat t1-gate / t2-gate   求解器与验证器核心门禁
-echo     orpath.bat m1-gate / m2-gate   工作区隔离与骨牌领域端到端门禁
+echo     orpath.bat test                运行核心单元测试套件 (pytest tools/)
 echo ======================================================================
 if "!PUSHD_OK!"=="1" popd
 exit /b 0
@@ -433,12 +407,6 @@ set "EC=!ERRORLEVEL!"
 if "!PUSHD_OK!"=="1" popd
 exit /b !EC!
 
-:t2
-"%PY%" "!ORPATH_HOME!\orpath\run_t2.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
 :knowledge_sync
 echo [OR-Path] knowledge-sync = allowlist export --clear-exports + ingest --clear
 "%PY%" "!ORPATH_HOME!\scripts\export_agent_knowledge_corpus.py" --clear-exports
@@ -545,87 +513,8 @@ set "EC=!ERRORLEVEL!"
 if "!PUSHD_OK!"=="1" popd
 exit /b !EC!
 
-:workbench_gate
-"%PY%" "!ORPATH_HOME!\scripts\problem_workbench_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:v0_watch_gate
-"%PY%" "!ORPATH_HOME!\scripts\v0_watch_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:dialogue_gate
-set "ORPATH_APPLY_STEER=1"
-"%PY%" "!ORPATH_HOME!\scripts\dialogue_steer_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:t1_gate
-"%PY%" "!ORPATH_HOME!\scripts\t1_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:t2_gate
-"%PY%" "!ORPATH_HOME!\scripts\t2_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:m0_gate
-"%PY%" "!ORPATH_HOME!\scripts\m0_demo_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:m1_gate
-"%PY%" "!ORPATH_HOME!\scripts\m1_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:m2_gate
-"%PY%" "!ORPATH_HOME!\scripts\m2_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:p3_gate
-"%PY%" "!ORPATH_HOME!\scripts\p3_watch_run_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:p5_gate
-"%PY%" "!ORPATH_HOME!\scripts\p5_polish_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:tube_geometry_gate
-"%PY%" "!ORPATH_HOME!\scripts\tube_geometry_stability_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:tube_collab_gate
-"%PY%" "!ORPATH_HOME!\scripts\tube_collaboration_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:tube_redteam_gate
-"%PY%" "!ORPATH_HOME!\scripts\tube_redteam_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:tube_live_gate
-"%PY%" "!ORPATH_HOME!\scripts\tube_live_gate.py" !SUB_ARGS!
+:pytest
+"%PY%" -m pytest "!ORPATH_HOME!\tools" -q -p no:langsmith !SUB_ARGS!
 set "EC=!ERRORLEVEL!"
 if "!PUSHD_OK!"=="1" popd
 exit /b !EC!
@@ -657,18 +546,6 @@ exit /b !EC!
 
 :vrp_baseline
 "%PY%" "!ORPATH_HOME!\eval_or_bench\run_cvrp_baseline.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:l2_gate
-"%PY%" "!ORPATH_HOME!\scripts\l2_release_gate.py" !SUB_ARGS!
-set "EC=!ERRORLEVEL!"
-if "!PUSHD_OK!"=="1" popd
-exit /b !EC!
-
-:promote_run_gate
-"%PY%" "!ORPATH_HOME!\scripts\promote_run_gate.py" !SUB_ARGS!
 set "EC=!ERRORLEVEL!"
 if "!PUSHD_OK!"=="1" popd
 exit /b !EC!

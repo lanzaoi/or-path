@@ -92,6 +92,11 @@ button:disabled {
 
 /* --- Layout Modes --- */
 
+#studio-root,
+#watch-root {
+  display: contents;
+}
+
 /* 1. Studio Mode (智能做题工作舱): Flex 纵向流式容器，开启原生独立滚动 */
 body.mode-studio {
   display: flex !important;
@@ -123,10 +128,10 @@ body.mode-studio footer {
   display: none !important;
 }
 
-/* 2. Inspector Mode (过程检视台): 8 行经典网格视图 */
+/* 2. Inspector Mode (过程检视台): 7 行经典网格视图 */
 body.mode-inspector {
   display: grid !important;
-  grid-template-rows: auto auto auto auto auto auto minmax(0, 1fr) auto !important;
+  grid-template-rows: auto auto auto auto auto minmax(0, 1fr) auto !important;
   height: 100vh !important;
   height: 100dvh !important;
   overflow: hidden !important;
@@ -219,6 +224,7 @@ header.nav {
   border: none;
   background: transparent;
   color: #94a3b8;
+  text-decoration: none;
   transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
   display: inline-flex;
   align-items: center;
@@ -311,4 +317,50 @@ header.nav {
   color: rgba(255, 255, 255, 0.45);
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.04);
+}
+
+/* Shared Action Buttons */
+.wb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #0f172a;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  cursor: pointer;
+}
+.wb-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.wb-btn.primary {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #1d4ed8;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+}
+.wb-btn.primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1e40af;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+.wb-btn.success {
+  background: #059669;
+  color: #ffffff;
+  border-color: #047857;
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.25);
+}
+.wb-btn.success:hover:not(:disabled) {
+  background: #047857;
+  border-color: #065f46;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
 }

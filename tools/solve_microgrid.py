@@ -30,7 +30,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from ortools.linear_solver import pywraplp
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_CASE_DIR = Path("/mnt/c/Users/Lanzao/Downloads/CUMCM2026Problems/C题")
+_ENV_CASE_DIR = (os.environ.get("ORPATH_MICROGRID_CASE_DIR") or "").strip()
+DEFAULT_CASE_DIR = Path(_ENV_CASE_DIR) if _ENV_CASE_DIR else (ROOT / "inbox" / "microgrid")
 
 # Microgrid Physical Parameters
 BATTERY_CAPACITY_KWH = 12000.0
@@ -1121,7 +1122,8 @@ def run_full_pipeline(case_dir: Path, out_dir: Path | None = None) -> dict[str, 
     solution: dict[str, Any] = {
         "problem_id": "microgrid_cumcm2026_c",
         "problem_class": "microgrid_dispatch",
-        "status": "OPTIMAL",
+        "status": "FEASIBLE",
+        "proven_optimal": False,
         "objective": round(q1["total_cost"], 4),
         "total_purchase_cost": round(q1["total_cost"], 4),
         "solver": "ortools_glop_mpc",
@@ -1129,6 +1131,8 @@ def run_full_pipeline(case_dir: Path, out_dir: Path | None = None) -> dict[str, 
         "solve_time_sec": round(t1 - t0, 3),
         "subproblems": {
             "q1": {
+                "status": "OPTIMAL",
+                "proven_optimal": True,
                 "total_cost": round(q1["total_cost"], 2),
                 "total_purchase_kwh": round(q1["total_buy_kwh"], 2),
                 "purchase_kwh": q1["purchase_kwh"],
@@ -1266,18 +1270,63 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--case-dir", type=Path, default=DEFAULT_CASE_DIR)
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--export-excel-dir", type=Path, default=None)
+    parser.add_argument(
+        "--is-replay",
+        action="store_true",
+        help="explicitly authorize fallback to local benchmark instance when --case-dir is absent",
+    )
     args = parser.parse_args(argv)
 
     case_dir = args.case_dir
-    if not case_dir.is_dir():
-        # Fallback to local workspace if running in isolated repo
+    if (case_dir is None or not case_dir.is_dir()) and (
+        args.is_replay or os.environ.get("ORPATH_FIXTURE_REPLAY") == "1"
+    ):
         cand = ROOT / "eval_or_bench" / "instances" / "microgrid"
         if cand.is_dir():
             case_dir = cand
 
     out_json_path = args.out
     if not out_json_path:
-        out_json_path = ROOT / "outputs" / f"{args.problem_id}-solution.json"
+        wd_env = (os.environ.get("ORPATH_WORKDIR") or "").strip()
+        out_base = Path(wd_env) if wd_env else ROOT
+        out_json_path = out_base / "outputs" / f"{args.problem_id}-solution.json"
+
+    def _emit_blocked(reason: str, code: str = "missing_microgrid_dataset") -> int:
+        blocked = {
+            "status": "BLOCKED",
+            "objective": None,
+            "solver": "none",
+            "source": "tools/solve_microgrid.py",
+            "problem_id": args.problem_id,
+            "problem_class": "microgrid_dispatch",
+            "meta": {
+                "exact": False,
+                "proven_optimal": False,
+                "blocked": True,
+                "blocked_code": code,
+                "is_replay": False,
+                "reason": reason,
+            },
+        }
+        out_json_path.parent.mkdir(parents=True, exist_ok=True)
+        out_json_path.write_text(json.dumps(blocked, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        print(json.dumps(blocked, ensure_ascii=False, indent=2))
+        return 0
+
+    if case_dir is None or not case_dir.is_dir():
+        return _emit_blocked(
+            f"missing microgrid case_dir ({case_dir!r}); refusing silent fixture fallback without --is-replay"
+        )
+
+    att_dir = case_dir / "附件"
+    if not (att_dir / "附件1.xlsx").is_file():
+        att_dir = case_dir
+    missing_files = [fn for fn in ("附件1.xlsx", "附件2.xlsx", "附件3.xlsx", "附件4.xlsx") if not (att_dir / fn).is_file()]
+    if missing_files:
+        return _emit_blocked(
+            f"microgrid dataset incomplete under {case_dir}: missing {', '.join(missing_files)}",
+            code="incomplete_microgrid_dataset",
+        )
 
     print(f"=== OR-Path Microgrid Solver: case_dir={case_dir} ===", file=sys.stderr)
     sol = run_full_pipeline(case_dir=case_dir, out_dir=args.export_excel_dir)

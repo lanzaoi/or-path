@@ -196,6 +196,9 @@ def run_product(
         problem_id,
         "--solve-mode",
         solve_mode,
+        "--is-replay",
+        "--fixture-ref",
+        problem_id,
         "--root",
         str(ROOT),
     ]

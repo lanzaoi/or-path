@@ -1,0 +1,76 @@
+    <!-- Step 3: Result & Artifacts Download Card -->
+    <div class="studio-card" id="studioResultCard" style="display:none">
+      <div class="studio-step-header">
+        <div class="step-num-badge step-3">3</div>
+        <h2 class="studio-step-title">求解成果与全维交付物</h2>
+        <span class="studio-step-sub" id="studioStep3Sub">纯真数字 · 数学验算合格</span>
+      </div>
+
+      <div id="studioResultBanner" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:14px;padding:20px 26px;margin-bottom:22px">
+        <div id="studioHeadline"></div>
+        <div style="display:flex;gap:36px;align-items:baseline;flex-wrap:wrap">
+          <div id="studioObjective"></div>
+          <div id="studioValidation"></div>
+        </div>
+        <div id="studioSolutionDetail"></div>
+      </div>
+
+      <!-- Step 3.5: Dynamic OR Visualization Cockpit -->
+      <div id="studioVizContainer" class="studio-viz-card">
+        <div class="viz-header">
+          <div class="viz-title-group">
+            <span class="viz-icon">📊</span>
+            <div>
+              <div class="viz-title">动态运筹图谱与收敛驾驶舱</div>
+              <div class="viz-subtitle">高精度纯矢量图谱 · 真实算子数据驱动 · 毫米级时序与拓扑研判</div>
+            </div>
+            <span class="viz-badge" id="vizDomainBadge">车间调度 / 路径 / 收敛</span>
+          </div>
+          <div class="viz-tabs" id="vizTabs">
+            <button type="button" class="viz-tab active" data-viz-tab="gantt" id="tabVizGantt">🏭 车间排产甘特图</button>
+            <button type="button" class="viz-tab" data-viz-tab="routes" id="tabVizRoutes">🚚 物流路线地图轨迹</button>
+            <button type="button" class="viz-tab" data-viz-tab="gap" id="tabVizGap">📈 ALNS 下界收敛曲线</button>
+          </div>
+        </div>
+        <div class="viz-body">
+          <div class="viz-panel active" id="vizPanelGantt"></div>
+          <div class="viz-panel" id="vizPanelRoutes" style="display:none"></div>
+          <div class="viz-panel" id="vizPanelGap" style="display:none"></div>
+          <div id="vizInteractiveTooltip" class="viz-tooltip-pill" style="display:none">
+            <span class="viz-tt-icon">💡</span>
+            <span class="viz-tt-text" id="vizTooltipText"></span>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:22px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#1e293b">📦 成果一键打包与下载：</div>
+        <div id="studioDownloads">
+          <a class="studio-dl-btn" id="dlSolution" href="#" download>
+            📥 求解输出数据 (solution.json)
+          </a>
+          <a class="studio-dl-btn" id="dlValidation" href="#" download>
+            🛡️ 物理与数学质检报告 (validate.json)
+          </a>
+          <a class="studio-dl-btn" id="dlPaper" href="#" download>
+            📑 工业与学术研报 (paper.md)
+          </a>
+          <a class="studio-dl-btn" id="dlAnalysis" href="#" download>
+            🧠 建模研判方案 (analysis.json)
+          </a>
+          <button type="button" class="wb-btn primary" id="btnStudioGeneratePaper" hidden>
+            📑 按需生成完整学术论文
+          </button>
+          <span id="studioPaperStatus" style="font-size:12px;font-weight:600;color:#475569;align-self:center"></span>
+        </div>
+      </div>
+
+      <div style="text-align:right">
+        <a class="wb-btn" id="btnStudioViewInspector" href="/" style="font-size:12px;text-decoration:none">
+          🔍 在「专家监视模式」中查看底层控制面与验证完整细节 →
+        </a>
+      </div>
+    </div>
+  </div>
+  </div> <!-- #studio-root -->
+  <!-- ==================== END STUDIO MODE CONTAINER ==================== -->

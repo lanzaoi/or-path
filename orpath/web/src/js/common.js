@@ -1,23 +1,6 @@
 /* ==========================================================================
-   OR-Path Common JavaScript Utilities & Global State
+   OR-Path Common JavaScript Utilities
    ========================================================================== */
-
-const POLL_MS = 1000;
-const EVENT_WINDOW = 80; // P5: only paint last N into DOM
-let selectedStageSeq = null;
-let selectedDispatch = null;
-let lastSnap = null;
-let lastFp = null;
-let lastEventsCount = null;
-let timer = null;
-let followTail = true;
-let paused = false;
-let errDismissed = "";
-let eventLimit = EVENT_WINDOW;
-let autoJumpedError = false;
-let copyToastTimer = null;
-let modelPresets = [];
-let lastDlgCount = 0;
 
 const $ = (id) => document.getElementById(id);
 
@@ -25,10 +8,10 @@ const NODE_ZH = {
   intake_ocr: "题面识别",
   intake_parse: "题面解析",
   orchestrate: "编排",
-  supervisor: "中心主控",
-  or_researcher: "文献研判",
+  or_analyst: "领域研判",
   or_modeler: "数学建模",
-  or_verifier_writer: "验算成文",
+  or_writer: "学术写稿",
+  or_reviewer: "审稿红队",
   retrieve: "检索",
   research: "调研",
   model: "建模",
@@ -189,46 +172,10 @@ function iconFor(kind) {
 }
 
 /**
- * 切换做题模式 (Studio) 与监视模式 (Inspector)
- * 通过精确切换 body.mode-studio 与 body.mode-inspector 类，
- * 解决 CSS 容器死锁导致的鼠标滚轮失效问题。
+ * 同步顶部导航栏激活状态 (/studio vs /)
  */
-function setAppMode(mode) {
-  const isStudio = mode !== "inspector";
-  if (isStudio) {
-    document.body.classList.remove("mode-inspector");
-    document.body.classList.add("mode-studio");
-    if ($("btnModeStudio")) {
-      $("btnModeStudio").classList.add("on");
-      $("btnModeStudio").style.background = "";
-      $("btnModeStudio").style.color = "";
-    }
-    if ($("btnModeInspector")) {
-      $("btnModeInspector").classList.remove("on");
-      $("btnModeInspector").style.background = "";
-      $("btnModeInspector").style.color = "";
-    }
-    try {
-      localStorage.setItem("orpath_mode", "studio");
-    } catch (e) {}
-  } else {
-    document.body.classList.remove("mode-studio");
-    document.body.classList.add("mode-inspector");
-    if ($("btnModeStudio")) {
-      $("btnModeStudio").classList.remove("on");
-      $("btnModeStudio").style.background = "";
-      $("btnModeStudio").style.color = "";
-    }
-    if ($("btnModeInspector")) {
-      $("btnModeInspector").classList.add("on");
-      $("btnModeInspector").style.background = "";
-      $("btnModeInspector").style.color = "";
-    }
-    try {
-      localStorage.setItem("orpath_mode", "inspector");
-    } catch (e) {}
-    if (lastSnap && typeof renderAll === "function") {
-      renderAll(lastSnap);
-    }
-  }
+function syncHeaderNavState() {
+  const isStudio = document.body.classList.contains("mode-studio");
+  if ($("btnModeStudio")) $("btnModeStudio").classList.toggle("on", isStudio);
+  if ($("btnModeInspector")) $("btnModeInspector").classList.toggle("on", !isStudio);
 }

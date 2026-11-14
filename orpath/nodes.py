@@ -23,8 +23,8 @@ from orpath.intake_nodes import (
 )
 from orpath.node_context import wrap_node
 from orpath.state import ORPathState
-from orpath.paths import fixture_search_roots  # noqa: F401 (gate marker: m1_workdir_paths_gate)
-from orpath.human_steer import apply_steer_to_state  # noqa: F401 (gate marker: dialogue_steer_gate)
+from orpath.paths import fixture_search_roots  # noqa: F401
+from orpath.human_steer import apply_steer_to_state  # noqa: F401
 
 from orpath.pipeline.common import (
     TUNE_STRATEGIES,

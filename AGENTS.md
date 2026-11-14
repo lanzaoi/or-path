@@ -25,8 +25,8 @@ Durable project law for OR-Path sessions. Product runtime is **this repo** (`STA
      4. `or_reviewer` — Adversarial peer-review red team (`FATAL` / `MAJOR` / `MINOR` defect grading) paired with deterministic R1/R2/Optimality-Claim checks.
    - **0-Token Deterministic Python Gates**: Preflight file/schema probe, `validate_solution.py` hard gate, verified Markdown table/chart renderer, and `r1_cite_check` / `r2_numeric_check` / `optimality_claim_auditor` gates. Never use an LLM "Supervisor/Lead" to poll routing or an LLM "Verifier" to eyeball numbers.
    - **10 Pluggable `DomainCartridge` Packs (`orpath/agents/domain_analytics.py`)**: Domain expertise is injected by mounting genuine domain-specific tools (`profile_<domain>_data` & `inspect_<domain>_solution`), solver allowlists, and domain checklists onto `or_analyst` / `or_modeler` — **never** by copy-pasting 900-line 6-agent Python files per domain.
-5. **Core Gates & High-Signal Verification (`tools/test_*.py` & `scripts/*_gate.py`)**
-   - Solver/validator mathematical truth tests, DIMO 5-class tamper rejection (`scripts/universal_redteam_gate.py`), Web Studio & Watch gates, and live LLM flagship end-to-end runs.
+5. **Core Verification (`tools/test_*.py`)**
+   - Solver/validator mathematical truth tests, DIMO 5-class tamper rejection (`tools/test_task51_dimo_mutator.py`), Dual-Mode Fast/Iterative execution (`tools/test_phase1_fast_mode.py`), and `DomainCartridge` + Adaptive 4-Agent tests (`tools/test_lean_cartridges_and_graph.py`).
 
 ## Ground Rules (Non-Negotiable)
 
@@ -60,9 +60,7 @@ Durable project law for OR-Path sessions. Product runtime is **this repo** (`STA
 
 | Check | Command |
 |------|---------|
-| Unit Tests | `.venv/bin/pytest tools/ -q -p no:langsmith` |
-| DIMO Red-Team Gate | `.venv/bin/python scripts/universal_redteam_gate.py` |
-| Swarms / Cartridge Gate | `.venv/bin/python scripts/or_swarms_master_gate.py` |
-| Workbench Gate | `.venv/bin/python scripts/problem_workbench_gate.py` |
-| Watch Gate | `.venv/bin/python scripts/v0_watch_gate.py` |
-| T1 / T2 / M1 / M2 | `.venv/bin/python scripts/t1_gate.py` · `t2_gate.py` · `m1_gate.py` · `m2_gate.py` |
+| Full Unit Test Suite | `.venv/bin/pytest tools/ -q -p no:langsmith` |
+| Fast Mode & Truth Chain | `.venv/bin/pytest tools/test_phase0_truth_and_assets.py tools/test_phase1_fast_mode.py -q -p no:langsmith` |
+| Cartridges & Adaptive 4-Agent | `.venv/bin/pytest tools/test_lean_cartridges_and_graph.py tools/test_cartridges_phase2.py -q -p no:langsmith` |
+| DIMO Invariant Mutator | `.venv/bin/pytest tools/test_task51_dimo_mutator.py -q -p no:langsmith` |

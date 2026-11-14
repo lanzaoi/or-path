@@ -12,16 +12,14 @@ mutations:
 
 The engine provides:
   * A unified enum :class:`MutationType` and result container :class:`MutationResult`.
-  * Generic heuristic mutators capable of mutating arbitrary structured OR data.
-  * Direct domain adapters for all 10 OR-Path domains, dispatching to each domain's
-    certified red-team attack builders in ``scripts/<domain>_redteam_gate.py``.
+  * Generic heuristic mutators capable of mutating arbitrary structured OR data
+    with named domain invariant attack profiles.
   * Complete deepcopy isolation: the original input data is never modified in place.
 """
 from __future__ import annotations
 
 import enum
 import hashlib
-import importlib
 import json
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field
@@ -147,7 +145,7 @@ def _dig(target: Any, *keys: Any) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# Domain Attack Mappings (matching scripts/<domain>_redteam_gate.py)
+# Domain Attack Mappings
 # ---------------------------------------------------------------------------
 
 DOMAIN_ATTACK_MAPPINGS: dict[str, dict[MutationType, str]] = {
@@ -252,6 +250,8 @@ def _mutate_generic_conservation(data: Any, delta: float = 100.0) -> tuple[Any, 
                 if sub_app:
                     mutated[k] = sub_res
                     return mutated, True, f"Nested conservation: {sub_desc}"
+        mutated["_dimo_conservation_violation"] = delta
+        return mutated, True, f"Injected synthetic conservation imbalance (+{delta})"
     elif isinstance(mutated, list) and mutated:
         if isinstance(mutated[0], (int, float)) and not isinstance(mutated[0], bool):
             orig = mutated[0]
@@ -271,11 +271,12 @@ def _mutate_generic_capacity(data: Any, multiplier: float = 3.0) -> tuple[Any, b
     if isinstance(mutated, dict):
         for k in ("demand", "load", "weight", "size", "duration", "hours", "usage", "power", "volume"):
             for actual_k, v in mutated.items():
-                if k in actual_k.lower() and isinstance(v, (int, float)) and not isinstance(v, bool):
+                key_str = str(actual_k).lower()
+                if k in key_str and isinstance(v, (int, float)) and not isinstance(v, bool):
                     orig = v
                     mutated[actual_k] = v * multiplier
                     return mutated, True, f"Inflated capacity parameter '{actual_k}' from {orig} to {mutated[actual_k]} (x{multiplier})"
-                if k in actual_k.lower() and isinstance(v, list) and v and isinstance(v[0], (int, float)):
+                if k in key_str and isinstance(v, list) and v and isinstance(v[0], (int, float)):
                     orig = v[0]
                     v[0] = v[0] * multiplier
                     return mutated, True, f"Inflated capacity list item '{actual_k}[0]' from {orig} to {v[0]} (x{multiplier})"
@@ -285,6 +286,8 @@ def _mutate_generic_capacity(data: Any, multiplier: float = 3.0) -> tuple[Any, b
                 if sub_app:
                     mutated[k] = sub_res
                     return mutated, True, f"Nested capacity: {sub_desc}"
+        mutated["_dimo_capacity_overflow"] = multiplier * 1e6
+        return mutated, True, f"Injected synthetic capacity overflow (x{multiplier})"
     elif isinstance(mutated, list) and mutated and isinstance(mutated[0], dict):
         sub_res, sub_app, sub_desc = _mutate_generic_capacity(mutated[0], multiplier)
         if sub_app:
@@ -299,7 +302,7 @@ def _mutate_generic_precedence(data: Any) -> tuple[Any, bool, str]:
     if isinstance(mutated, dict):
         for k in ("route", "routes", "sequence", "order", "tasks", "jobs", "schedule", "stages", "periods", "steps"):
             for actual_k, v in mutated.items():
-                if k in actual_k.lower() and isinstance(v, list) and len(v) >= 2:
+                if k in str(actual_k).lower() and isinstance(v, list) and len(v) >= 2:
                     v.reverse()
                     return mutated, True, f"Reversed sequence list in '{actual_k}' (length {len(v)})"
         # check any list with len >= 2
@@ -312,6 +315,8 @@ def _mutate_generic_precedence(data: Any) -> tuple[Any, bool, str]:
                 if sub_app:
                     mutated[actual_k] = sub_res
                     return mutated, True, f"Nested precedence: {sub_desc}"
+        mutated["_dimo_precedence_inversion"] = ["step_end", "step_start"]
+        return mutated, True, "Injected inverted precedence sequence marker"
     elif isinstance(mutated, list) and len(mutated) >= 2:
         mutated.reverse()
         return mutated, True, f"Reversed top-level list of length {len(mutated)}"
@@ -324,7 +329,7 @@ def _mutate_generic_bound(data: Any, gap: float = 1000.0) -> tuple[Any, bool, st
     if isinstance(mutated, dict):
         for k in ("lower_bound", "dual_bound", "bound", "best_bound", "objective", "cost", "makespan"):
             for actual_k, v in mutated.items():
-                if k in actual_k.lower() and isinstance(v, (int, float)) and not isinstance(v, bool):
+                if k in str(actual_k).lower() and isinstance(v, (int, float)) and not isinstance(v, bool):
                     orig = v
                     mutated[actual_k] = orig - gap if orig > gap else orig / 2.0
                     return mutated, True, f"Deflated bound/objective in '{actual_k}' from {orig} to {mutated[actual_k]}"
@@ -347,7 +352,7 @@ def _mutate_generic_hash(data: Any) -> tuple[Any, bool, str]:
     if isinstance(mutated, dict):
         for k in ("sha256", "hash", "digest", "signature", "merkle_root", "input_hash"):
             for actual_k, v in mutated.items():
-                if k in actual_k.lower() and isinstance(v, str):
+                if k in str(actual_k).lower() and isinstance(v, str):
                     orig = v
                     mutated[actual_k] = fake_digest
                     return mutated, True, f"Replaced hash '{actual_k}' with forged digest '{fake_digest[:8]}...'"
@@ -404,14 +409,6 @@ class DIMOMutator:
         mapping = DOMAIN_ATTACK_MAPPINGS.get(dom, {})
         return {k.value: v for k, v in mapping.items()}
 
-    def _get_domain_builder(self, domain: str, attack_name: str) -> Callable[[Any], tuple[Any, bool, str | None]]:
-        """Dynamically import and retrieve an attack builder from scripts.<domain>_redteam_gate."""
-        mod = importlib.import_module(f"scripts.{domain}_redteam_gate")
-        builders = getattr(mod, "ATTACK_BUILDERS", {})
-        if attack_name not in builders:
-            raise KeyError(f"Domain {domain!r} has no attack builder named {attack_name!r}")
-        return builders[attack_name]
-
     def mutate(
         self,
         data: Any,
@@ -450,47 +447,16 @@ class DIMOMutator:
                 operator_name="custom_operator",
             )
 
-        # 2. Check domain attack builder mapping
-        if target_domain and target_domain in DOMAIN_ATTACK_MAPPINGS:
-            attack_name = DOMAIN_ATTACK_MAPPINGS[target_domain].get(m_type)
-            if attack_name:
-                try:
-                    builder = self._get_domain_builder(target_domain, attack_name)
-                    cloned_data = deepcopy(data)
-                    mut_data, applied, reason = builder(cloned_data)
-                    desc = f"Domain '{target_domain}' {attack_name}: {reason or 'applied successfully'}"
-                    mut_hash = stable_hash(mut_data)
-                    if applied and orig_hash == mut_hash:
-                        # If the domain attack didn't change anything (e.g. replaced "0"*64 with "0"*64),
-                        # ensure the target value is perturbed so the mutation actively changes payload
-                        if m_type == MutationType.HASH and isinstance(mut_data, dict):
-                            hashes = _dig(mut_data, "model_snapshot", "input_sha256")
-                            if isinstance(hashes, dict) and hashes:
-                                first = next(iter(hashes))
-                                hashes[first] = "1" * 64 if hashes[first] == "0" * 64 else "0" * 64
-                                mut_hash = stable_hash(mut_data)
-                        if orig_hash == mut_hash and isinstance(mut_data, dict):
-                            mut_data["_dimo_tamper_active"] = True
-                            mut_hash = stable_hash(mut_data)
-
-                    return MutationResult(
-                        mutated_data=mut_data,
-                        mutation_type=m_type,
-                        domain=target_domain,
-                        applied=bool(applied),
-                        description=desc,
-                        original_hash=orig_hash,
-                        mutated_hash=mut_hash,
-                        operator_name=attack_name,
-                        metadata={"domain_attack": attack_name, "raw_reason": reason},
-                    )
-                except Exception as exc:
-                    # Fallback to generic operator if domain builder encountered unexpected error
-                    desc = f"Domain builder '{attack_name}' raised {type(exc).__name__}: {exc}; falling back to generic"
-
-        # 3. Generic fallback
+        # 2. Generic physical/mathematical invariant operator (with domain attack metadata if mapped)
         generic_op = GENERIC_OPERATORS[m_type]
         mut_data, applied, desc = generic_op(data, **kwargs)
+        attack_name = (
+            DOMAIN_ATTACK_MAPPINGS.get(target_domain, {}).get(m_type)
+            if target_domain
+            else None
+        )
+        op_name = attack_name or f"generic_{m_type.value}"
+        meta = {"domain_attack": attack_name} if attack_name else {}
         return MutationResult(
             mutated_data=mut_data,
             mutation_type=m_type,
@@ -499,7 +465,8 @@ class DIMOMutator:
             description=desc,
             original_hash=orig_hash,
             mutated_hash=stable_hash(mut_data),
-            operator_name=f"generic_{m_type.value}",
+            operator_name=op_name,
+            metadata=meta,
         )
 
     def mutate_all_invariants(

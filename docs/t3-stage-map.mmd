@@ -15,7 +15,8 @@ flowchart TD
   gate_validate -->|model repair| model
   gate_validate -->|ceiling| human_stop
   human_stop --> provenance
-  explain --> draft_paper --> cite_pack --> review_pack --> revise_or_done
+  explain -->|skip_paper| provenance
+  explain -->|paper| draft_paper --> cite_pack --> review_pack --> revise_or_done
   revise_or_done -->|revise| draft_paper
   revise_or_done -->|re-cite| cite_pack
   revise_or_done -->|done| provenance

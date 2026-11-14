@@ -355,7 +355,7 @@ def test_execute_python_sandbox_honours_timeout():
 
 def test_execute_python_sandbox_default_timeout():
     payload = _payload(execute_python_sandbox, code="print('ok')")
-    assert payload["timeout_sec"] == SANDBOX_DEFAULT_TIMEOUT_SEC == 30
+    assert payload["timeout_sec"] == SANDBOX_DEFAULT_TIMEOUT_SEC == 180
 
 
 @pytest.mark.parametrize("bad_timeout", [0, -5])

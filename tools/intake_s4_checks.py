@@ -27,7 +27,7 @@ def legacy_skip_intake_ok(root: Path) -> list[str]:
     Proof (static + fixture presence):
     - T1 fixture shortest_path exists and is the product smoke without intake files
     - No required outputs/*-intake.json for that fixture
-    - tools/gate_intake is opt-in CLI (not imported by run_t1)
+    - Intake extraction is optional (skipped when no intake source exists)
     """
     errors: list[str] = []
     t1 = root / "fixtures" / "t1" / "shortest_path"
@@ -37,12 +37,6 @@ def legacy_skip_intake_ok(root: Path) -> list[str]:
     # must not require intake.json beside t1 fixture
     if (t1 / "intake.json").is_file():
         errors.append("t1 fixture unexpectedly has intake.json (legacy should not require it)")
-    # run_t1 should not import gate_intake
-    run_t1 = root / "orpath" / "run_t1.py"
-    if run_t1.is_file():
-        text = run_t1.read_text(encoding="utf-8", errors="replace")
-        if "gate_intake" in text or "intake_parse" in text or "intake_ocr" in text:
-            errors.append("run_t1.py imports intake tools — breaks skip_intake legacy")
     # control_plane seed path should not hard-require intake
     cp = root / "orpath" / "control_plane.py"
     if cp.is_file():

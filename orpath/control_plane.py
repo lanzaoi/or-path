@@ -4,23 +4,20 @@ Interface (what callers learn):
   - build_graph(checkpointer=None)            → compiled product LangGraph
   - build_multiagent_graph(...)               → supervisor multi-agent StateGraph
   - build_compiled_multiagent(checkpointer=)  → compiled supervisor graph
-  - build_domain_supervisor_graph(domain, ...)     → 10-domain supervisor StateGraph
-  - build_compiled_domain_supervisor(domain, ...)  → compiled domain supervisor
-  - build_composite_supervisor(composite_type, ...) → compiled LRP/PRP/... pipeline
-  - dispatch_supervisor_for_problem(data, text, filename) → auto-routed supervisor
   - default_initial(...)            → ORPathState seed dict
   - invoke_once(...)                → one-shot run (no checkpointer; T1/CI)
   - PRODUCT_NODES / stage map helpers (re-export)
 
 Topology lives in graph_product.py; checkpointed CLI stays run_orpath.py.
-Legacy shims: graph.py, graph_t2.py, run_t1.py, run_t2.py.
 """
 from __future__ import annotations
 
+import logging
 import os
+import time
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 try:
     from dotenv import load_dotenv
@@ -38,9 +35,6 @@ from orpath.graph_product import (  # re-export seam
     open_sqlite_checkpointer,
     write_stage_map_files,
 )
-
-if TYPE_CHECKING:  # pragma: no cover — annotations only, keeps import graph acyclic
-    from orpath.agents.meta_router import DomainRouteResult
 
 # Provider precedence: DeepSeek > iFlytek Spark > OpenAI.
 # ``base_url`` is the OpenAI-compatible chat-completions root (``.../v1``).
@@ -198,18 +192,14 @@ build_graph_product_cp = build_graph  # alias
 
 
 # --------------------------------------------------------------------------- #
-# Multi-agent supervisor re-export seam
+# Deep Mode multi-agent pipeline seam (backed by adaptive_graph)
 #
-# ``orpath.agents.supervisor`` and every ``orpath.agents.domains.*`` module
-# import ``get_chat_model`` from this module, so a module-level
-# ``from orpath.agents.<...> import ...`` would be a circular import (and would
-# break ``import orpath.agents`` for tools/test_supervisor.py). All supervisor
-# builders below therefore import lazily on first call, preserving the
-# ControlPlane entry-point contract without changing import order.
+# ``orpath.agents.adaptive_graph`` lazily imports ``get_chat_model`` from this
+# module, so builders below import lazily on call to avoid circular imports.
 #
 # Public names (kept stable for callers / e2e tests):
-#   build_multiagent_graph    == build_supervisor_graph
-#   build_compiled_multiagent == build_compiled_supervisor
+#   build_multiagent_graph    == build_isolated_pipeline_graph (uncompiled StateGraph)
+#   build_compiled_multiagent == build_compiled_isolated_pipeline (CompiledStateGraph)
 # --------------------------------------------------------------------------- #
 def build_multiagent_graph(
     model: Any = None,
@@ -219,23 +209,10 @@ def build_multiagent_graph(
     enable_guard: bool = True,
     **kwargs: Any,
 ) -> Any:
-    """Build the supervisor-orchestrated multi-agent graph (un-compiled).
+    """Build the unified 4-agent adaptive Deep Mode StateGraph (un-compiled)."""
+    from orpath.agents.adaptive_graph import build_isolated_pipeline_graph as _build_isolated
 
-    Re-export of ``orpath.agents.supervisor.build_supervisor_graph``. Accepts an
-    optional ``model``, ``workers`` roster, ``prompt``, ``state_schema`` and
-    ``enable_guard``; when omitted the supervisor factory falls back to the
-    offline-safe shared chat model.
-    """
-    from orpath.agents.supervisor import build_supervisor_graph
-
-    return build_supervisor_graph(
-        model=model,
-        workers=workers,
-        prompt=prompt,
-        state_schema=state_schema,
-        enable_guard=enable_guard,
-        **kwargs,
-    )
+    return _build_isolated(model=model, **kwargs)
 
 
 def build_compiled_multiagent(
@@ -247,319 +224,10 @@ def build_compiled_multiagent(
     enable_guard: bool = True,
     **kwargs: Any,
 ) -> Any:
-    """Build and compile the supervisor multi-agent graph.
+    """Build and compile the unified 4-agent adaptive Deep Mode graph."""
+    from orpath.agents.adaptive_graph import build_compiled_isolated_pipeline as _compile_isolated
 
-    Re-export of ``orpath.agents.supervisor.build_compiled_supervisor``. Pass a
-    LangGraph checkpointer (``MemorySaver`` / ``SqliteSaver``, ...) for a
-    persistent graph; pass ``None`` for an ephemeral one.
-    """
-    from orpath.agents.supervisor import build_compiled_supervisor
-
-    return build_compiled_supervisor(
-        checkpointer=checkpointer,
-        model=model,
-        workers=workers,
-        prompt=prompt,
-        state_schema=state_schema,
-        enable_guard=enable_guard,
-        **kwargs,
-    )
-
-
-# --------------------------------------------------------------------------- #
-# Domain supervisor dispatch registry (Task 4.3)
-#
-# One canonical registry mapping each of the 10 standard OR domains to the
-# module that builds its domain-specific multi-agent supervisor team. The
-# dynamic factories below resolve a domain string against this registry and
-# lazily import the matching builder, so callers never import domain modules
-# directly (circular-import constraint, see header above).
-# --------------------------------------------------------------------------- #
-DOMAIN_TUBE = "tube"
-DOMAIN_ROUTING = "routing"
-DOMAIN_SCHEDULING = "scheduling"
-DOMAIN_PROJECT = "project"
-DOMAIN_INVENTORY = "inventory"
-DOMAIN_FACILITY = "facility"
-DOMAIN_ROSTERING = "rostering"
-DOMAIN_MICROGRID = "microgrid"
-DOMAIN_PRICING = "pricing"
-DOMAIN_FINANCE = "finance"
-
-#: domain → (module path, un-compiled builder, compiled builder).
-_DOMAIN_SUPERVISOR_MODULES: dict[str, tuple[str, str, str]] = {
-    DOMAIN_TUBE: ("orpath.agents.domains.tube",
-                  "build_tube_supervisor_graph",
-                  "build_compiled_tube_supervisor"),
-    DOMAIN_ROUTING: ("orpath.agents.domains.routing",
-                     "build_routing_supervisor_graph",
-                     "build_compiled_routing_supervisor"),
-    DOMAIN_SCHEDULING: ("orpath.agents.domains.scheduling",
-                        "build_scheduling_supervisor_graph",
-                        "build_compiled_scheduling_supervisor"),
-    DOMAIN_PROJECT: ("orpath.agents.domains.project",
-                     "build_project_supervisor_graph",
-                     "build_compiled_project_supervisor"),
-    DOMAIN_INVENTORY: ("orpath.agents.domains.inventory",
-                       "build_inventory_supervisor_graph",
-                       "build_compiled_inventory_supervisor"),
-    DOMAIN_FACILITY: ("orpath.agents.domains.facility",
-                      "build_facility_supervisor_graph",
-                      "build_compiled_facility_supervisor"),
-    DOMAIN_ROSTERING: ("orpath.agents.domains.rostering",
-                       "build_rostering_supervisor_graph",
-                       "build_compiled_rostering_supervisor"),
-    DOMAIN_MICROGRID: ("orpath.agents.domains.microgrid",
-                       "build_microgrid_supervisor_graph",
-                       "build_compiled_microgrid_supervisor"),
-    DOMAIN_PRICING: ("orpath.agents.domains.pricing",
-                     "build_pricing_supervisor_graph",
-                     "build_compiled_pricing_supervisor"),
-    DOMAIN_FINANCE: ("orpath.agents.domains.finance",
-                     "build_finance_supervisor_graph",
-                     "build_compiled_finance_supervisor"),
-}
-
-#: Canonical order of the 10 supported domain supervisors.
-SUPPORTED_DOMAIN_SUPERVISORS: tuple[str, ...] = tuple(_DOMAIN_SUPERVISOR_MODULES)
-
-
-def _normalize_domain(domain: str) -> str:
-    """Validate *domain* and return its canonical key.
-
-    Raises ``ValueError`` listing the legal domains when the input is unknown.
-    """
-    key = str(domain or "").strip().lower()
-    if key not in _DOMAIN_SUPERVISOR_MODULES:
-        raise ValueError(
-            f"unknown domain {domain!r}; supported domains: "
-            f"{list(SUPPORTED_DOMAIN_SUPERVISORS)}"
-        )
-    return key
-
-
-def build_domain_supervisor_graph(
-    domain: str,
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> StateGraph:
-    """Build the un-compiled multi-agent supervisor graph for one domain.
-
-    Parameters
-    ----------
-    domain
-        One of the 10 canonical OR domains: ``tube``, ``routing``,
-        ``scheduling``, ``project``, ``inventory``, ``facility``,
-        ``rostering``, ``microgrid``, ``pricing``, ``finance``. Unknown
-        domains raise ``ValueError``.
-    model
-        Chat model injected into every domain worker. Defaults to the
-        offline-safe shared factory (``get_chat_model()``).
-    checkpointer
-        Accepted for signature symmetry with
-        :func:`build_compiled_domain_supervisor`; ignored for the
-        un-compiled graph (compile first, then attach a checkpointer).
-    **kwargs
-        Forwarded to the domain builder (``workers``, ``prompt``,
-        ``state_schema``, ``enable_guard``, ``enable_trim``,
-        ``pre_model_hook``, ``supervisor_name``).
-
-    Returns
-    -------
-    StateGraph
-        The un-compiled domain supervisor graph (supervisor lead +
-        five specialist workers = 6 nodes).
-    """
-    key = _normalize_domain(domain)
-    module_name, graph_fn, _ = _DOMAIN_SUPERVISOR_MODULES[key]
-    module = __import__(module_name, fromlist=[graph_fn])
-    builder = getattr(module, graph_fn)
-    return builder(model=model, **kwargs)
-
-
-def build_compiled_domain_supervisor(
-    domain: str,
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the domain supervisor graph for one domain.
-
-    Same domain resolution rules as :func:`build_domain_supervisor_graph`;
-    the compiled graph additionally honours ``checkpointer`` (pass a
-    LangGraph checkpointer such as ``MemorySaver`` / ``SqliteSaver`` for a
-    persistent run, or ``None`` for an ephemeral one).
-    """
-    key = _normalize_domain(domain)
-    module_name, _, compiled_fn = _DOMAIN_SUPERVISOR_MODULES[key]
-    module = __import__(module_name, fromlist=[compiled_fn])
-    builder = getattr(module, compiled_fn)
-    return builder(checkpointer=checkpointer, model=model, **kwargs)
-
-
-# --------------------------------------------------------------------------- #
-# Per-domain convenience aliases — dynamically generated from the registry
-# (Phase 3.4 convergence): the 20 static delegation pairs above are replaced by
-# one PEP-562 ``__getattr__`` so every public alias resolves through the
-# unified ``build_domain_supervisor_graph`` / ``build_compiled_domain_supervisor``
-# factories without duplicating 200 lines of boilerplate.
-_DOMAIN_ALIAS_SPECS: dict[str, tuple[str, str]] = {
-    domain: (
-        f"build_{domain}_supervisor_graph",
-        f"build_compiled_{domain}_supervisor",
-    )
-    for domain in _DOMAIN_SUPERVISOR_MODULES
-}
-
-
-def __getattr__(name: str) -> Any:
-    """Resolve ``build_<domain>_supervisor_graph`` / ``build_compiled_<domain>_supervisor``
-    aliases through the unified domain registry (PEP 562 module-level hook)."""
-    for domain, (graph_name, compiled_name) in _DOMAIN_ALIAS_SPECS.items():
-        if name == graph_name:
-            from functools import partial
-
-            return partial(build_domain_supervisor_graph, domain)
-        if name == compiled_name:
-            from functools import partial
-
-            return partial(build_compiled_domain_supervisor, domain)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-# --------------------------------------------------------------------------- #
-# Composite supervisor (Task 4.3)
-# --------------------------------------------------------------------------- #
-COMPOSITE_LRP = "LRP"
-COMPOSITE_IRP = "IRP"
-COMPOSITE_PRP = "PRP"
-COMPOSITE_MICROGRID_FACILITY = "MICROGRID_FACILITY"
-COMPOSITE_CUSTOM = "CUSTOM"
-
-#: Canonical composite problem classes accepted by the composite lead.
-SUPPORTED_COMPOSITE_TYPES: tuple[str, ...] = (
-    COMPOSITE_LRP,
-    COMPOSITE_IRP,
-    COMPOSITE_PRP,
-    COMPOSITE_MICROGRID_FACILITY,
-    COMPOSITE_CUSTOM,
-)
-
-#: Composite domain chain (as produced by ``meta_router.route_problem``) →
-#: canonical composite class. ``CUSTOM`` is the fallback for unknown chains.
-_COMPOSITE_CHAIN_TYPES: dict[tuple[str, ...], str] = {
-    (DOMAIN_FACILITY, DOMAIN_ROUTING): COMPOSITE_LRP,
-    (DOMAIN_INVENTORY, DOMAIN_ROUTING): COMPOSITE_IRP,
-    (DOMAIN_SCHEDULING, DOMAIN_INVENTORY, DOMAIN_ROUTING): COMPOSITE_PRP,
-    (DOMAIN_FACILITY, DOMAIN_MICROGRID): COMPOSITE_MICROGRID_FACILITY,
-}
-
-
-def build_composite_supervisor(
-    composite_type: str,
-    model: Any = None,
-    checkpointer: Any = None,
-    **kwargs: Any,
-) -> CompiledStateGraph:
-    """Build and compile the cross-domain composite supervisor graph.
-
-    Parameters
-    ----------
-    composite_type
-        One of ``SUPPORTED_COMPOSITE_TYPES``: ``LRP``, ``IRP``, ``PRP``,
-        ``MICROGRID_FACILITY`` or ``CUSTOM``. Unknown types raise
-        ``ValueError``. ``CUSTOM`` additionally requires ``domain_chain``.
-    model
-        Accepted for interface symmetry with the domain factories; the
-        composite pipeline is deterministic (solver-backed, no LLM).
-    checkpointer
-        LangGraph checkpointer forwarded to the compiled composite graph.
-    **kwargs
-        Forwarded to ``orpath.agents.composite_lead.build_compiled_composite_supervisor``
-        (``domain_chain``, ``domain_executors``).
-
-    Returns
-    -------
-    CompiledStateGraph
-    """
-    key = str(composite_type or "").strip().upper()
-    if key not in SUPPORTED_COMPOSITE_TYPES:
-        raise ValueError(
-            f"unknown composite_type {composite_type!r}; supported types: "
-            f"{list(SUPPORTED_COMPOSITE_TYPES)}"
-        )
-    from orpath.agents.composite_lead import (
-        build_compiled_composite_supervisor as _build_composite,
-    )
-
-    return _build_composite(
-        composite_type=key,
-        checkpointer=checkpointer,
-        **kwargs,
-    )
-
-
-def dispatch_supervisor_for_problem(
-    data: Any = None,
-    text: str = "",
-    filename: str = "",
-    model: Any = None,
-    checkpointer: Any = None,
-) -> tuple[Any, "DomainRouteResult"]:
-    """Auto-route an OR problem and build the matching compiled supervisor.
-
-    Runs the Meta-Router (``orpath.agents.meta_router.route_problem``) over the
-    structured payload / free text / filename, then:
-
-      * single-domain verdict → ``build_compiled_domain_supervisor`` for that
-        domain;
-      * composite verdict (e.g. LRP / PRP) → ``build_composite_supervisor``
-        for the matching composite class.
-
-    Parameters
-    ----------
-    data
-        Structured problem payload (dict / JSON string / pydantic-like).
-    text
-        Free-text problem description.
-    filename
-        Problem file name.
-    model
-        Optional chat model forwarded to the router's LLM fallback probe and
-        to the domain supervisor workers.
-    checkpointer
-        LangGraph checkpointer forwarded to the compiled supervisor.
-
-    Returns
-    -------
-    tuple
-        ``(compiled_graph, route_result)`` where ``route_result`` is the
-        underlying ``DomainRouteResult``.
-    """
-    from orpath.agents.meta_router import route_problem
-
-    route_result = route_problem(data=data, text=text, filename=filename, model=model)
-
-    if route_result.is_composite:
-        chain = tuple(route_result.composite_domains)
-        composite_type = _COMPOSITE_CHAIN_TYPES.get(chain, COMPOSITE_CUSTOM)
-        kwargs: dict[str, Any] = {}
-        if composite_type == COMPOSITE_CUSTOM:
-            kwargs["domain_chain"] = list(chain)
-        compiled = build_composite_supervisor(
-            composite_type,
-            model=model,
-            checkpointer=checkpointer,
-            **kwargs,
-        )
-    else:
-        compiled = build_compiled_domain_supervisor(
-            route_result.domain,
-            model=model,
-            checkpointer=checkpointer,
-        )
-    return compiled, route_result
+    return _compile_isolated(checkpointer=checkpointer, model=model, **kwargs)
 
 
 def build_isolated_pipeline_graph(
@@ -567,8 +235,8 @@ def build_isolated_pipeline_graph(
     checkpointer: Any = None,
     **kwargs: Any,
 ) -> Any:
-    """Build the artifact-driven isolated multi-agent pipeline graph (un-compiled)."""
-    from orpath.agents.supervisor import build_isolated_pipeline_graph as _build_isolated
+    """Build the unified adaptive Deep Mode StateGraph (un-compiled)."""
+    from orpath.agents.adaptive_graph import build_isolated_pipeline_graph as _build_isolated
 
     return _build_isolated(model=model, checkpointer=checkpointer, **kwargs)
 
@@ -578,8 +246,8 @@ def build_compiled_isolated_pipeline(
     model: Any = None,
     **kwargs: Any,
 ) -> Any:
-    """Build and compile the artifact-driven isolated multi-agent pipeline graph."""
-    from orpath.agents.supervisor import build_compiled_isolated_pipeline as _compile_isolated
+    """Build and compile the unified adaptive Deep Mode StateGraph."""
+    from orpath.agents.adaptive_graph import build_compiled_isolated_pipeline as _compile_isolated
 
     return _compile_isolated(checkpointer=checkpointer, model=model, **kwargs)
 
@@ -609,9 +277,27 @@ def default_initial(
     intake_assets_dir: str = "",
     human_confirm_intake: bool = False,
     intake_confirmed: bool = False,
+    is_replay: bool = False,
+    fixture_ref: str = "",
+    replay_authorized: bool | None = None,
+    run_mode: str = "deep",
+    skip_paper: bool | None = None,
+    paper_quality: str = "",
 ) -> dict[str, Any]:
     """Canonical ORPathState seed for product runs."""
     root = Path(root)
+    fref = (fixture_ref or "").strip()
+    explicit_replay = bool(is_replay or fref or os.environ.get("ORPATH_FIXTURE_REPLAY") == "1")
+    has_intake = (not skip_intake) or bool(intake_sources) or bool((intake_assets_dir or "").strip())
+    if replay_authorized is not None:
+        auth_replay = bool(replay_authorized)
+    elif has_intake:
+        auth_replay = explicit_replay
+    else:
+        auth_replay = explicit_replay or bool((problem_id or "").strip())
+    if auth_replay and not fref and (problem_id or "").strip():
+        fref = str(problem_id).strip()
+    data_source = "fixture" if explicit_replay else ("case" if has_intake else "")
     return {
         "slug": slug,
         "problem_id": problem_id,
@@ -672,7 +358,101 @@ def default_initial(
         "gate_intake_ok": True if skip_intake else False,
         "human_confirm_intake": bool(human_confirm_intake),
         "intake_confirmed": bool(intake_confirmed),
+        "is_replay": bool(is_replay or (explicit_replay and auth_replay)),
+        "fixture_ref": fref,
+        "replay_authorized": bool(auth_replay),
+        "blocked_reason": "",
+        "data_source": data_source,
+        "run_mode": "fast" if str(run_mode or "").strip().lower() == "fast" else "deep",
+        "skip_paper": bool(skip_paper) if skip_paper is not None else False,
+        "paper_quality": str(paper_quality or ""),
+        "paper_degraded_reason": "",
     }
+
+
+def _is_transient_llm_error(exc: BaseException) -> bool:
+    """Return True when exc looks like a transient LLM/network error safe to retry."""
+    if isinstance(exc, TimeoutError):
+        return True
+    name = type(exc).__name__.lower()
+    if any(tok in name for tok in ("timeout", "ratelimit", "apiconnection", "internalserver", "serviceunavailable", "remoteprotocol")):
+        return True
+    status = getattr(exc, "status_code", None)
+    if status in (408, 429, 500, 502, 503, 504):
+        return True
+    msg = str(exc).lower()
+    transient_markers = (
+        "timed out",
+        "timeout",
+        "rate limit",
+        "too many requests",
+        "429",
+        "502",
+        "503",
+        "504",
+        "500",
+        "bad gateway",
+        "service unavailable",
+        "gateway timeout",
+        "connection reset",
+        "connection aborted",
+        "temporarily unavailable",
+        "remote protocol",
+        "eof occurred",
+    )
+    return any(m in msg for m in transient_markers)
+
+
+def invoke_with_backoff(
+    model: Any,
+    payload: Any,
+    *,
+    config: dict[str, Any] | None = None,
+    max_retries: int | None = None,
+    base_delay: float | None = None,
+    sleep_fn: Any = None,
+) -> Any:
+    """Invoke a LangChain model or compiled agent with exponential backoff on transient errors.
+
+    Controlled via ``ORPATH_LLM_MAX_RETRIES`` (default 3) and
+    ``ORPATH_LLM_RETRY_DELAY`` (default 2.0 seconds).
+    """
+    if max_retries is None:
+        try:
+            max_retries = max(0, int(os.environ.get("ORPATH_LLM_MAX_RETRIES", "3")))
+        except ValueError:
+            max_retries = 3
+    if base_delay is None:
+        try:
+            base_delay = max(0.0, float(os.environ.get("ORPATH_LLM_RETRY_DELAY", "2.0")))
+        except ValueError:
+            base_delay = 2.0
+    sleeper = sleep_fn or time.sleep
+    log = logging.getLogger(__name__)
+
+    last_exc: BaseException | None = None
+    for attempt in range(max_retries + 1):
+        try:
+            if config is not None:
+                return model.invoke(payload, config=config)
+            return model.invoke(payload)
+        except Exception as exc:
+            last_exc = exc
+            if attempt >= max_retries or not _is_transient_llm_error(exc):
+                raise
+            delay = min(30.0, base_delay * (2 ** attempt))
+            log.warning(
+                "Transient LLM error on attempt %d/%d (%s: %s); retrying in %.2fs",
+                attempt + 1,
+                max_retries + 1,
+                type(exc).__name__,
+                exc,
+                delay,
+            )
+            if delay > 0:
+                sleeper(delay)
+    assert last_exc is not None
+    raise last_exc
 
 
 def summarize_run(final: dict[str, Any], *, extra: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -691,6 +471,10 @@ def summarize_run(final: dict[str, Any], *, extra: dict[str, Any] | None = None)
         "last_error": final.get("last_error"),
         "pipeline": final.get("pipeline") or "product",
         "thread_id": final.get("thread_id"),
+        "run_mode": final.get("run_mode", "deep"),
+        "skip_paper": bool(final.get("skip_paper", False)),
+        "paper_quality": final.get("paper_quality", ""),
+        "paper_degraded_reason": final.get("paper_degraded_reason", ""),
     }
     if extra:
         out.update(extra)
@@ -709,6 +493,12 @@ def invoke_once(
     live_subagent: bool | None = False,
     thread_id: str | None = None,
     bridge_attachment: str = "before_research",
+    is_replay: bool = False,
+    fixture_ref: str = "",
+    replay_authorized: bool | None = None,
+    run_mode: str = "deep",
+    skip_paper: bool | None = None,
+    paper_quality: str = "",
 ) -> dict[str, Any]:
     """One-shot product run without Sqlite checkpointer (T1 / ad-hoc CI)."""
     root = Path(root).resolve()
@@ -724,6 +514,12 @@ def invoke_once(
         live_subagent=live_subagent,
         thread_id=tid,
         bridge_attachment=bridge_attachment,
+        is_replay=is_replay,
+        fixture_ref=fixture_ref,
+        replay_authorized=replay_authorized,
+        run_mode=run_mode,
+        skip_paper=skip_paper,
+        paper_quality=paper_quality,
     )
     app = build_graph(checkpointer=None)
     return app.invoke(initial)
@@ -738,55 +534,13 @@ __all__ = [
     "build_graph_product",
     "build_isolated_pipeline_graph",
     "build_multiagent_graph",
-    # domain supervisor registry (Task 4.3)
-    "build_compiled_domain_supervisor",
-    "build_domain_supervisor_graph",
-    "build_tube_supervisor_graph",
-    "build_compiled_tube_supervisor",
-    "build_routing_supervisor_graph",
-    "build_compiled_routing_supervisor",
-    "build_scheduling_supervisor_graph",
-    "build_compiled_scheduling_supervisor",
-    "build_project_supervisor_graph",
-    "build_compiled_project_supervisor",
-    "build_inventory_supervisor_graph",
-    "build_compiled_inventory_supervisor",
-    "build_facility_supervisor_graph",
-    "build_compiled_facility_supervisor",
-    "build_rostering_supervisor_graph",
-    "build_compiled_rostering_supervisor",
-    "build_microgrid_supervisor_graph",
-    "build_compiled_microgrid_supervisor",
-    "build_pricing_supervisor_graph",
-    "build_compiled_pricing_supervisor",
-    "build_finance_supervisor_graph",
-    "build_compiled_finance_supervisor",
-    "SUPPORTED_DOMAIN_SUPERVISORS",
-    "DOMAIN_TUBE",
-    "DOMAIN_ROUTING",
-    "DOMAIN_SCHEDULING",
-    "DOMAIN_PROJECT",
-    "DOMAIN_INVENTORY",
-    "DOMAIN_FACILITY",
-    "DOMAIN_ROSTERING",
-    "DOMAIN_MICROGRID",
-    "DOMAIN_PRICING",
-    "DOMAIN_FINANCE",
-    # composite supervisor (Task 4.3)
-    "build_composite_supervisor",
-    "dispatch_supervisor_for_problem",
-    "COMPOSITE_LRP",
-    "COMPOSITE_IRP",
-    "COMPOSITE_PRP",
-    "COMPOSITE_MICROGRID_FACILITY",
-    "COMPOSITE_CUSTOM",
-    "SUPPORTED_COMPOSITE_TYPES",
     # shared helpers
     "db_path",
     "default_initial",
     "export_stage_map",
     "get_chat_model",
     "invoke_once",
+    "invoke_with_backoff",
     "is_real_llm_configured",
     "open_sqlite_checkpointer",
     "PRODUCT_NODES",

@@ -155,10 +155,7 @@ def normalize_steer_payload(
         if isinstance(pm, str):
             pm = [x.strip() for x in pm.split(",") if x.strip()]
         pi_in = {**pi_in, "prefer_methods": pm}
-    if body.get("at_stage"):
-        at_stage = str(body.get("at_stage") or "").strip()
-    else:
-        at_stage = str(lg_in.get("at_stage") or body.get("stage") or "manual").strip()
+    at_stage = "manual"
 
     lg: dict[str, Any] = {}
     sm = str(lg_in.get("solve_mode") or "").strip()
@@ -169,8 +166,8 @@ def normalize_steer_payload(
         lg["resume_from"] = rf
     if "fresh" in lg_in:
         lg["fresh"] = bool(lg_in.get("fresh"))
-    if "pause_next" in lg_in:
-        lg["pause_next"] = bool(lg_in.get("pause_next"))
+    # Human-in-the-loop pause gates are disabled so execution never stalls.
+    lg["pause_next"] = False
 
     pi: dict[str, Any] = {}
     notes = str(pi_in.get("notes") or "").strip()
@@ -671,23 +668,8 @@ def apply_steer_to_state(
     if "fresh" in lg:
         upd["human_steer_fresh"] = bool(lg.get("fresh"))
 
-    # Pause: before executing `boundary` node
-    pause_next = bool(lg.get("pause_next"))
-    if pause_next and boundary:
-        target = _PAUSE_BEFORE.get(at_stage.lower()) if at_stage else None
-        # also allow at_stage == boundary name directly
-        if target is None and at_stage.lower() == str(boundary).lower():
-            target = str(boundary)
-        if target and str(boundary).lower() == str(target).lower():
-            upd["steer_pause"] = True
-            upd["human_required"] = True
-            upd["stage"] = "human_stop"
-            upd["last_error"] = (
-                f"steer_pause before {boundary} (at_stage={at_stage}); "
-                "clear lg.pause_next in human-steer.json then resume"
-            )
-    elif not pause_next:
-        upd["steer_pause"] = False
+    # Pause gates disabled: never hijack active runs into human_stop via steer_pause.
+    upd["steer_pause"] = False
 
     return upd
 

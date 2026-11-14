@@ -1,0 +1,190 @@
+/* Diagnosis Banner */
+#studioDiagnosisBanner {
+  background: linear-gradient(135deg, rgba(245, 243, 255, 0.9) 0%, rgba(238, 242, 255, 0.7) 100%);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-left: 4px solid #7c3aed;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 3px rgba(139, 92, 246, 0.04);
+}
+
+/* Knowledge Banner */
+#studioKnowledgeBanner {
+  display: none;
+  background: linear-gradient(135deg, rgba(238, 242, 255, 0.9) 0%, rgba(245, 243, 255, 0.7) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-left: 4px solid #6366f1;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+}
+
+/* Algorithm Comparison Cards */
+#studioAlgoList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.studio-algo-item {
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.studio-algo-item:hover {
+  transform: translateY(-1px);
+}
+
+/* Data Variables Alignment List */
+#studioDataList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.studio-data-item {
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.studio-data-item:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+/* Clarification Questions Box */
+#studioQuestionsBox {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.studio-question-card {
+  border-bottom: 1px dashed rgba(203, 213, 225, 0.8);
+  padding-bottom: 14px;
+}
+
+.studio-question-card:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.studio-option-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.studio-option-label:hover {
+  background: rgba(241, 245, 249, 0.9);
+}
+
+/* Result Card */
+#studioResultCard {
+  background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 80%);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 24px -2px rgba(16, 185, 129, 0.08);
+}
+
+#studioResultCard.is-blocked {
+  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 80%);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 4px 24px -2px rgba(239, 68, 68, 0.08);
+}
+
+#studioHeadline {
+  font-size: 18px;
+  font-weight: 800;
+  color: #065f46;
+  margin-bottom: 8px;
+  letter-spacing: -0.015em;
+}
+
+#studioResultCard.is-blocked #studioHeadline {
+  color: #991b1b;
+}
+
+#studioObjective {
+  font-size: 32px;
+  font-weight: 800;
+  color: #047857;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 6px;
+  letter-spacing: -0.03em;
+}
+
+#studioResultCard.is-blocked #studioObjective {
+  color: #b91c1c;
+}
+
+#studioValidation {
+  font-size: 13px;
+  font-weight: 600;
+  color: #065f46;
+}
+
+#studioResultCard.is-blocked #studioValidation {
+  color: #991b1b;
+}
+
+#studioSolutionDetail {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #047857;
+  font-family: var(--mono);
+  line-height: 1.6;
+}
+
+#studioResultCard.is-blocked #studioSolutionDetail {
+  color: #7f1d1d;
+}
+
+/* Artifact Download Buttons */
+#studioDownloads {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.studio-dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 12px;
+  color: #0f172a;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  cursor: pointer;
+}
+
+.studio-dl-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.studio-dl-btn:active {
+  transform: scale(0.98);
+}
+

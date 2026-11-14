@@ -120,6 +120,10 @@ def solve(
     mode: str,
     problem_class: str | None = None,
     extra_args: list[str] | None = None,
+    *,
+    is_replay: bool = False,
+    fixture_ref: str = "",
+    replay_authorized: bool | None = None,
 ) -> tuple[bool, dict, str]:
     """Solve seam — tools/solve_dispatch.solve (ADR-0002)."""
     tools = tools_dir(root)
@@ -133,4 +137,7 @@ def solve(
         mode,
         problem_class=problem_class,
         extra_args=extra_args,
+        is_replay=is_replay,
+        fixture_ref=fixture_ref,
+        replay_authorized=replay_authorized,
     )

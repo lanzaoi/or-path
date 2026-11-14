@@ -35,96 +35,25 @@ from typing import Any
 from orpath.human_steer import build_dialogue
 from orpath.paths import orpath_home, orpath_workdir
 
-# 10 domain swarms (60 canonical agent roles)
-DOMAIN_SWARM_ROLES: dict[str, dict[str, str]] = {
-    "tube": {
-        "or_tube_lead": "or-tube-lead",
-        "or_tube_geometry": "or-tube-geometry",
-        "or_tube_q1q2": "or-tube-q1q2",
-        "or_tube_q3": "or-tube-q3",
-        "or_tube_q4": "or-tube-q4",
-        "or_tube_redteam": "or-tube-redteam",
-    },
-    "routing": {
-        "or_vrp_lead": "or-vrp-lead",
-        "or_vrp_auditor": "or-vrp-auditor",
-        "or_vrp_exact_bound": "or-vrp-exact_bound",
-        "or_vrp_hgs": "or-vrp-hgs",
-        "or_vrp_realities": "or-vrp-realities",
-        "or_vrp_redteam": "or-vrp-redteam",
-    },
-    "scheduling": {
-        "or_jssp_lead": "or-jssp-lead",
-        "or_jssp_auditor": "or-jssp-auditor",
-        "or_jssp_exact_bound": "or-jssp-exact_bound",
-        "or_jssp_heuristic": "or-jssp-heuristic",
-        "or_jssp_realities": "or-jssp-realities",
-        "or_jssp_redteam": "or-jssp-redteam",
-    },
-    "project": {
-        "or_project_lead": "or-project-lead",
-        "or_project_auditor": "or-project-auditor",
-        "or_project_exact_bound": "or-project-exact_bound",
-        "or_project_heuristic": "or-project-heuristic",
-        "or_project_realities": "or-project-realities",
-        "or_project_redteam": "or-project-redteam",
-    },
-    "inventory": {
-        "or_inventory_lead": "or-inventory-lead",
-        "or_inventory_auditor": "or-inventory-auditor",
-        "or_inventory_exact_bound": "or-inventory-exact_bound",
-        "or_inventory_heuristic": "or-inventory-heuristic",
-        "or_inventory_realities": "or-inventory-realities",
-        "or_inventory_redteam": "or-inventory-redteam",
-    },
-    "facility": {
-        "or_facility_lead": "or-facility-lead",
-        "or_facility_auditor": "or-facility-auditor",
-        "or_facility_exact_bound": "or-facility-exact_bound",
-        "or_facility_heuristic": "or-facility-heuristic",
-        "or_facility_realities": "or-facility-realities",
-        "or_facility_redteam": "or-facility-redteam",
-    },
-    "rostering": {
-        "or_rostering_lead": "or-rostering-lead",
-        "or_rostering_auditor": "or-rostering-auditor",
-        "or_rostering_exact_bound": "or-rostering-exact_bound",
-        "or_rostering_heuristic": "or-rostering-heuristic",
-        "or_rostering_realities": "or-rostering-realities",
-        "or_rostering_redteam": "or-rostering-redteam",
-    },
-    "microgrid": {
-        "or_microgrid_lead": "or-microgrid-lead",
-        "or_microgrid_auditor": "or-microgrid-auditor",
-        "or_microgrid_exact_bound": "or-microgrid-exact_bound",
-        "or_microgrid_heuristic": "or-microgrid-heuristic",
-        "or_microgrid_realities": "or-microgrid-realities",
-        "or_microgrid_redteam": "or-microgrid-redteam",
-    },
-    "pricing": {
-        "or_pricing_lead": "or-pricing-lead",
-        "or_pricing_auditor": "or-pricing-auditor",
-        "or_pricing_exact_bound": "or-pricing-exact_bound",
-        "or_pricing_heuristic": "or-pricing-heuristic",
-        "or_pricing_realities": "or-pricing-realities",
-        "or_pricing_redteam": "or-pricing-redteam",
-    },
-    "finance": {
-        "or_finance_lead": "or-finance-lead",
-        "or_finance_auditor": "or-finance-auditor",
-        "or_finance_exact_bound": "or-finance-exact_bound",
-        "or_finance_heuristic": "or-finance-heuristic",
-        "or_finance_realities": "or-finance-realities",
-        "or_finance_redteam": "or-finance-redteam",
-    },
-}
+_CANONICAL_DOMAINS: tuple[str, ...] = (
+    "tube",
+    "routing",
+    "scheduling",
+    "project",
+    "inventory",
+    "facility",
+    "rostering",
+    "microgrid",
+    "pricing",
+    "finance",
+)
 
 _SUBAGENT_DETECT_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r'"tool(?:_name|Name)?"\s*:\s*"subagent"', re.I),
     re.compile(r"\btool\s*(?:call|use|invocation)?\s*[:=]?\s*subagent\b", re.I),
     re.compile(r'"name"\s*:\s*"subagent"', re.I),
     re.compile(
-        r"\bor[-_](?:verifier|reviewer|researcher|modeler|writer|verifier_writer|orchestrator|"
+        r"\bor[-_](?:analyst|verifier|reviewer|researcher|modeler|writer|verifier_writer|orchestrator|"
         r"(?:tube|routing|vrp|jssp|scheduling|project|inventory|facility|rostering|microgrid|pricing|finance)[-_a-z0-9]+|composite[-_]lead)\b",
         re.I,
     ),
@@ -190,11 +119,19 @@ TEXT_CLIP = 400
 
 _STAGE_ROLE: dict[str, str] = {
     "supervisor": "or-supervisor",
+    "analyst": "or-analyst",
+    "or_analyst": "or-analyst",
     "research": "or-researcher",
     "or_researcher": "or-researcher",
     "model": "or-modeler",
     "or_modeler": "or-modeler",
+    "modeler_track_a": "or-modeler",
+    "modeler_track_b": "or-modeler",
+    "tier_c_focus": "or-modeler",
     "cite": "or-verifier",
+    "validator": "or-verifier",
+    "table_render": "or-verifier",
+    "doc_gate": "or-verifier",
     "or_verifier": "or-verifier",
     "or_writer": "or-writer",
     "or_reviewer": "or-reviewer",
@@ -203,20 +140,9 @@ _STAGE_ROLE: dict[str, str] = {
     "draft": "or-writer",
     "explain": "or-writer",
     "orchestrate": "or-orchestrator",
-    "composite_lead": "composite-lead",
 }
 
-# Populate all 60 domain roles
-for _dom, _roles in DOMAIN_SWARM_ROLES.items():
-    for _k, _v in _roles.items():
-        _STAGE_ROLE[_k] = _v
-        _STAGE_ROLE[_k.replace("_", "-")] = _v
-
-_ALL_LEAD_STAGES = (
-    "supervisor|research|or_researcher|model|or_modeler|cite|or_verifier|or_writer|or_reviewer|"
-    "or_verifier_writer|review|draft|explain|orchestrate|composite_lead|"
-    + "|".join(re.escape(k) for k in _STAGE_ROLE.keys())
-)
+_ALL_LEAD_STAGES = "|".join(re.escape(k) for k in _STAGE_ROLE.keys())
 _LEAD_NAME_RE = re.compile(
     rf"^(?P<stage>{_ALL_LEAD_STAGES})(?:-lead)?(?:-(?P<ts>\d{{8}}T\d{{6}}Z))?\.log$",
     re.I,
@@ -576,173 +502,6 @@ def _extract_subagent_role(args: Any) -> str | None:
     return None
 
 
-def load_subagent_artifact_index(
-    bases: list[Path],
-    *,
-    root: Path,
-) -> list[dict[str, Any]]:
-    """Index .pi-subagents/artifacts/*_meta.json for P2 transcript attach."""
-    items: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    for base in bases:
-        arts = base / ".pi-subagents" / "artifacts"
-        if not arts.is_dir():
-            continue
-        for meta_p in arts.glob("*_meta.json"):
-            key = str(meta_p.resolve())
-            if key in seen:
-                continue
-            seen.add(key)
-            meta = _read_json(meta_p) or {}
-            agent = str(meta.get("agent") or "")
-            run_id = str(meta.get("runId") or meta.get("run_id") or "")
-            tp = meta.get("transcriptPath") or meta.get("transcript_path")
-            tpath: Path | None = None
-            if isinstance(tp, str) and tp.strip():
-                cand = Path(tp)
-                if cand.is_file():
-                    tpath = cand
-            if tpath is None and run_id and agent:
-                guess = arts / f"{run_id}_{agent}_0_transcript.jsonl"
-                if guess.is_file():
-                    tpath = guess
-                else:
-                    # any matching runId prefix
-                    for g in arts.glob(f"{run_id}_*_transcript.jsonl"):
-                        tpath = g
-                        break
-            out_md = None
-            if run_id and agent:
-                om = arts / f"{run_id}_{agent}_0_output.md"
-                if om.is_file():
-                    out_md = om
-            try:
-                mtime = float(meta_p.stat().st_mtime)
-            except OSError:
-                mtime = 0.0
-            # meta timestamp is often ms
-            ts_raw = meta.get("timestamp")
-            if isinstance(ts_raw, (int, float)) and ts_raw > 1e12:
-                mtime = max(mtime, float(ts_raw) / 1000.0)
-            items.append(
-                {
-                    "agent": agent,
-                    "run_id": run_id,
-                    "task": _clip(str(meta.get("task") or ""), 200),
-                    "exit_code": meta.get("exitCode"),
-                    "meta_path": _rel_or_str(meta_p, root),
-                    "transcript_path": _rel_or_str(tpath, root) if tpath else None,
-                    "transcript_abs": str(tpath) if tpath else None,
-                    "output_path": _rel_or_str(out_md, root) if out_md else None,
-                    "mtime": mtime,
-                    "tool_count": meta.get("toolCount"),
-                    "duration_ms": meta.get("durationMs"),
-                    "model": meta.get("model"),
-                }
-            )
-    items.sort(key=lambda x: float(x.get("mtime") or 0), reverse=True)
-    return items
-
-
-def parse_transcript_events(
-    path: Path,
-    *,
-    dispatch_id: str,
-    agent: str,
-    max_events: int = 120,
-) -> tuple[list[dict[str, Any]], bool]:
-    """Parse .pi-subagents transcript.jsonl into L2/L3 events (source=sub)."""
-    events: list[dict[str, Any]] = []
-    thinking_found = False
-    try:
-        raw = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return [], False
-
-    def push(kind: str, body: str, t: str = "", **extra: Any) -> None:
-        nonlocal thinking_found
-        if kind == "thinking" and body.strip():
-            thinking_found = True
-        ev = {
-            "t": str(t or ""),
-            "source": "sub",
-            "kind": kind,
-            "text": _clip(body),
-            "dispatch_id": dispatch_id,
-            "agent": agent,
-        }
-        ev.update(extra)
-        events.append(ev)
-        if len(events) > max_events * 2:
-            del events[: len(events) - max_events]
-
-    for line in raw.splitlines():
-        s = line.strip()
-        if not s.startswith("{"):
-            continue
-        try:
-            obj = json.loads(s)
-        except json.JSONDecodeError:
-            continue
-        if not isinstance(obj, dict):
-            continue
-        et = str(obj.get("sourceEventType") or obj.get("recordType") or obj.get("type") or "")
-        ts = str(obj.get("timestamp") or obj.get("ts") or "")
-        role = str(obj.get("role") or "")
-
-        if et in {"tool_execution_start", "tool_start"} or (
-            obj.get("toolName") and obj.get("argsPreview") is not None and "end" not in et
-        ):
-            name = _tool_name_from_obj(obj)
-            prev = obj.get("argsPreview") or obj.get("args") or ""
-            push("tool", f"{name} {_clip(str(prev), 200)}", ts, tool=name)
-            continue
-        if et in {"tool_execution_end", "tool_end"} or (
-            obj.get("toolName") and obj.get("isError") is not None and obj.get("argsPreview") is None
-        ):
-            name = _tool_name_from_obj(obj)
-            err = obj.get("isError")
-            push(
-                "tool_result",
-                f"{name}: {'ERROR' if err else 'ok'}",
-                ts,
-                tool=name,
-            )
-            continue
-        if et in {"message_end", "message_start", "initial_prompt"} or role:
-            # skip pure user dumps unless short assistant
-            if role == "user" and et != "initial_prompt":
-                # keep short task lines only
-                text = obj.get("text") or ""
-                if isinstance(text, str) and 0 < len(text) < 180 and et == "initial_prompt":
-                    push("meta", f"task: {_clip(text, 160)}", ts)
-                continue
-            msg = obj.get("message") if isinstance(obj.get("message"), dict) else {}
-            content = msg.get("content") if msg else None
-            thinks: list[str] = []
-            texts: list[str] = []
-            if content is not None:
-                _extract_text_blocks(content, thinks, keys=("thinking", "reasoning"))
-                _extract_text_blocks(content, texts, keys=("text",))
-            plain = obj.get("text")
-            if isinstance(plain, str) and plain.strip() and not texts:
-                texts.append(plain)
-            for th in thinks:
-                if th.strip():
-                    push("thinking", th, ts)
-            if role == "assistant" and texts:
-                # skip huge acceptance-report dumps in preview
-                body = texts[-1]
-                if "acceptance-report" in body and len(body) > 400:
-                    body = body[:200] + "…[acceptance-report truncated]"
-                push("assistant", body, ts)
-            continue
-
-    if len(events) > max_events:
-        events = events[-max_events:]
-    return events, thinking_found
-
-
 def parse_lead_events(
     text: str,
     *,
@@ -973,133 +732,6 @@ def parse_lead_events(
     return events, thinking_found, roles_seen
 
 
-def _match_children_for_dispatch(
-    *,
-    role: str,
-    stage: str,
-    log_mtime: float,
-    roles_from_log: list[str],
-    index: list[dict[str, Any]],
-    slug: str,
-) -> list[dict[str, Any]]:
-    """Pick subagent artifact rows for this stage lead."""
-    want_roles = list(roles_from_log) if roles_from_log else []
-    if role and role not in want_roles:
-        want_roles.append(role)
-    # stage name heuristic: research → or-researcher
-    if stage and f"or-{stage}" not in want_roles and stage in _STAGE_ROLE:
-        want_roles.append(_STAGE_ROLE[stage])
-
-    candidates = [
-        it
-        for it in index
-        if (not want_roles) or (it.get("agent") in want_roles)
-    ]
-    # prefer mtime near lead log (±2h) or task mentions slug
-    scored: list[tuple[float, dict[str, Any]]] = []
-    for it in candidates:
-        score = 0.0
-        mt = float(it.get("mtime") or 0)
-        if log_mtime and mt:
-            dt = abs(mt - log_mtime)
-            if dt < 7200:
-                score += max(0.0, 100.0 - dt / 72.0)
-        task = str(it.get("task") or "")
-        if slug and slug in task:
-            score += 50
-        if it.get("transcript_path"):
-            score += 5
-        if it.get("agent") == role:
-            score += 10
-        scored.append((score, it))
-    scored.sort(key=lambda x: (-x[0], -float(x[1].get("mtime") or 0)))
-    # top few per dispatch
-    out: list[dict[str, Any]] = []
-    seen_run: set[str] = set()
-    for score, it in scored:
-        if score < 5 and out:
-            # weak matches only if nothing better
-            if len(out) >= 1:
-                break
-        rid = str(it.get("run_id") or it.get("meta_path") or "")
-        if rid in seen_run:
-            continue
-        seen_run.add(rid)
-        out.append(it)
-        if len(out) >= 5:
-            break
-    return out
-
-
-def discover_pi_sessions(
-    *,
-    workdir: Path,
-    limit: int = 12,
-    home: Path | None = None,
-) -> dict[str, Any]:
-    """Read-only session & deep-link metadata for Watch Tier-2 panel (no Pi runtime dependency)."""
-    raw_env = (os.environ.get("ORPATH_PI_SESSION") or "").strip().lower()
-    enabled = raw_env in {"1", "true", "yes", "on"}
-    raw_dir = (os.environ.get("ORPATH_SESSIONS_DIR") or "").strip()
-    root = Path(raw_dir).expanduser() if raw_dir else (Path(workdir) / "runs" / "sessions")
-
-    deep_links = [
-        {
-            "id": "session_on",
-            "title": "开启会话落盘重跑",
-            "command": (
-                "set ORPATH_PI_SESSION=1\n"
-                "orpath.bat watch-run --keep-watch --slug tier2-demo"
-            ),
-            "reason": "启用会话轨迹记录",
-        },
-        {
-            "id": "kanban",
-            "title": "打开 Web Studio 工作台",
-            "command": "START.bat",
-            "reason": "启动 OR-Path Studio 实时过程与做题看板",
-            "ready": True,
-        },
-        {
-            "id": "supervise",
-            "title": "执行独立物理与数学核验",
-            "command": "python tools/validate_solution.py --problem-id tube_cut_b2026 --solution outputs/live-btube-solution.json",
-            "reason": "Numbers Truth：数字只来自求解器 JSON 与独立校验器",
-            "ready": True,
-        },
-    ]
-
-    out: dict[str, Any] = {
-        "pi_session_env": enabled,
-        "sessions_root": str(root),
-        "sessions_root_exists": root.is_dir(),
-        "recent": [],
-        "kanban_hint": "START.bat / START.sh 启动 Web Studio",
-        "supervise_hint": "tools/validate_solution.py 独立数学与物理校验",
-        "fleet_hint": "LangGraph 控制面 16 站流水线",
-        "docs": "docs/_deprecated/d3-tier2-deep-link.md",
-        "docs_p4": "docs/_deprecated/p4-tier2-deep-look.md",
-        "packages": [],
-        "package_status": {
-            "pi-kanban": True,
-            "pi-supervisor": True,
-            "rpiv-ask-user-question": True,
-            "pi-subagents": False,
-        },
-        "deep_links": deep_links,
-        "honesty": (
-            []
-            if enabled
-            else [
-                "tier2_session_off: set ORPATH_PI_SESSION=1 to enable session trace flag"
-            ]
-        ),
-        "workdir_hint": str(workdir.resolve()),
-    }
-    return out
-
-
-
 def build_dispatches(
     agents_dir: Path,
     *,
@@ -1127,11 +759,6 @@ def build_dispatches(
     log_cursors: dict[str, dict[str, Any]] = {}
     transcript_missing_any = False
     leads = _latest_lead_logs(agents_dir)
-
-    bases = [root]
-    if home is not None and home.resolve() != root.resolve():
-        bases.append(home)
-    sub_index = load_subagent_artifact_index(bases, root=root)
 
     for stage, log_path in sorted(leads.items(), key=lambda kv: kv[0]):
         role = _STAGE_ROLE.get(stage, f"or-{stage}")
@@ -1180,58 +807,13 @@ def build_dispatches(
         if th:
             thinking_any = True
 
-        children_raw = _match_children_for_dispatch(
-            role=role,
-            stage=stage,
-            log_mtime=mtime,
-            roles_from_log=roles_seen,
-            index=sub_index,
-            slug=slug,
-        )
         children: list[dict[str, Any]] = []
-        for ch in children_raw:
-            child = {
-                "agent": ch.get("agent"),
-                "run_id": ch.get("run_id"),
-                "task": ch.get("task"),
-                "exit_code": ch.get("exit_code"),
-                "meta_path": ch.get("meta_path"),
-                "transcript_path": ch.get("transcript_path"),
-                "output_path": ch.get("output_path"),
-                "tool_count": ch.get("tool_count"),
-                "duration_ms": ch.get("duration_ms"),
-                "model": ch.get("model"),
-                "event_count": 0,
-            }
-            tabs = ch.get("transcript_abs")
-            if tabs:
-                tp = Path(str(tabs))
-                if tp.is_file():
-                    tevs, tth = parse_transcript_events(
-                        tp, dispatch_id=stage, agent=str(ch.get("agent") or "sub")
-                    )
-                    child["event_count"] = len(tevs)
-                    if tth:
-                        thinking_any = True
-                    all_events.extend(tevs)
-                else:
-                    child["transcript_path"] = None
-            children.append(child)
-
-        if hit and not any(c.get("transcript_path") for c in children):
-            transcript_missing_any = True
-            messages.append(
-                f"transcript_missing: stage={stage} subagent_detected but no .pi-subagents transcript matched"
-            )
 
         # event kind counts for UI
         kind_counts: dict[str, int] = {}
         for e in evs:
             k = str(e.get("kind") or "")
             kind_counts[k] = kind_counts.get(k, 0) + 1
-        for c in children:
-            # counts already in child events merged to all_events
-            pass
 
         disp = {
             "id": stage,
@@ -2331,30 +1913,26 @@ def build_snapshot(
         "sub_events": sub_event_count,
     }
 
-    tier2 = discover_pi_sessions(workdir=wd, limit=10, home=home)
-    if not tier2.get("pi_session_env"):
-        msgs = list(honesty.get("messages") or [])
-        if not any("tier2_session_off" in str(m) for m in msgs):
-            msgs.append(
-                "tier2_session_off: ORPATH_PI_SESSION not set — product leads use --no-session; "
-                "kanban may only see interactive pi sessions"
-            )
-        honesty["messages"] = msgs
-        # also fold tier2.honesty
-        for m in tier2.get("honesty") or []:
-            if m not in honesty["messages"]:
-                honesty["messages"].append(m)
+    tier2 = {
+        "pi_session_env": False,
+        "sessions_root": "",
+        "sessions_root_exists": False,
+        "recent": [],
+        "kanban_hint": "START.bat / START.sh 启动 Web Studio",
+        "supervise_hint": "tools/validate_solution.py 独立数学与物理校验",
+        "deep_links": [],
+        "honesty": [],
+    }
 
-    # P5 Tier-3 optional Langfuse — surface only; does not replace Watch
+    # Optional Langfuse — surface only; does not replace Watch
     lf_raw = (os.environ.get("ORPATH_LANGFUSE") or os.environ.get("LANGFUSE_ENABLED") or "0").strip().lower()
     lf_on = lf_raw in {"1", "true", "yes", "on"}
     tier3 = {
         "enabled": lf_on,
-        "hint": "docs/_deprecated/p5-tier3-langfuse.md",
         "note": (
             "Langfuse wired (env on) — still secondary to Watch"
             if lf_on
-            else "optional portfolio/debug graph; set ORPATH_LANGFUSE=1 + keys to enable spans (see docs)"
+            else "optional portfolio/debug graph; set ORPATH_LANGFUSE=1 + keys to enable spans"
         ),
         "host": (os.environ.get("LANGFUSE_HOST") or os.environ.get("LANGFUSE_BASE_URL") or ""),
         "replaces_watch": False,
@@ -2381,14 +1959,14 @@ def build_snapshot(
 
     # Infer active domain
     active_domain = "generic"
-    for d_name in DOMAIN_SWARM_ROLES:
+    for d_name in _CANONICAL_DOMAINS:
         if d_name in slug.lower() or (isinstance(problem_view, dict) and d_name in str(problem_view.get("problem_id", "")).lower()):
             active_domain = d_name
             break
     if active_domain == "generic" and isinstance(dispatches, list):
         for disp in dispatches:
             role_str = str(disp.get("role", "")).lower()
-            for d_name in DOMAIN_SWARM_ROLES:
+            for d_name in _CANONICAL_DOMAINS:
                 if f"or-{d_name}" in role_str or f"or_{d_name}" in role_str:
                     active_domain = d_name
                     break
@@ -2396,13 +1974,6 @@ def build_snapshot(
                 break
 
     domain_roles: list[dict[str, Any]] = []
-    if active_domain in DOMAIN_SWARM_ROLES:
-        for k, v in DOMAIN_SWARM_ROLES[active_domain].items():
-            domain_roles.append({
-                "agent_name": k,
-                "role": v,
-                "is_lead": "lead" in k.lower(),
-            })
 
     snap: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -2491,9 +2062,6 @@ __all__ = [
     "compute_source_fingerprint",
     "validate_snapshot_shape",
     "parse_lead_events",
-    "parse_transcript_events",
-    "load_subagent_artifact_index",
-    "discover_pi_sessions",
     "read_log_text",
     "detect_subagent_calls",
     "assert_no_llm_imports",

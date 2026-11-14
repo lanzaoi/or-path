@@ -1,0 +1,53 @@
+    <!-- Step 2: Deep Thinking Analysis & Strategy Parameter Card (Non-blocking) -->
+    <div class="studio-card" id="studioAnalysisCard" style="display:none">
+      <div class="studio-step-header">
+        <div class="step-num-badge step-2">2</div>
+        <h2 class="studio-step-title">建模思路研判与策略参数</h2>
+        <span class="studio-step-sub">全自动直通求解 · 已默认采用推荐策略（可随时微调重算）</span>
+      </div>
+
+      <div id="studioDiagnosisBanner"></div>
+      <div id="studioKnowledgeBanner" style="display:none"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+        <div>
+          <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;color:#334155">⚖️ 求解算法可行性推演对比</div>
+          <div id="studioAlgoList"></div>
+        </div>
+        <div>
+          <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;color:#334155">📊 数据探针与输入参数对齐</div>
+          <div id="studioDataList"></div>
+        </div>
+      </div>
+
+      <details style="margin-bottom:18px;background:#f8fafc;border-radius:12px;padding:12px 16px;border:1px solid var(--border)" id="studioThinkingDetails">
+        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;color:#334155">
+          <span>🧠 查看深度推演过程与思考链 (Deep Thinking)</span>
+          <span id="studioThinkingBadge" style="font-size:11px;padding:3px 10px;border-radius:var(--pill);font-weight:600;margin-left:auto"></span>
+        </summary>
+        <div id="studioKeyPromptBanner" style="display:none;margin:12px 0 8px 0;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;line-height:1.5">
+          💡 <strong>离线模式提示：</strong>当前未配置 API Key，展示的是基于本地知识库的确定性规则推演。在上方填入 Key 即可启动真正的深度语义推理链。
+        </div>
+        <div id="studioThinkingContent" style="margin-top:12px;font-size:11.5px;font-family:var(--mono);line-height:1.65;white-space:pre-wrap;color:#475569;background:#ffffff;padding:12px;border-radius:8px;border:1px solid #e2e8f0;max-height:220px;overflow-y:auto"></div>
+      </details>
+
+      <div style="background:#f8fafc;border-radius:14px;padding:18px 20px;margin-bottom:18px;border:1px solid var(--border)">
+        <div style="font-size:13.5px;font-weight:800;margin-bottom:14px;color:#1e293b">⚙️ 求解策略与参数预设（已自动采用推荐方向，可按需微调后重算）：</div>
+        <div id="studioQuestionsBox"></div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px;color:#475569">💬 自由补充指令（选填）：</label>
+        <input type="text" id="studioExtraPrompt" placeholder="例如：请将巡检结果用通俗报告呈现，标明总里程…" style="width:100%;height:38px;padding:0 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:12.5px;outline:none;background:#f8fafc" />
+      </div>
+
+      <div id="studioConfirmError" class="studio-error-box"></div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <span id="studioStep2Status" style="font-size:12px;color:#64748b">修改上方策略或知识库锚点后，可一键按新参数重新求解</span>
+        <button type="button" class="wb-btn success" id="btnStudioConfirmSolve" style="height:40px;padding:0 28px;font-size:14px;font-weight:700">
+          🔄 应用参数微调并重算
+        </button>
+      </div>
+    </div>
+

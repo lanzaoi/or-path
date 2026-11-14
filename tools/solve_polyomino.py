@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -406,6 +407,11 @@ def main(argv: list[str] | None = None) -> int:
         default="none",
         help="B-题 Q2 inventory presets",
     )
+    p.add_argument(
+        "--is-replay",
+        action="store_true",
+        help="explicitly authorize built-in 4x4 fallback replay when board.json is absent",
+    )
     args = p.parse_args(argv)
 
     caps_map = {
@@ -433,8 +439,33 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 data["problem_id"] = args.problem_id
             except FileNotFoundError:
-                data = solve_q1_min_cover()
-                data["problem_id"] = args.problem_id
+                if args.is_replay or os.environ.get("ORPATH_FIXTURE_REPLAY") == "1":
+                    data = solve_q1_min_cover()
+                    data["problem_id"] = args.problem_id
+                    meta = data.setdefault("meta", {})
+                    if isinstance(meta, dict):
+                        meta["is_replay"] = True
+                        meta["fixture_ref"] = "polyomino_q1_default_4x4"
+                else:
+                    data = {
+                        "status": "BLOCKED",
+                        "objective": None,
+                        "solver": "none",
+                        "source": "tools/solve_polyomino.py",
+                        "problem_id": args.problem_id,
+                        "problem_class": "polyomino_cover",
+                        "meta": {
+                            "exact": False,
+                            "proven_optimal": False,
+                            "blocked": True,
+                            "blocked_code": "missing_board_data",
+                            "is_replay": False,
+                            "reason": (
+                                f"missing board.json for problem_id={args.problem_id!r}; "
+                                "refusing silent 4x4 default board fallback without --is-replay"
+                            ),
+                        },
+                    }
         elif args.task == "l3_deficient":
             data = solve_q1_l_only_deficient()
         elif args.task == "q2":
@@ -476,7 +507,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(json.dumps(data, ensure_ascii=False, indent=2))
-    return 0 if data.get("status") in {"OPTIMAL", "FEASIBLE"} else 1
+    return 0 if data.get("status") in {"OPTIMAL", "FEASIBLE", "BLOCKED"} else 1
 
 
 if __name__ == "__main__":

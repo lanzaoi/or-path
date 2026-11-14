@@ -44,7 +44,9 @@ _CN_NUM = {
 _ASSET_KIND = {
     ".csv": "csv",
     ".xlsx": "xlsx",
+    ".xlsm": "xlsx",
     ".xls": "xlsx",
+    ".docx": "other",
     ".stp": "stp",
     ".step": "stp",
     ".pdf": "pdf",
@@ -171,9 +173,23 @@ def extract_subproblems(body: str) -> list[dict[str, Any]]:
 
 def guess_problem_class_hint(text: str) -> str | None:
     t = text.lower()
-    if re.search(r"\bvrp\b|vehicle routing|多车|车辆路径", t):
+    if re.search(r"多联|骨牌|polyomino|铺放|拼图|tiling\s*cover", t):
+        return "polyomino_cover"
+    if re.search(r"微电网|微网|光伏|储能|microgrid|bess|削峰填谷", t):
+        return "microgrid_dispatch"
+    if re.search(r"圆管|下料|tube[_\s-]?cut|余料|cutting\s*stock", t):
+        return "tube_cut"
+    if re.search(r"作业车间|车间调度|\bjssp\b|\bfjssp\b|job\s*shop|完工时间|makespan", t):
+        return "jssp"
+    if re.search(r"\brcpsp\b|项目排程|psplib|紧前关系|关键路径", t):
+        return "rcpsp"
+    if re.search(r"排班|轮班|护士排班|staff\s*rostering|\brostering\b", t):
+        return "staff_rostering"
+    if re.search(r"选址|设施选址|\bcflp\b|facility\s*location", t):
+        return "facility_location"
+    if re.search(r"\bvrp\b|\bcvrp\b|\bvrptw\b|vehicle routing|多车|车辆路径", t):
         return "vrp"
-    if re.search(r"\btsp\b|traveling salesman|旅行商", t):
+    if re.search(r"\btsp\b|traveling salesman|旅行商|巡检路线", t):
         return "tsp"
     if re.search(r"shortest\s*path|最短路", t):
         return "shortest_path"

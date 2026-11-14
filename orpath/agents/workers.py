@@ -46,13 +46,23 @@ from langchain_core.tools import BaseTool, tool
 from langgraph.prebuilt import create_react_agent
 
 from orpath.control_plane import get_chat_model
+from orpath.agents.coding_tools import (
+    edit_file,
+    grep_search,
+    list_files,
+    read_file,
+    run_shell,
+    write_file,
+)
 from orpath.agents.tools_or import (
     consult_or_skill,
+    execute_custom_script,
     execute_or_solver,
     execute_python_sandbox,
     get_problem_formulation_template,
     list_available_solvers,
     validate_solution_tool,
+    write_custom_solver_script,
 )
 
 __all__ = [
@@ -97,7 +107,7 @@ def _resolve_root() -> Path:
     return Path.cwd()
 
 #: Default character budget for ``read_problem_file``.
-READ_PROBLEM_FILE_MAX_CHARS = 8000
+READ_PROBLEM_FILE_MAX_CHARS = 32000
 
 #: Canonical agent names (stable identifiers for a supervisor / routing layer).
 ANALYST_NAME = "or_analyst"
@@ -136,7 +146,7 @@ def make_compact_handoff(
         if v:
             lines.append(f"  - {k}: {v}")
     lines.append("Executive State Summary:")
-    lines.append(str(summary or "").strip()[:800])
+    lines.append(str(summary or "").strip()[:4000])
     return "\n".join(lines)
 
 
@@ -144,18 +154,24 @@ def make_compact_handoff(
 # Small file-facing tools shared by the workers
 # --------------------------------------------------------------------------- #
 @tool
-def read_problem_file(file_path: str, max_chars: int = READ_PROBLEM_FILE_MAX_CHARS) -> str:
-    """Read a problem statement / fixture file as text, with a hard size limit.
+def read_problem_file(
+    file_path: str,
+    max_chars: int = READ_PROBLEM_FILE_MAX_CHARS,
+    offset: int = 0,
+) -> str:
+    """Read a problem statement / fixture file as text, with configurable window.
 
     Used by every worker to ground its reasoning in the raw problem data rather
     than a paraphrase. The file is resolved against the current working directory
     (absolute paths are honoured). Binary / undecodable bytes are replaced so the
-    call never raises; oversized files are truncated with an explicit marker.
+    call never raises; oversized files support sequential ``offset`` paging.
 
     Args:
         file_path: Path to the problem document or fixture (``.txt``, ``.md``,
-            ``.json``, ``.py``, ...). Relative paths resolve against ``cwd``.
+            ``.json``, ``.py``, ``.docx``, ``.xlsx``, ``.pdf``, ...). Relative paths
+            resolve against ``cwd``.
         max_chars: Maximum number of characters returned. Must be > 0.
+        offset: 0-based character offset into decoded text (default 0).
 
     Returns:
         A text block of the form:
@@ -173,6 +189,11 @@ def read_problem_file(file_path: str, max_chars: int = READ_PROBLEM_FILE_MAX_CHA
         limit = READ_PROBLEM_FILE_MAX_CHARS
     if limit <= 0:
         limit = READ_PROBLEM_FILE_MAX_CHARS
+
+    try:
+        start_off = max(0, int(offset))
+    except (TypeError, ValueError):
+        start_off = 0
 
     root = _resolve_root()
     path = Path(file_path).expanduser()
@@ -196,7 +217,7 @@ def read_problem_file(file_path: str, max_chars: int = READ_PROBLEM_FILE_MAX_CHA
             path = found
 
     try:
-        raw = path.read_bytes()
+        size_bytes = path.stat().st_size
     except FileNotFoundError:
         # Provide nearby hint if available
         nearby = []
@@ -218,9 +239,45 @@ def read_problem_file(file_path: str, max_chars: int = READ_PROBLEM_FILE_MAX_CHA
     except OSError as exc:  # noqa: BLE001 - tools must never raise
         return f"file_path={path}\nerror={type(exc).__name__}: {exc}"
 
+    if path.is_dir():
+        return f"file_path={path}\nerror=is_a_directory"
+
+    suf = path.suffix.lower()
+    if suf in {".docx", ".xlsx", ".xlsm", ".pdf"}:
+        try:
+            from tools.intake_assets import extract_asset_text
+
+            text, _pages, _warns = extract_asset_text(path, max_chars=start_off + limit)
+            body = text[start_off : start_off + limit]
+            truncated = (start_off + len(body)) < len(text) or len(text) >= (start_off + limit)
+            lines = [
+                f"file_path={path}",
+                f"size={size_bytes} returned={len(body)} truncated={str(truncated).lower()} max_chars={limit}",
+                "---",
+                body,
+            ]
+            return "\n".join(lines)
+        except IsADirectoryError:
+            return f"file_path={path}\nerror=is_a_directory"
+        except PermissionError:
+            return f"file_path={path}\nerror=permission_denied"
+        except Exception as exc:  # noqa: BLE001
+            return f"file_path={path}\nerror={type(exc).__name__}: {exc}"
+
+    try:
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return f"file_path={path}\nerror=file_not_found"
+    except IsADirectoryError:
+        return f"file_path={path}\nerror=is_a_directory"
+    except PermissionError:
+        return f"file_path={path}\nerror=permission_denied"
+    except OSError as exc:  # noqa: BLE001 - tools must never raise
+        return f"file_path={path}\nerror={type(exc).__name__}: {exc}"
+
     text = raw.decode("utf-8", errors="replace")
-    truncated = len(text) > limit
-    body = text[:limit]
+    body = text[start_off : start_off + limit]
+    truncated = (start_off + len(body)) < len(text)
     lines = [
         f"file_path={path}",
         f"size={len(raw)} returned={len(body)} truncated={str(truncated).lower()} max_chars={limit}",
@@ -362,37 +419,32 @@ def create_analyst_agent(
         Compiled ``create_react_agent`` graph named ``or_analyst``.
     """
     tools = _merge_tools(
-        [read_problem_file, search_or_knowledge, consult_or_skill, get_problem_formulation_template],
+        [
+            read_problem_file,
+            read_file,
+            list_files,
+            grep_search,
+            search_or_knowledge,
+            consult_or_skill,
+            get_problem_formulation_template,
+        ],
         cartridge_tools,
     )
     prompt = (
-        "你是 OR-Path 流水线中的【运筹学问题分析专家】(Analyst)。\n\n"
-        "【工具优先 (Tool-First) 指令】\n"
-        "在输出任何分析结论前，必须首先调用 read_problem_file 工具读取原始题面与数据文件"
-        "（若任务简报提供了 profile_path / 前置数据画像文件，必须一并读取），"
-        "必要时调用 search_or_knowledge / consult_or_skill 检索知识库与建模范式，"
-        "绝不允许在未调用工具读取原始文件的情况下凭空臆测题意或数据规模。\n\n"
-        "核心职责：\n"
-        "1. 题面精读：用 read_problem_file 读取原始题面/数据文件，逐条拆解真实需求，绝不臆测；\n"
-        "2. 数据画像：读取确定性前置探针产出的数据画像文件（outputs/<slug>-profile.json），"
-        "确认行列规模、字段语义与规模量级；\n"
-        "3. 数学分类确认：明确问题的数学类别（LP/MILP/QP/CP-SAT/最短路/网络流/匹配/"
-        "TSP/CVRP/VRPTW/JSSP/RCPSP/CFLP/排班/装箱/切割/库存/随机规划/凸优化等）并给出依据；\n"
-        "4. 复杂度分档：给出 Tier-A（精确易解：LP/凸QP/最短路/最大流/DP）、"
-        "Tier-B（组合难解：VRPTW/JSSP/RCPSP/排班/装箱/选址等）、"
-        "Tier-C（多问递进大型赛题）的分档建议；\n"
-        "5. 建模建议：输出交由 Modeler 承接的建模建议清单（决策变量、约束骨架、"
-        "数据接口、已注册求解器线索）。\n\n"
-        "【防角色越界与字数收敛 (Anti-Overstepping)】\n"
-        "- 严禁编写任何求解代码、求解器脚本或 schema.json（这是 Modeler 的专职）；\n"
-        "- 严禁猜解或试填任何目标值/最优值（Numbers Truth 铁律）；\n"
-        "- 严禁撰写学术论文草稿（这是 Writer 的专职）；\n"
-        "- 输出必须结构化且极度精炼（严格控制在 500 字以内），包含：① 问题对象与决策目标、"
-        "② 数据画像与规模量级、③ 数学分类确认、④ Tier 复杂度分档建议、⑤ 建模建议与歧义/风险提示。\n\n"
-        "硬性纪律：\n"
-        "- 不输出任何未经原始数据支持的结论，不虚构最优值；\n"
-        "- 若题意模糊，明确列出需要澄清的歧义点，而不是自行假设；\n"
-        "- 严控篇幅在 500 字以内，输出结构化、可被 Modeler 直接消费的紧凑中文研判。"
+        "You are `or_analyst`, an operations research problem & data analyst.\n\n"
+        "## Mission\n"
+        "1. Inspect the case workspace thoroughly (`list_files`, `read_file`, `read_problem_file`, `grep_search`) "
+        "including raw problem statements, tables/attachments, and preflight profile JSON (`outputs/<slug>-profile.json`).\n"
+        "2. Verify exact dimensions, parameter tables, variable meanings, constraints, and edge cases.\n"
+        "3. Determine complexity tier (`A`: exact LP/convex QP/shortest path/network flow/DP; `B`: NP-hard MIP/CP-SAT/VRP/JSSP; "
+        "`C`: multi-subproblem contest) and identify whether the problem:\n"
+        "   - maps directly to a registered solver,\n"
+        "   - can be reduced mathematically to one of the 27 registered solvers (reference `or-reduction-playbook`), or\n"
+        "   - requires a custom Python MIP/CP-SAT/SciPy solver + isolated validator.\n"
+        "4. Deliver a complete, structured engineering specification (variables, sets, parameters, constraints C1..Ck, solver route, ambiguities).\n\n"
+        "## Forbidden\n"
+        "- Never fabricate data, objective values, or optimal solutions (Numbers Truth).\n"
+        "- Never write full solver execution scripts or academic papers — pass clean specification artifacts to `or_modeler`."
     )
     return create_react_agent(
         _resolve_model(model), tools, prompt=append_domain_directive(prompt, domain_directive), name=ANALYST_NAME
@@ -405,7 +457,7 @@ def create_modeler_agent(
     domain_directive: str = "",
     extra_tools: Any = None,
 ) -> Any:
-    """Create the ``or_modeler`` agent (mathematical-programming / algorithm expert).
+    """Create the ``or_modeler`` agent (mathematical-programming / algorithm engineer).
 
     Args:
         model: Chat model instance. Defaults to ``get_chat_model()``.
@@ -419,35 +471,60 @@ def create_modeler_agent(
         Compiled ``create_react_agent`` graph named ``or_modeler``.
     """
     tools = _merge_tools(
-        [list_available_solvers, execute_or_solver, execute_python_sandbox, read_problem_file],
-        [cartridge_tools, extra_tools],
+        [
+            list_available_solvers,
+            execute_or_solver,
+            execute_python_sandbox,
+            read_problem_file,
+            read_file,
+            write_file,
+            edit_file,
+            grep_search,
+            list_files,
+            run_shell,
+            write_custom_solver_script,
+            execute_custom_script,
+            validate_solution_tool,
+            consult_or_skill,
+            get_problem_formulation_template,
+            search_or_knowledge,
+        ],
+        cartridge_tools,
+        extra_tools,
     )
     prompt = (
-        "你是 OR-Path 流水线中的【数学规划与算法实现专家】(Modeler)。\n\n"
-        "核心专职：排他性聚焦于 schema.json 建模与算法求解工件生成。\n"
-        "1. 显式建模工件：承接 Analyst 的研判结论，首先产出可被求解器消费的 schema.json 模型文档"
-        "（决策变量与定义域、目标函数、逐条编号约束集合 C1/C2...），"
-        "严禁在模型文档或对话中提前填入最优值；\n"
-        "2. 探明算子：必须先用 list_available_solvers 探明系统内已注册的成熟算子，"
-        "优先复用成熟求解器；\n"
-        "3. 算子派发：匹配上已注册 mode 时，直接用 execute_or_solver 求解，"
-        "准确传入 problem_id / mode / extra_args；\n"
-        "4. 沙箱建模：当系统内没有成熟算子时，用 execute_python_sandbox 在受控沙箱中"
-        "构建并求解模型（如 OR-Tools CP-SAT / HiGHS / NetworkX），把建模逻辑与求解跑通；\n"
-        "5. 下界与 Gap 分析：分析松弛下界（LP relaxation / bound）与最优性 Gap；"
-        "若求解器标记 proven_optimal=False，如实报告 gap 或可行解性质，严禁声称全局最优；\n"
-        "6. 产出有效解工件：必须产出可被独立校验的真实解（包括 solution_path 解文件路径、"
-        "目标值、关键决策量），交由确定性校验门与 Writer 核验。\n\n"
-        "【防角色越界 (Anti-Overstepping)】\n"
-        "- 严禁重复开展文献综述、题面背景研判或复杂度分档（由 Analyst 专职负责）；\n"
-        "- 严禁撰写整篇学术论文正文或终结任务报告（由 Writer 专职负责）；\n"
-        "- 严禁手写解 JSON 数值或口算填数：所有数值必须来自求解器真实输出。\n\n"
-        "硬性纪律：\n"
-        "- 目标函数值与约束必须来自真实求解输出，严禁编造最优解或凭空填数；\n"
-        "- 求解失败时如实报告 detail，并给出可执行的降级策略（缩小规模、换算法族、"
-        "放宽间隙），而不是伪造成功；\n"
-        "- 若需长时间求解，主动设置 timeout/gap 等超时参数；\n"
-        "- 输出结构化、紧凑的建模求解报告，标明 schema/solution_path 与目标值、下界与 Gap，供下游直接消费。"
+        "You are `or_modeler`, an autonomous Operations Research Modeling & Algorithm Engineer.\n\n"
+        "## Mission\n"
+        "Read raw problem inputs (`list_files`, `read_file`, `read_problem_file`), formulate a clean structural model "
+        "in `outputs/<slug>-schema.json`, compute a genuine numerical solution in `outputs/<slug>-solution.json`, "
+        "and verify it via independent recomputation (`validate_solution_tool`).\n"
+        "Note: `outputs/<slug>-schema.json` must contain structure ONLY (`problem_id`, `problem_class`, `decision_vars`, "
+        "`constraints`, `preferred_solve_mode`) — NEVER include `objective`, `values`, `tour`, `routes`, `schedule`, `placements`, `status`, or `solver`.\n\n"
+        "## Solving Strategy (Two Tracks)\n"
+        "1. **Track 1 — Direct Dispatch or Mathematical Reduction to 27 Solvers**:\n"
+        "   Call `list_available_solvers`. If the problem matches or mathematically reduces to a registered solver "
+        "(consult `consult_or_skill(topic='reduction')`), format inputs if needed and invoke `execute_or_solver`.\n"
+        "   When using mathematical reduction, record `reduction_manifest` in `outputs/<slug>-solution.json` showing "
+        "`recomputed_original_objective` and `original_constraints` verified against raw problem parameters.\n"
+        "2. **Track 2 — Custom Python Solver + Physically Isolated Validator**:\n"
+        "   For open/custom/hybrid problems:\n"
+        "   a) Write `outputs/<slug>-custom_solver.py` (OR-Tools CP-SAT, HiGHS/`highspy`, `scipy.optimize.milp`, PuLP, NetworkX, etc.) "
+        "via `write_file`/`write_custom_solver_script` and run it via `execute_custom_script` or `run_shell` to produce "
+        "`outputs/<slug>-solution.json` with `problem_class=\"custom_mip\"` (or `\"custom\"`), decision variable assignments, "
+        "`validation_report=\"outputs/<slug>-custom-validate.json\"`, and `validator_script=\"outputs/<slug>-custom-validate.py\"`.\n"
+        "   b) Write a **physically separate** independent validator `outputs/<slug>-custom-validate.py` that:\n"
+        "      - NEVER imports `custom_solver` or any solver package (`ortools`, `highspy`, `pulp`, `gurobipy`, `pyvrp`, etc.);\n"
+        "      - reads raw problem inputs + `outputs/<slug>-solution.json` directly from disk;\n"
+        "      - recomputes the objective value and every constraint residual using pure Python / `math` / `numpy`;\n"
+        "      - writes `outputs/<slug>-custom-validate.json` (`{\"ok\": bool, \"objective\": float, \"checks\": [...]}`).\n"
+        "   c) Execute `outputs/<slug>-custom-validate.py` via `execute_custom_script`, then call `validate_solution_tool`.\n\n"
+        "## Self-Repair Loop\n"
+        "When a script errors or `validate_solution_tool` reports constraint/recomputation failures, inspect the exact stderr/violations, "
+        "patch your code with `edit_file` (or `read_file` first if context shifted), re-run solver & validator, and re-validate.\n\n"
+        "## Forbidden (Numbers Truth)\n"
+        "- Never guess, hardcode, or hand-write objective/solution values without running a real solver.\n"
+        "- Never set `proven_optimal=True` or `status=\"OPTIMAL\"` unless an exact solver proved optimality with zero gap (`status=\"FEASIBLE\"` otherwise).\n"
+        "- Never fake a validator that imports the solver or returns constant `{\"ok\": true}`."
     )
     return create_react_agent(
         _resolve_model(model), tools, prompt=append_domain_directive(prompt, domain_directive), name=MODELER_NAME
@@ -512,7 +589,17 @@ def create_writer_agent(
             appended to the system prompt (DomainCartridge mount).
     """
     tools = _merge_tools(
-        [read_problem_file, export_paper_markdown, search_or_knowledge, get_problem_formulation_template],
+        [
+            read_problem_file,
+            read_file,
+            edit_file,
+            list_files,
+            grep_search,
+            export_paper_markdown,
+            search_or_knowledge,
+            consult_or_skill,
+            get_problem_formulation_template,
+        ],
         extra_tools,
         cartridge_tools,
     )
@@ -520,26 +607,30 @@ def create_writer_agent(
         "你是 OR-Path 流水线中的【高水平运筹学学术论文撰写专家】(Writer)。\n\n"
         "【真数据来源声明】：论文中的所有表格与图必须以 Python 预渲染的核验真值表/真值图"
         "（如 outputs/<slug>-tables.md、outputs/<slug>-*.png）为唯一数据来源，"
-        "你只负责成文与排版组织，严禁重算或臆造任何数值。\n" + ""
+        "原样嵌入其中包含的双轨算法赛马对比表（Dual-Track Tournament Comparison）与校验指标表，"
+        "你只负责成文与排版组织，严禁重算或臆造任何数值。\n"
+        "【打回修订能力】：当被 `doc_gate` 或 `or_reviewer` 打回修改时，必须先用 `read_file` 阅读现有论文与评审意见，"
+        "再优先使用 `edit_file` 进行精准外科手术式修订（或使用 `export_paper_markdown` 完整覆盖写入），逐条消除所有缺陷。\n\n"
         "【核心定位与专职】\n"
         "严格遵循《运筹建模与学术论文规范 SOP》（docs/or-paper-sop.md），在 Verifier 确认"
         "校验通过 (ok: true) 后，基于真实解与研判工件撰写结构严密、公式规范、论证充分的高质量学术报告。\n\n"
         "标准六章学术规范（必须严格包含以下结构）：\n"
         "1. 摘要与关键指标速览 (MUST)：明确问题对象、目标值（objective）、求解器与状态、"
-        "并包含诚实求解性质声明（若未证明最优，必须明确标注『搜索/可行轨，未证明全局最优』）；\n"
+        "并包含诚实求解性质声明（若 `proven_optimal == False` 或未证明最优，严禁使用『全局最优』『globally optimal』等措辞，必须明确标注『可行解/搜索轨，未证明全局最优』）；\n"
         "2. 问题重述与建模假设 (MUST)：精准引用原始题面数据，列出完整工程/物理假设及其对模型的影响，"
         "给出清晰的符号说明表（决策变量、参数、集合）；\n"
         "3. 数学规划模型建立 (MUST)：严格使用 LaTeX 公式分别给出决策变量及定义域、"
         "目标函数方向与权重、逐条编号约束集合（C1, C2...）并阐明物理含义；模型中严禁提前填入最优值；\n"
-        "4. 求解策略与算子选型说明 (MUST)：论证算法选型理由、定性/定量分析算法复杂度与收敛性、"
+        "4. 求解策略与算子选型说明 (MUST)：论证算法选型理由、双轨求解策略对比、定性/定量分析算法复杂度与收敛性、"
         "明确求解器参数（时间上限、间隙 gap、随机种子）；\n"
-        "5. 数值计算结果与敏感性分析 (MUST)：所有结果数值必须严格来自 solution.json 并标注重算一致；"
+        "5. 数值计算结果与敏感性分析 (MUST)：所有结果数值必须严格来自 solution.json 与 outputs/<slug>-tables.md 并标注重算一致；"
         "给出核心指标汇总表；至少变动一项关键参数进行敏感性分析，汇报真实重算变化；\n"
         "6. 模型评价、优缺点与工业落地建议 (MUST)：客观剖析模型优缺点与局限性清单，"
         "给出可落地的工业工程部署方案，清晰区分『本文已解决』与『未来工作』。\n\n"
         "硬性纪律（不可妥协）：\n"
         "- Numbers Truth：论文中的所有目标值、开销、指标必须严格来自 solution.json，严禁虚构、外推或凑数；\n"
-        "- 完整论文必须调用 export_paper_markdown 写入 papers/<slug>.md（或指定路径），严禁在对话截断输出；\n"
+        "- 若 `proven_optimal == False`，全文绝对禁止出现『全局最优』『exact global optimum』字样；\n"
+        "- 完整论文必须调用 export_paper_markdown 或 edit_file 写入 papers/<slug>.md（或指定路径），严禁在对话截断输出；\n"
         "- 对话返回仅保留一句话总结及导出的论文路径。"
     )
     return create_react_agent(
@@ -550,6 +641,8 @@ def create_writer_agent(
 def create_reviewer_agent(
     model: Any = None,
     domain_directive: str = "",
+    extra_tools: list[Any] | None = None,
+    cartridge_tools: list[Any] | None = None,
 ) -> Any:
     """Create the dedicated ``or_reviewer`` agent (adversarial internal peer reviewer).
 
@@ -565,9 +658,24 @@ def create_reviewer_agent(
         domain_directive: Optional domain-specific modeling prompt fragment
             appended to the system prompt (DomainCartridge mount).
     """
-    tools = _merge_tools([read_problem_file, export_paper_markdown, validate_solution_tool])
+    tools = _merge_tools(
+        [
+            read_problem_file,
+            read_file,
+            grep_search,
+            list_files,
+            run_shell,
+            validate_solution_tool,
+            export_paper_markdown,
+        ],
+        extra_tools,
+        cartridge_tools,
+    )
     prompt = (
         "你是 OR-Path 流水线中的【严苛对立同行评审专家】(Reviewer)。\n\n"
+        "【主动核查工具】：先用 `read_file` / `grep_search` / `list_files` 核对论文与数据表，"
+        "并可主动调用 `validate_solution_tool` 或 `run_shell` 运行确定性核验（例如 `r1_cite_check.py`、`r2_numeric_check.py`、"
+        "`validate_solution.py`）获取客观实证后再下结论，严禁凭空猜测。\n\n"
         "【核心定位与专职】\n"
         "扮演顶尖期刊资深审稿人，坚持批判性思维，专门寻找论文与模型中的漏洞、数字不实与逻辑硬伤。\n\n"
         "十项严苛自审核对清单（依据 docs/or-paper-sop.md §6）：\n"

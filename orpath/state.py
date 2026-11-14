@@ -84,6 +84,19 @@ class ORPathState(TypedDict):
     human_steer_utc: NotRequired[str]
     human_steer_fresh: NotRequired[bool]
     steer_pause: NotRequired[bool]
+    # Phase 0: explicit fixture replay authorization & data provenance
+    is_replay: NotRequired[bool]
+    fixture_ref: NotRequired[str]
+    replay_authorized: NotRequired[bool]
+    blocked_reason: NotRequired[str]
+    data_source: NotRequired[str]
+    # Phase 1: single-agent fast mode & deferred paper generation
+    run_mode: NotRequired[Literal["fast", "deep"]]
+    skip_paper: NotRequired[bool]
+    paper_quality: NotRequired[Literal["llm_writer", "template_render", "skipped", ""]]
+    paper_degraded_reason: NotRequired[str]
+    llm_model: NotRequired[str]
+    force_live_agent: NotRequired[bool]
 
 
 # Nodes allowed to create/overwrite solution.json content (numbers truth).
@@ -162,6 +175,15 @@ def make_initial_orpath_state() -> ORPathState:
         complexity_tier="",  # type: ignore[literal-required]
         profile_path="",
         workdir="",
+        is_replay=False,
+        fixture_ref="",
+        replay_authorized=False,
+        blocked_reason="",
+        data_source="",
+        run_mode="deep",
+        skip_paper=False,
+        paper_quality="",
+        paper_degraded_reason="",
     )
 
 

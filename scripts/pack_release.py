@@ -40,7 +40,6 @@ INCLUDE_DIRS = [
     "knowledge",
     "docs",
     "demo",
-    "experiments",
 ]
 
 EXCLUDE_DIR_NAMES = {

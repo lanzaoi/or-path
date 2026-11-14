@@ -93,7 +93,7 @@ def cmd_status(root: Path, thread_id: str) -> int:
 def _load_state_from_checkpoint(app: Any, thread_id: str) -> dict[str, Any] | None:
     cfg = _config(thread_id)
     snap = app.get_state(cfg)
-    if snap is None or snap.values is None:
+    if snap is None or not snap.values or not snap.values.get("slug"):
         return None
     return dict(snap.values)
 
@@ -149,8 +149,8 @@ def cmd_run(args: argparse.Namespace) -> int:
     # Install home stays on sys.path for package imports (ROOT already inserted).
     _ = orpath_home()
     write_stage_map_files(root)
-    thread_id = args.thread_id or f"{args.slug or args.problem_id}-{uuid.uuid4().hex[:8]}"
-    slug = args.slug or f"orpath-{args.problem_id}"
+    thread_id = args.thread_id or f"{args.slug or args.problem_id or 'case'}-{uuid.uuid4().hex[:8]}"
+    slug = args.slug or f"orpath-{args.problem_id or 'case'}"
 
     # D2: human-steer resume_from when CLI --from-stage empty
     from orpath.human_steer import apply_steer_to_state, resume_from_steer
@@ -234,12 +234,27 @@ def cmd_run(args: argparse.Namespace) -> int:
                     ),
                     flush=True,
                 )
+            is_replay = bool(getattr(args, "is_replay", False))
+            fixture_ref = str(getattr(args, "fixture_ref", "") or "").strip()
+            pid_clean = str(getattr(args, "problem_id", "") or "").strip()
+            replay_auth: bool | None
+            if is_replay or fixture_ref:
+                replay_auth = True
+            elif (not skip_intake) or (not pid_clean):
+                replay_auth = False
+            else:
+                replay_auth = None
+            run_mode_val = str(getattr(args, "run_mode", "deep") or "deep").strip().lower()
+            if run_mode_val not in {"fast", "deep"}:
+                run_mode_val = "deep"
+            sp_arg = getattr(args, "skip_paper", None)
+            skip_paper_val = bool(sp_arg) if sp_arg is not None else (run_mode_val == "fast")
             initial = _default_initial(
                 root=root,
                 slug=slug,
-                problem_id=args.problem_id,
+                problem_id=pid_clean,
                 problem_class=args.problem_class or "",
-                solve_mode=args.solve_mode,
+                solve_mode=str(getattr(args, "solve_mode", "") or ""),
                 knowledge_mode=(
                     __import__("orpath.nodes", fromlist=["_resolve_knowledge_mode"])._resolve_knowledge_mode(
                         args.knowledge_mode
@@ -254,6 +269,11 @@ def cmd_run(args: argparse.Namespace) -> int:
                 intake_assets_dir=str(getattr(args, "intake_assets", "") or ""),
                 human_confirm_intake=bool(getattr(args, "human_confirm_intake", False)),
                 intake_confirmed=bool(getattr(args, "intake_confirmed", False)),
+                is_replay=is_replay,
+                fixture_ref=fixture_ref,
+                replay_authorized=replay_auth,
+                run_mode=run_mode_val,
+                skip_paper=skip_paper_val,
             )
             # D2: merge human-steer into seed (solve_mode / pi fields)
             steer_seed = apply_steer_to_state(initial, workdir=root, boundary=None)
@@ -348,6 +368,10 @@ def cmd_run(args: argparse.Namespace) -> int:
             "orpath_checkpoint_id": final.get("orpath_checkpoint_id"),
             "last_error": final.get("last_error"),
             "solver_tune": final.get("solver_tune"),
+            "run_mode": final.get("run_mode") or "deep",
+            "skip_paper": bool(final.get("skip_paper", False)),
+            "paper_quality": final.get("paper_quality") or "",
+            "paper_degraded_reason": final.get("paper_degraded_reason") or "",
             "product_nodes": PRODUCT_NODES,
             "pipeline": final.get("pipeline") or "product",
         }
@@ -366,6 +390,140 @@ def cmd_run(args: argparse.Namespace) -> int:
             except Exception:
                 pass
             conn = None
+
+
+def cmd_paper(args: argparse.Namespace) -> int:
+    """Deferred / on-demand academic paper workflow over existing solved artifacts."""
+    root = _resolve_data_root(args)
+    apply_workdir(root)
+    slug = str(args.slug or "").strip()
+    if not slug:
+        print(json.dumps({"ok": False, "error": "slug is required"}), file=sys.stderr)
+        return 1
+    sol_path = root / "outputs" / f"{slug}-solution.json"
+    if not sol_path.is_file():
+        print(
+            json.dumps({"ok": False, "error": f"solution missing: {sol_path}"}),
+            file=sys.stderr,
+        )
+        return 1
+    try:
+        sol_data = json.loads(sol_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        print(
+            json.dumps({"ok": False, "error": f"invalid solution json: {exc}"}),
+            file=sys.stderr,
+        )
+        return 1
+    sol_meta = sol_data.get("meta") if isinstance(sol_data, dict) and isinstance(sol_data.get("meta"), dict) else {}
+    if not isinstance(sol_data, dict) or str(sol_data.get("status") or "").upper() == "BLOCKED" or sol_meta.get("blocked"):
+        reason = str(sol_meta.get("reason") or "solution is BLOCKED")
+        print(
+            json.dumps({"ok": False, "error": f"solution blocked: {reason}"}),
+            file=sys.stderr,
+        )
+        return 1
+
+    from_stage = str(getattr(args, "from_stage", "") or "draft_paper").strip()
+    if from_stage not in {"explain", "draft_paper", "cite_pack", "review_pack", "provenance"}:
+        from_stage = "draft_paper"
+    thread_id = str(getattr(args, "thread_id", "") or "").strip() or slug
+    live_sa = _resolve_live_subagent(args)
+
+    saver, conn = open_sqlite_checkpointer(_db_path(root))
+    try:
+        app = build_graph(checkpointer=saver)
+        cfg = _config(thread_id)
+        existing = _load_state_from_checkpoint(app, thread_id)
+        if existing is None:
+            pid = str(sol_data.get("problem_id") or slug)
+            pc = str(sol_data.get("problem_class") or "")
+            sm = str(sol_data.get("solver") or sol_data.get("solve_mode") or "auto")
+            k_mode = __import__("orpath.nodes", fromlist=["_resolve_knowledge_mode"])._resolve_knowledge_mode(
+                getattr(args, "knowledge_mode", "hybrid")
+            )
+            existing = _default_initial(
+                root=root,
+                slug=slug,
+                problem_id=pid,
+                problem_class=pc,
+                solve_mode=sm,
+                knowledge_mode=k_mode,
+                live_subagent=live_sa,
+                thread_id=thread_id,
+                is_replay=bool(sol_meta.get("is_replay")),
+                fixture_ref=str(sol_meta.get("fixture_ref") or ""),
+                replay_authorized=bool(sol_meta.get("replay_authorized", True)),
+                run_mode="deep",
+                skip_paper=False,
+            )
+            outputs_dir = root / "outputs"
+            if (outputs_dir / f"{slug}-schema.json").is_file():
+                existing["schema_path"] = str(outputs_dir / f"{slug}-schema.json")
+                existing["gate_schema_ok"] = True
+            existing["solution_path"] = str(sol_path)
+            if (outputs_dir / f"{slug}-validate.json").is_file():
+                existing["validate_path"] = str(outputs_dir / f"{slug}-validate.json")
+            existing["gate_validate_ok"] = True
+            for cand in (outputs_dir / f"{slug}-research.md", root / "notes" / f"{slug}-research.md"):
+                if cand.is_file():
+                    existing["research_path"] = str(cand)
+                    break
+            for cand in (outputs_dir / f"{slug}-retrieval.json", root / "notes" / f"{slug}-retrieval.json"):
+                if cand.is_file():
+                    existing["retrieval_path"] = str(cand)
+                    break
+            for cand in (outputs_dir / f"{slug}-explain.md", root / "notes" / f"{slug}-explain.md"):
+                if cand.is_file():
+                    existing["explain_path"] = str(cand)
+                    break
+            for cand in (outputs_dir / f"{slug}-plan.md", outputs_dir / ".plans" / f"{slug}.md"):
+                if cand.is_file():
+                    existing["plan_path"] = str(cand)
+                    break
+        else:
+            existing["skip_paper"] = False
+            existing["run_mode"] = "deep"
+            existing["paper_quality"] = ""
+            existing["paper_degraded_reason"] = ""
+            existing["revise_count"] = 0
+            if live_sa is not None:
+                existing["live_subagent"] = live_sa
+            if not existing.get("solution_path"):
+                existing["solution_path"] = str(sol_path)
+            existing["gate_validate_ok"] = True
+
+        existing["human_required"] = False
+        existing["steer_pause"] = False
+        existing["last_error"] = ""
+        existing["stage"] = from_stage
+        as_node = _PREDECESSORS.get(from_stage, "explain")
+        app.update_state(cfg, existing, as_node=as_node)
+        final = app.invoke(None, cfg)
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    paper_p = str(final.get("paper_path") or "")
+    paper_ok = bool(paper_p and Path(paper_p).is_file())
+    out = {
+        "ok": bool(paper_ok and not final.get("human_required")),
+        "slug": slug,
+        "thread_id": thread_id,
+        "from_stage": from_stage,
+        "paper_path": paper_p,
+        "paper_generated": paper_ok,
+        "paper_quality": final.get("paper_quality") or ("template_render" if paper_ok else "skipped"),
+        "paper_degraded_reason": final.get("paper_degraded_reason") or "",
+        "gate_r1_ok": bool(final.get("gate_r1_ok")),
+        "gate_r2_ok": bool(final.get("gate_r2_ok")),
+        "provenance_path": str(final.get("provenance_path") or ""),
+    }
+    print(json.dumps(out, indent=2, ensure_ascii=False))
+    return 0 if out["ok"] else 1
 
 
 def cmd_intake(args: argparse.Namespace) -> int:
@@ -407,12 +565,13 @@ def main() -> int:
             help="case data root: outputs/notes/papers/runs (sets ORPATH_WORKDIR)",
         )
         sp.add_argument("--thread-id", default="")
-        sp.add_argument("--problem-id", default="shortest_path")
+        sp.add_argument("--problem-id", default="")
         sp.add_argument("--problem-class", default="")
         sp.add_argument("--slug", default="")
         sp.add_argument(
             "--solve-mode",
             choices=(
+                "",
                 "mock",
                 "networkx",
                 "ortools",
@@ -424,7 +583,17 @@ def main() -> int:
                 "microgrid",
                 "microgrid_dispatch",
             ),
-            default="mock",
+            default="",
+        )
+        sp.add_argument(
+            "--is-replay",
+            action="store_true",
+            help="explicitly authorize fixture replay for benchmark/regression runs",
+        )
+        sp.add_argument(
+            "--fixture-ref",
+            default="",
+            help="explicit fixture id/path for authorized replay provenance",
         )
         sp.add_argument(
             "--knowledge-mode", choices=("off", "seed", "hybrid"), default="hybrid",
@@ -477,6 +646,24 @@ def main() -> int:
             action="store_true",
             help="mark intake brief accepted (with human_confirm_intake)",
         )
+        sp.add_argument(
+            "--run-mode",
+            choices=("fast", "deep"),
+            default="deep",
+            help="execution mode: fast (single-agent + optional skip paper) or deep",
+        )
+        sp.add_argument(
+            "--skip-paper",
+            action="store_true",
+            default=None,
+            help="skip paper drafting/citation/review and go straight from explain to provenance",
+        )
+        sp.add_argument(
+            "--no-skip-paper",
+            dest="skip_paper",
+            action="store_false",
+            help="force generating paper even when --run-mode fast",
+        )
 
     run_p = sub.add_parser("run", help="run or resume product graph")
     add_common(run_p)
@@ -502,6 +689,16 @@ def main() -> int:
         help="problem surface file (repeatable)",
     )
     inp.add_argument("--assets", default="", dest="intake_assets")
+
+    pp = sub.add_parser("paper", help="deferred/on-demand academic paper generation")
+    pp.add_argument("--root", type=Path, default=ROOT)
+    pp.add_argument("--workdir", type=Path, default=None)
+    pp.add_argument("--slug", required=True)
+    pp.add_argument("--thread-id", default="")
+    pp.add_argument("--from-stage", default="draft_paper", help="re-entry stage (default: draft_paper)")
+    pp.add_argument("--knowledge-mode", choices=("off", "seed", "hybrid"), default="hybrid")
+    pp.add_argument("--live-subagent", action="store_true")
+    pp.add_argument("--no-live-subagent", action="store_true")
 
     # bare args = run (compat with thin wrappers)
     p.add_argument("--problem-id", default=None)
@@ -530,6 +727,11 @@ def main() -> int:
     p.add_argument("--intake-assets", default="")
     p.add_argument("--human-confirm-intake", action="store_true")
     p.add_argument("--intake-confirmed", action="store_true")
+    p.add_argument("--is-replay", action="store_true")
+    p.add_argument("--fixture-ref", default="")
+    p.add_argument("--run-mode", choices=("fast", "deep"), default="deep")
+    p.add_argument("--skip-paper", action="store_true", default=None)
+    p.add_argument("--no-skip-paper", dest="skip_paper", action="store_false")
 
     args = p.parse_args()
 
@@ -539,17 +741,19 @@ def main() -> int:
         return cmd_status(_resolve_data_root(args), args.thread_id)
     if args.cmd == "intake":
         return cmd_intake(args)
+    if args.cmd == "paper":
+        return cmd_paper(args)
     if args.cmd == "run" or args.cmd is None:
         if args.cmd is None:
             if args.problem_id is None:
-                args.problem_id = "shortest_path"
+                args.problem_id = ""
             if args.solve_mode is None:
-                args.solve_mode = "mock"
+                args.solve_mode = ""
             if args.knowledge_mode is None:
                 args.knowledge_mode = "hybrid"
         else:
             if getattr(args, "problem_id", None) is None:
-                args.problem_id = "shortest_path"
+                args.problem_id = ""
         return cmd_run(args)
     p.print_help()
     return 1

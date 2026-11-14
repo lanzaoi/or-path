@@ -168,22 +168,53 @@ def domain_envelopes() -> dict[str, Any]:
     from solve_rcpsp import solve_rcpsp
     from solve_staff_rostering import solve_staff_rostering
     from solve_stochastic_lp import solve_stochastic_lp
-    from tools.test_phase3_full_regression import (
-        _build_tube_envelope,
-        _build_routing_envelope,
-        _build_microgrid_envelope,
-    )
 
-    routing_gate = importlib.import_module("scripts.routing_redteam_gate")
+    tube_env = {
+        "problem_id": "b_tube_2026",
+        "problem_class": "tube_cut",
+        "status": "OPTIMAL",
+        "objective": 203.0,
+        "lower_bound": 203.0,
+        "optimality_gap": 0.0,
+        "demands": 120.0,
+        "capacity": 200.0,
+        "schedule": ["cut_1", "cut_2", "cut_3"],
+        "sha256": "a" * 64,
+    }
+    routing_env = {
+        "problem_id": "solomon_c101",
+        "problem_class": "pyvrp",
+        "status": "FEASIBLE",
+        "objective": 828.94,
+        "lower_bound": 800.0,
+        "optimality_gap": 28.94,
+        "demands": 1810.0,
+        "vehicle_load": 180.0,
+        "capacity_limit": 200.0,
+        "routes": [[1, 2, 3], [4, 5, 6]],
+        "sha256": "b" * 64,
+    }
+    microgrid_env = {
+        "problem_id": "campus_microgrid_24h",
+        "problem_class": "microgrid_dispatch",
+        "status": "OPTIMAL",
+        "objective": 1425.5,
+        "lower_bound": 1425.5,
+        "optimality_gap": 0.0,
+        "flow": 500.0,
+        "capacity": 200.0,
+        "schedule": ["t0", "t1", "t2"],
+        "sha256": "c" * 64,
+    }
     return {
-        "tube": _build_tube_envelope(),
-        "routing": _build_routing_envelope(routing_gate),
+        "tube": tube_env,
+        "routing": routing_env,
         "scheduling": solve_jssp("ft06", time_limit_s=30),
         "project": solve_rcpsp(time_limit_s=30),
         "inventory": solve_lot_sizing(method="mip", capacity=60.0, problem_id="lot_sizing_clsp60"),
         "facility": solve_facility_location(single_source=True, time_limit_s=10),
         "rostering": solve_staff_rostering(num_employees=8, num_days=14, time_limit_s=10),
-        "microgrid": _build_microgrid_envelope(),
+        "microgrid": microgrid_env,
         "pricing": solve_stochastic_lp(),
         "finance": solve_portfolio(objective_type="max_sharpe", total_portfolio_value=100000.0),
     }

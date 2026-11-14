@@ -16,6 +16,7 @@ from schema_models import FORBIDDEN_SCHEMA_KEYS, walk_forbidden_keys  # noqa: E4
 # Prefer package registry when available (product install)
 try:
     from orpath.domain_registry import (  # type: ignore
+        CUSTOM_OPTIMIZATION_CLASSES,
         MICROGRID_SCHEMA_KEYS,
         POLYOMINO_SCHEMA_KEYS,
         is_polyomino_class,
@@ -23,6 +24,14 @@ try:
         schema_class_ok,
     )
 except Exception:  # noqa: BLE001 — tools/ may run without package on path
+    CUSTOM_OPTIMIZATION_CLASSES = frozenset(
+        {
+            "custom_mip",
+            "custom",
+            "general_optimization",
+            "custom_reduced",
+        }
+    )
     MICROGRID_SCHEMA_KEYS = frozenset(
         {
             "battery",
@@ -153,6 +162,18 @@ def check_schema(data: dict) -> list[str]:
             errors.append(
                 "microgrid_dispatch requires structural keys "
                 "(battery|storage|pv|load|prices|grid|time_horizon|intervals|efficiency|…)"
+            )
+    elif pc in CUSTOM_OPTIMIZATION_CLASSES:
+        custom_structural_keys = (
+            "constraints",
+            "decision_vars",
+            "variables",
+            "reduction_manifest",
+            "objective_sense",
+        )
+        if not any(k in top for k in custom_structural_keys):
+            errors.append(
+                f"{pc} requires structural keys ({' or '.join(custom_structural_keys)})"
             )
     elif not schema_class_ok(pc):
         errors.append(f"unknown problem_class: {pc_raw or pc}")

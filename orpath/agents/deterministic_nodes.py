@@ -49,8 +49,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 
 #: Suffixes treated as "parseable input payloads" by the front probe.
 DATA_SUFFIXES = {
-    ".csv", ".tsv", ".txt", ".md", ".json", ".jsonl", ".xlsx", ".xls",
-    ".dat", ".xml", ".py",
+    ".csv", ".tsv", ".txt", ".md", ".json", ".jsonl", ".xlsx", ".xlsm", ".xls",
+    ".docx", ".pdf", ".dat", ".xml", ".py",
 }
 #: Directories never scanned inside a case folder (harness state, not inputs).
 _SKIP_DIRS = {"outputs", "notes", "papers", "runs", "__pycache__", ".git", "tools"}
@@ -69,9 +69,9 @@ DOMAIN_KEYWORDS: dict[str, tuple[str, ...]] = {
     "pricing": ("stochastic", "pricing", "farmer", "two_stage", "two-stage", "随机", "定价", "两阶段"),
     "project": ("rcpsp", "psplib", "project_scheduling", "工期", "cumulative", "j30", "j60"),
     "portfolio": ("portfolio", "markowitz", "risk_parity", "投资组合", "资产配置"),
-    "microgrid": ("microgrid", "micro_grid", "smart_grid", "photovoltaic", "pv", "储能", "光伏", "电网", "battery", "soc", "dispatch"),
-    "tube": ("tube", "圆管", "cutting", "bfd", "cutting_stock", "余料"),
-    "polyomino": ("polyomino", "tiling", "骨牌", "多联", "覆盖", "铺放"),
+    "microgrid": ("microgrid", "micro_grid", "smart_grid", "photovoltaic", "pv", "储能", "光伏", "电网", "微网", "微电网", "battery", "soc", "dispatch"),
+    "tube": ("tube", "圆管", "cutting", "bfd", "cutting_stock", "余料", "下料"),
+    "polyomino": ("polyomino", "tiling", "骨牌", "多联", "多联骨牌", "覆盖", "铺放"),
 }
 
 #: problem_class keyword guess (canonical names only, via domain registry).
@@ -81,20 +81,20 @@ CLASS_KEYWORDS: dict[str, tuple[str, ...]] = {
     "tsp": ("tsp", "旅行商"),
     "vrp": ("cvrp", "vrp", "车辆路径"),
     "pyvrp": ("pyvrp", "vrptw", "vrp_tw"),
-    "jssp": ("jssp", "fjssp", "job_shop", "jobshop", "作业车间"),
-    "rcpsp": ("rcpsp", "project_scheduling", "psplib"),
-    "staff_rostering": ("rostering", "排班"),
+    "jssp": ("jssp", "fjssp", "job_shop", "jobshop", "作业车间", "车间调度"),
+    "rcpsp": ("rcpsp", "project_scheduling", "psplib", "项目排程"),
+    "staff_rostering": ("rostering", "排班", "轮班"),
     "bin_packing": ("binpack", "bin_packing", "装箱"),
     "facility_location": ("cflp", "facility", "选址"),
-    "hub_location": ("hub", "p-hub"),
+    "hub_location": ("hub", "p-hub", "枢纽"),
     "portfolio_opt": ("portfolio", "markowitz", "投资组合"),
     "lot_sizing": ("lot_sizing", "lotsizing", "wagner", "库存"),
     "stochastic_lp": ("stochastic_lp", "two_stage", "两阶段随机"),
     "qubo_ising": ("qubo", "ising", "max_cut", "maxcut"),
     "game_theory": ("bimatrix", "nash", "博弈"),
-    "tube_cut": ("tube", "圆管", "cutting"),
-    "polyomino_cover": ("polyomino", "骨牌", "tiling"),
-    "microgrid_dispatch": ("microgrid", "微网", "储能"),
+    "tube_cut": ("tube", "圆管", "cutting", "下料"),
+    "polyomino_cover": ("polyomino", "骨牌", "多联", "多联骨牌", "tiling"),
+    "microgrid_dispatch": ("microgrid", "微网", "微电网", "储能", "光伏"),
 }
 
 __all__ = [
@@ -308,7 +308,35 @@ def file_overview(path: Path) -> dict[str, Any]:
     elif suffix in {".json", ".jsonl"}:
         out = _overview_json(path)
     elif suffix in {".xlsx", ".xlsm"}:
-        out = _overview_xlsx(path)
+        from tools.intake_assets import probe_spreadsheet
+
+        meta = probe_spreadsheet(path)
+        if meta.get("error"):
+            out = {"format": "xlsx", "error": meta["error"]}
+        else:
+            sheets = {
+                s["name"]: {"rows": s.get("rows_est", 0), "fields": s.get("columns", [])}
+                for s in (meta.get("sheets") or [])
+            }
+            out = {
+                "format": "xlsx",
+                "sheets": sheets,
+                "rows": sum(int(s.get("rows_est") or 0) for s in (meta.get("sheets") or [])),
+                "cols": max((len(s.get("columns") or []) for s in (meta.get("sheets") or [])), default=0),
+            }
+    elif suffix == ".docx":
+        from tools.intake_assets import read_statement_text
+
+        txt = read_statement_text(path, max_chars=2000)
+        out = {"format": "docx", "chars": len(txt), "bytes": size}
+    elif suffix == ".pdf":
+        from tools.intake_assets import extract_pdf_text_safe
+
+        try:
+            txt, pages, _ = extract_pdf_text_safe(path, max_chars=2000, min_chars=0)
+            out = {"format": "pdf", "pages": pages, "chars": len(txt), "bytes": size}
+        except Exception as exc:  # noqa: BLE001
+            out = {"format": "pdf", "error": str(exc), "bytes": size}
     elif suffix in {".xls"}:
         return {"format": "xls", "bytes": size, "note": "legacy xls — row scale unknown without xlrd"}
     elif suffix in {".md", ".txt", ".py", ".xml", ".dat"}:
@@ -419,14 +447,18 @@ def _preflight(state: Mapping[str, Any], t0: float) -> dict[str, Any]:
 
     # Extract compact statement snippet for fallback classification & zero-LLM knowledge pack
     stmt_hint = str(state.get("problem_text") or "")[:300]
-    if not stmt_hint:
+    if (not stmt_hint) or (not domain) or (not problem_class):
+        from tools.intake_assets import read_statement_text
+
         for p in files:
-            if p.suffix.lower() in {".md", ".txt"}:
-                try:
-                    stmt_hint = p.read_text(encoding="utf-8", errors="replace")[:300]
+            if p.suffix.lower() in {".md", ".txt", ".docx", ".pdf"}:
+                txt = read_statement_text(p, max_chars=800).strip()
+                if txt:
+                    if not stmt_hint:
+                        stmt_hint = txt[:300]
+                    else:
+                        stmt_hint = f"{stmt_hint}\n{txt[:300]}"
                     break
-                except OSError:
-                    continue
     if not domain and stmt_hint:
         guessed_domain = guess_domain(stmt_hint)
         domain = guessed_domain

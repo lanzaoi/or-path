@@ -248,10 +248,11 @@ def test_cartridge_tools_are_merged(model: Any) -> None:
 
 def test_cartridge_tools_are_de_duplicated(model: Any) -> None:
     """Passing an already-mounted tool must not duplicate the binding."""
+    default_tools = _worker_tools(create_modeler_agent(model=model))
     agent = create_modeler_agent(model=model, cartridge_tools=[read_problem_file])
     tools = _worker_tools(agent)
     assert tools.count("read_problem_file") == 1
-    assert len(tools) == 4
+    assert len(tools) == len(default_tools) == len(set(tools))
 
 
 def test_cartridge_tools_none_is_noop(model: Any) -> None:
@@ -372,7 +373,7 @@ def test_cartridge_injection_does_not_break_isolation() -> None:
 # --------------------------------------------------------------------------- #
 def test_read_problem_file_is_base_tool() -> None:
     assert isinstance(read_problem_file, BaseTool)
-    assert set(read_problem_file.args_schema.model_fields) == {"file_path", "max_chars"}
+    assert set(read_problem_file.args_schema.model_fields) == {"file_path", "max_chars", "offset"}
     assert read_problem_file.args_schema.model_fields["file_path"].is_required()
 
 
@@ -458,15 +459,14 @@ def test_export_paper_markdown_reports_failure(tmp_path: Path) -> None:
 def test_analyst_prompt_profile_classification_and_tiering(model: Any) -> None:
     agent = create_analyst_agent(model=model)
     prompt = _worker_prompt(agent)
-    assert "Analyst" in prompt or "or_analyst" in prompt
-    assert "read_problem_file" in prompt
-    assert "数据画像" in prompt
-    assert "数学分类" in prompt
-    assert "Tier-A" in prompt and "Tier-B" in prompt
-    assert "防角色越界" in prompt or "Anti-Overstepping" in prompt
-    assert "严禁编写任何求解代码" in prompt
-    assert "严禁猜解" in prompt
-    assert "500" in prompt
+    assert "or_analyst" in prompt or "Analyst" in prompt
+    assert "read_problem_file" in prompt and "read_file" in prompt
+    assert "profile.json" in prompt
+    assert "complexity tier" in prompt.lower()
+    assert "or-reduction-playbook" in prompt
+    assert "Never fabricate" in prompt
+    assert "Never write full solver" in prompt
+    assert "500" not in prompt
 
 
 def test_modeler_prompt_schema_gap_and_no_hand_solved_values(model: Any) -> None:
@@ -475,11 +475,11 @@ def test_modeler_prompt_schema_gap_and_no_hand_solved_values(model: Any) -> None
     assert "schema.json" in prompt
     assert "list_available_solvers" in prompt
     assert "execute_or_solver" in prompt
-    assert "execute_python_sandbox" in prompt
+    assert "execute_custom_script" in prompt
+    assert "validate_solution_tool" in prompt
     assert "proven_optimal" in prompt
-    assert "下界与 Gap" in prompt
-    assert "严禁手写解 JSON 数值" in prompt
-    assert "防角色越界" in prompt or "Anti-Overstepping" in prompt
+    assert "Never guess, hardcode, or hand-write" in prompt
+    assert "physically separate" in prompt.lower()
 
 
 def test_writer_prompt_prerendered_tables_and_six_chapters(model: Any) -> None:

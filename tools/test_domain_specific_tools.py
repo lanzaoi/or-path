@@ -57,60 +57,36 @@ GENERIC_TOOLS = {
 
 DOMAIN_SPECS: dict[str, dict[str, Any]] = {
     "routing": {
-        "module": "orpath.agents.domains.routing",
         "profile": "profile_routing_data",
         "inspect": "inspect_routing_solution",
-        "auditor": "create_routing_auditor_agent",
-        "solvers": ["create_routing_exact_bound_agent", "create_routing_hgs_agent", "create_routing_realities_agent"],
     },
     "scheduling": {
-        "module": "orpath.agents.domains.scheduling",
         "profile": "profile_scheduling_data",
         "inspect": "inspect_scheduling_solution",
-        "auditor": "create_jssp_auditor_agent",
-        "solvers": ["create_jssp_exact_bound_agent", "create_jssp_heuristic_agent", "create_jssp_realities_agent"],
     },
     "rostering": {
-        "module": "orpath.agents.domains.rostering",
         "profile": "profile_rostering_data",
         "inspect": "inspect_rostering_solution",
-        "auditor": "create_rostering_auditor_agent",
-        "solvers": ["create_rostering_exact_bound_agent", "create_rostering_heuristic_agent", "create_rostering_realities_agent"],
     },
     "inventory": {
-        "module": "orpath.agents.domains.inventory",
         "profile": "profile_inventory_data",
         "inspect": "inspect_inventory_solution",
-        "auditor": "create_inventory_auditor_agent",
-        "solvers": ["create_inventory_exact_bound_agent", "create_inventory_heuristic_agent", "create_inventory_realities_agent"],
     },
     "facility": {
-        "module": "orpath.agents.domains.facility",
         "profile": "profile_facility_data",
         "inspect": "inspect_facility_solution",
-        "auditor": "create_facility_auditor_agent",
-        "solvers": ["create_facility_exact_bound_agent", "create_facility_heuristic_agent", "create_facility_realities_agent"],
     },
     "pricing": {
-        "module": "orpath.agents.domains.pricing",
         "profile": "profile_pricing_data",
         "inspect": "inspect_pricing_solution",
-        "auditor": "create_pricing_auditor_agent",
-        "solvers": ["create_pricing_exact_bound_agent", "create_pricing_heuristic_agent", "create_pricing_realities_agent"],
     },
     "project": {
-        "module": "orpath.agents.domains.project",
         "profile": "profile_project_data",
         "inspect": "inspect_project_solution",
-        "auditor": "create_project_auditor_agent",
-        "solvers": ["create_project_exact_bound_agent", "create_project_heuristic_agent", "create_project_realities_agent"],
     },
     "finance": {
-        "module": "orpath.agents.domains.finance",
         "profile": "profile_portfolio_data",
         "inspect": "inspect_portfolio_solution",
-        "auditor": "create_finance_auditor_agent",
-        "solvers": ["create_finance_exact_bound_agent", "create_finance_heuristic_agent", "create_finance_realities_agent"],
     },
 }
 
@@ -136,47 +112,52 @@ def _agent_tool_names(agent: Any) -> set[str]:
 
 @pytest.mark.parametrize("domain", sorted(DOMAIN_SPECS))
 def test_domain_auditor_binds_profile_tool(domain: str, model: Any) -> None:
-    """Each auditor binds its domain-specific input profiler (not just generic)."""
+    """Each domain cartridge mounts its domain-specific input profiler onto the analyst."""
+    from orpath.agents.cartridges import cartridge_tools
+    from orpath.agents.workers import create_analyst_agent
+
     spec = DOMAIN_SPECS[domain]
-    mod = __import__(spec["module"], fromlist=[spec["auditor"]])
-    factory = getattr(mod, spec["auditor"])
-    agent = factory(model=model)
+    ctools = cartridge_tools(domain)
+    agent = create_analyst_agent(model=model, cartridge_tools=[ctools["profile_tool"]])
     names = _agent_tool_names(agent)
     assert spec["profile"] in names, (
-        f"{domain} auditor missing domain-specific profiler {spec['profile']!r}; "
+        f"{domain} analyst missing domain-specific profiler {spec['profile']!r}; "
         f"bound tools: {sorted(names)}"
     )
 
 
 @pytest.mark.parametrize("domain", sorted(DOMAIN_SPECS))
 def test_domain_solver_agents_bind_inspect_tool(domain: str, model: Any) -> None:
-    """Each exact-bound / heuristic / realities specialist binds the solution inspector."""
+    """Each domain cartridge mounts the solution inspector onto the modeler."""
+    from orpath.agents.cartridges import cartridge_tools
+    from orpath.agents.workers import create_modeler_agent
+
     spec = DOMAIN_SPECS[domain]
-    mod = __import__(spec["module"], fromlist=spec["solvers"])
-    for factory_name in spec["solvers"]:
-        factory = getattr(mod, factory_name)
-        agent = factory(model=model)
-        names = _agent_tool_names(agent)
-        assert spec["inspect"] in names, (
-            f"{domain} {factory_name} missing domain-specific inspector "
-            f"{spec['inspect']!r}; bound tools: {sorted(names)}"
-        )
+    ctools = cartridge_tools(domain)
+    agent = create_modeler_agent(model=model, cartridge_tools=[ctools["inspect_tool"]])
+    names = _agent_tool_names(agent)
+    assert spec["inspect"] in names, (
+        f"{domain} modeler missing domain-specific inspector {spec['inspect']!r}; "
+        f"bound tools: {sorted(names)}"
+    )
 
 
 @pytest.mark.parametrize("domain", sorted(DOMAIN_SPECS))
 def test_domain_agents_have_domain_specific_tools(domain: str, model: Any) -> None:
-    """No solver specialist is left with only the 5 generic tools."""
-    spec = DOMAIN_SPECS[domain]
-    mod = __import__(spec["module"], fromlist=spec["solvers"])
-    for factory_name in spec["solvers"]:
-        factory = getattr(mod, factory_name)
-        agent = factory(model=model)
-        names = _agent_tool_names(agent)
-        domain_specific = names - GENERIC_TOOLS
-        assert domain_specific, (
-            f"{domain} {factory_name} has NO domain-specific tool; "
-            f"bound: {sorted(names)}"
-        )
+    """No domain cartridge leaves modeler with only the generic tools."""
+    from orpath.agents.cartridges import cartridge_tools
+    from orpath.agents.workers import create_modeler_agent
+
+    ctools = cartridge_tools(domain)
+    agent = create_modeler_agent(
+        model=model,
+        cartridge_tools=[ctools["profile_tool"], ctools["inspect_tool"]],
+    )
+    names = _agent_tool_names(agent)
+    domain_specific = names - GENERIC_TOOLS
+    assert domain_specific, (
+        f"{domain} modeler has NO domain-specific tool; bound: {sorted(names)}"
+    )
 
 
 # --------------------------------------------------------------------------- #

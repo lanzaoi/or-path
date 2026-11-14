@@ -32,19 +32,24 @@ from pathlib import Path
 from typing import Any, Callable
 
 TEXT_SUFFIXES = {".md", ".txt", ".text", ".markdown"}
+DOCX_SUFFIXES = {".docx"}
+XLSX_SUFFIXES = {".xlsx", ".xlsm"}
 PDF_SUFFIXES = {".pdf"}
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp"}
 
 _PDF_TEXT_MIN_CHARS = 20
 _OCR_MIN_CHARS = 4
 
-# Default Windows install found on this machine (user ppocr / paddleocr 3.7)
-_DEFAULT_PADDLE_PY = Path(
-    os.environ.get(
-        "ORPATH_PADDLEOCR_PYTHON",
-        r"C:\Users\Lanzao\AppData\Local\Programs\Python\Python311\python.exe",
-    )
-)
+
+def _resolve_paddle_python() -> Path | None:
+    env_py = (os.environ.get("ORPATH_PADDLEOCR_PYTHON") or "").strip()
+    if env_py:
+        return Path(env_py)
+    found = shutil.which("paddleocr-python")
+    return Path(found) if found else None
+
+
+_DEFAULT_PADDLE_PY: Path | None = _resolve_paddle_python()
 
 
 @dataclass
@@ -100,8 +105,35 @@ def _rel_or_str(path: Path, root: Path | None) -> str:
 
 
 def extract_manual_stub(path: Path) -> tuple[str, int | None, list[str]]:
+    if not path.exists():
+        raise FileNotFoundError(f"file not found: {path}")
+    if path.is_dir():
+        raise IsADirectoryError(f"path is a directory, not a file: {path}")
+    suf = path.suffix.lower()
+    if suf in DOCX_SUFFIXES:
+        return extract_docx(path)
+    if suf in XLSX_SUFFIXES:
+        return extract_xlsx(path)
     text = path.read_text(encoding="utf-8", errors="replace")
     return text, 1, []
+
+
+def extract_docx(path: Path) -> tuple[str, int | None, list[str]]:
+    try:
+        from tools.intake_assets import extract_docx_text
+    except ImportError:  # pragma: no cover
+        from intake_assets import extract_docx_text
+
+    return extract_docx_text(path)
+
+
+def extract_xlsx(path: Path) -> tuple[str, int | None, list[str]]:
+    try:
+        from tools.intake_assets import extract_spreadsheet_text
+    except ImportError:  # pragma: no cover
+        from intake_assets import extract_spreadsheet_text
+
+    return extract_spreadsheet_text(path)
 
 
 def extract_pdf_text(path: Path) -> tuple[str, int | None, list[str]]:
@@ -276,13 +308,10 @@ def _ocr_via_paddle_api_cli(path: Path) -> tuple[str, list[str]]:
     if not token:
         raise RuntimeError("paddleocr api: no PADDLEOCR_ACCESS_TOKEN / ORPATH_PADDLEOCR_TOKEN")
 
-    exe = shutil.which("paddleocr") or str(
-        Path(os.environ.get("ORPATH_PADDLEOCR_CLI", "")) 
-        if os.environ.get("ORPATH_PADDLEOCR_CLI")
-        else Path(r"C:\Users\Lanzao\AppData\Local\Programs\Python\Python311\Scripts\paddleocr.exe")
-    )
-    if not Path(exe).is_file() and not shutil.which(str(exe)):
-        raise RuntimeError(f"paddleocr CLI not found: {exe}")
+    cli_env = (os.environ.get("ORPATH_PADDLEOCR_CLI") or "").strip()
+    exe = shutil.which("paddleocr") or (cli_env if cli_env else "")
+    if not exe or (not Path(exe).is_file() and not shutil.which(str(exe))):
+        raise RuntimeError(f"paddleocr CLI not found: {exe or '<unset>'}")
 
     out_json = Path(tempfile.mkstemp(suffix=".json")[1])
     try:
@@ -390,14 +419,18 @@ def _pdf_pages_to_images(path: Path, tmp: Path) -> list[Path]:
 def extract_image_ocr(path: Path) -> tuple[str, int | None, list[str]]:
     """OCR one image: paddle python → paddle api → rapidocr."""
     errors: list[str] = []
-    py = Path(os.environ.get("ORPATH_PADDLEOCR_PYTHON", str(_DEFAULT_PADDLE_PY)))
+    env_py = (os.environ.get("ORPATH_PADDLEOCR_PYTHON") or "").strip()
+    py = Path(env_py) if env_py else _DEFAULT_PADDLE_PY
     # allow skip paddle with ORPATH_OCR_BACKEND=rapidocr only via force
 
-    try:
-        text, w = _ocr_via_paddle_python(path, py)
-        return text + "\n", 1, w
-    except Exception as e:  # noqa: BLE001
-        errors.append(f"paddle_python: {e}")
+    if py is not None:
+        try:
+            text, w = _ocr_via_paddle_python(path, py)
+            return text + "\n", 1, w
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"paddle_python: {e}")
+    else:
+        errors.append("paddle_python: ORPATH_PADDLEOCR_PYTHON not configured")
 
     try:
         text, w = _ocr_via_paddle_api_cli(path)
@@ -478,6 +511,10 @@ def choose_backend(path: Path, forced: str | None = None) -> str:
     suf = path.suffix.lower()
     if suf in TEXT_SUFFIXES:
         return "manual_stub"
+    if suf in DOCX_SUFFIXES:
+        return "docx"
+    if suf in XLSX_SUFFIXES:
+        return "xlsx"
     if suf in PDF_SUFFIXES:
         return "pdf_text"
     if suf in IMAGE_SUFFIXES:
@@ -487,6 +524,8 @@ def choose_backend(path: Path, forced: str | None = None) -> str:
 
 _EXTRACTORS: dict[str, Callable[[Path], tuple[str, int | None, list[str]]]] = {
     "manual_stub": extract_manual_stub,
+    "docx": extract_docx,
+    "xlsx": extract_xlsx,
     "pdf_text": extract_pdf_text,
     "paddleocr": extract_paddleocr,
     "paddleocr_mcp": extract_paddleocr,  # same stack; MCP is external to this tool
@@ -641,6 +680,10 @@ def _kind_for(path: Path) -> str:
     suf = path.suffix.lower()
     if suf in TEXT_SUFFIXES:
         return "text"
+    if suf in DOCX_SUFFIXES:
+        return "docx"
+    if suf in XLSX_SUFFIXES:
+        return "xlsx"
     if suf in PDF_SUFFIXES:
         return "pdf"
     if suf in IMAGE_SUFFIXES:

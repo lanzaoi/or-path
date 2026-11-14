@@ -35,6 +35,15 @@ CANONICAL_CLASSES: frozenset[str] = frozenset(
     }
 )
 
+CUSTOM_OPTIMIZATION_CLASSES: frozenset[str] = frozenset(
+    {
+        "custom_mip",
+        "custom",
+        "general_optimization",
+        "custom_reduced",
+    }
+)
+
 # alias → canonical
 CLASS_ALIASES: dict[str, str] = {
     "sp": "shortest_path",
@@ -168,6 +177,15 @@ REGISTERED_SOLVE_CLASSES: frozenset[str] = frozenset(
     }
 )
 
+CUSTOM_OPTIMIZATION_CLASSES: frozenset[str] = frozenset(
+    {
+        "custom_mip",
+        "custom",
+        "general_optimization",
+        "custom_reduced",
+    }
+)
+
 # solve_mode names that map to polyomino adapter
 POLYOMINO_SOLVE_MODES: frozenset[str] = frozenset(
     {
@@ -249,6 +267,12 @@ def is_registered_solve_class(raw: str | None) -> bool:
 
 def is_polyomino_class(raw: str | None) -> bool:
     return normalize_problem_class(raw) == "polyomino_cover"
+
+
+def is_custom_optimization_class(raw: str | None) -> bool:
+    """True when problem_class designates a custom or reduced optimization task."""
+    pc = normalize_problem_class(raw)
+    return bool(pc and pc in CUSTOM_OPTIMIZATION_CLASSES)
 
 
 def schema_class_ok(raw: str | None) -> bool:

@@ -70,6 +70,8 @@ def _after_validate(
     state: ORPathState,
 ) -> Literal["explain", "solve", "model", "human_stop"]:
     st = state.get("stage")
+    if st == "human_stop" or state.get("human_required"):
+        return "human_stop"
     if st == "explain":
         return "explain"
     if st == "solve":
@@ -77,6 +79,15 @@ def _after_validate(
     if st == "model":
         return "model"
     return "human_stop"
+
+
+def _after_explain_fast(
+    state: ORPathState,
+) -> Literal["provenance", "draft_paper"]:
+    """Bypass paper drafting/citation/review in fast / skip-paper mode."""
+    if state.get("skip_paper"):
+        return "provenance"
+    return "draft_paper"
 
 
 def _after_revise(
@@ -143,7 +154,14 @@ def build_graph_product(checkpointer: Any | None = None) -> Any:
         },
     )
     g.add_edge("human_stop", "provenance")
-    g.add_edge("explain", "draft_paper")
+    g.add_conditional_edges(
+        "explain",
+        _after_explain_fast,
+        {
+            "provenance": "provenance",
+            "draft_paper": "draft_paper",
+        },
+    )
     g.add_edge("draft_paper", "cite_pack")
     g.add_edge("cite_pack", "review_pack")
     g.add_edge("review_pack", "revise_or_done")
@@ -207,7 +225,11 @@ def export_stage_map() -> dict[str, Any]:
                 "cond": "validate_gate",
             },
             {"from": "human_stop", "to": "provenance"},
-            {"from": "explain", "to": "draft_paper"},
+            {
+                "from": "explain",
+                "to": ["provenance", "draft_paper"],
+                "cond": "skip_paper",
+            },
             {"from": "draft_paper", "to": "cite_pack"},
             {"from": "cite_pack", "to": "review_pack"},
             {"from": "review_pack", "to": "revise_or_done"},
@@ -256,7 +278,8 @@ def write_stage_map_files(root: Path) -> None:
         "  gate_validate -->|model repair| model",
         "  gate_validate -->|ceiling| human_stop",
         "  human_stop --> provenance",
-        "  explain --> draft_paper --> cite_pack --> review_pack --> revise_or_done",
+        "  explain -->|skip_paper| provenance",
+        "  explain -->|paper| draft_paper --> cite_pack --> review_pack --> revise_or_done",
         "  revise_or_done -->|revise| draft_paper",
         "  revise_or_done -->|re-cite| cite_pack",
         "  revise_or_done -->|done| provenance",

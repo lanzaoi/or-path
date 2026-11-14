@@ -1,0 +1,81 @@
+  <div class="or-modal-backdrop" id="intakeModal">
+    <div class="or-modal">
+      <div class="or-modal-head">
+        <h3>📥 题目一键导入与工业案例库</h3>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div class="wb-tabs" id="intakeModalTabs">
+            <button type="button" class="wb-tab active" data-im-tab="presets">📚 内置赛题与工业案例</button>
+            <button type="button" class="wb-tab" data-im-tab="upload">📤 上传文件 (PDF/图/MD)</button>
+            <button type="button" class="wb-tab" data-im-tab="text">✍️ 粘贴题面文本</button>
+          </div>
+          <button type="button" class="wb-btn" id="btnCloseIntake">✕ 关闭</button>
+        </div>
+      </div>
+      <div class="or-modal-body">
+        <div id="imCasesBar" style="margin-bottom:12px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:12px"></div>
+        <div id="imTabPresets">
+          <div style="font-size:12px;color:var(--ink-48);margin-bottom:8px">点击任意内置赛题即可一键导入题面结构、查看子问题与物理约束，或直接启动求解流水线：</div>
+          <div class="preset-grid" id="presetGrid"></div>
+        </div>
+        <div id="imTabUpload" hidden>
+          <div style="display:grid;gap:10px">
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <label style="font-size:12px;font-weight:600">目标任务标识 (Slug):
+                <input type="text" id="upSlug" placeholder="留空自动按文件名生成" style="height:30px;padding:0 10px;border:1px solid var(--surface-2);border-radius:8px;margin-left:6px" />
+              </label>
+              <span style="font-size:11.5px;color:var(--ink-48)">支持 PDF 题面、扫描图片 (PNG/JPG)、Markdown 或 TXT（自动调用 pdf_text / RapidOCR 与结构化审题门禁）</span>
+            </div>
+            <div class="dropzone" id="upDropzone">
+              <div style="font-size:24px;margin-bottom:6px">📄</div>
+              <div style="font-size:13px;font-weight:600" id="upFileLabel">点击选择或拖拽题面文件到此处 (.pdf / .png / .jpg / .md / .txt)</div>
+              <div style="font-size:11.5px;color:var(--ink-48);margin-top:4px">自动提取子问题 Q1..Qn、目标层级、约束条件与数据附件清单（遵守 1.1 禁数字铁律）</div>
+              <input type="file" id="upFileInput" accept=".pdf,.png,.jpg,.jpeg,.webp,.md,.txt" style="display:none" />
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button type="button" class="wb-btn primary" id="btnDoUpload" style="height:34px;padding:0 18px">🔍 开始 OCR 识别与一键导入查看</button>
+              <button type="button" class="wb-btn success" id="btnDoUploadAndRun" style="height:34px;padding:0 18px">⚡ 导入并立即启动求解</button>
+              <span id="upStatus" style="font-size:12px;font-weight:600;color:var(--blue)"></span>
+            </div>
+          </div>
+        </div>
+        <div id="imTabText" hidden>
+          <div style="display:grid;gap:10px">
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <label style="font-size:12px;font-weight:600;flex:1;min-width:220px">题目标题:
+                <input type="text" id="txtTitle" placeholder="例如：车间多批次激光下料排产优化问题" style="width:100%;height:32px;padding:0 10px;border:1px solid var(--surface-2);border-radius:8px;margin-top:4px" />
+              </label>
+              <label style="font-size:12px;font-weight:600;width:200px">任务标识 (Slug):
+                <input type="text" id="txtSlug" placeholder="case-custom" style="width:100%;height:32px;padding:0 10px;border:1px solid var(--surface-2);border-radius:8px;margin-top:4px" />
+              </label>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                <span style="font-size:12px;font-weight:600">题面正文（支持问题一/二/三 或 Q1/Q2/Q3 自动分拆）:</span>
+                <button type="button" class="art-view-btn" id="btnFillSampleText">填入工业下料示例题面</button>
+              </div>
+              <textarea id="txtRaw" rows="9" placeholder="在此粘贴数学建模或工业运筹题面描述（包含背景、问题一/问题二、约束条件、目标说明等）…" style="width:100%;padding:10px;border:1px solid var(--surface-2);border-radius:8px;font-family:var(--mono);font-size:12px;line-height:1.5"></textarea>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button type="button" class="wb-btn primary" id="btnDoTextImport" style="height:34px;padding:0 18px">🔍 解析题面并一键查看</button>
+              <button type="button" class="wb-btn success" id="btnDoTextAndRun" style="height:34px;padding:0 18px">⚡ 解析并立即启动求解</button>
+              <span id="txtStatus" style="font-size:12px;font-weight:600;color:var(--blue)"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Artifact Content Viewer Modal -->
+  <div class="or-modal-backdrop" id="artifactModal">
+    <div class="or-modal">
+      <div class="or-modal-head">
+        <h3 id="artModalTitle">产物详情查看</h3>
+        <button type="button" class="wb-btn" id="btnCloseArtifact">✕ 关闭</button>
+      </div>
+      <div class="or-modal-body">
+        <div id="artModalPath" style="font-family:var(--mono);font-size:11px;color:var(--ink-48);margin-bottom:8px"></div>
+        <pre class="wb-pre" id="artModalContent" style="max-height:70vh"></pre>
+      </div>
+    </div>
+  </div>

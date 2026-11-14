@@ -36,6 +36,7 @@ from orpath.pipeline.common import (
     _rel_under,
     _fixture_base,
     _paper_whitelist_path,
+    _replay_authorized,
     _solution_is_blocked,
     _intake_front_door_active,
 )
@@ -89,7 +90,7 @@ def node_draft_paper(state: ORPathState) -> dict:
     paths = draft_paths(root, slug)
     paths["paper"].parent.mkdir(parents=True, exist_ok=True)
     pc = state.get("problem_class") or sol.get("problem_class")
-    fb = _fixture_base(root, state["problem_id"])
+    fb = _fixture_base(root, state["problem_id"], allow_fixture=_replay_authorized(state))
     meta0 = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
     blocked0 = str(sol.get("status") or "").upper() == "BLOCKED" or bool(meta0.get("blocked"))
     intake_on = _intake_front_door_active(state)
@@ -127,7 +128,7 @@ def node_draft_paper(state: ORPathState) -> dict:
             except ValueError:
                 rel = str(fb)
             cites = []
-            wl_path = fb / "whitelist_refs.json"
+            wl_path = _paper_whitelist_path(root, state, fb)
         if wl_path.is_file():
             try:
                 wl = json.loads(wl_path.read_text(encoding="utf-8"))
@@ -142,7 +143,11 @@ def node_draft_paper(state: ORPathState) -> dict:
                 else (
                     "notes://t2-vrp-ref"
                     if pc == "vrp"
-                    else "notes://t1-shortest-path-ref"
+                    else (
+                        "notes://t1-shortest-path-ref"
+                        if pc == "shortest_path"
+                        else f"notes://{pc or 'unregistered'}-ref"
+                    )
                 )
             ]
     source_lines = list(cites)
@@ -157,6 +162,7 @@ def node_draft_paper(state: ORPathState) -> dict:
         source_lines.append(str(state.get("intake_path")))
 
     revision_fb = state.get("last_error") if int(state.get("revise_count") or 0) > 0 else ""
+    quality_out: dict[str, Any] = {}
     body = draft_paper_with_writer(
         root=root,
         slug=slug,
@@ -175,6 +181,7 @@ def node_draft_paper(state: ORPathState) -> dict:
         template="or",
         revision_feedback=revision_fb or "",
         state=dict(state),
+        quality_out=quality_out,
     )
     meta = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
     if str(sol.get("status") or "").upper() == "BLOCKED" or meta.get("blocked"):
@@ -203,6 +210,8 @@ def node_draft_paper(state: ORPathState) -> dict:
         "stage": "cite_pack",
         "paper_path": str(paths["paper"]),
         "solution_path": str(sol_path),
+        "paper_quality": quality_out.get("paper_quality", "template_render"),
+        "paper_degraded_reason": quality_out.get("paper_degraded_reason", ""),
         "last_error": "",
     }
 
@@ -215,7 +224,7 @@ def node_cite_pack(state: ORPathState) -> dict:
     paper = Path(state["paper_path"])
     if not paper.is_file() and paths["draft"].is_file():
         paper = paths["draft"]
-    fb = _fixture_base(root, state["problem_id"])
+    fb = _fixture_base(root, state["problem_id"], allow_fixture=_replay_authorized(state))
     wl = _paper_whitelist_path(root, state, fb)
     sol_raw = state.get("solution_path")
     sol = Path(sol_raw) if sol_raw and str(sol_raw).strip() else (root / "outputs" / f"{slug}-solution.json")
@@ -317,7 +326,7 @@ def node_review_pack(state: ORPathState) -> dict:
     slug = state["slug"]
     paper = Path(state["paper_path"])
     sol = Path(state["solution_path"])
-    fb = _fixture_base(root, state["problem_id"])
+    fb = _fixture_base(root, state["problem_id"], allow_fixture=_replay_authorized(state))
     wl = _paper_whitelist_path(root, state, fb)
     paper_text = paper.read_text(encoding="utf-8") if paper.is_file() else ""
     review = root / "outputs" / f"{slug}-review.md"
@@ -483,7 +492,7 @@ def node_revise_or_done(state: ORPathState) -> dict:
         sol = json.loads(sol_p.read_text(encoding="utf-8")) if sol_p.is_file() else {}
     except Exception:
         sol = {}
-    fb = _fixture_base(root, state["problem_id"])
+    fb = _fixture_base(root, state["problem_id"], allow_fixture=_replay_authorized(state))
     wl_path = _paper_whitelist_path(root, state, fb)
     allowed: list[str] = []
     if wl_path.is_file():
@@ -629,26 +638,34 @@ def node_provenance(state: ORPathState) -> dict:
     root = _root(state)
     slug = state["slug"]
     dpaths = draft_paths(root, slug)
-    # Promote final candidate (Feynman: revised > cited > draft)
-    final = select_final_candidate(dpaths)
-    if final and final.is_file():
-        paper_out = dpaths["paper"]
-        paper_out.parent.mkdir(parents=True, exist_ok=True)
-        body = final.read_text(encoding="utf-8")
-        # strip cite footer if present when promoting cited
-        if "## Claim map (P0 cite_pack)" in body:
-            body = body.split("## Claim map (P0 cite_pack)")[0].rstrip() + "\n"
-        paper_out.write_text(body, encoding="utf-8")
-        final_path = str(final)
+    skip_paper = bool(state.get("skip_paper"))
+    if skip_paper:
+        # Fast / skip_paper mode: NEVER promote stale or pre-existing paper drafts.
+        final_path = ""
+        paper_quality = "skipped"
     else:
-        final_path = state.get("paper_path") or ""
+        # Promote final candidate (Feynman: revised > cited > draft)
+        final = select_final_candidate(dpaths)
+        if final and final.is_file():
+            paper_out = dpaths["paper"]
+            paper_out.parent.mkdir(parents=True, exist_ok=True)
+            body = final.read_text(encoding="utf-8")
+            # strip cite footer if present when promoting cited
+            if "## Claim map (P0 cite_pack)" in body:
+                body = body.split("## Claim map (P0 cite_pack)")[0].rstrip() + "\n"
+            paper_out.write_text(body, encoding="utf-8")
+            final_path = str(final)
+        else:
+            final_path = state.get("paper_path") or ""
+        paper_quality = str(state.get("paper_quality") or "template_render")
 
     # rebuild ledger at end with all gates
     texts: list[tuple[str, str]] = []
-    for key in ("draft", "cited", "revised", "paper", "verification"):
-        p = dpaths.get(key)
-        if p and Path(p).is_file():
-            texts.append((str(p), Path(p).read_text(encoding="utf-8")))
+    if not skip_paper:
+        for key in ("draft", "cited", "revised", "paper", "verification"):
+            p = dpaths.get(key)
+            if p and Path(p).is_file():
+                texts.append((str(p), Path(p).read_text(encoding="utf-8")))
     if state.get("research_path") and Path(state["research_path"]).is_file():
         texts.append(
             (str(state["research_path"]), Path(state["research_path"]).read_text(encoding="utf-8"))
@@ -664,9 +681,9 @@ def node_provenance(state: ORPathState) -> dict:
     ledger = build_claim_ledger(
         slug=slug,
         texts=texts,
-        r1_ok=state.get("gate_r1_ok"),
-        r2_ok=state.get("gate_r2_ok"),
-        claim_map_ok=state.get("gate_claim_ok"),
+        r1_ok=None if skip_paper else state.get("gate_r1_ok"),
+        r2_ok=None if skip_paper else state.get("gate_r2_ok"),
+        claim_map_ok=None if skip_paper else state.get("gate_claim_ok"),
         research_ok=research_ok,
         validate_ok=state.get("gate_validate_ok"),
     )
@@ -674,9 +691,14 @@ def node_provenance(state: ORPathState) -> dict:
     write_verification_md(
         dpaths["verification"],
         ledger,
-        extra=f"final_candidate={final_path}\nrevise_count={state.get('revise_count')}",
+        extra=f"final_candidate={final_path}\nrevise_count={state.get('revise_count')}\nskip_paper={skip_paper}",
     )
 
+    resolved_paper_path = (
+        ""
+        if skip_paper
+        else (str(dpaths["paper"]) if dpaths["paper"].is_file() else (state.get("paper_path") or ""))
+    )
     path_map = {
         "plan_path": state.get("plan_path") or str(dpaths["plan"]),
         "retrieval_path": state.get("retrieval_path"),
@@ -685,15 +707,15 @@ def node_provenance(state: ORPathState) -> dict:
         "solution_path": state.get("solution_path"),
         "validate_path": state.get("validate_path"),
         "explain_path": state.get("explain_path"),
-        "draft_path": str(dpaths["draft"]) if dpaths["draft"].is_file() else "",
-        "cited_path": str(dpaths["cited"]) if dpaths["cited"].is_file() else "",
-        "revised_path": str(dpaths["revised"]) if dpaths["revised"].is_file() else "",
+        "draft_path": "" if skip_paper else (str(dpaths["draft"]) if dpaths["draft"].is_file() else ""),
+        "cited_path": "" if skip_paper else (str(dpaths["cited"]) if dpaths["cited"].is_file() else ""),
+        "revised_path": "" if skip_paper else (str(dpaths["revised"]) if dpaths["revised"].is_file() else ""),
         "verification_path": str(dpaths["verification"]) if dpaths["verification"].is_file() else "",
         "claim_ledger_path": str(dpaths["claim_ledger"]) if dpaths["claim_ledger"].is_file() else "",
-        "claim_map_path": str(dpaths["claim_map"]) if dpaths["claim_map"].is_file() else "",
+        "claim_map_path": "" if skip_paper else (str(dpaths["claim_map"]) if dpaths["claim_map"].is_file() else ""),
         "final_candidate_path": final_path,
-        "paper_path": str(dpaths["paper"]) if dpaths["paper"].is_file() else state.get("paper_path"),
-        "review_path": state.get("review_path"),
+        "paper_path": resolved_paper_path,
+        "review_path": "" if skip_paper else state.get("review_path"),
         "tune_log_path": state.get("tune_log_path"),
         "annotations_path": str(root / "outputs" / ".drafts" / f"{slug}-annotations.json")
         if (root / "outputs" / ".drafts" / f"{slug}-annotations.json").is_file()
@@ -718,6 +740,9 @@ def node_provenance(state: ORPathState) -> dict:
         verif = "BLOCKED"
     elif ledger.get("verificationState") == "failed":
         verif = "BLOCKED"
+    elif skip_paper:
+        if not state.get("gate_validate_ok"):
+            verif = "PASS WITH NOTES"
     elif not (
         state.get("gate_r1_ok")
         and state.get("gate_r2_ok")
@@ -782,6 +807,9 @@ def node_provenance(state: ORPathState) -> dict:
     st = dict(state)
     st["verification_state"] = ledger.get("verificationState")
     st["final_candidate_path"] = final_path
+    st["paper_quality"] = paper_quality
+    st["run_mode"] = state.get("run_mode") or "deep"
+    st["skip_paper"] = skip_paper
     text = thick_provenance(
         slug=slug,
         state=st,
@@ -825,7 +853,8 @@ def node_provenance(state: ORPathState) -> dict:
     return {
         "stage": "end",
         "provenance_path": str(prov),
-        "paper_path": str(dpaths["paper"]) if dpaths["paper"].is_file() else state.get("paper_path"),
+        "paper_path": resolved_paper_path,
+        "paper_quality": paper_quality,
         "verification_state": ledger.get("verificationState"),
         "final_candidate_path": final_path,
         "research_run_path": str(run_path),

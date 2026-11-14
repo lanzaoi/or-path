@@ -58,12 +58,7 @@ case "$CMD" in
     ./orpath.sh doctor                 运行 Python 环境、求解器与工作台健康检查
     ./orpath.sh setup                  初始化虚拟环境、释放演示种子并运行 doctor
     ./orpath.sh knowledge-sync         同步本地混合知识库 (BM25 + ONNX bge-m3)
-
-  [4. 核心验证门禁]
-    ./orpath.sh workbench-gate         Web Studio 智能做题工作舱契约门禁
-    ./orpath.sh v0-watch-gate          Live Watch 实时过程看板门禁
-    ./orpath.sh t1-gate | t2-gate      求解器与验证器核心门禁
-    ./orpath.sh m1-gate | m2-gate      工作区隔离与骨牌领域端到端门禁
+    ./orpath.sh test                   运行核心单元测试套件 (pytest tools/)
 ======================================================================
 EOF
     ;;
@@ -152,9 +147,6 @@ EOF
   paper)
     run_py scripts/orpath_paper.py "$@"
     ;;
-  t2)
-    run_py orpath/run_t2.py "$@"
-    ;;
   knowledge-sync|knowledge-rebuild)
     echo "[OR-Path] $CMD = allowlist export --clear-exports + ingest --clear"
     "$PY" scripts/export_agent_knowledge_corpus.py --clear-exports
@@ -205,48 +197,8 @@ EOF
   pack-release)
     run_py scripts/pack_release.py "$@"
     ;;
-  workbench-gate|problem-workbench-gate)
-    run_py scripts/problem_workbench_gate.py "$@"
-    ;;
-  v0-watch-gate|watch-gate)
-    run_py scripts/v0_watch_gate.py "$@"
-    ;;
-  dialogue-gate|steer-gate)
-    export ORPATH_APPLY_STEER=1
-    run_py scripts/dialogue_steer_gate.py "$@"
-    ;;
-  t1-gate)
-    run_py scripts/t1_gate.py "$@"
-    ;;
-  t2-gate|gate)
-    run_py scripts/t2_gate.py "$@"
-    ;;
-  m0-gate)
-    run_py scripts/m0_demo_gate.py "$@"
-    ;;
-  m1-gate)
-    run_py scripts/m1_gate.py "$@"
-    ;;
-  m2-gate)
-    run_py scripts/m2_gate.py "$@"
-    ;;
-  p3-gate)
-    run_py scripts/p3_watch_run_gate.py "$@"
-    ;;
-  p5-gate)
-    run_py scripts/p5_polish_gate.py "$@"
-    ;;
-  tube-geometry-gate)
-    run_py scripts/tube_geometry_stability_gate.py "$@"
-    ;;
-  tube-collab-gate)
-    run_py scripts/tube_collaboration_gate.py "$@"
-    ;;
-  tube-redteam-gate)
-    run_py scripts/tube_redteam_gate.py "$@"
-    ;;
-  tube-live-gate)
-    run_py scripts/tube_live_gate.py "$@"
+  test|pytest)
+    run_py -m pytest tools/ -q -p no:langsmith "$@"
     ;;
   tube-benchmark)
     run_py eval_or_bench/run_tube_synthetic_benchmark.py "$@"
@@ -258,12 +210,6 @@ EOF
     ;;
   vrp-baseline)
     run_py eval_or_bench/run_cvrp_baseline.py "$@"
-    ;;
-  l2-gate)
-    run_py scripts/l2_release_gate.py "$@"
-    ;;
-  promote-run-gate)
-    run_py scripts/promote_run_gate.py "$@"
     ;;
   *)
     echo "unknown command: $CMD" >&2

@@ -773,11 +773,11 @@ def _validate_polyomino(problem_id: str, sol: dict) -> list[dict]:
 
 
 def _validate_custom_mip(problem_id: str, sol: dict, solution_path: "Path | None") -> list[dict]:
-    """Validate custom_mip envelopes: envelope closure + independent recompute report.
+    """Validate custom & reduced optimization envelopes (Numbers Truth 2.0).
 
-    The modeler-authored validator script recomputes objective & constraints from
-    raw instance data (no solver imports) and writes ``<slug>-custom-validate.json``;
-    here we re-read it and assert objective agreement + constraint satisfaction.
+    Executes AST anti-cheat inspection + fresh subprocess rerun when a validator
+    script is present, verifies ``reduction_manifest`` and ``proven_optimal``
+    honesty, and cross-checks independent recompute objective agreement.
     """
     checks: list[dict] = []
     required = ["problem_id", "status", "objective", "solver", "source"]
@@ -789,13 +789,49 @@ def _validate_custom_mip(problem_id: str, sol: dict, solution_path: "Path | None
             "detail": f"missing={missing}" if missing else None,
         }
     )
+
+    sp_resolved: Path | None = None
+    root_dir = Path.cwd()
+    if solution_path is not None:
+        sp_cand = Path(solution_path).resolve()
+        if sp_cand.is_file():
+            sp_resolved = sp_cand
+            root_dir = (
+                sp_cand.parent.parent
+                if sp_cand.parent.name in {"outputs", "runs"}
+                else sp_cand.parent
+            )
+
     report_rel = str(sol.get("validation_report") or "")
+    rp = Path(report_rel) if report_rel else Path()
+    if report_rel and not rp.is_file() and solution_path is not None:
+        p_cand = Path(solution_path).resolve()
+        for parent in (p_cand.parent, p_cand.parent.parent, p_cand.parent.parent.parent):
+            if (parent / report_rel).is_file():
+                rp = parent / report_rel
+                break
+
+    sandbox_res: dict[str, Any] | None = None
+    if sp_resolved is not None:
+        try:
+            from scripts.custom_sandbox_gate import verify_custom_sandbox
+
+            sandbox_res = verify_custom_sandbox(
+                root=root_dir,
+                slug=str(sol.get("slug") or problem_id),
+                solution_path=sp_resolved,
+                report_path=rp if (report_rel and rp.is_file()) else None,
+                require_script=False,
+            )
+            checks.extend(sandbox_res.get("checks") or [])
+        except Exception as exc:  # noqa: BLE001
+            checks.append({"name": "custom_sandbox_gate", "ok": False, "detail": f"{type(exc).__name__}: {exc}"})
+
     if not report_rel:
         checks.append(
             {"name": "validation_report", "ok": False, "detail": "envelope must declare validation_report"}
         )
         return checks
-    rp = Path(report_rel)
     if not rp.is_file() and solution_path is not None:
         p_cand = Path(solution_path).resolve()
         for parent in (p_cand.parent, p_cand.parent.parent, p_cand.parent.parent.parent):
@@ -814,7 +850,11 @@ def _validate_custom_mip(problem_id: str, sol: dict, solution_path: "Path | None
         return checks
     checks.append({"name": "validation_report", "ok": bool(rep.get("ok"))})
     declared = sol.get("objective")
-    recomputed = rep.get("objective")
+    recomputed = (
+        rep.get("recomputed_objective")
+        if rep.get("recomputed_objective") is not None
+        else rep.get("objective")
+    )
     try:
         checks.append(
             {
@@ -835,7 +875,7 @@ def validate(problem_id: str, solution: dict, gold: dict | None = None, solution
     pc = str(
         solution.get("problem_class")
         or (gold or {}).get("problem_class")
-        or "shortest_path"
+        or "unregistered"
     ).lower()
     # aliases
     if pc in {"tube", "tube_bfd", "cutting_stock", "cut_stock"}:
@@ -924,7 +964,7 @@ def validate(problem_id: str, solution: dict, gold: dict | None = None, solution
     elif pc_norm == "hub_location":
         from validators.extended_solvers import validate_hub_location
         checks.extend(validate_hub_location(problem_id, solution))
-    elif pc_norm in {"custom_mip", "custom", "general_optimization"}:
+    elif pc_norm in {"custom_mip", "custom", "general_optimization", "custom_reduced"}:
         checks.extend(_validate_custom_mip(problem_id, solution, solution_path))
     elif pc_norm == "pyvrp" or pc_norm == "vrp_pdp" or solution.get("solver") == "pyvrp-hgs":
         from validators.extended_solvers import validate_pyvrp

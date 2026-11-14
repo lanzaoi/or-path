@@ -84,7 +84,11 @@
     },
     {
       "from": "explain",
-      "to": "draft_paper"
+      "to": [
+        "provenance",
+        "draft_paper"
+      ],
+      "cond": "skip_paper"
     },
     {
       "from": "draft_paper",

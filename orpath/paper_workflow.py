@@ -699,8 +699,14 @@ def draft_paper_with_writer(
     model: Any = None,
     revision_feedback: str = "",
     state: dict[str, Any] | None = None,
+    quality_out: dict[str, Any] | None = None,
 ) -> str:
     """Author academic paper using or_writer agent when enabled, falling back to render_or_paper."""
+    def _mark_quality(qual: str, reason: str = "") -> None:
+        if quality_out is not None:
+            quality_out["paper_quality"] = qual
+            quality_out["paper_degraded_reason"] = reason
+
     # 1. First Priority: Check if solver already produced a dedicated domain paper deliverable
     deliverables = solution.get("deliverables") or {}
     cand_paper = deliverables.get("paper")
@@ -712,6 +718,7 @@ def draft_paper_with_writer(
             content = p_cand.read_text(encoding="utf-8")
             paper_path.parent.mkdir(parents=True, exist_ok=True)
             paper_path.write_text(content, encoding="utf-8")
+            _mark_quality("template_render", "solver_deliverable_paper")
             return content
     elif problem_class == "microgrid_dispatch" and solution.get("subproblems"):
         try:
@@ -719,18 +726,21 @@ def draft_paper_with_writer(
             content = generate_paper_markdown(solution)
             paper_path.parent.mkdir(parents=True, exist_ok=True)
             paper_path.write_text(content, encoding="utf-8")
+            _mark_quality("template_render", "domain_template_reporter")
             return content
         except Exception:
             pass
 
+    degraded_reason = ""
     if is_live_paper_agent_enabled(state):
         try:
-            from orpath.control_plane import get_chat_model
+            from orpath.control_plane import get_chat_model, invoke_with_backoff
             from orpath.agents.workers import create_writer_agent
             from orpath.agents.cartridges import resolve_cartridge, cartridge_tools
             from langchain_core.messages import HumanMessage
 
-            active_model = model if model is not None else get_chat_model()
+            llm_model_name = str((state or {}).get("llm_model") or "").strip() or None
+            active_model = model if model is not None else get_chat_model(model_name=llm_model_name)
 
             # Resolve domain cartridge and build rich evidence blocks
             cart = resolve_cartridge(problem_class)
@@ -789,9 +799,9 @@ def draft_paper_with_writer(
             )
 
             # Single-turn direct synthesis: avoid multi-turn tool-calling loop hangs on slow cloud endpoints
-            # If the model is a ChatModel instance, invoke directly
+            # If the model is a ChatModel instance, invoke directly with exponential backoff
             if active_model is not None and hasattr(active_model, "invoke"):
-                res = active_model.invoke([HumanMessage(content=prompt_text)])
+                res = invoke_with_backoff(active_model, [HumanMessage(content=prompt_text)])
                 content = getattr(res, "content", "") or ""
                 # Strip markdown code wrapper if wrapped entirely
                 if content.startswith("```markdown") and content.endswith("```"):
@@ -802,6 +812,7 @@ def draft_paper_with_writer(
                 if len(content) > 1000 and ("# " in content or "## " in content):
                     paper_path.parent.mkdir(parents=True, exist_ok=True)
                     paper_path.write_text(content, encoding="utf-8")
+                    _mark_quality("llm_writer", "")
                     return content
 
             # Fallback: ReAct agent if direct invoke did not return suitable text
@@ -810,11 +821,13 @@ def draft_paper_with_writer(
                 cartridge_tools=writer_tools,
                 domain_directive=domain_hints,
             )
-            res = writer.invoke(
+            res = invoke_with_backoff(
+                writer,
                 {"messages": [HumanMessage(content=prompt_text + f"\n5. Call export_paper_markdown('{paper_path}', content=...).")]},
                 config={"recursion_limit": 10},
             )
             if paper_path.is_file() and paper_path.stat().st_size > 1200:
+                _mark_quality("llm_writer", "")
                 return paper_path.read_text(encoding="utf-8")
             if isinstance(res, dict) and "messages" in res and res["messages"]:
                 last_msg = res["messages"][-1]
@@ -822,10 +835,15 @@ def draft_paper_with_writer(
                 if len(content) > 1200 and ("# " in content or "## " in content):
                     paper_path.parent.mkdir(parents=True, exist_ok=True)
                     paper_path.write_text(content, encoding="utf-8")
+                    _mark_quality("llm_writer", "")
                     return content
+            degraded_reason = "live_writer_insufficient_output"
         except Exception as exc:
             import warnings
+            degraded_reason = f"{type(exc).__name__}: {exc}"
             warnings.warn(f"Live writer agent failed: {exc}, falling back to render_or_paper", RuntimeWarning)
+    else:
+        degraded_reason = "live_writer_disabled"
 
     body = render_or_paper(
         slug=slug,
@@ -846,6 +864,7 @@ def draft_paper_with_writer(
         body += f"\n\n## Revision Note\n- Handled review feedback: {revision_feedback}\n"
     paper_path.parent.mkdir(parents=True, exist_ok=True)
     paper_path.write_text(body, encoding="utf-8")
+    _mark_quality("template_render", degraded_reason or "template_fallback")
     return body
 
 
@@ -863,11 +882,12 @@ def run_reviewer_agent(
     if not is_live_paper_agent_enabled(state):
         return None
     try:
-        from orpath.control_plane import get_chat_model
+        from orpath.control_plane import get_chat_model, invoke_with_backoff
         from orpath.agents.workers import create_reviewer_agent
         from langchain_core.messages import HumanMessage
 
-        active_model = model if model is not None else get_chat_model()
+        llm_model_name = str((state or {}).get("llm_model") or "").strip() or None
+        active_model = model if model is not None else get_chat_model(model_name=llm_model_name)
         reviewer = create_reviewer_agent(model=active_model)
         prompt_text = (
             f"Task: Conduct an adversarial peer review on paper '{paper_path}' against '{solution_path}'.\n"
@@ -877,14 +897,15 @@ def run_reviewer_agent(
             f"Write the final peer review report in Markdown format."
         )
         if active_model is not None and hasattr(active_model, "invoke"):
-            res = active_model.invoke([HumanMessage(content=prompt_text)])
+            res = invoke_with_backoff(active_model, [HumanMessage(content=prompt_text)])
             content = getattr(res, "content", "") or ""
             if len(content) > 100:
                 review_path.parent.mkdir(parents=True, exist_ok=True)
                 review_path.write_text(content, encoding="utf-8")
                 return content
 
-        res = reviewer.invoke(
+        res = invoke_with_backoff(
+            reviewer,
             {"messages": [HumanMessage(content=prompt_text + f" Export to '{review_path}'.")]},
             config={"recursion_limit": 10},
         )
@@ -972,6 +993,14 @@ def thick_provenance(
         f"- problem_class: {state.get('problem_class')}",
         f"- solve_mode: {state.get('solve_mode')}",
         f"- knowledge_mode: {state.get('knowledge_mode')}",
+        f"- run_mode: {state.get('run_mode') or 'deep'}",
+        f"- skip_paper: {bool(state.get('skip_paper', False))}",
+        f"- paper_quality: {state.get('paper_quality') or 'n/a'}",
+        *(
+            [f"- paper_degraded_reason: {state.get('paper_degraded_reason')}"]
+            if state.get("paper_degraded_reason")
+            else []
+        ),
         f"- revise_count: {state.get('revise_count')}",
         f"- human_required: {state.get('human_required')}",
         f"- gate_schema_ok: {state.get('gate_schema_ok')}",

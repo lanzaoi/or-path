@@ -20,6 +20,7 @@ from orpath.pipeline.common import (
     _ensure_dirs,
     _fixture_base,
     _infer_class,
+    _replay_authorized,
 )
 
 
@@ -32,7 +33,13 @@ def node_orchestrate(state: ORPathState) -> dict:
 
     steer_upd = apply_steer_to_state(dict(state), workdir=root, boundary="orchestrate")
     merged = {**dict(state), **steer_upd}
-    pc = _infer_class(root, merged["problem_id"], merged.get("problem_class"))
+    allow_fix = _replay_authorized(merged)  # type: ignore[arg-type]
+    pc = _infer_class(
+        root,
+        merged["problem_id"],
+        merged.get("problem_class"),
+        allow_fixture=allow_fix,
+    )
     solve_mode = merged.get("solve_mode") or state.get("solve_mode")
     plan = root / "outputs" / ".plans" / f"{slug}.md"
     steer_line = ""
@@ -373,6 +380,8 @@ def _profile_constraint_mapping_md(profile: dict[str, Any]) -> str:
 def _probe_document(
     root: Path, slug: str, pid: str, pc: str, data_files: list[str],
     problem_file: str = "",
+    *,
+    allow_fixture: bool = True,
 ) -> dict[str, Any]:
     """Deterministic preflight probe → outputs/<slug>-profile.json (Phase 3.1)."""
     from orpath.agents.deterministic_nodes import run_preflight_probe
@@ -392,7 +401,7 @@ def _probe_document(
         upd = {}
     ppath = Path(str(upd.get("profile_path") or (root / "outputs" / f"{slug}-profile.json")))
     if not ppath.is_file():
-        upd = _minimal_profile(root, slug, pid, pc, data_files)
+        upd = _minimal_profile(root, slug, pid, pc, data_files, allow_fixture=allow_fixture)
         ppath = Path(str(upd.get("profile_path")))
     return {"profile_path": str(ppath), **{
         k: v for k, v in upd.items() if k != "profile_path"
@@ -400,7 +409,13 @@ def _probe_document(
 
 
 def _minimal_profile(
-    root: Path, slug: str, pid: str, pc: str, data_files: list[str]
+    root: Path,
+    slug: str,
+    pid: str,
+    pc: str,
+    data_files: list[str],
+    *,
+    allow_fixture: bool = True,
 ) -> dict[str, Any]:
     """No inbox files: profile fixture/intake files deterministically (still writes profile.json)."""
     from orpath.agents.deterministic_nodes import (
@@ -411,13 +426,13 @@ def _minimal_profile(
     )
 
     files, notes = collect_input_files(root, slug, data_files)
-    fb = _fixture_base(root, pid)
+    fb = _fixture_base(root, pid, allow_fixture=allow_fixture)
     if fb and fb.is_dir():
         seen = {str(p) for p in files}
         for p in sorted(fb.rglob("*")):
             if not p.is_file():
                 continue
-            if p.suffix.lower() not in {".json", ".csv", ".tsv", ".md", ".txt"}:
+            if p.suffix.lower() not in {".json", ".csv", ".tsv", ".md", ".txt", ".docx", ".xlsx", ".xlsm", ".pdf"}:
                 continue
             if str(p) not in seen:
                 files.append(p)
@@ -456,7 +471,9 @@ def _minimal_profile(
 
 
 def _live_research_enabled(state_m: dict[str, Any]) -> bool:
-    """or_analyst research only under explicit live mode + real LLM credentials."""
+    """or_analyst research only under explicit live deep mode + real LLM credentials."""
+    if str(state_m.get("run_mode") or "deep").strip().lower() == "fast":
+        return False
     if (
         os.environ.get("PYTEST_CURRENT_TEST")
         and not state_m.get("force_live_agent")
@@ -536,7 +553,9 @@ domain_cartridge={domain_key} complexity_tier={tier}
 3. 校验或反拨复杂度分档 (Tier-A/B/C), 确认 DomainCartridge;
 4. 输出一份高信息密度 research.md 正文, 使用以下标题: '# Research: {slug}'、'## 摘要研判'、'## 数据附件画像'、'## 决策变量与目标层级'、'## 约束映射'、'## 数学分类与装备包'、'## 建模建议与歧义';
 5. 禁止: 不得输出任何最优值/目标值答案(仅方法与建模结构); 不得编造未在附件中出现的字段名; 输出控制在 1200 字以内, 中文、紧凑、表格化。"""
-    resp = agent.invoke({"messages": [HumanMessage(brief)]})
+    from orpath.control_plane import invoke_with_backoff
+
+    resp = invoke_with_backoff(agent, {"messages": [HumanMessage(brief)]})
     return _invoke_last_ai_text(resp)
 
 
@@ -557,7 +576,8 @@ def _deterministic_skeleton(
     """Offline CI research skeleton — attachment tables + constraint mappings (zero speculation)."""
     from orpath.human_steer import format_pi_steer_block
 
-    fb = _fixture_base(root, pid)
+    allow_fix = _replay_authorized(state_m)  # type: ignore[arg-type]
+    fb = _fixture_base(root, pid, allow_fixture=allow_fix)
     problem = (
         (fb / "problem.md").read_text(encoding="utf-8")
         if fb and (fb / "problem.md").is_file()
@@ -648,9 +668,12 @@ def node_research(state: ORPathState) -> dict:
     state_m = {**dict(state), **steer_upd}
     slug = state_m["slug"]
     pid = state_m["problem_id"]
-    pc = state_m.get("problem_class") or "shortest_path"
+    allow_fix = _replay_authorized(state_m)  # type: ignore[arg-type]
+    pc = str(state_m.get("problem_class") or "").strip() or _infer_class(
+        root, pid, None, allow_fixture=allow_fix
+    )
     mode = _resolve_knowledge_mode(state_m.get("knowledge_mode"))
-    fb = _fixture_base(root, pid)
+    fb = _fixture_base(root, pid, allow_fixture=allow_fix)
     path = root / "notes" / f"{slug}-research.md"
     rp = state_m.get("retrieval_path")
     retrieval = load_retrieval(rp)
@@ -659,6 +682,7 @@ def node_research(state: ORPathState) -> dict:
     probe = _probe_document(
         root, slug, pid, pc, list(state_m.get("data_files") or []),
         str(state_m.get("problem_file") or ""),
+        allow_fixture=allow_fix,
     )
     profile_path = str(probe.get("profile_path") or (root / "outputs" / f"{slug}-profile.json"))
     profile: dict[str, Any] = {}
@@ -713,6 +737,12 @@ def node_research(state: ORPathState) -> dict:
             )
             path.write_text(body, encoding="utf-8")
 
+    ret_disk_p = Path(str(state_m.get("retrieval_path") or (root / "notes" / f"{slug}-retrieval.json")))
+    if ret_disk_p.is_file():
+        try:
+            retrieval = json.loads(ret_disk_p.read_text(encoding="utf-8"))
+        except Exception:
+            pass
     body = path.read_text(encoding="utf-8")
     body2 = ensure_research_coverage_section(body, retrieval or {"knowledge_mode": mode})
     # inject steer section if missing

@@ -136,10 +136,13 @@ def _import_tsp_folder(base: str, slug: str) -> None:
 
 
 def _confirm(base: str, slug: str) -> tuple[int, dict[str, Any]]:
+    # Explicitly request deep mode so legacy multi-agent supervisor tests stay orthogonal
+    # to the Phase 1 Studio fast-mode default (tested in test_phase1_fast_mode.py).
     return _post_json(
         base + "/api/studio/confirm",
         {
             "slug": slug,
+            "run_mode": "deep",
             "selected_options": {"q_algorithm": "ortools"},
             "extra_prompt": "",
         },
