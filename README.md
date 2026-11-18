@@ -1,130 +1,99 @@
-# OR-Path: 面向高端智能制造与复杂工程决策的运筹优化与智能工作台系统
+# OR-Path：防幻觉、可审计的运筹优化多智能体与决策工作台
 
-> **核心定位：** 融合「大模型认知解析 + 本地知识库检索（RAG） + 27 台重型工业求解器矩阵（MILP / CP-SAT / DP / MPC / HGS / ALNS） + 独立物理与数学验证器（DIMO 5 类变异防御）」的原生级工业运筹优化平台，攻克空间异形管材激光下料、离散板材/芯片多目标排样、多车带时间窗路径调度、智慧能源园区光储充微电网优化调度等复杂工业工程决策场景。
+**面向数学建模竞赛与复杂工业优化场景的确定性运筹智能体系统** —— 上传题面 PDF 与数据附件后，自动完成字段对齐与领域诊断，通过 **三阶段确定性运筹算子核** 配合 **独立物理重算校验防线**、**4 常驻隔离智能体 + 10 套领域专家插件（`DomainCartridge`）** 以及 **人机协同实时看板**，彻底消除大模型直写求解代码时的“数值虚报幻觉”与“最优性措辞幻觉”。
 
-[![Release](https://img.shields.io/badge/Release-v1.1.0-blue.svg)](https://github.com/lanzaoi/or-path/releases/tag/v1.1.0)
-[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue.svg)]()
-[![Solvers](https://img.shields.io/badge/Industrial%20Solvers-27%20Heavyweight-orange.svg)]()
-[![Domain](https://img.shields.io/badge/Industry-AI%20%2B%20Operations%20Research-brightgreen.svg)]()
-[![Validation](https://img.shields.io/badge/Numbers%20Truth-Independent%20Validator%20(DIMO)-success.svg)]()
-
----
-
-## 🌟 30 秒开箱即用体验
-
-```bat
-:: 1. 全链路环境与运筹求解器健康诊断
-orpath.bat doctor
-
-:: 2. ⚡ 一键启动智能做题工作舱与实时过程看板（拖拽题面、深度研判、求解验算一站式完成）
-START.bat
-:: Linux / macOS / WSL 环境：./START.sh
-
-:: 3. 运行核心运筹与验证器测试套件
-pytest tools/ -v
-```
-
-| 统一入口 | 功能说明 |
-|:---|:---|
-| **`START.bat`** / **`START.sh`** | **智能做题工作舱与过程大屏（Web Studio & Live Watch）**：一键启动并打开浏览器（`http://127.0.0.1:8765`），支持题面文件夹拖拽导入、多视角智能研判、交互式反问确认、底层求解器调用与结果报告下载 |
-| **`orpath.bat`** / **`orpath.sh`** | **命令行主控入口**：支持运行 `doctor` 健康检查、`tube-solve` 异形圆管下料求解、`demo-m0` 基准演示及各项自动化验证门禁 |
+[![Python](https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-2563eb.svg)]()
+[![Architecture](https://img.shields.io/badge/Workflow-LangGraph%2016--Node%20%7C%20Fast%20%2B%20Deep-0284c7.svg)]()
+[![Solvers](https://img.shields.io/badge/Operators-3--Stage%20Kernel%20%7C%20HiGHS%20%2B%20OR--Tools%20%2B%20SciPy-ea580c.svg)]()
+[![Tests](https://img.shields.io/badge/Pytest-722%20Passed%20(tools%2F)-16a34a.svg)]()
 
 ---
 
-## 💎 四大核心工程资产
+## 🎬 完整产品与工程演示视频
 
-### 1. 统一启动入口与 Web Studio 智能工作台 (`START.bat`, `START.sh`, `orpath/web/`, `orpath/studio_analyzer.py`)
-- **原生直连大模型与本地向量检索**：直接读取 `.env` 中的讯飞星火（`spark-x2.6`）或 DeepSeek API Key，结合本地 ONNX `bge-m3` 语义向量模型与 SQLite FTS5 混合检索（`knowledge_svc/`），无需任何外部 Node CLI 包装层。
-- **全流程可视化交互**：集成了题面 OCR/文本解析、三路并行认知探针（结构拆解、方法选型、形式化建模）、工程师人在回路（Dialogue Steer）参数干预，以及毫秒级响应的实时过程台（`Live Watch`）。
+点击下方动图可查看或下载 **`1080p` 完整有声演示视频**（04:48，完整演示 2025 数模国赛 A 题导入对齐、快/深双模切换、8 阶段状态流转、6 轮演化抽屉、7 项物理校验、6 章全屏论文审阅、人导断点介入以及 30 秒国一标尺消融对照表）：
 
-### 2. 硬核运筹求解算法库 (`tools/` & `scripts/`)
-所有优化计算均由纯正、可复现的运筹规划算法与精确/启发式求解器完成：
-- **异形圆管三维空间展开与共切动态规划**（`scripts/b_tube_solve.py`, `scripts/b_tube_geometry.py`, `tools/solve_tube_cut_b2026.py`, `tools/tube_optimization.py`）：
-  - 处理 3D 空间异形圆管端面相贯线展开、内外焊缝禁忌角度避让、轴向旋转角度离散化匹配；
-  - 支持定长组合下料（Q1/Q2）、四模式激光共线共切动态规划（Q3）及跨批次余料结转排产（Q4），材料利用率达 **99.06%–99.74%**。
-- **多联骨牌精确覆盖与芯片多目标布局优化**（`tools/solve_polyomino.py`, `tools/solve_polyomino_q3.py`）：
-  - 基于 OR-Tools CP-SAT 求解二维网格精确覆盖与无重叠排样；
-  - 支持多目标芯片/拼板布局优化（最小化采购成本、最大化共享切割边长以降低激光切割热损伤）。
-- **园区光储充微电网多时段线性规划与滚动 MPC 控制**（`tools/solve_microgrid.py`, `tools/microgrid_reporting.py`）：
-  - 基于 SciPy HiGHS 构建 96 时段（15 分钟粒度）日前光储充协同调度线性规划模型（分时电价套利、需量电费削峰、储能充放电损耗与寿命折旧、有序充电激励）；
-  - 内置日内滚动时域模型预测控制（Rolling-Horizon MPC），平抑光伏出力与负荷预测误差，并自动生成全套调度数据报表与高分辨率分析图表。
-- **经典图论与车辆路径规划引擎**（`tools/solve_ortools.py`, `tools/solve_highs.py`, `tools/solve_networkx.py`）：
-  - 覆盖网络流最短路（Shortest Path）、旅行商问题（TSP）、带容量限制车辆路径问题（CVRP）及带硬时间窗准时制配送问题（VRPTW）。
-- **作业车间调度 JSSP / 柔性作业车间调度 FJSSP 工业引擎**（`tools/solve_jssp.py`）：
-  - 基于 PyJobShop（CP-SAT）工业级调度引擎，内置 **Taillard 基准算例库**（JSSP：ft/la/abz/orb/swv/yn/ta 共 67 例；FJSSP：kacem/mk/abz 变体/Dauzère-Pérès/Chambers-Barnes 等 407 例），均附带 JSPLib 已知最优值作为参考基准；
-  - 支持 **工序换模时延**（sequence-dependent setup time）：均匀换模时间或按操作对的显式换模矩阵；
-  - 支持 **甘特图生成**（每台机床一行，输出 PNG），并输出机床利用率、总流程时间、换模总时延等指标；
-  - 严格遵循 Numbers Truth：目标值与排产方案均来自求解器，已知最优值仅作 gap 参照，绝不冒充求解结果。
+[![OR-Path 演示视频预览](./docs/media/orpath-demo-preview.gif)](https://github.com/lanzaoi/or-path/raw/main/docs/media/orpath-demo.mp4)
 
-### 3. 独立物理与数学验证器 (`tools/validate_solution.py` & `tools/validators/`)
-- **坚守 Numbers Truth 铁律**：大模型绝不直接编造最优目标值或排产方案。
-- **零信任独立重算**：验证器与求解器完全解耦，直接从原始算例输入数据出发，对每一份 `*-solution.json` 执行独立的物理可行性与目标函数重算（包括圆管 748 项空间几何与焊缝干涉硬约束检验、骨牌网格覆盖无重叠检验、微电网功率平衡与 SOC 边界检验、VRP 容量与时间窗检验）。
-
-### 4. 核心业务案例验证与 Pytest 单元测试 (`tools/test_*.py` & `scripts/*_gate.py`)
-- 配备完善的单元测试与端到端门禁：
-  - `tools/test_tube_optimization.py`：三维圆管母材分配、模式匹配与共切优化单元测试
-  - `tools/test_microgrid_optimization.py`：园区微电网日前规划、敏感性分析与 MPC 滚动控制测试
-  - `tools/test_polyomino_q3.py` & `tools/test_solvers_t2.py`：骨牌排样、最短路、TSP、VRP 求解与独立验证器测试
-  - `scripts/problem_workbench_gate.py` & `scripts/v0_watch_gate.py`：Web Studio 工作台与过程看板契约门禁
+> 📺 **完整视频文件**：[`docs/media/orpath-demo.mp4`](./docs/media/orpath-demo.mp4)（`22 MB`，`1920×1080`，H.264/AAC）。  
+> *提示：由于 GitHub 限制 Git 直接推送 `<video>` 标签，如需在 GitHub 页面内嵌原生带声音播放器，可在 GitHub 网页端编辑本 `README.md` 并直接拖入 `orpath-demo.mp4` 生成 `user-attachments` 链接。*
 
 ---
 
-## 📂 项目结构
+## 🎯 解决什么痛点？（防幻觉两条铁律）
 
-```text
-OR-Path/
-├── START.bat / START.sh            # 智能做题工作舱与 Live Watch 统一启动入口
-├── orpath.bat / orpath.sh          # 命令行控制与门禁运行入口
-├── orpath/                         # 核心控制面与 Web Studio 服务
-│   ├── web/                        # Web Studio 与实时过程看板前端源码及构建产物 (watch.html)
-│   ├── studio_analyzer.py          # 原生大模型多视角题面研判引擎 (Spark X2.6 / DeepSeek + 本地 RAG)
-│   ├── graph_product.py            # 16 节点确定性 LangGraph 运筹工作流状态机
-│   ├── pipeline/                   # 审题 (intake)、检索调研 (research)、建模求解 (solve)、报告生成 (paper)
-│   └── watch_snapshot.py           # 零 LLM 依赖的高性能工作台状态聚合引擎
-├── tools/                          # 硬核运筹求解器与独立物理/数学验证器
-│   ├── solve_ortools.py            # OR-Tools 路由与组合优化求解器 (TSP / CVRP / VRPTW)
-│   ├── solve_highs.py              # HiGHS 混合整数线性规划 (MILP) 求解器
-│   ├── solve_networkx.py           # NetworkX 图论与最短路精确求解器
-│   ├── solve_polyomino.py          # CP-SAT 多联骨牌二维精确覆盖求解器
-│   ├── solve_polyomino_q3.py       # 芯片/板材多目标排样与共边最大化求解器
-│   ├── solve_tube_cut_b2026.py     # 异形圆管激光下料多阶段运筹求解器
-│   ├── tube_optimization.py        # 圆管下料动态规划与启发式核心算法库
-│   ├── solve_microgrid.py          # 园区光储充微电网日前 LP 与日内滚动 MPC 求解器
-│   ├── microgrid_reporting.py      # 微电网多维工程报表与图表生成工具
-│   ├── solve_jssp.py               # JSSP/FJSSP 工业调度引擎 (Taillard 基准 + 换模时延 + 甘特图)
-│   ├── validate_solution.py        # 独立物理与数学验证器主入口
-│   └── validators/                 # 各领域独立重算验证器 (routing / polyomino / tube / microgrid)
-├── scripts/                        # 核心业务求解脚本 (b_tube_solve.py 等) 与自动化门禁
-├── knowledge/ & knowledge_svc/     # 本地运筹学知识库 (BM25 + ONNX bge-m3 混合检索)
-├── fixtures/ & demo/seed/          # 标准测试算例与开箱即用演示种子 (live-btube / m0)
-└── specs/ & docs/                  # 系统设计规范 (SDD) 与架构文档
-```
+裸大模型直接编写运筹优化代码通常会在上线或竞赛评审前栽在两类幻觉上：
+1. **数值幻觉与自检造假**：漏掉关键物理约束导致目标值失真、自算指标虚高近一倍，写校验脚本时还会硬编码凑数或偷调求解器蒙混过关；
+2. **最优性措辞幻觉**：启发式方法明明只求得可行解（`FEASIBLE`），报告里却顺嘴宣称“已取得全局最优解”。
+
+为此，OR-Path 用确定性工程边界锁死流程：
+- **求解与校验物理隔离**：独立校验器运行前必过 AST 静态扫描，**严禁导入任何求解器库**（`ortools` / `highspy` / `scipy.optimize` / `pulp`），必须读取原始输入题面与表格从头重算；未证明 `OPTIMAL` 时硬拦截“全局最优”字样。
+- **人机协同“只改策略、不改数字”**：支持题面导入后的交互式字段确认，以及运行途中在实时看板暂停注入建模策略并断点续跑，但机制上严禁人工直接篡改解向量与目标数值。
 
 ---
 
-## 🛠️ 质量验证与测试命令
+## ⚙️ 核心架构：三阶段通用算子核 × 双模专家插件组装
+
+| 能力维度 | 快速模式（Fast · **默认档**） | 深度模式（Deep · 3 / 5 / 8 轮演化） |
+| :--- | :--- | :--- |
+| **算子核调度** | **单智能体直接调用三阶段运筹算子核**（非裸大模型直写随机代码） | 共用三阶段算子核 + 双轨多轮演化账本（[`evolution_ledger.py`](./orpath/agents/evolution_ledger.py)） |
+| **智能体与插件** | 主链路直达建模、求解与独立重算 | **4 常驻隔离智能体**（分析 / 建模 / 撰写 / 审稿红队）+ **10 套领域专家插件（`DomainCartridge`）动态组装** |
+| **过程与交付** | Excel / JSON 解产物 + 全套独立物理校验 | 实时演化曲线抽屉 + 6 章结构化论文全稿 + 对立红队审稿 |
+| **适用场景** | 日常作业、时间受限场景（性价比最高） | 复杂多阶段竞赛难题、高价值工业排产与论文全案交付 |
+
+### 代码级防线与工程底座
+- **三阶段可复用算子核（[`tools/or_kernels/`](./tools/or_kernels/)）**：`物理几何离散提取 → 通用运筹规约（HiGHS / OR-Tools）→ 连续局部抛光`，统一调度 24 类求解模块。
+- **三道硬隔离门禁**：AST 静态禁导求解库 + 沙箱读写权限门禁与硬编码伪造拦截 + 5 类数据篡改注入测试（检验校验器真能抓假）+ 最优性措辞审计。
+- **LangGraph 16 节点文件指针流水线（[`orpath/graph_product.py`](./orpath/graph_product.py)）**：大体积解向量与表格全量落盘，状态仅传文件指针防上下文溢出；基于 SQLite 持久化支持断点续跑；历史经验先剥离具体坐标与数值后再回灌本地混合知识库（BM25 + FTS5 + BGE-M3 + RRF），杜绝跨题串数。
+
+---
+
+## 🖼️ 系统界面与对照实验截图
+
+| Web Studio 题面诊断与 10 列字段对齐 | Live Watch 过程监视与 8 阶段收敛轨迹 | 2025 数模国赛 A 题对照实验总表 |
+| :---: | :---: | :---: |
+| ![Studio 诊断](./docs/media/orpath-studio-diagnosis.jpg) | ![Live Watch 看板](./docs/media/orpath-watch-workbench.jpg) | ![对比实验表](./docs/media/orpath-benchmark-table.jpg) |
+
+---
+
+## 📊 2025 数模国赛 A 题消融与强模型对照（国一标尺：`30.00 s`）
+
+| 对比维度 | 纯 AI 直写代码<br>(`deepseek-flash`) | OR-Path 快速模式 **（默认档）**<br>(`deepseek-flash`，调算子核) | OR-Path 深度模式<br>(`deepseek-flash`，6 轮进化) | 强模型对照<br>(`GPT-6.2-Astra` + 自研领域插件) | 国一高分参考标尺 |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Q5 总遮蔽时长** | `4.50 s`（`15.0%`，自报虚高 `5.185 s`） | **`22.40 s`（`74.7%`）** | **`25.90 s`（`86.3%`）** | **`28.76 s`（重算 `29.21 s`，`97.4%`）** | `30.00 s`（100%） |
+| **Q4 防虚报对比** | `5.60 s`（虚报 `11.04 s`） | `11.50 s`（重算一致） | `11.50 s`（重算一致） | `11.66 s`（重算 `11.72 s`） | ~`11.6–12.4 s` |
+| **独立物理校验** | `3 / 5` 问通过 | **`5 / 5` 全过**（119 项检查） | **`5 / 5` 全过**（83 点圆柱校验） | **`5 / 5` 全过** | `5 / 5` 全过 |
+| **耗时与工程成本** | `~292 s`（约 `¥0.20`） | **`~507 s`**（约 8.5 分钟） | `~2362 s`（缓存命中 **`92.7%`** · **`¥0.91`**） | `~733 s` | 人工 3 天 |
+| **核心启示** | 裸写易把圆柱简化为质点 | 调三阶段算子核把结果拉升 **5.0 倍**，日常性价比最高 | 专家插件组装 + 多轮进化逼近国一 | **证明模型变强后编排应做薄，真正沉淀下来有长期壁垒的是领域约束插件与独立物理校验** | — |
+
+### 跨赛事与国际标准算例验证
+- **全国大学生数学建模竞赛**：2025 A 题（无人机烟幕干扰弹连续遮蔽优化）、2026 C 题（园区微电网 334 天 × 144 时段 = 48,096 区间 MILP 调度，24 项物理校验全过）。
+- **全国运筹学工业优化大赛（工业工程优化大赛）**：空间异形圆管三维展开与四模式共线激光下料（跨批次余料结转与物理几何重算校验全过）。
+- **标准运筹基准集**：TSPLIB 8 例全部求得可行解（5 例达精确最优，最大 Gap `1.41%`）；支持 JSSP（67 例）/ FJSSP（407 例）工业调度基准与多联骨牌精确覆盖（CP-SAT）。
+
+---
+
+## 🚀 快速开始与工程测试
 
 ```bash
-# 1. 运行全量运筹求解器与验证器单元测试
-pytest tools/ -v
-
-# 2. 环境与核心资产健康检查
+# 1. 安装依赖并运行环境诊断
+pip install -r requirements.txt
 python scripts/orpath_doctor.py
 
-# 3. Web Studio 工作台与看板门禁验证
-python scripts/problem_workbench_gate.py
-python scripts/v0_watch_gate.py
+# 2. 启动 Web Studio 工作台与 Live Watch 过程看板（http://127.0.0.1:8765）
+./START.sh        # Windows 双击 START.bat
 
-# 4. 异形圆管几何稳定性、协同账本与红队边界门禁
-python scripts/tube_geometry_stability_gate.py
-python scripts/tube_collaboration_gate.py
-python scripts/tube_redteam_gate.py
+# 3. 运行核心单元测试（已实测 tools/ 下 722 passed, 3 skipped）
+pytest tools/ -q -p no:langsmith
 ```
 
----
+### 目录导航
 
-## 📋 运行环境说明
-
-- **操作系统**：Windows 10 / 11 (x64)、Linux、macOS 或 WSL2
-- **核心依赖**：Python 3.10+（详见 `requirements.txt`：OR-Tools、SciPy/HiGHS、NetworkX、NumPy、Pandas、LangGraph 等）
-- **大模型配置（可选）**：复制 `.env.example` 为 `.env`，填入 `XFYUN_API_KEY`（讯飞星火 `spark-x2.6`）或 `DEEPSEEK_API_KEY` 即可启用 Web Studio 智能审题与交互式建模分析；底层运筹求解器与独立验证器支持完全离线运行。
+| 路径 | 说明 |
+| :--- | :--- |
+| [`orpath/`](./orpath/) | 控制面、LangGraph 16 节点工作流、Web Studio / Live Watch 前端源码与聚合引擎 |
+| [`orpath/agents/`](./orpath/agents/) | 4 常驻智能体、10 套领域专家插件（`cartridges.py`）与双轨演化账本 |
+| [`tools/or_kernels/`](./tools/or_kernels/) | 三阶段通用运筹算子核（物理提取、MILP 规约、连续遮蔽/LNS 局部抛光） |
+| [`tools/validate_solution.py`](./tools/validate_solution.py) | 独立物理重算校验总入口与 [`tools/validators/`](./tools/validators/) 各域校验器 |
+| [`knowledge/skills/`](./knowledge/skills/) & [`knowledge_svc/`](./knowledge_svc/) | 领域专家 Skill 知识包与本地混合检索底座（BM25 + FTS5 + BGE-M3） |
+| [`docs/media/`](./docs/media/) | 演示视频（`.mp4`）、预览动图（`.gif`）与核心功能/对照实验截图 |
