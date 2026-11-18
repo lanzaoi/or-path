@@ -15,8 +15,7 @@
 
 [![OR-Path 演示视频预览](./docs/media/orpath-demo-preview.gif)](https://github.com/lanzaoi/or-path/raw/main/docs/media/orpath-demo.mp4)
 
-> 📺 **完整视频文件**：[`docs/media/orpath-demo.mp4`](./docs/media/orpath-demo.mp4)（`22 MB`，`1920×1080`，H.264/AAC）。  
-> *提示：由于 GitHub 限制 Git 直接推送 `<video>` 标签，如需在 GitHub 页面内嵌原生带声音播放器，可在 GitHub 网页端编辑本 `README.md` 并直接拖入 `orpath-demo.mp4` 生成 `user-attachments` 链接。*
+> 📺 **完整视频文件**：[`docs/media/orpath-demo.mp4`](./docs/media/orpath-demo.mp4)（`22 MB`，`1920×1080`，H.264/AAC）。
 
 ---
 
