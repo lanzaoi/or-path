@@ -12,13 +12,20 @@ const NODE_ZH = {
   or_modeler: "数学建模",
   or_writer: "学术写稿",
   or_reviewer: "审稿红队",
+  or_researcher: "知识调研",
+  analyst: "领域研判",
+  modeler: "数学建模",
+  writer: "学术写稿",
+  reviewer: "审稿红队",
+  tier_c_focus: "分问深挖",
+  graph_solve: "图谱求解",
   retrieve: "检索",
   research: "调研",
   model: "建模",
-  gate_schema: "结构门禁",
+  gate_schema: "结构校验",
   solve: "求解",
-  gate_validate: "校验",
-  human_stop: "人工确认",
+  gate_validate: "独立验算",
+  human_stop: "异常收口",
   explain: "解释",
   draft_paper: "写稿",
   cite_pack: "引用打包",
@@ -34,7 +41,7 @@ const STATUS_ZH = {
   blocked: "受阻",
   running: "运行中",
   idle: "空闲",
-  no_product_run: "尚无产品跑次",
+  no_product_run: "尚无运行记录",
   available: "有思维链",
   thinking_unavailable: "无思维链",
 };
@@ -80,7 +87,11 @@ function esc(x) {
 
 function fmtKB(bytes) {
   if (bytes == null || isNaN(bytes)) return "? KB";
-  return Math.round(bytes / 1024) + " KB";
+  const b = Number(bytes);
+  if (b <= 0) return "0 B";
+  if (b < 1024) return b + " B";
+  const kb = b / 1024;
+  return (kb < 10 ? kb.toFixed(1) : Math.round(kb)) + " KB";
 }
 
 function showToast(msg, type = "info") {
@@ -162,7 +173,7 @@ function iconFor(kind) {
     clock: "⏱",
     hand: "🖐",
     warn: "⚠",
-    gate: "🚪",
+    gate: "🛡️",
     schema: "📐",
     solve: "🧮",
     paper: "📄",
@@ -172,10 +183,14 @@ function iconFor(kind) {
 }
 
 /**
- * 同步顶部导航栏激活状态 (/studio vs /)
+ * 同步顶部导航栏激活状态 (/ Studio vs 过程监视抽屉)
  */
 function syncHeaderNavState() {
   const isStudio = document.body.classList.contains("mode-studio");
   if ($("btnModeStudio")) $("btnModeStudio").classList.toggle("on", isStudio);
-  if ($("btnModeInspector")) $("btnModeInspector").classList.toggle("on", !isStudio);
+  if ($("btnToggleWatchDrawer")) {
+    const dr = $("watchDrawer");
+    const isWatchActive = !isStudio || Boolean(dr && !dr.hidden);
+    $("btnToggleWatchDrawer").classList.toggle("on", isWatchActive);
+  }
 }

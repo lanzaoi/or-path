@@ -71,6 +71,9 @@ __all__ = [
     # tube (3D common-edge nesting)
     "profile_tube_data",
     "inspect_tube_solution",
+    # general non-convex NLP / interval coverage
+    "profile_nlp_data",
+    "inspect_nlp_solution",
 ]
 
 EPS = 1e-6
@@ -1270,3 +1273,92 @@ def inspect_tube_solution(solution_path: str = "outputs/tube_cut_b2026-solution.
             "questions": per_q,
         }
     )
+
+
+@tool
+def profile_nlp_data(problem_id: str = "") -> str:
+    """Inspect problem attachments/templates for general NLP, MINLP, and interval-coverage cases."""
+    root = _resolve_root()
+    inbox = root / "inbox"
+    pid_clean = Path(str(problem_id or "").strip()).name if str(problem_id or "").strip() else ""
+    scan_dir = (inbox / pid_clean) if (pid_clean and (inbox / pid_clean).is_dir()) else inbox
+    files: list[dict[str, Any]] = []
+    if scan_dir.is_dir():
+        for p in sorted(scan_dir.rglob("*")):
+            if not p.is_file():
+                continue
+            rel = str(p.relative_to(root))
+            entry: dict[str, Any] = {"path": rel, "suffix": p.suffix.lower(), "bytes": p.stat().st_size}
+            if p.suffix.lower() in {".xlsx", ".xlsm"}:
+                try:
+                    import openpyxl
+
+                    wb = openpyxl.load_workbook(p, read_only=True, data_only=True)
+                    sheets: dict[str, Any] = {}
+                    for sn in wb.sheetnames[:3]:
+                        ws = wb[sn]
+                        rows = []
+                        for idx, row in enumerate(ws.iter_rows(values_only=True)):
+                            if idx >= 4:
+                                break
+                            rows.append([str(c)[:28] if c is not None else None for c in row[:10]])
+                        sheets[sn] = rows
+                    entry["sheets"] = sheets
+                    wb.close()
+                except Exception as exc:
+                    entry["excel_error"] = str(exc)
+            files.append(entry)
+    return _json({
+        "ok": bool(files),
+        "problem_id": problem_id,
+        "recommended_kernels": [
+            "tools.or_kernels.milp_reduction.solve_general_milp",
+            "tools.or_kernels.milp_reduction.solve_budgeted_coverage_milp",
+            "tools.or_kernels.milp_reduction.solve_assignment_milp",
+            "tools.or_kernels.lns_hybrid.select_max_union_subset",
+            "tools.or_kernels.nlp_minlp.solve_box_nlp",
+            "tools.or_kernels.nlp_minlp.solve_multistart_polish",
+            "tools.or_kernels.nlp_minlp.solve_minlp_decomposed",
+            "tools.or_kernels.interval_coverage.eval_smoke_masking_intervals",
+        ],
+        "files": files[:12],
+    })
+
+
+@tool
+def inspect_nlp_solution(solution_path: str = "outputs/solution.json") -> str:
+    """Inspect custom NLP/MINLP/interval-coverage solution envelope and custom validation report."""
+    root = _resolve_root()
+    sp = Path(solution_path)
+    if not sp.is_absolute():
+        sp = root / sp
+    if not sp.is_file():
+        return _json({"ok": False, "error": f"Solution not found: {sp}"})
+    try:
+        sol = json.loads(sp.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return _json({"ok": False, "error": f"Invalid JSON: {exc}"})
+    rep_path_raw = str(sol.get("validation_report") or "")
+    rep_doc: dict[str, Any] = {}
+    if rep_path_raw:
+        rp = Path(rep_path_raw)
+        if not rp.is_absolute():
+            rp = root / rp
+        if rp.is_file():
+            try:
+                rep_doc = json.loads(rp.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+    meta = sol.get("meta") if isinstance(sol.get("meta"), dict) else {}
+    return _json({
+        "ok": True,
+        "path": str(sp),
+        "status": sol.get("status"),
+        "objective": sol.get("objective"),
+        "solver": sol.get("solver"),
+        "proven_optimal": bool(meta.get("proven_optimal")),
+        "wall_time_s": meta.get("wall_time_s"),
+        "validation_ok": rep_doc.get("ok"),
+        "recomputed_objective": rep_doc.get("recomputed_objective"),
+        "subproblems": list((sol.get("subproblems") or {}).keys()) if isinstance(sol.get("subproblems"), dict) else [],
+    })

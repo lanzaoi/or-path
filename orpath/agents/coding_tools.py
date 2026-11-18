@@ -8,6 +8,7 @@ Node wrappers.
 """
 from __future__ import annotations
 
+import ast
 import fnmatch
 import json
 import os
@@ -43,17 +44,26 @@ FORBIDDEN_WRITE_DIRS: frozenset[str] = frozenset(
     }
 )
 
-_SKIP_SCAN_DIRS: frozenset[str] = frozenset({".git", ".venv", "__pycache__", "node_modules"})
+_SKIP_SCAN_DIRS: frozenset[str] = frozenset({".git", ".venv", "__pycache__", "node_modules", ".pytest_cache"})
+_SKIP_ROOT_NOISE_DIRS: frozenset[str] = frozenset({"runs", ".agents", ".plans", "fixtures"})
 _BINARY_EXTENSIONS: frozenset[str] = frozenset(
     {".png", ".jpg", ".jpeg", ".gif", ".pdf", ".xlsx", ".xlsm", ".docx", ".sqlite", ".db", ".pyc", ".pyo", ".onnx"}
 )
 _DESTRUCTIVE_CMD_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"(?:^|[;&|\s])rm\s+-[^\s]*[rf][^\s]*\s+/(?:\s|$)", re.I),
+    # rm with -r/-f flags against root, home, current dir or a drive root
+    re.compile(
+        r"(?:^|[;&|\s])rm\s+(?:-\S+\s+)*-\S*[rf]\S*\s+"
+        r"(?:/(?:\s|$)|//(?:\S|$)|(?:\.{1,2}|~|\$HOME|\$\{HOME\}|[A-Za-z]:)(?:/|\s|$))",
+        re.I,
+    ),
     re.compile(r"\bgit\s+reset\s+--hard\b", re.I),
     re.compile(r"\bgit\s+checkout\s+--\b", re.I),
     re.compile(r"\bgit\s+clean\b", re.I),
+    re.compile(r"\bgit\s+restore\b", re.I),
     re.compile(r"\bmkfs(?:\.\w+)?\b", re.I),
     re.compile(r"\bdd\s+if=", re.I),
+    re.compile(r"\bfind\b[^\n]*\s-delete\b", re.I),
+    re.compile(r"\b(?:truncate|shred)\b", re.I),
     re.compile(r"\b(?:shutdown|reboot|poweroff|halt)\b", re.I),
 )
 
@@ -252,10 +262,23 @@ def read_file(file_path: str, offset: int = 1, limit: int = 200) -> str:
             "---\n"
         )
 
-    slice_lines = all_lines[idx_start : idx_start + count]
-    end = start + len(slice_lines) - 1
-    has_more = (idx_start + len(slice_lines)) < total
-    numbered = [f"{ln}: {txt}" for ln, txt in enumerate(slice_lines, start=start)]
+    raw_slice = all_lines[idx_start : idx_start + count]
+    numbered: list[str] = []
+    char_budget = 6500
+    used_chars = 0
+    clipped_early = False
+    for offset_idx, txt in enumerate(raw_slice):
+        ln = start + offset_idx
+        if len(txt) > 1200:
+            txt = txt[:1200] + "... [line clipped]"
+        line_str = f"{ln}: {txt}"
+        if numbered and (used_chars + len(line_str) + 1) > char_budget:
+            clipped_early = True
+            break
+        numbered.append(line_str)
+        used_chars += len(line_str) + 1
+    end = start + len(numbered) - 1
+    has_more = clipped_early or ((idx_start + len(numbered)) < total)
     return "\n".join(
         [
             f"file_path={resolved}",
@@ -345,6 +368,19 @@ def edit_file(file_path: str, old_text: str, new_text: str) -> str:
                 }
             )
         updated = existing.replace(old_text, str(new_text), 1)
+        if target.suffix.lower() == ".py":
+            try:
+                ast.parse(updated, filename=str(target))
+            except SyntaxError as syn:
+                return _json(
+                    {
+                        "success": False,
+                        "detail": (
+                            f"Python SyntaxError at line {syn.lineno}: {syn.msg}; "
+                            "edit rejected before writing"
+                        ),
+                    }
+                )
         target.write_text(updated, encoding="utf-8")
         return _json(
             {
@@ -359,13 +395,13 @@ def edit_file(file_path: str, old_text: str, new_text: str) -> str:
 
 
 @tool
-def grep_search(pattern: str, path: str = ".", max_hits: int = 50) -> str:
+def grep_search(pattern: str, path: str = ".", max_hits: int = 30) -> str:
     """Search text files under the case workdir (or repo knowledge/tools) by regex.
 
     Args:
         pattern: Case-insensitive Python regex pattern (falls back to literal on syntax error).
         path: Directory or file under workdir (or ``knowledge/...``, ``tools/...``).
-        max_hits: Maximum matching lines returned (1..200, default 50).
+        max_hits: Maximum matching lines returned (1..200, default 30).
 
     Returns:
         JSON string with ``success``, ``pattern``, ``count``, and ``hits``.
@@ -378,9 +414,9 @@ def grep_search(pattern: str, path: str = ".", max_hits: int = 50) -> str:
         return _json({"success": False, "detail": f"invalid or missing path: {path!r}", "count": 0, "hits": []})
 
     try:
-        cap = max(1, min(int(max_hits), 200))
+        cap = max(1, min(int(max_hits), 100))
     except (TypeError, ValueError):
-        cap = 50
+        cap = 30
 
     try:
         regex = re.compile(pattern, re.IGNORECASE)
@@ -402,15 +438,16 @@ def grep_search(pattern: str, path: str = ".", max_hits: int = 50) -> str:
             return
         for lineno, line in enumerate(text.splitlines(), start=1):
             if regex.search(line):
-                hits.append({"file": rel, "line": lineno, "text": line[:240]})
+                hits.append({"file": rel, "line": lineno, "text": line[:160]})
                 if len(hits) >= cap:
                     return
 
     if target.is_file():
         _scan_file(target)
     else:
+        skip_extra = _SKIP_ROOT_NOISE_DIRS if target.resolve() == base_root.resolve() else frozenset()
         for dirpath, dirnames, filenames in os.walk(target):
-            dirnames[:] = sorted(d for d in dirnames if d not in _SKIP_SCAN_DIRS)
+            dirnames[:] = sorted(d for d in dirnames if d not in _SKIP_SCAN_DIRS and d not in skip_extra)
             for fname in sorted(filenames):
                 _scan_file(Path(dirpath) / fname)
                 if len(hits) >= cap:
@@ -422,13 +459,13 @@ def grep_search(pattern: str, path: str = ".", max_hits: int = 50) -> str:
 
 
 @tool
-def list_files(path: str = ".", pattern: str = "*", max_entries: int = 200) -> str:
+def list_files(path: str = ".", pattern: str = "*", max_entries: int = 60) -> str:
     """List files and directories under the case workdir (or repo knowledge).
 
     Args:
         path: Directory under workdir (or ``knowledge/...`` / ``tools/...``). Defaults to ``"."``.
         pattern: Glob pattern applied to entry name or relative path (default ``"*"``).
-        max_entries: Maximum entries to return (1..500, default 200).
+        max_entries: Maximum entries to return (1..500, default 60).
 
     Returns:
         JSON string with ``success``, ``path``, ``count``, and ``entries``.
@@ -440,7 +477,7 @@ def list_files(path: str = ".", pattern: str = "*", max_entries: int = 200) -> s
     try:
         cap = max(1, min(int(max_entries), 500))
     except (TypeError, ValueError):
-        cap = 200
+        cap = 60
 
     glob_pat = str(pattern or "*").strip() or "*"
     entries: list[dict[str, Any]] = []
@@ -453,11 +490,17 @@ def list_files(path: str = ".", pattern: str = "*", max_entries: int = 200) -> s
         entries.append({"path": rel, "type": "file", "size": target.stat().st_size})
         return _json({"success": True, "path": str(target), "count": 1, "entries": entries})
 
+    skip_extra = _SKIP_ROOT_NOISE_DIRS if target.resolve() == base_root.resolve() else frozenset()
+    char_budget = 4800
+    used_chars = 0
+    truncated = False
+
     for dirpath, dirnames, filenames in os.walk(target):
-        dirnames[:] = sorted(d for d in dirnames if d not in _SKIP_SCAN_DIRS)
+        dirnames[:] = sorted(d for d in dirnames if d not in _SKIP_SCAN_DIRS and d not in skip_extra)
         cur_dir = Path(dirpath)
         for dname in dirnames:
-            if len(entries) >= cap:
+            if len(entries) >= cap or used_chars >= char_budget:
+                truncated = True
                 break
             dp = cur_dir / dname
             try:
@@ -466,8 +509,10 @@ def list_files(path: str = ".", pattern: str = "*", max_entries: int = 200) -> s
                 rel = str(dp)
             if fnmatch.fnmatch(dname, glob_pat) or fnmatch.fnmatch(rel, glob_pat):
                 entries.append({"path": rel, "type": "dir", "size": 0})
+                used_chars += len(rel) + 32
         for fname in sorted(filenames):
-            if len(entries) >= cap:
+            if len(entries) >= cap or used_chars >= char_budget:
+                truncated = True
                 break
             fp = cur_dir / fname
             try:
@@ -480,10 +525,15 @@ def list_files(path: str = ".", pattern: str = "*", max_entries: int = 200) -> s
                 except OSError:
                     fsize = 0
                 entries.append({"path": rel, "type": "file", "size": fsize})
-        if len(entries) >= cap:
+                used_chars += len(rel) + 40
+        if len(entries) >= cap or used_chars >= char_budget:
+            truncated = True
             break
 
-    return _json({"success": True, "path": str(target), "count": len(entries), "entries": entries})
+    payload: dict[str, Any] = {"success": True, "path": str(target), "count": len(entries), "entries": entries}
+    if truncated:
+        payload["truncated"] = True
+    return _json(payload)
 
 
 @tool
@@ -550,6 +600,7 @@ def run_shell(command: str, timeout_sec: int = 180) -> str:
                 "detail": f"timeout_sec must be > 0, got {timeout}",
             }
         )
+    timeout = min(600, timeout)
 
     root = _resolve_root().resolve()
     env = dict(os.environ)

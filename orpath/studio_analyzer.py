@@ -22,6 +22,46 @@ STATEMENT_EXTS = frozenset({".md", ".txt", ".docx", ".pdf", ".png", ".jpg", ".jp
 DATA_EXTS = frozenset({".csv", ".xlsx", ".xlsm", ".xls", ".json", ".stp", ".step", ".sm", ".col", ".dat"})
 
 
+_SKILL_PUBLIC_LABELS: dict[str, str] = {
+    "or-modeling": "通用数学建模方法",
+    "or-problems": "经典运筹优化模型库",
+    "or-routing": "车辆与巡检路径建模",
+    "or-scheduling": "车间排产与时序调度",
+    "or-cutting": "下料与排样优化",
+    "or-microgrid": "微电网能量优化调度",
+    "or-inventory": "多周期库存与批量优化",
+    "or-facility": "设施选址与网络流",
+    "or-rostering": "人员排班优化",
+    "or-finance": "投资组合与风险优化",
+    "or-pricing": "动态定价与收益管理",
+    "exploratory-data-analysis": "探索性数据分析",
+    "statistical-analysis": "统计检验与建模",
+    "scikit-learn-modeling": "机器学习预测与分类",
+    "experimental-design": "试验设计 (DOE)",
+    "scientific-visualization": "工程图谱可视化",
+}
+_INTERNAL_PROMPT_SKILLS = frozenset({"or-numbers-truth", "or-verify", "or-paper-sop", "or-reviewer"})
+
+
+def _sanitize_rag_snippet(raw: Any) -> str:
+    """Drop binary/garbled PDF font chunks, OCR numeric tables, and internal prompt syntax."""
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\ufffd]+", " ", str(raw or "")).strip()
+    if len(text) < 16:
+        return ""
+    # Strip markdown headings and ASCII box-drawing prompts
+    text = re.sub(r"^#+\s+", "", text)
+    text = re.sub(r"[┌─┐│└┘▼▲]+", " ", text)
+    readable = sum(1 for ch in text if ("\u4e00" <= ch <= "\u9fff") or ch.isalnum())
+    if readable / max(1, len(text)) < 0.45:
+        return ""
+    # Drop raw OCR numeric benchmark tables (e.g. "0/10 MST-ep 18.1 35.6 ...")
+    digits = sum(1 for ch in text if ch.isdigit())
+    slashes = text.count("/")
+    if digits / max(1, len(text)) > 0.22 or slashes >= 3:
+        return ""
+    return re.sub(r"\s+", " ", text)[:220].strip()
+
+
 def profile_inbox_assets(inbox_dir: Path, slug: str, outputs_dir: Path) -> dict[str, Any]:
     """Scan inbox/<slug> directory and produce outputs/<slug>-data-profile.json."""
     inbox_dir = Path(inbox_dir).resolve()
@@ -46,10 +86,14 @@ def profile_inbox_assets(inbox_dir: Path, slug: str, outputs_dir: Path) -> dict[
             if (suf in STATEMENT_EXTS and suf != ".txt") or (suf == ".txt" and any(k in p.name.lower() for k in ("problem", "readme", "brief", "题", "说明"))):
                 statements.append(rel)
             elif suf in DATA_EXTS or (suf == ".txt" and any(k in p.name.lower() for k in ("cap", "cab", "benchmark", "demand", "matrix"))):
+                try:
+                    size_bytes = p.stat().st_size
+                except OSError:
+                    size_bytes = 0
                 file_info: dict[str, Any] = {
                     "rel_path": rel,
                     "kind": suf.lstrip("."),
-                    "size_bytes": p.stat().st_size,
+                    "size_bytes": size_bytes,
                 }
                 # Probe CSV
                 if suf == ".csv":
@@ -188,9 +232,12 @@ def profile_inbox_assets(inbox_dir: Path, slug: str, outputs_dir: Path) -> dict[
     }
     has_mg_result_wb = any(
         k in all_names
-        for k in ("result1.xlsx", "result2.xlsx", "result3.xlsx", "result4-2.xlsx", "result4-3.xlsx")
+        for k in ("result4-2.xlsx", "result4-3.xlsx")
     )
-    has_mg_schema = "小区负载" in all_xlsx_sheets and "光伏发电实际功率" in all_xlsx_sheets
+    has_mg_schema = (
+        ("小区负载" in all_xlsx_sheets and "光伏发电实际功率" in all_xlsx_sheets)
+        or any(s in all_xlsx_sheets for s in ("典型日负荷", "分时电价", "储能功率", "园区负荷"))
+    )
     if has_mg_result_wb or has_mg_schema:
         detected_class = detected_class or "microgrid_dispatch"
         has_solver_dataset = True
@@ -243,7 +290,7 @@ def call_llm_reasoner(
             model = os.environ.get("XFYUN_MODEL") or "spark-x2.6"
     else:
         base_url = (base_url or os.environ.get("DEEPSEEK_BASE_URL") or "https://api.deepseek.com").rstrip("/")
-        model = model or "deepseek-reasoner"
+        model = model or os.environ.get("DEEPSEEK_MODEL") or os.environ.get("ORPATH_LLM_MODEL") or "deepseek-reasoner"
 
     url = f"{base_url}/chat/completions"
 
@@ -276,7 +323,7 @@ def call_llm_reasoner(
         f"【附件数据探针概览】\n{json.dumps(clean_profile, ensure_ascii=False, indent=2)}"
     )
 
-    payload = {
+    payload: dict[str, Any] = {
         "model": model,
         "messages": [
             {"role": "system", "content": system_prompt},
@@ -285,6 +332,14 @@ def call_llm_reasoner(
         "temperature": 0.2,
         "stream": True,
     }
+    if not is_xfyun:
+        is_flash = "flash" in model.lower()
+        t_mode = (os.environ.get("ORPATH_DEEPSEEK_THINKING") or ("enabled" if is_flash else "")).strip().lower()
+        ds_effort = (os.environ.get("ORPATH_DEEPSEEK_REASONING_EFFORT") or ("high" if is_flash else "")).strip().lower()
+        if t_mode in {"enabled", "disabled"}:
+            payload["thinking"] = {"type": t_mode}
+        if ds_effort in {"low", "medium", "high"}:
+            payload["reasoning_effort"] = ds_effort
 
     req_data = json.dumps(payload).encode("utf-8")
     max_retries = int(os.environ.get("ORPATH_LLM_MAX_RETRIES") or 4)
@@ -461,25 +516,26 @@ def run_deep_analysis(
     key_candidate = (api_key or "").strip()
     if not key_candidate and os.environ.get("ORPATH_STUDIO_LIVE") == "1":
         key_candidate = (
-            os.environ.get("XFYUN_API_KEY", "").strip()
-            or os.environ.get("DEEPSEEK_API_KEY", "").strip()
+            os.environ.get("DEEPSEEK_API_KEY", "").strip()
+            or os.environ.get("XFYUN_API_KEY", "").strip()
             or os.environ.get("OPENAI_API_KEY", "").strip()
         )
         if not key_candidate:
             for env_path in (workdir / ".env", home / ".env"):
                 if env_path.is_file():
                     try:
+                        ds_k = ""
+                        xf_k = ""
                         for line in env_path.read_text(encoding="utf-8").splitlines():
-                            if line.startswith("XFYUN_API_KEY="):
+                            if line.startswith("DEEPSEEK_API_KEY="):
                                 v = line.split("=", 1)[1].strip().strip('"').strip("'")
                                 if v:
-                                    key_candidate = v
-                                    break
-                            elif line.startswith("DEEPSEEK_API_KEY="):
+                                    ds_k = v
+                            elif line.startswith("XFYUN_API_KEY="):
                                 v = line.split("=", 1)[1].strip().strip('"').strip("'")
                                 if v:
-                                    key_candidate = v
-                                    break
+                                    xf_k = v
+                        key_candidate = ds_k or xf_k
                     except Exception:
                         pass
                 if key_candidate:
@@ -509,7 +565,11 @@ def run_deep_analysis(
     combined_text = "\n".join(statement_texts) + "\n" + (prompt or "")
 
     # 3. Detect problem class
-    from orpath.studio_domain_catalog import detect_problem_class_from_text, get_domain_spec
+    from orpath.studio_domain_catalog import (
+        detect_problem_class_from_text,
+        get_domain_clarification_questions,
+        get_domain_spec,
+    )
 
     detected_class = profile.get("detected_runnable_class")
     if not detected_class:
@@ -565,70 +625,23 @@ def run_deep_analysis(
     if not matched_vars:
         missing_warnings.append("未检测到结构化数值数据文件（CSV/JSON/Excel），仅有纯文字题面；可进行定性建模，数值求解将受阻。")
 
-    # 6. Deterministic baseline reasoning & questions
+    # 6. Deterministic baseline reasoning & domain-matched questions
+    data_map_note = (
+        f"已识别结构化数据文件共 {len(matched_vars)} 份，已完成字段与决策变量映射。"
+        if matched_vars
+        else "当前仅收到文字描述，尚未附带结构化数据文件。"
+    )
     deterministic_reasoning = (
-        f"【运筹学知识库与数据维度推演研判】\n"
-        f"1. 题面结构剖析：识别到业务场景属于「{domain_name}」，"
-        f"核心在于在给定离散工位/节点集合下寻找满足所有业务约束的最优决策流。\n"
-        f"2. 数据特征映射：探针已捕获数据文件共 {len(matched_vars)} 份，结构化参数与决策变量已成功建立索引映射。\n"
-        f"3. 算法可行性论证：对比了精确求解器（MIP/CP-SAT）与启发式元算法，"
-        f"针对当前问题规模与实时响应指标，推荐「{rec_algo}」作为基准求解引擎。\n"
-        f"4. 策略直通执行：已自动锁定推荐求解引擎与度量准则直通求解，如需微调可在下方参数卡片调整后重算。"
+        f"领域建模分析摘要\n"
+        f"1. 问题识别：当前场景判定为「{domain_name}」，将在给定决策空间与约束条件下求取优化方案。\n"
+        f"2. 数据接入：{data_map_note}\n"
+        f"3. 算法选型：对比候选求解方案后，推荐「{rec_algo}」作为当前基准求解引擎。\n"
+        f"4. 执行策略：已按推荐参数自动执行求解；如需修改策略，可在下方选择后重新求解。"
     )
 
-    clarification_questions: list[dict[str, Any]] = [
-        {
-            "id": "q_algorithm",
-            "question": "请确认推荐的求解引擎与求解策略：",
-            "options": [
-                {
-                    "id": rec_algo if rec_algo != "none" else "qualitative",
-                    "label": f"推荐方案：{comparisons[0]['name']}",
-                    "recommended": True,
-                },
-                {
-                    "id": "alternative",
-                    "label": f"备选方案：{comparisons[1]['name'] if len(comparisons) > 1 else '通用启发式算法'}",
-                    "recommended": False,
-                },
-            ],
-            "recommended": rec_algo if rec_algo != "none" else "qualitative",
-        },
-        {
-            "id": "q_subproblem",
-            "question": "请确认优化目标与回路连通性范围：",
-            "options": [
-                {
-                    "id": "full_closed_loop",
-                    "label": "全局闭环优化 (推荐 · 访问全部点位并返回起始点，总距离最短)",
-                    "recommended": True,
-                },
-                {
-                    "id": "open_path",
-                    "label": "开放式单向路径 (仅到达终点，不计算返程距离)",
-                    "recommended": False,
-                },
-            ],
-            "recommended": "full_closed_loop",
-        },
-        {
-            "id": "q_distance_metric",
-            "question": "请确认工位空间距离度量准则：",
-            "options": [
-                {
-                    "id": "euclidean",
-                    "label": "标准欧氏几何直线距离 sqrt((x1-x2)^2 + (y1-y2)^2) (推荐)",
-                    "recommended": True,
-                },
-                {
-                    "id": "manhattan",
-                    "label": "曼哈顿网格距离 |x1-x2| + |y1-y2| (适用于有直角通道约束的厂区)",
-                    "recommended": False,
-                },
-            ],
-            "recommended": "euclidean",
-        },
-    ]
+    clarification_questions = get_domain_clarification_questions(
+        detected_class, rec_algo, comparisons
+    )
 
     # 6.5 Real OR Knowledge Base Retrieval (Hybrid RAG)
     retrieval_query_parts = []
@@ -651,7 +664,18 @@ def run_deep_analysis(
             problem_class=detected_class if detected_class != "unregistered" else "",
             home=home,
         )
-        matched_skills = [{"id": s["id"], "path": s["path"], "excerpt": s["excerpt"][:200]} for s in skills_raw[:4]]
+        for s in skills_raw:
+            sid = str(s.get("id") or "").strip()
+            if not sid or sid in _INTERNAL_PROMPT_SKILLS:
+                continue
+            matched_skills.append({
+                "id": sid,
+                "label": _SKILL_PUBLIC_LABELS.get(sid, sid.replace("-", " ").title()),
+                "path": "",
+                "excerpt": "",
+            })
+            if len(matched_skills) >= 3:
+                break
         literature_anchors = match_top_literature(
             problem_class=detected_class if detected_class != "unregistered" else "",
             query=retrieval_query,
@@ -674,7 +698,7 @@ def run_deep_analysis(
             art_obj = ks_retrieve(
                 retrieval_query,
                 mode=k_mode,  # type: ignore[arg-type]
-                topk=4,
+                topk=8,
                 root=home,
                 problem_class=detected_class if detected_class != "unregistered" else None,
             )
@@ -690,6 +714,9 @@ def run_deep_analysis(
             )
 
             for h in retrieval_payload.get("hits") or []:
+                cleaned = _sanitize_rag_snippet(h.get("snippet"))
+                if not cleaned:
+                    continue
                 sp = str(h.get("source_path") or "")
                 title = Path(sp).stem if sp else str(h.get("chunk_id") or "")
                 knowledge_hits.append({
@@ -698,8 +725,10 @@ def run_deep_analysis(
                     "backend": str(h.get("backend") or "hybrid"),
                     "source_path": sp,
                     "title": title,
-                    "snippet": str(h.get("snippet") or "")[:240],
+                    "snippet": cleaned,
                 })
+                if len(knowledge_hits) >= 4:
+                    break
 
             ctx_lines = [
                 f"- 📚 [{kh['title']}] ({kh['backend']}): {kh['snippet']}"
@@ -724,7 +753,7 @@ def run_deep_analysis(
             prompt=prompt,
             statement_text=combined_text,
             data_profile=profile,
-            model=model or "deepseek-reasoner",
+            model=model or os.environ.get("DEEPSEEK_MODEL") or os.environ.get("ORPATH_LLM_MODEL") or "deepseek-reasoner",
             base_url=base_url,
             knowledge_context=knowledge_context_str,
         )
@@ -761,12 +790,11 @@ def run_deep_analysis(
             clarification_questions = llm_qs
 
         citations = [
-            f"{provider_title} Reasoning ({model})",
-            f"OR-KNOWLEDGE: {detected_class} formulation and solver benchmarking standards",
-            "OR-PATH: SDD product flow and numbers truth verification protocol",
+            f"{provider_title} ({model})",
+            f"领域建模规范: {detected_class}",
         ]
         for kh in knowledge_hits:
-            citations.append(f"📚 运筹文献先验: {kh['title']} ({kh['source_path']})")
+            citations.append(f"参考文献: {kh['title']}")
     elif llm_payload and llm_payload.get("error"):
         thinking_mode = "rag_deterministic"
         live_thinking = False
@@ -774,52 +802,31 @@ def run_deep_analysis(
             (model and "spark" in model.lower())
             or (key_candidate and key_candidate.startswith("ak-"))
         )
-        provider_title = "讯飞星辰 (Spark)" if is_xfyun_run else "DeepSeek"
-        rag_prefix = ""
-        if knowledge_hits:
-            rag_prefix = (
-                f"【📚 运筹知识库 (RAG) 召回成功 · {len(knowledge_hits)} 篇方法文献】\n"
-                + "\n".join(f"• [{kh['title']}]: {kh['snippet']}" for kh in knowledge_hits)
-                + "\n\n"
-            )
+        provider_title = "Spark" if is_xfyun_run else "DeepSeek"
         reasoning_text = (
-            f"【⚠️ {provider_title} API 调用未完成 · 已安全降级为本地探针】\n"
+            f"{provider_title} 模型调用未完成，已切换为本地确定性规则诊断。\n"
             f"接口提示: {llm_payload.get('error')}\n\n"
-            + rag_prefix
-            + "系统已自动结合知识库先验与本地运筹规则探针：\n"
             + deterministic_reasoning
         )
         citations = [
-            f"OR-KNOWLEDGE: {detected_class} formulation and solver benchmarking standards",
-            "OR-PATH: SDD product flow and numbers truth verification protocol",
+            f"领域建模规范: {detected_class}",
         ]
         for kh in knowledge_hits:
-            citations.append(f"📚 运筹文献先验: {kh['title']} ({kh['source_path']})")
+            citations.append(f"参考文献: {kh['title']}")
     else:
         thinking_mode = "rag_deterministic"
         live_thinking = False
-        rag_prefix = ""
-        if knowledge_hits:
-            rag_prefix = (
-                f"【📚 本地运筹知识库 (RAG) 召回完成 · {len(knowledge_hits)} 篇方法先验】\n"
-                + "\n".join(f"• [{kh['title']}]: {kh['snippet']}" for kh in knowledge_hits)
-                + "\n\n"
-            )
         reasoning_text = (
-            "【⚠️ 离线启发式规则探针 · 未配置 API Key】\n"
-            "系统检测到未填入 DeepSeek API Key。\n"
-            + rag_prefix
-            + "当前展示的算法对比与决策卡基于本地运筹学静态规则库、混合检索先验与数据特征探针推演。\n"
-            "如需针对您上传的非标数据启动端到端语义理解与 DeepSeek-R1 深度推理链，请在页面顶部填入 DeepSeek API Key 后重新研判。\n\n"
-            + deterministic_reasoning
+            deterministic_reasoning
+            + "\n\n（当前为本地规则与知识库推演；如需在线大模型辅助诊断，请在顶部配置 API Key 后重算。）"
         )
         citations = [
-            f"OR-KNOWLEDGE: {detected_class} formulation and solver benchmarking standards",
-            "OR-PATH: SDD product flow and numbers truth verification protocol",
+            f"领域建模规范: {detected_class}",
         ]
         for kh in knowledge_hits:
-            citations.append(f"📚 运筹文献先验: {kh['title']} ({kh['source_path']})")
+            citations.append(f"参考文献: {kh['title']}")
 
+    effective_model = model if (key_candidate and model != "offline") else "offline"
     analysis: dict[str, Any] = {
         "slug": slug,
         "domain_diagnosis": {
@@ -836,7 +843,8 @@ def run_deep_analysis(
         "thinking_meta": {
             "mode": thinking_mode,
             "live_thinking": live_thinking,
-            "model": model if (key_candidate and model != "offline") else "offline",
+            "model": effective_model,
+            "model_used": effective_model,
             "reasoning_text": reasoning_text,
             "citations": citations,
             "knowledge_hits": knowledge_hits,

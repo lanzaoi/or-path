@@ -1,4 +1,22 @@
 // --- Dynamic OR Visualization & Convergence Dashboard (Task 6.3 - Huashu 5D Standard) ---
+function selectVizTab(targetTab) {
+  document.querySelectorAll("#vizTabs [data-viz-tab]").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-viz-tab") === targetTab);
+  });
+  const panels = {
+    gantt: $("vizPanelGantt"),
+    routes: $("vizPanelRoutes"),
+    microgrid: $("vizPanelMicrogrid"),
+    gap: $("vizPanelGap"),
+  };
+  for (const [k, p] of Object.entries(panels)) {
+    if (!p) continue;
+    const on = k === targetTab;
+    p.style.display = on ? "block" : "none";
+    p.classList.toggle("active", on);
+  }
+}
+
 function initVizTabsOnce() {
   if (studioState.vizTabsBound) return;
   const tabsContainer = $("vizTabs");
@@ -7,25 +25,7 @@ function initVizTabsOnce() {
   tabsContainer.addEventListener("click", (e) => {
     const tabBtn = e.target.closest("[data-viz-tab]");
     if (!tabBtn) return;
-    const targetTab = tabBtn.getAttribute("data-viz-tab");
-    document.querySelectorAll("#vizTabs [data-viz-tab]").forEach(b => {
-      b.classList.toggle("active", b === tabBtn);
-    });
-    const panels = {
-      gantt: $("vizPanelGantt"),
-      routes: $("vizPanelRoutes"),
-      gap: $("vizPanelGap"),
-    };
-    for (const [k, p] of Object.entries(panels)) {
-      if (!p) continue;
-      if (k === targetTab) {
-        p.style.display = "block";
-        p.classList.add("active");
-      } else {
-        p.style.display = "none";
-        p.classList.remove("active");
-      }
-    }
+    selectVizTab(tabBtn.getAttribute("data-viz-tab"));
   });
 }
 
@@ -42,20 +42,37 @@ function hideVizTooltip() {
   if (tipBox) tipBox.style.display = "none";
 }
 
+function bindVizTooltips(container, selector, attrName) {
+  container.querySelectorAll(selector).forEach(el => {
+    const desc = el.getAttribute(attrName) || "";
+    el.addEventListener("mouseenter", () => showVizTooltip(desc));
+    el.addEventListener("focus", () => showVizTooltip(desc));
+    el.addEventListener("click", () => showVizTooltip(desc));
+    el.addEventListener("mouseleave", hideVizTooltip);
+    el.addEventListener("blur", hideVizTooltip);
+  });
+}
+
+function vizEmptyCard(tag, title, detailHtml) {
+  return `
+    <div class="viz-empty-card" style="padding:36px 20px;text-align:center;background:#fafafa;border:1px dashed var(--border-strong);border-radius:8px;margin:8px 0">
+      <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-48);margin-bottom:6px">${esc(tag)}</div>
+      <div style="font-weight:600;font-size:13px;color:var(--ink)">${esc(title)}</div>
+      ${detailHtml ? `<div style="font-size:11px;color:var(--ink-48);margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">${detailHtml}</div>` : ""}
+    </div>
+  `;
+}
+
 function renderGanttChart(container, solution) {
   if (!container) return;
   const colors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#84cc16"];
 
   if (!solution || !Array.isArray(solution.schedule) || solution.schedule.length === 0) {
-    container.innerHTML = `
-      <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
-        <div style="font-size:32px;margin-bottom:8px">🏭</div>
-        <div style="font-weight:600;font-size:13px;color:#334155">当前算例不含工序时序排程数据</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
-          甘特图专用于流水/作业车间调度（JSSP/FJSSP/RCPSP）工序可视化。<br/>根据 <strong>Numbers Truth</strong> 准则：当前输出无真实 schedule 数组，系统严禁虚构排产基准。
-        </div>
-      </div>
-    `;
+    container.innerHTML = vizEmptyCard(
+      "SCHEDULE UNAVAILABLE",
+      "当前算例不含工序时序排程数据",
+      "甘特图用于流水/作业车间调度（JSSP / FJSSP / RCPSP）工序可视化。<br/>遵循 Numbers Truth 准则：未返回真实 schedule 数组时不展示虚构排产图。"
+    );
     return;
   }
 
@@ -141,21 +158,17 @@ function renderGanttChart(container, solution) {
   svg += `</g></svg>`;
 
   container.innerHTML = `
-    <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:gap:8px">
+    <div style="margin-bottom:12px;font-size:12px;color:var(--ink-60);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <div style="display:flex;align-items:center;gap:8px">
-        <span>🏭 <strong>车间排产逐机甘特图</strong> · ${machines.length} 台设备工序时序</span>
-        <span style="font-size:10px;background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">✓ 真实排产数据 (${ops.length} 项工序)</span>
+        <span><strong>车间排产逐机甘特图</strong> · ${machines.length} 台设备工序时序</span>
+        <span style="font-size:10px;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:2px 7px;border-radius:5px;font-weight:600">真实排产 (${ops.length} 项工序)</span>
       </div>
-      <span style="font-family:var(--mono);color:#059669;font-weight:700">总完工时间 (Cmax): ${makespan}</span>
+      <span style="font-family:var(--mono);color:#047857;font-weight:600">Makespan (Cmax): ${makespan}</span>
     </div>
     ${svg}
   `;
 
-  // Attach hover listener for interactive tooltip
-  container.querySelectorAll(".gantt-bar").forEach(bar => {
-    bar.addEventListener("mouseenter", () => showVizTooltip(bar.getAttribute("data-op-desc") || ""));
-    bar.addEventListener("mouseleave", hideVizTooltip);
-  });
+  bindVizTooltips(container, ".gantt-bar", "data-op-desc");
 }
 
 function renderRouteMap(container, solution) {
@@ -164,20 +177,16 @@ function renderRouteMap(container, solution) {
   const hasTour = solution && Array.isArray(solution.tour) && solution.tour.length > 0;
 
   if (!hasRoutes && !hasTour) {
-    container.innerHTML = `
-      <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
-        <div style="font-size:32px;margin-bottom:8px">🗺️</div>
-        <div style="font-weight:600;font-size:13px;color:#334155">当前算例不含车辆或旅行商路径规划数据</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
-          路径图专用于车辆路径 (VRP/CVRP) 或旅行商回路 (TSP) 可视化。<br/>根据 <strong>Numbers Truth</strong> 准则：当前输出无 routes 或 tour 路径数据，系统严禁伪造路径拓扑。
-        </div>
-      </div>
-    `;
+    container.innerHTML = vizEmptyCard(
+      "ROUTES UNAVAILABLE",
+      "当前算例不含车辆或旅行商路径数据",
+      "路径图用于车辆路径（VRP / CVRP）或巡检回路（TSP）可视化。<br/>遵循 Numbers Truth 准则：当前输出无 routes 或 tour 字段时不生成路径拓扑。"
+    );
     return;
   }
 
-  const palette = ["#2563eb", "#059669", "#7c3aed", "#d97706", "#ec4899"];
-  const depot = { x: 410, y: 140, name: "场站/起点 0" };
+  const palette = ["#1d4ed8", "#059669", "#6d28d9", "#d97706", "#db2777"];
+  const pureTourMode = hasTour && !hasRoutes;
 
   let normalizedRoutes = [];
   if (hasRoutes) {
@@ -203,21 +212,28 @@ function renderRouteMap(container, solution) {
     const angle = (idx / Math.max(1, numNodes)) * 2 * Math.PI - Math.PI / 2;
     const px = 410 + radiusX * Math.cos(angle);
     const py = 140 + radiusY * Math.sin(angle);
-    customers.push({ id: nid, x: px, y: py, name: `站点 ${nid}` });
+    customers.push({ id: nid, idx, x: px, y: py, name: `站点 ${nid}` });
   });
 
   const nodeMap = new Map();
   customers.forEach(c => nodeMap.set(String(c.id), c));
 
+  const startId = nodeSeq[0] || "0";
+  const depot = { x: 410, y: 140, name: "场站 / 起点" };
   const routes = normalizedRoutes.slice(0, 6).map((r, idx) => {
     const cColor = palette[idx % palette.length];
     const routeArr = Array.isArray(r.route) ? r.route : (Array.isArray(r) ? r : []);
-    const routeStops = [depot];
+    const routeStops = [];
+    if (!pureTourMode) routeStops.push(depot);
     routeArr.forEach(nid => {
       const pt = nodeMap.get(String(nid));
       if (pt) routeStops.push(pt);
     });
-    routeStops.push(depot);
+    if (pureTourMode && routeStops.length > 1) {
+      routeStops.push(routeStops[0]);
+    } else if (!pureTourMode) {
+      routeStops.push(depot);
+    }
     return {
       id: hasRoutes ? `车队 ${idx + 1}` : "巡检回路",
       color: cColor,
@@ -227,7 +243,7 @@ function renderRouteMap(container, solution) {
   });
 
   let svg = `<svg class="viz-svg" viewBox="0 0 820 280" xmlns="http://www.w3.org/2000/svg">`;
-  svg += `<rect width="820" height="280" fill="#ffffff" rx="10"/>`;
+  svg += `<rect width="820" height="280" fill="#ffffff" rx="8"/>`;
 
   // Background concentric grid
   svg += `<circle cx="410" cy="140" r="110" fill="none" stroke="#f1f5f9" stroke-width="1.5" stroke-dasharray="4,4"/>`;
@@ -237,51 +253,59 @@ function renderRouteMap(container, solution) {
   routes.forEach(route => {
     let pathD = "";
     route.pts.forEach((pt, pIdx) => {
-      pathD += (pIdx === 0 ? "M " : " L ") + `${pt.x} ${pt.y}`;
+      pathD += (pIdx === 0 ? "M " : " L ") + `${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
     });
-    svg += `<path d="${pathD}" fill="none" stroke="${route.color}" stroke-width="2" stroke-opacity="0.85" stroke-dasharray="6,3"/>`;
+    svg += `<path d="${pathD}" fill="none" stroke="${route.color}" stroke-width="2" stroke-opacity="0.85" stroke-dasharray="5,3"/>`;
   });
 
   // Draw customer nodes
   customers.forEach(c => {
-    const desc = `${c.name} · 拓扑受访节点`;
+    const isStart = pureTourMode && c.id === startId;
+    const desc = isStart
+      ? `${c.name} · 回路起点与终点（第 1 站）`
+      : `${c.name} · 访问次序第 ${c.idx + 1} 站`;
+    const stroke = isStart ? "#059669" : "#1d4ed8";
+    const fill = isStart ? "#059669" : "#ffffff";
+    const r = isStart ? 8 : 6;
+    const label = isStart ? `${esc(c.id)} (起点)` : esc(c.id);
     svg += `
-      <g class="route-node" data-node-desc="${esc(desc)}" tabindex="0" style="cursor:pointer">
+      <g class="route-node" data-node-desc="${esc(desc)}" tabindex="0" role="button" aria-label="${esc(desc)}" style="cursor:pointer">
         <title>${esc(desc)}</title>
-        <circle cx="${c.x}" cy="${c.y}" r="6" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
-        <text x="${c.x}" y="${c.y + 15}" font-size="9" font-family="var(--mono)" font-weight="600" fill="#475569" text-anchor="middle">${esc(c.id)}</text>
-      </g>
-    `;
+        <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="20" fill="rgba(0,0,0,0.001)" pointer-events="all"/>
+        <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="2.2"/>
+        <text x="${c.x.toFixed(1)}" y="${(c.y + 17).toFixed(1)}" font-size="9.5" font-family="var(--mono)" font-weight="${isStart ? 700 : 600}" fill="${isStart ? "#047857" : "#475569"}" text-anchor="middle">${label}</text>
+      </g>`;
   });
 
-  // Draw Depot
-  svg += `
-    <g style="cursor:pointer">
-      <rect x="396" y="126" width="28" height="28" rx="6" fill="#dc2626" stroke="#ffffff" stroke-width="2"/>
-      <text x="410" y="144" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">★</text>
-      <text x="410" y="166" font-size="10" font-weight="700" fill="#dc2626" text-anchor="middle">起点</text>
-    </g>
-  `;
+  // Draw center depot only for multi-vehicle routes
+  if (!pureTourMode) {
+    const depotDesc = "配送中心 / 车队出发与回场场站";
+    svg += `
+      <g class="route-node" data-node-desc="${esc(depotDesc)}" tabindex="0" role="button" aria-label="${esc(depotDesc)}" style="cursor:pointer">
+        <title>${esc(depotDesc)}</title>
+        <rect x="392" y="122" width="36" height="48" fill="rgba(0,0,0,0.001)" pointer-events="all"/>
+        <rect x="396" y="126" width="28" height="28" rx="6" fill="#111827" stroke="#ffffff" stroke-width="2"/>
+        <text x="410" y="144" font-size="10.5" font-weight="700" font-family="var(--mono)" fill="#ffffff" text-anchor="middle">D0</text>
+        <text x="410" y="166" font-size="10" font-weight="600" fill="#374151" text-anchor="middle">场站</text>
+      </g>`;
+  }
 
   svg += `</svg>`;
 
   const objLabel = solution.objective != null ? `目标耗费/里程: ${solution.objective}` : "路径规划完成";
 
   container.innerHTML = `
-    <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div style="margin-bottom:12px;font-size:12px;color:var(--ink-60);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <div style="display:flex;align-items:center;gap:8px">
-        <span>🗺️ <strong>车辆/巡检路径拓扑图</strong> · ${customers.length} 个受访站点 <span style="font-size:10px;color:#94a3b8">(拓扑序排布)</span></span>
-        <span style="font-size:10px;background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">✓ 真实路径规划数据</span>
+        <span><strong>路径拓扑视图</strong> · ${customers.length} 个站点 <span style="font-size:10px;color:var(--ink-48)">(拓扑序)</span></span>
+        <span style="font-size:10px;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:2px 7px;border-radius:5px;font-weight:600">真实路径数据</span>
       </div>
-      <span style="font-family:var(--mono);color:#059669;font-weight:700">${esc(objLabel)}</span>
+      <span style="font-family:var(--mono);color:#047857;font-weight:600">${esc(objLabel)}</span>
     </div>
     ${svg}
   `;
 
-  container.querySelectorAll(".route-node").forEach(node => {
-    node.addEventListener("mouseenter", () => showVizTooltip(node.getAttribute("data-node-desc") || ""));
-    node.addEventListener("mouseleave", hideVizTooltip);
-  });
+  bindVizTooltips(container, ".route-node", "data-node-desc");
 }
 
 function renderConvergenceGapCurve(container, solution) {
@@ -289,15 +313,11 @@ function renderConvergenceGapCurve(container, solution) {
   const rawGap = solution?.gap_history || solution?.metrics?.gap_history || solution?.meta?.gap_history;
 
   if (!Array.isArray(rawGap) || rawGap.length < 2) {
-    container.innerHTML = `
-      <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
-        <div style="font-size:32px;margin-bottom:8px">📈</div>
-        <div style="font-weight:600;font-size:13px;color:#334155">当前求解为单阶段直接交付，无多轮迭代收敛历程</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
-          根据 <strong>Numbers Truth</strong> 准则：系统绝不伪造虚假收敛曲线与 0.00% 严密闭合结论。<br/>仅当求解器输出真实迭代历程数据（如松弛下界与上界轨迹）时呈现收敛分析。
-        </div>
-      </div>
-    `;
+    container.innerHTML = vizEmptyCard(
+      "NO CONVERGENCE HISTORY",
+      "本次为单阶段直接求解，无迭代收敛轨迹",
+      "遵循 Numbers Truth 准则：仅当求解器返回真实迭代上下界轨迹（gap_history）时绘制收敛曲线。"
+    );
     return;
   }
 
@@ -350,12 +370,56 @@ function renderConvergenceGapCurve(container, solution) {
   svg += `</svg>`;
 
   container.innerHTML = `
-    <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <span>📈 <strong>数学下界与启发式上界真实收敛 Gap 曲线</strong></span>
-      <span style="font-family:var(--mono);color:#059669;font-weight:700">最终 Gap: ${gapStr}%</span>
+    <div style="margin-bottom:12px;font-size:12px;color:var(--ink-60);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span><strong>下界与启发式上界收敛曲线</strong></span>
+      <span style="font-family:var(--mono);color:#047857;font-weight:600">最终 Gap: ${gapStr}%</span>
     </div>
     ${svg}
   `;
+}
+
+function renderMicrogridChart(container, solution) {
+  if (!container) return;
+  const subs = solution?.subproblems || {};
+  const q1 = subs.q1 || {};
+  const grid = Array.isArray(q1.purchase_kwh) ? q1.purchase_kwh.map(Number) : [];
+  const soc = Array.isArray(q1.soc_kwh) ? q1.soc_kwh.map(Number) : [];
+  if (grid.length === 0 && soc.length === 0) {
+    container.innerHTML = vizEmptyCard(
+      "MICROGRID DATA UNAVAILABLE",
+      "当前问题未包含分时购电与储能 SoC 调度序列",
+      ""
+    );
+    return;
+  }
+  const N = Math.max(grid.length, soc.length, 24);
+  const maxGrid = Math.max(...grid, 10);
+  const maxSoc = Math.max(...soc, 10);
+  const startX = 56, plotW = 730, baseY = 205, plotH = 155;
+  const barW = Math.max(8, (plotW / N) * 0.58);
+  let bars = "", socPts = [];
+  for (let h = 0; h < N; h++) {
+    const x = startX + (h + 0.5) * (plotW / N);
+    const g = grid[h] || 0;
+    const bh = (g / maxGrid) * plotH;
+    bars += `<rect class="mg-bar" x="${(x - barW / 2).toFixed(1)}" y="${(baseY - bh).toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="#3b82f6" opacity="0.78" data-mg="时段 ${h + 1}: 购电 ${g.toFixed(2)} kWh | SoC ${(soc[h] || 0).toFixed(2)} kWh" />`;
+    if (h < soc.length) {
+      const sy = baseY - (soc[h] / maxSoc) * plotH;
+      socPts.push(`${h === 0 ? "M" : "L"} ${x.toFixed(1)} ${sy.toFixed(1)}`);
+    }
+    if (h % 3 === 0) bars += `<text x="${x.toFixed(1)}" y="${baseY + 16}" font-size="9.5" fill="#64748b" text-anchor="middle">${h + 1}h</text>`;
+  }
+  const chips = [
+    ["Q1 基础运行成本", q1.total_cost],
+    ["Q2 有序充电", subs.q2?.total_cost],
+    ["Q3 屋顶光伏协同", subs.q3?.total_cost],
+    ["Q4 优化配置最优年成本", subs.q4_3?.total_cost ?? subs.q4_2?.total_cost],
+  ].filter(([, v]) => v != null).map(([k, v]) =>
+    `<span style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:4px 10px;font-size:11px;font-family:var(--mono)"><strong>${k}:</strong> ${Number(v).toLocaleString()}</span>`
+  ).join("");
+  const svg = `<svg class="viz-svg" viewBox="0 0 820 245" xmlns="http://www.w3.org/2000/svg"><rect width="820" height="245" fill="#ffffff" rx="10"/><line x1="${startX}" y1="${baseY}" x2="${startX + plotW}" y2="${baseY}" stroke="#cbd5e1"/>${bars}${socPts.length ? `<path d="${socPts.join(" ")}" fill="none" stroke="#10b981" stroke-width="2.6"/>` : ""}</svg>`;
+  container.innerHTML = `<div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px"><span><strong>微电网 24h 网购电柱状与储能 SoC 曲线</strong></span><div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div></div>${svg}`;
+  bindVizTooltips(container, ".mg-bar", "data-mg");
 }
 
 function renderVisualizations(solution) {
@@ -366,7 +430,21 @@ function renderVisualizations(solution) {
 
   renderGanttChart($("vizPanelGantt"), solution);
   renderRouteMap($("vizPanelRoutes"), solution);
+  renderMicrogridChart($("vizPanelMicrogrid"), solution);
   renderConvergenceGapCurve($("vizPanelGap"), solution);
 
   initVizTabsOnce();
+  const hasMg = Boolean(solution?.subproblems?.q1?.purchase_kwh?.length);
+  const pc = String(solution?.problem_class || "").toLowerCase();
+  const hasRouteData = (Array.isArray(solution?.routes) && solution.routes.length > 0)
+    || (Array.isArray(solution?.tour) && solution.tour.length > 0);
+  if (hasMg || pc.includes("microgrid") || studioState.domainKey === "microgrid") {
+    selectVizTab("microgrid");
+  } else if (hasRouteData) {
+    selectVizTab("routes");
+  } else if (Array.isArray(solution?.schedule) && solution.schedule.length > 0) {
+    selectVizTab("gantt");
+  } else if (Array.isArray(solution?.gap_history) && solution.gap_history.length >= 2) {
+    selectVizTab("gap");
+  }
 }

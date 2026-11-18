@@ -264,5 +264,18 @@ def test_validator_microgrid_heavy_case_end_to_end(tmp_path: Path) -> None:
     assert abs(updates["objective_value"] - 35126.9486) < 0.01
 
 
+def test_validate_artifact_overwrites_stale_report(tmp_path: Path) -> None:
+    sol = _solution_copy(tmp_path)
+    out = tmp_path / "outputs" / "stale-validation.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps({"ok": False, "errors": ["stale round-1 failure"]}), encoding="utf-8")
+
+    ok, data, _ = dn.validate_artifact(tmp_path, "shortest_path", sol, out, in_process=True)
+    assert ok is True
+    written = json.loads(out.read_text(encoding="utf-8"))
+    assert written["ok"] is True
+    assert written == data
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-q"]))

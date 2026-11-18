@@ -37,10 +37,16 @@ PATH_TOKEN_RE = re.compile(
 )
 
 
+DATE_DOT_OR_DASH_RE = re.compile(r"\b20\d{2}[./-](?:0?[1-9]|1[0-2])[./-](?:0?[1-9]|[12]\d|3[01])\b")
+CLOCK_TIME_RE = re.compile(r"\b\d{1,2}:\d{2}(?::\d{2})?\b")
+
+
 def mask_non_result_numbers(text: str) -> str:
-    """Blank arxiv/doi and process-meta lines before numeric binding scans."""
+    """Blank arxiv/doi, calendar dates, clock times, and process-meta lines before numeric binding scans."""
     masked = ARXIV_ID_RE.sub(" ARXIV ", text or "")
     masked = DOI_NUM_RE.sub(" DOI ", masked)
+    masked = DATE_DOT_OR_DASH_RE.sub(" DATE ", masked)
+    masked = CLOCK_TIME_RE.sub(" TIME ", masked)
     masked = PATH_TOKEN_RE.sub(" PATH ", masked)
     masked = META_COUNTER_RE.sub(" META_COUNTER_LINE ", masked)
     # also inline "claims_recorded: 309" mid-line
@@ -67,6 +73,10 @@ def _collect_solution_tokens(obj: Any, out: set[str]) -> None:
         if obj.is_integer():
             out.add(str(int(obj)))
         out.add(str(obj))
+        # Also allow standard rounded display formats (1..4 decimals) of solution floats.
+        for dp in (1, 2, 3, 4):
+            out.add(f"{obj:.{dp}f}")
+            out.add(f"{round(obj, dp)}")
     elif isinstance(obj, str):
         out.add(obj)
         if re.fullmatch(r"[+-]?\d+(?:\.\d+)?", obj):

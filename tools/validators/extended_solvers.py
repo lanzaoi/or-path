@@ -78,7 +78,12 @@ def validate_jssp(problem_id: str, sol: dict[str, Any]) -> list[dict[str, Any]]:
     # 4. Check makespan equals max end time
     recomputed_makespan = max((t.get("end", 0) for t in tasks), default=0)
     expected_obj = sol.get("objective", sol.get("makespan"))
-    makespan_ok = recomputed_makespan == expected_obj
+    try:
+        makespan_ok = math.isclose(
+            recomputed_makespan, float(expected_obj), rel_tol=1e-9, abs_tol=1e-6
+        )
+    except (TypeError, ValueError):
+        makespan_ok = False
     checks.append({
         "name": "makespan_objective_match",
         "ok": makespan_ok,

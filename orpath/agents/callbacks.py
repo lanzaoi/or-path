@@ -195,15 +195,28 @@ class MultiAgentSnapshotCallback(BaseCallbackHandler):
             if isinstance(tag, str):
                 candidates.append(tag)
         metadata_dict = _as_dict(metadata)
-        for key in ("agent", "name", "role", "ls_custom_run_id"):
+        for key in ("agent", "name", "role", "ls_custom_run_id", "langgraph_node"):
             value = metadata_dict.get(key)
             if isinstance(value, str):
                 candidates.append(value)
 
+        node_aliases = {
+            "analyst": "or_analyst",
+            "modeler": "or_modeler",
+            "modeler_track_a": "or_modeler",
+            "modeler_track_b": "or_modeler",
+            "tier_c_focus": "or_modeler",
+            "writer": "or_writer",
+            "reviewer": "or_reviewer",
+            "research": RESEARCHER_NAME,
+            "model": MODELER_NAME,
+        }
         known = set(KNOWN_AGENT_NAMES)
         for candidate in candidates:
             if candidate in known:
                 return candidate
+            if candidate in node_aliases:
+                return node_aliases[candidate]
 
         for known_name in KNOWN_AGENT_NAMES:
             for candidate in candidates:

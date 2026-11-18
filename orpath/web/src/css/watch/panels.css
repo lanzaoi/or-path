@@ -36,7 +36,7 @@
   margin-bottom: 4px;
   text-transform: uppercase;
 }
-.bubble.system { align-self: center; max-width: 100%; background: #f1f5f9; color: #475569; }
+.bubble.system { align-self: flex-start; max-width: 100%; background: #f1f5f9; color: #475569; }
 .bubble.research, .bubble.pi { align-self: flex-start; border-color: rgba(37, 99, 235, 0.25); background: #f8faff; }
 .bubble.model { align-self: flex-start; border-color: rgba(139, 92, 246, 0.3); background: #faf8ff; }
 .bubble.solve { align-self: flex-start; background: #f0fdf4; border-color: rgba(16, 185, 129, 0.35); }

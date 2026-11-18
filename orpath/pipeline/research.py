@@ -800,6 +800,7 @@ def node_research(state: ORPathState) -> dict:
     state_out = {
         **base_out,
         "stage": "model",
+        "problem_class": pc or "unknown",
         "research_path": str(path),
         "profile_path": profile_path,
         "data_files": list(probe.get("data_files") or []),

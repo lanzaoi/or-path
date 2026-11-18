@@ -71,6 +71,8 @@ _PROFILE_TOOL = {
     "rostering": "profile_rostering_data",
     "project": "profile_project_data",
     "tube": "profile_tube_data",
+    "nlp": "profile_nlp_data",
+    "general_or": "profile_nlp_data",
 }
 _INSPECT_TOOL = {
     "routing": "inspect_routing_solution",
@@ -83,6 +85,8 @@ _INSPECT_TOOL = {
     "rostering": "inspect_rostering_solution",
     "project": "inspect_project_solution",
     "tube": "inspect_tube_solution",
+    "nlp": "inspect_nlp_solution",
+    "general_or": "inspect_nlp_solution",
 }
 
 
@@ -129,6 +133,9 @@ CLASS_TO_DOMAIN: dict[str, str] = {
     "graph_coloring": "general_or",
     "max_clique": "general_or",
     "game_theory": "general_or",
+    # universal Python math-paradigm sandbox cartridges:
+    "nlp_minlp": "nlp",
+    "interval_coverage": "nlp",
 }
 
 #: Raw-alias forced tiers (checked before canonical normalisation).
@@ -201,7 +208,7 @@ CARTRIDGES: dict[str, DomainCartridge] = {
         problem_classes=("microgrid_dispatch",),
         default_tier="B",
         solver_modes=("microgrid", "microgrid_dispatch", "energy_storage"),
-        skill_topics=("or-modeling", "or-problems.md"),
+        skill_topics=("microgrid-dispatch", "or-modeling", "or-problems.md"),
         modeling_checklist=("SOC 上下限", "充放电互斥", "功率平衡 buy+pv+dis-ch>=load"),
     ),
     "tube": DomainCartridge(
@@ -209,7 +216,7 @@ CARTRIDGES: dict[str, DomainCartridge] = {
         problem_classes=("tube_cut", "polyomino_cover", "bin_packing"),
         default_tier="B",
         solver_modes=("tube_cut", "tube", "polyomino", "polyomino_cover", "poly", "bin_packing", "binpack"),
-        skill_topics=("or-problems.md", "research-ops-skills"),
+        skill_topics=("polyomino-cover", "lns-warmstart", "or-problems.md", "research-ops-skills"),
         modeling_checklist=("PCA 几何一致性", "余料跨期继承账本", "共边负收益核算"),
     ),
     "facility": DomainCartridge(
@@ -220,13 +227,26 @@ CARTRIDGES: dict[str, DomainCartridge] = {
         skill_topics=("or-numbers-truth", "or-problems.md"),
         modeling_checklist=("产能=需求分配", "单源二值", "运输成本 Haversine"),
     ),
+    "nlp": DomainCartridge(
+        domain="nlp",
+        problem_classes=("nlp_minlp", "interval_coverage"),
+        default_tier="B",
+        solver_modes=("sandbox", "custom_mip"),
+        skill_topics=("or-reduction-playbook", "nlp-minlp", "interval-coverage", "lns-warmstart", "or-problems.md", "or-numbers-truth"),
+        modeling_checklist=(
+            "两阶段物理离散规约 -> OR求解器主干(CP-SAT/HiGHS MILP) -> 低维连续抛光",
+            "优先导入 tools.or_kernels (milp_reduction / lns_hybrid / nlp_minlp / interval_coverage)",
+            "连续区间合并测度严格去重 (merge_intervals / union_length)",
+            "独立纯 Python 物理/几何验算禁止导入 scipy.optimize 或求解器",
+        ),
+    ),
     GENERAL_OR_DOMAIN: DomainCartridge(
         domain=GENERAL_OR_DOMAIN,
         problem_classes=(),
         default_tier="B",
         solver_modes=("sandbox", "custom_mip", "custom_cp"),
-        skill_topics=("or-problems.md", "or-solver-select", "or-numbers-truth"),
-        modeling_checklist=("受控沙箱自编 MIP/CP-SAT", "独立重算校验", "未知题型回退"),
+        skill_topics=("or-reduction-playbook", "nlp-minlp", "interval-coverage", "lns-warmstart", "or-problems.md", "or-solver-select", "or-numbers-truth"),
+        modeling_checklist=("物理离散建列 + MILP/CP-SAT 组合主干 + 局部抛光 (复用 tools.or_kernels)", "独立重算校验", "未知题型回退"),
         general=True,
     ),
 }

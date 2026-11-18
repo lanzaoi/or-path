@@ -119,6 +119,11 @@ function boot() {
 
   on("btnApply", "click", applyControls);
   on("btnRefresh", "click", () => fetchSnapshot(true));
+  on("btnToggleWatchDrawer", "click", () => {
+    const rail = $("rail");
+    if (rail && rail.scrollIntoView) rail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    fetchSnapshot(true);
+  });
   on("btnFollow", "click", () => {
     followTail = !followTail;
     if ($("btnFollow")) $("btnFollow").classList.toggle("on", followTail);
@@ -128,6 +133,7 @@ function boot() {
     if ($("btnPause")) $("btnPause").classList.toggle("on", paused);
     if (!paused) fetchSnapshot(true);
   });
+  on("errRetry", "click", () => runCurrentProblem());
   on("errCopy", "click", copyErrorText);
   on("errJump", "click", jumpToErrorStage);
   on("errDismiss", "click", () => {

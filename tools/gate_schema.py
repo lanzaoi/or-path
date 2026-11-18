@@ -30,6 +30,9 @@ except Exception:  # noqa: BLE001 — tools/ may run without package on path
             "custom",
             "general_optimization",
             "custom_reduced",
+            "nlp_minlp",
+            "interval_coverage",
+            "general_or",
         }
     )
     MICROGRID_SCHEMA_KEYS = frozenset(

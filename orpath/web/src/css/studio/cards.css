@@ -1,40 +1,38 @@
 /* Diagnosis Banner */
 #studioDiagnosisBanner {
-  background: linear-gradient(135deg, rgba(245, 243, 255, 0.9) 0%, rgba(238, 242, 255, 0.7) 100%);
-  border: 1px solid rgba(139, 92, 246, 0.25);
-  border-left: 4px solid #7c3aed;
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin-bottom: 18px;
-  box-shadow: 0 1px 3px rgba(139, 92, 246, 0.04);
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ink);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
 }
 
 /* Knowledge Banner */
 #studioKnowledgeBanner {
   display: none;
-  background: linear-gradient(135deg, rgba(238, 242, 255, 0.9) 0%, rgba(245, 243, 255, 0.7) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  border-left: 4px solid #6366f1;
-  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 14px 18px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 /* Algorithm Comparison Cards */
 #studioAlgoList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .studio-algo-item {
-  border-radius: 10px;
-  padding: 12px 14px;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  border-radius: 8px;
+  padding: 11px 14px;
+  transition: border-color 0.15s ease;
 }
 
 .studio-algo-item:hover {
-  transform: translateY(-1px);
+  border-color: var(--border-strong);
 }
 
 /* Data Variables Alignment List */
@@ -46,30 +44,30 @@
 
 .studio-data-item {
   border: 1px solid var(--border);
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 10px 14px;
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 9px 13px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: background-color 0.18s ease, border-color 0.18s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .studio-data-item:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--surface-2);
+  border-color: var(--border-strong);
 }
 
 /* Clarification Questions Box */
 #studioQuestionsBox {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .studio-question-card {
-  border-bottom: 1px dashed rgba(203, 213, 225, 0.8);
-  padding-bottom: 14px;
+  border-bottom: 1px solid var(--surface-2);
+  padding-bottom: 12px;
 }
 
 .studio-question-card:last-child {
@@ -84,32 +82,34 @@
   font-size: 12.5px;
   cursor: pointer;
   padding: 6px 10px;
-  border-radius: 8px;
-  transition: background 0.15s ease;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
 }
 
 .studio-option-label:hover {
-  background: rgba(241, 245, 249, 0.9);
+  background: var(--surface-2);
 }
 
 /* Result Card */
 #studioResultCard {
-  background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 80%);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  box-shadow: 0 4px 24px -2px rgba(16, 185, 129, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--ok);
+  box-shadow: var(--shadow-sm);
 }
 
 #studioResultCard.is-blocked {
-  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 80%);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  box-shadow: 0 4px 24px -2px rgba(239, 68, 68, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--fail);
+  box-shadow: var(--shadow-sm);
 }
 
 #studioHeadline {
-  font-size: 18px;
-  font-weight: 800;
-  color: #065f46;
-  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
   letter-spacing: -0.015em;
 }
 
@@ -118,9 +118,9 @@
 }
 
 #studioObjective {
-  font-size: 32px;
-  font-weight: 800;
-  color: #047857;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--ink);
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   margin-bottom: 6px;
@@ -132,9 +132,9 @@
 }
 
 #studioValidation {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
-  color: #065f46;
+  color: #047857;
 }
 
 #studioResultCard.is-blocked #studioValidation {
@@ -144,7 +144,7 @@
 #studioSolutionDetail {
   margin-top: 10px;
   font-size: 12px;
-  color: #047857;
+  color: var(--ink-60);
   font-family: var(--mono);
   line-height: 1.6;
 }
@@ -156,7 +156,7 @@
 /* Artifact Download Buttons */
 #studioDownloads {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -164,24 +164,26 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 7px 14px;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
   font-size: 12px;
-  color: #0f172a;
+  color: var(--ink);
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
   box-shadow: var(--shadow-xs);
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
   cursor: pointer;
 }
 
+.studio-dl-btn[hidden] {
+  display: none;
+}
+
 .studio-dl-btn:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 
 .studio-dl-btn:active {

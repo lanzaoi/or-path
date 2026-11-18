@@ -69,6 +69,21 @@ __all__ = [
 
 #: Default wall-clock budget for ``execute_python_sandbox``.
 SANDBOX_DEFAULT_TIMEOUT_SEC = 180
+#: Hard maximum per-round wall-clock ceiling for sandbox script execution (600s).
+SANDBOX_MAX_TIMEOUT_SEC = 600
+#: Maximum characters preserved per stdout/stderr/detail field returned to LLMs.
+_MAX_TOOL_IO_CHARS = 3500
+
+
+def _clip_io(text: Any, max_chars: int = _MAX_TOOL_IO_CHARS) -> str:
+    """Clip verbose tool stdout/stderr/detail cleanly so LLM context never explodes."""
+    raw = str(text or "")
+    if len(raw) <= max_chars:
+        return raw
+    head = max(400, int(max_chars * 0.30))
+    tail = max(800, max_chars - head - 80)
+    dropped = len(raw) - head - tail
+    return f"{raw[:head]}\n... [truncated {dropped} chars] ...\n{raw[-tail:]}"
 
 #: Readable algorithm-family label per adapter script (falls back to the
 #: script stem minus the ``solve_`` prefix / ``.py`` suffix).
@@ -179,6 +194,31 @@ def list_available_solvers() -> str:
             "total_families": len(families_out),
             "modes": sorted(modes),
             "families": families_out,
+            "or_kernels": [
+                {
+                    "module": "tools.or_kernels.milp_reduction",
+                    "functions": [
+                        "solve_general_milp(c, *, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=None, integrality=None, maximize=False, time_limit_s=30.0)",
+                        "solve_budgeted_coverage_milp(item_coverages, *, universe_weights=None, item_costs=None, max_items=None, budget=None, cover_all=False, regime_groups=None, conflicts=())",
+                        "solve_assignment_milp(cost_matrix, *, maximize=False, row_caps=None, col_demands=None, exact_row_assign=True, conflicts=())",
+                    ],
+                },
+                {
+                    "module": "tools.or_kernels.lns_hybrid",
+                    "functions": [
+                        "select_max_union_subset(intervals_by_item=None, *, target_intervals_by_item=None, target_weights=None, max_items=None, group_caps=None, regime_groups=None, conflicts=(), item_times=None, min_separation=0.0, warm_start=(), time_limit_s=30.0)",
+                        "run_lns_loop(initial_state, evaluate_fn, repair_step_fn, *, maximize=False, n_iterations=10, time_limit_s=120.0)",
+                    ],
+                },
+                {
+                    "module": "tools.or_kernels.nlp_minlp",
+                    "functions": [
+                        "solve_box_nlp(objective_fn, bounds, *, maximize=False, constraints=(), n_lhs=96, global_method='de', popsize=12, maxiter=120, n_local_starts=5, time_limit_s=60.0, seed=42, initial_points=())  # constraints: c(x) >= 0",
+                        "solve_multistart_polish(objective_fn, bounds, initial_points, *, maximize=False, constraints=(), method='auto', maxiter=100, time_limit_s=15.0)",
+                        "solve_minlp_decomposed(discrete_candidates, build_subproblem_fn, *, maximize=False, time_limit_s=120.0)",
+                    ],
+                },
+            ],
         }
     )
 
@@ -224,7 +264,7 @@ def execute_or_solver(
     # problem classes, and any failure is surfaced through ``detail``.
     extra = extra_args.split() if extra_args else None
     root = _resolve_root()
-    out_slug = (slug or "").strip() or problem_id
+    out_slug = re.sub(r"[^A-Za-z0-9_-]+", "-", (slug or "").strip() or problem_id).strip("-") or "case"
     out_path = Path("outputs") / f"{out_slug}-solution.json"
     target_path = root / out_path
     try:
@@ -322,8 +362,8 @@ def validate_solution_tool(problem_id: str, solution_path: str, output_path: str
             "solution_path": str(solution),
             "output_path": str(out),
             "validation": data,
-            "constraint_violations": violations,
-            "detail": detail,
+            "constraint_violations": violations[:20],
+            "detail": _clip_io(detail, 2400),
         }
     )
 
@@ -371,6 +411,7 @@ def execute_python_sandbox(code: str, timeout_sec: int = SANDBOX_DEFAULT_TIMEOUT
             }
         )
 
+    timeout = min(SANDBOX_MAX_TIMEOUT_SEC, timeout)
     root = _resolve_root()
     try:
         proc = subprocess.run(
@@ -385,11 +426,14 @@ def execute_python_sandbox(code: str, timeout_sec: int = SANDBOX_DEFAULT_TIMEOUT
             {
                 "success": False,
                 "returncode": None,
-                "stdout": exc.stdout or "",
-                "stderr": exc.stderr or "",
+                "stdout": _clip_io(exc.stdout),
+                "stderr": _clip_io(exc.stderr),
                 "timed_out": True,
                 "timeout_sec": timeout,
-                "detail": f"sandbox timed out after {timeout}s",
+                "detail": (
+                    f"sandbox timed out after {timeout}s — write persistent solver scripts via "
+                    "`write_custom_solver_script` and execute via `execute_custom_script` with bounded `time_limit_s`"
+                ),
             }
         )
     except Exception as exc:  # noqa: BLE001 - tools must never raise
@@ -409,8 +453,8 @@ def execute_python_sandbox(code: str, timeout_sec: int = SANDBOX_DEFAULT_TIMEOUT
         {
             "success": proc.returncode == 0,
             "returncode": proc.returncode,
-            "stdout": proc.stdout,
-            "stderr": proc.stderr,
+            "stdout": _clip_io(proc.stdout),
+            "stderr": _clip_io(proc.stderr),
             "timed_out": False,
             "timeout_sec": timeout,
         }
@@ -447,8 +491,19 @@ def write_custom_solver_script(script_path: str, code: str) -> str:
             return _json({"success": False, "detail": f"path escapes workdir: {script_path!r}"})
         if not rel_parts or rel_parts[0] in {"orpath", "tools", "scripts", ".git", ".venv"}:
             return _json({"success": False, "detail": f"refusing write to protected path: {script_path!r}"})
+        src = str(code)
+        if target.suffix.lower() == ".py":
+            import ast as _ast
+
+            try:
+                _ast.parse(src, filename=str(target.name))
+            except SyntaxError as s_exc:
+                return _json({
+                    "success": False,
+                    "detail": f"SyntaxError line {s_exc.lineno}: {s_exc.msg} (refused overwrite)",
+                })
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(str(code), encoding="utf-8")
+        target.write_text(src, encoding="utf-8")
         return _json({
             "success": True,
             "path": str(target),
@@ -487,7 +542,10 @@ def execute_custom_script(script_path: str, timeout_sec: int = 300) -> str:
             return _json({"success": False, "detail": f"script escapes workdir: {script_path!r}"})
         if not path.is_file():
             return _json({"success": False, "detail": f"script not found: {path}"})
-        timeout = int(timeout_sec) if str(timeout_sec).isdigit() and int(timeout_sec) > 0 else SANDBOX_DEFAULT_TIMEOUT_SEC
+        raw_to = int(timeout_sec) if str(timeout_sec).strip().isdigit() and int(timeout_sec) > 0 else SANDBOX_DEFAULT_TIMEOUT_SEC
+        cap_raw = (os.environ.get("ORPATH_CUSTOM_SCRIPT_MAX_TIMEOUT") or "").strip()
+        cap_to = int(cap_raw) if cap_raw.isdigit() and int(cap_raw) > 0 else SANDBOX_MAX_TIMEOUT_SEC
+        timeout = min(SANDBOX_MAX_TIMEOUT_SEC, cap_to, max(1, raw_to))
         env = dict(os.environ)
         env["ORPATH_WORKDIR"] = str(root)
         proc = subprocess.run(
@@ -501,8 +559,8 @@ def execute_custom_script(script_path: str, timeout_sec: int = 300) -> str:
         return _json({
             "success": proc.returncode == 0,
             "returncode": proc.returncode,
-            "stdout": proc.stdout,
-            "stderr": proc.stderr,
+            "stdout": _clip_io(proc.stdout),
+            "stderr": _clip_io(proc.stderr),
             "timed_out": False,
             "timeout_sec": timeout,
             "script_path": str(path),
@@ -511,10 +569,10 @@ def execute_custom_script(script_path: str, timeout_sec: int = 300) -> str:
         return _json({
             "success": False,
             "returncode": None,
-            "stdout": exc.stdout or "",
-            "stderr": exc.stderr or "",
+            "stdout": _clip_io(exc.stdout),
+            "stderr": _clip_io(exc.stderr),
             "timed_out": True,
-            "detail": "custom script timed out",
+            "detail": f"custom script timed out after {timeout}s (reduce grid density or add explicit time_limit_s)",
         })
     except Exception as exc:  # noqa: BLE001 - tools must never raise
         return _json({
@@ -617,10 +675,32 @@ def consult_or_skill(topic: str, subtopic: str | None = None) -> str:
         "stochastic": ["or-problems.md", "inventory-demand-planning/SKILL.md"],
         "binpack": ["or-problems.md"],
         "knapsack": ["or-problems.md"],
+        "nlp-minlp": ["nlp-minlp/SKILL.md", "interval-coverage/SKILL.md"],
+        "nlp": ["nlp-minlp/SKILL.md", "or-problems.md"],
+        "minlp": ["nlp-minlp/SKILL.md", "or-problems.md"],
+        "interval-coverage": ["interval-coverage/SKILL.md", "nlp-minlp/SKILL.md"],
+        "interval": ["interval-coverage/SKILL.md", "nlp-minlp/SKILL.md"],
+        "eda": ["exploratory-data-analysis/SKILL.md"],
+        "exploratory": ["exploratory-data-analysis/SKILL.md"],
+        "stats": ["statistical-analysis/SKILL.md"],
+        "statistics": ["statistical-analysis/SKILL.md"],
+        "statistical": ["statistical-analysis/SKILL.md"],
+        "regression": ["statistical-analysis/SKILL.md", "scikit-learn-modeling/SKILL.md"],
+        "uncertainty": ["uncertainty-and-units/SKILL.md"],
+        "units": ["uncertainty-and-units/SKILL.md"],
+        "sklearn": ["scikit-learn-modeling/SKILL.md"],
+        "ml": ["scikit-learn-modeling/SKILL.md"],
+        "classification": ["scikit-learn-modeling/SKILL.md"],
+        "clustering": ["scikit-learn-modeling/SKILL.md"],
+        "forecasting": ["scikit-learn-modeling/SKILL.md", "statistical-analysis/SKILL.md"],
+        "lns-warmstart": ["lns-warmstart/SKILL.md"],
+        "lns": ["lns-warmstart/SKILL.md", "references/heuristics_and_metaheuristics.md"],
+        "polyomino-cover": ["polyomino-cover/SKILL.md", "lns-warmstart/SKILL.md"],
+        "microgrid-dispatch": ["microgrid-dispatch/SKILL.md"],
     }
 
     candidate_files: list[Path] = []
-    for k, paths in alias_map.items():
+    for k, paths in sorted(alias_map.items(), key=lambda kv: -len(kv[0])):
         if k in query or query in k:
             for rel in paths:
                 p = base_skills_dir / rel

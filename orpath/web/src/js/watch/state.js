@@ -29,13 +29,14 @@ function showErrorBanner(s) {
   const t = (e.last_error || "").trim();
   const ex = e.explain || {};
   const banner = $("errBanner");
-  if (!e.has_error || !t || t === errDismissed) {
-    if ((!e.has_error || !t) && banner) banner.classList.remove("show");
+  const overallOk = String((s && s.status) || "").toLowerCase() === "ok" && !e.human_required;
+  if (overallOk || !e.has_error || !t || t === errDismissed) {
+    if ((overallOk || !e.has_error || !t) && banner) banner.classList.remove("show");
     renderNextActions(s);
     return;
   }
   const headline = (ex.headline || "").trim()
-    || (e.human_required ? "需要你看一下" : "运行出错");
+    || (e.human_required ? "需要处理" : "运行出错");
   if ($("errTitle")) $("errTitle").textContent = e.human_required ? "需要人工处理" : "出错了";
   if ($("errHeadline")) {
     $("errHeadline").hidden = false;
@@ -46,7 +47,11 @@ function showErrorBanner(s) {
     $("errExplain").hidden = false;
     if ($("errWhat")) $("errWhat").textContent = ex.what || ("卡在「" + nodeLabel(e.node || e.stage) + "」。");
     if ($("errWhy")) $("errWhy").textContent = ex.why || t;
-    if ($("errDo")) $("errDo").textContent = ex.do || "复制下方命令到终端执行；网页不会自动续跑。";
+    const rawDo = String(ex.do || "").trim();
+    const safeDo = (rawDo && (!rawDo.includes("建议操作") || $("nextActions")))
+      ? rawDo
+      : "请点击右上角「跳到该步」定位失败阶段，或展开下方技术日志查看上下文。";
+    if ($("errDo")) $("errDo").textContent = safeDo;
   }
   if ($("errText")) $("errText").textContent = t;
   const meta = [
@@ -60,60 +65,11 @@ function showErrorBanner(s) {
     autoJumpedError = true;
     selectedStageSeq = Number(e.stage_seq);
   }
-  renderNextActions(s);
 }
 
-function renderNextActions(s) {
+function renderNextActions(_s) {
   const box = $("nextActions");
-  const list = $("nextActionsList");
-  if (!box || !list) return;
-  const acts = (s && (s.next_actions || (s.error && s.error.next_actions))) || [];
-  if (!acts.length) {
-    box.classList.remove("show");
-    list.innerHTML = "";
-    return;
-  }
-  box.classList.add("show");
-  const banner = $("errBanner");
-  if (banner && !banner.classList.contains("show")) {
-    banner.classList.add("show");
-    if ($("errTitle")) $("errTitle").textContent = "建议下一步";
-    if ($("errHeadline")) {
-      $("errHeadline").hidden = false;
-      if ($("errHeadlineText")) $("errHeadlineText").textContent = "可以继续，但要你在终端执行";
-      if ($("errIcon")) $("errIcon").textContent = "👉";
-    }
-    if ($("errExplain")) $("errExplain").hidden = true;
-    if ($("errText")) $("errText").textContent = "";
-    if ($("errMeta")) $("errMeta").textContent = "状态：" + statusLabel((s && s.status) || "");
-  }
-  list.innerHTML = acts.map((a, i) => {
-    const title = esc(a.title || ("操作 " + (i + 1)));
-    const reason = esc(a.reason || "");
-    const cmd = esc(a.command || "");
-    const rec = i === 0 || /推荐/.test(a.title || "");
-    return `<div class="na-item${rec ? " rec" : ""}" data-na-idx="${i}">
-      <strong>${title}</strong>
-      <button type="button" class="na-copy" data-na-copy="${i}">复制命令</button>
-      <div class="na-reason">${reason}</div>
-      <pre class="na-cmd" id="naCmd${i}">${cmd}</pre>
-    </div>`;
-  }).join("");
-  list.querySelectorAll("[data-na-copy]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const i = btn.getAttribute("data-na-copy");
-      const pre = document.getElementById("naCmd" + i);
-      const text = pre ? pre.textContent : "";
-      if (!text) return;
-      const ok = await copyToClipboard(text);
-      if (ok) {
-        btn.textContent = "已复制 ✓";
-        setTimeout(() => { btn.textContent = "复制命令"; }, 1200);
-      } else {
-        if ($("fetchErr")) $("fetchErr").textContent = "复制命令失败";
-      }
-    });
-  });
+  if (box) box.classList.remove("show");
 }
 
 async function copyErrorText() {
@@ -218,7 +174,6 @@ function renderBadges(s) {
       ? `<span class="badge st-blocked">需人工</span>` : "",
     s.thinking
       ? `<span class="badge">${esc(statusLabel(s.thinking.status))}</span>` : "",
-    poll.events_truncated ? `<span class="badge st-fail">事件截断</span>` : "",
     t2.pi_session_env ? `<span class="badge on">会话</span>` : `<span class="badge off">无会话</span>`,
     t3.enabled ? `<span class="badge on">观测</span>` : "",
     paused ? `<span class="badge st-blocked">已暂停</span>` : "",

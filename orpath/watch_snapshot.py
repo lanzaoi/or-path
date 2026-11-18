@@ -405,13 +405,40 @@ def load_stages(
     files = sorted(stages_dir.glob("*.json"), key=lambda p: p.name)
     if not files:
         return [], None
-    out: list[dict[str, Any]] = []
+    raw_out: list[dict[str, Any]] = []
     for i, fp in enumerate(files, 1):
-        out.append(
+        raw_out.append(
             _parse_stage_file(
                 fp, i, is_last=(i == len(files)), sources_fresh=sources_fresh
             )
         )
+    # Collapse consecutive multi-agent step files with identical (node, last_error, human_required)
+    # when a run has many granular step files (>24), preserving exact progression transitions.
+    if len(raw_out) > 24:
+        collapsed: list[dict[str, Any]] = []
+        run_counts: list[int] = []
+        for item in raw_out:
+            if (
+                collapsed
+                and collapsed[-1].get("node") == item.get("node")
+                and (collapsed[-1].get("last_error") or "") == (item.get("last_error") or "")
+                and bool(collapsed[-1].get("human_required")) == bool(item.get("human_required"))
+            ):
+                collapsed[-1] = dict(item)
+                run_counts[-1] += 1
+            else:
+                collapsed.append(dict(item))
+                run_counts.append(1)
+        out: list[dict[str, Any]] = []
+        for idx, (st_item, cnt) in enumerate(zip(collapsed, run_counts), 1):
+            st_item["raw_seq"] = st_item.get("seq")
+            st_item["seq"] = idx
+            st_item["step_count"] = cnt
+            if cnt > 1 and not st_item.get("stage"):
+                st_item["stage"] = f"共 {cnt} 步"
+            out.append(st_item)
+    else:
+        out = raw_out
     latest = _read_json(runs_thread / "latest_snapshot.json")
     return out, latest
 
@@ -1101,12 +1128,55 @@ def build_problem_view(
         intake_status = "fixture"
         ocr_backend = "fixture"
 
+    # Fallback to data-profile.json for sources & data_assets when intake.json is absent
+    data_profile_file = workdir / "outputs" / f"{slug}-data-profile.json"
+    if not sources and not data_assets and data_profile_file.is_file():
+        dp_doc = _read_json(data_profile_file)
+        if isinstance(dp_doc, dict):
+            if intake_status == "none":
+                intake_status = "ok"
+                ocr_backend = "studio_profile"
+            for sf in dp_doc.get("statement_files") or []:
+                if sf:
+                    sources.append({"path": str(sf), "kind": Path(str(sf)).suffix.lstrip(".") or "doc", "pages": None})
+            for df in dp_doc.get("data_files") or []:
+                if isinstance(df, dict) and df.get("rel_path"):
+                    data_assets.append({
+                        "path": str(df.get("rel_path")),
+                        "kind": str(df.get("kind") or "xlsx"),
+                        "role": f"{len(df.get('columns') or [])} 列数据表" if df.get("columns") else "数据附件",
+                    })
+
+    if not subproblems and isinstance(solution_doc, dict) and isinstance(solution_doc.get("questions"), dict):
+        for qk in sorted(solution_doc["questions"].keys()):
+            qv = solution_doc["questions"][qk]
+            if isinstance(qv, dict):
+                obj_v = qv.get("total_effective_time_s") or qv.get("effective_time_s") or qv.get("objective")
+                notes_s = str(qv.get("summary") or qv.get("method") or "")
+                if obj_v is not None:
+                    notes_s = f"求得指标：{obj_v}" + (f" · {notes_s}" if notes_s else "")
+                subproblems.append({
+                    "id": qk.upper(),
+                    "title": f"子问题 {qk.upper()}",
+                    "notes": notes_s,
+                    "must_deliver": [],
+                    "data_refs": [],
+                })
+
     if not objectives_text and isinstance(schema_doc, dict):
         objectives_text = str(schema_doc.get("objective") or "")
     if not constraints_text and isinstance(schema_doc, dict):
         c_list = schema_doc.get("constraints") or []
         if isinstance(c_list, list):
-            constraints_text = "；".join(str(x) for x in c_list[:8])
+            parts_c: list[str] = []
+            for x in c_list[:8]:
+                if isinstance(x, dict):
+                    nm = str(x.get("name") or "").strip()
+                    ex = str(x.get("expr") or x.get("description") or "").strip()
+                    parts_c.append(f"{nm}: {ex}" if (nm and ex) else (ex or nm))
+                else:
+                    parts_c.append(str(x))
+            constraints_text = "；".join(p for p in parts_c if p)
 
     # Schema summary
     schema_summary: dict[str, Any] = {"exists": isinstance(schema_doc, dict)}
@@ -1322,61 +1392,51 @@ def _explain_error(
 
     headline = "需要你看一下" if human else "运行出错"
     what = f"卡在「{where}」这一步。"
-    why = "系统记录了一条技术错误（下面有原文）。"
-    do = "把下方「建议操作」里的命令复制到终端执行。本页面不会自动继续跑。"
+    why = "系统记录了一条异常信息，详情见下方日志。"
+    do = "可直接点击「一键重试求解」或调整输入参数后重新运行，无需手动进入终端。"
     icon = "hand" if human else "warn"
 
     if "exit_code=-9" in low or "exit_code = -9" in low or "timeout after" in low:
-        headline = "调研超时被打断（不是算错）"
-        what = (
-            f"停在「{where}」。多路子智能体往往已经写完笔记，"
-            "但负责汇总的主会话超过时限被强制结束。"
-        )
-        why = (
-            "技术码 exit_code=-9 在本产品里表示「超时」（Timeout），"
-            "不是乱码。常见于 LIVE 时限过短，或宽调研（多子任务）合并太慢。"
-        )
-        do = (
-            "若 notes 里已有调研文稿：优先从「建模」续跑；"
-            "并设 ORPATH_SUBAGENT_TIMEOUT=1800。"
-            "按下面中文操作卡片复制命令即可。"
-        )
+        headline = "求解超时被中断"
+        what = f"停在「{where}」，当前阶段执行超过单次时限。"
+        why = "子任务或求解器运行超时，系统已安全终止该轮等待。"
+        do = "可直接点击「一键重试求解」重新运行，或适当精简输入规模后重试。"
         icon = "clock"
     elif "research_gate" in low or (node_s == "research" and "subagent" in low):
-        headline = "调研门禁没过"
-        what = f"「{where}」要求：调研文稿合格 +（LIVE 时）子智能体链路成功。"
+        headline = "建模调研未完成"
+        what = f"「{where}」未能获取完整的背景解析输出。"
         why = raw or "research_gate 失败"
-        do = "先打开 notes/*-research.md 看是否已有内容；有则从建模续，没有则加长超时后重跑调研。"
+        do = "可检查输入题面内容或直接点击「一键重试求解」重新分析。"
         icon = "gate"
     elif "schema" in low or "forbidden key" in low or node_s in {"gate_schema", "model"}:
-        headline = "建模/结构门禁失败"
+        headline = "模型结构校验未通过"
         what = f"问题结构（schema）不合格，卡在「{where}」。"
         why = raw or "schema gate"
-        do = "从建模或结构门禁续跑；不要手填 objective。"
+        do = "请检查题目约束与数据字段匹配关系后，点击「一键重试求解」。"
         icon = "schema"
     elif "validate" in low or node_s in {"gate_validate", "solve"}:
-        headline = "求解或校验失败"
-        what = f"卡在「{where}」。数字必须以求解器 JSON + 校验为准。"
+        headline = "求解或验算未通过"
+        what = f"卡在「{where}」，数值结果未通过独立约束核验。"
         why = raw or "validate/solve"
-        do = "从求解或校验续跑；禁止改 objective 散文蒙混。"
+        do = "可检查输入数据单位与约束参数后点击「一键重试求解」。"
         icon = "solve"
     elif any(k in low for k in ("cite", "claim", "r1", "r2", "whitelist", "unmapped")):
-        headline = "论文引用/数字主张检查失败"
-        what = f"卡在「{where}」（引用或 claim 门禁）。"
+        headline = "论文引用或数值一致性校验失败"
+        what = f"卡在「{where}」。"
         why = raw
-        do = "从引用打包或写稿续跑；数字只能来自 solution。"
+        do = "可点击「一键重试求解」重新渲染与核验数值。"
         icon = "paper"
     elif "intake" in low or node_s in {"intake_ocr", "intake_parse"}:
-        headline = "题面入口失败"
-        what = "OCR/解析题面没过。"
+        headline = "题面导入失败"
+        what = "文件读取或格式解析未通过。"
         why = raw
-        do = "检查 PDF/图片路径后从题面解析或编排续跑。"
+        do = "请检查上传的文件格式与编码后点击「一键重试求解」。"
         icon = "intake"
     elif raw == "human_required":
-        headline = "流程要求人工确认"
-        what = f"停在「{where}」，等待你决定下一步。"
-        why = "控制面设置了需要人工确认（例如暂停边界或门禁）。"
-        do = "看建议操作；复制命令到终端。页面不会自动续跑。"
+        headline = "当前任务已暂停"
+        what = f"停在「{where}」。"
+        why = "此前运行因异常或阻塞条件停止。"
+        do = "补充题面或数据文件后，直接点击「一键重试求解」即可。"
         icon = "hand"
 
     status_zh = {
@@ -1975,6 +2035,16 @@ def build_snapshot(
 
     domain_roles: list[dict[str, Any]] = []
 
+    evolution_ledger: dict[str, Any] | None = None
+    evo_path = wd / "notes" / f"{slug}-experiments.json"
+    if evo_path.is_file():
+        try:
+            _evo_raw = json.loads(evo_path.read_text(encoding="utf-8"))
+            if isinstance(_evo_raw, dict) and isinstance(_evo_raw.get("rounds"), list):
+                evolution_ledger = _evo_raw
+        except (OSError, json.JSONDecodeError):
+            evolution_ledger = None
+
     snap: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "generated_utc": _utc(),
@@ -1997,6 +2067,7 @@ def build_snapshot(
         "problem_view": problem_view,
         "domain": active_domain,
         "domain_roles": domain_roles,
+        "evolution": evolution_ledger,
         "ui": {"phase": "P5", "event_cap_server": MAX_EVENTS, "dialogue": True, "problem_workbench": True},
         # M1 path contract: root alias = workdir (case data); home = install
         "root": str(wd),

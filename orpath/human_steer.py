@@ -68,6 +68,11 @@ _NODE_ZH = {
     "review_pack": "审稿",
     "revise_or_done": "修订/完成",
     "provenance": "溯源",
+    "supervisor": "总控调度",
+    "or_analyst": "情报分析",
+    "or_modeler": "数学建模与求解",
+    "or_writer": "论文撰写",
+    "or_reviewer": "审稿红队",
     "end": "结束",
 }
 
@@ -348,17 +353,17 @@ def build_dialogue(
         node = str(st.get("node") or st.get("stage") or "stage")
         role = _ROLE_SYSTEM
         low = node.lower()
-        if "research" in low or "retrieve" in low:
+        if "research" in low or "retrieve" in low or "analyst" in low:
             role = _ROLE_RESEARCH
         elif "model" in low or "schema" in low:
             role = _ROLE_MODEL
         elif low == "solve":
             role = _ROLE_SOLVE
-        elif "validate" in low:
+        elif "validate" in low or "reviewer" in low:
             role = _ROLE_VALIDATE
         elif "human" in low:
             role = _ROLE_HUMAN
-        elif any(x in low for x in ("bridge", "cite", "review", "explain", "draft")):
+        elif any(x in low for x in ("bridge", "cite", "review", "explain", "draft", "writer")):
             role = _ROLE_PI
 
         err = str(st.get("last_error") or "").strip()
@@ -366,9 +371,13 @@ def build_dialogue(
         parts = [_node_label(node)]
         if st.get("seq") is not None:
             parts.insert(0, f"#{st.get('seq')}")
+        step_cnt = int(st.get("step_count") or 0)
+        if step_cnt > 1:
+            parts.append(f"共 {step_cnt} 步")
         state = st.get("state") or st.get("status") or ""
         if state:
-            parts.append(str(state))
+            state_zh = "已完成" if str(state) == "done" else ("运行中" if str(state) == "active" else str(state))
+            parts.append(state_zh)
         text = " · ".join(str(p) for p in parts if p)
         if err:
             text += f"\n⚠ { _clip(err, 200) }"
@@ -395,18 +404,14 @@ def build_dialogue(
         obj = sol.get("objective")
         st_s = sol.get("status")
         method = meta.get("method_class") or meta.get("solver") or sol.get("solver") or ""
-        exact = meta.get("exact")
-        proven = meta.get("proven_optimal")
+        st_u = str(st_s or "").upper()
+        st_zh = "可行解 (FEASIBLE)" if st_u == "FEASIBLE" else ("最优解 (OPTIMAL)" if st_u == "OPTIMAL" else str(st_s or "—"))
         lines = [
-            f"status={st_s}",
-            f"objective={obj}" if obj is not None else "objective=—",
+            f"状态：{st_zh}",
+            f"目标值：{obj}" if obj is not None else "目标值：—",
         ]
         if method:
-            lines.append(f"method={method}")
-        if exact is not None:
-            lines.append(f"exact={exact}")
-        if proven is not None:
-            lines.append(f"proven_optimal={proven}")
+            lines.append(f"求解策略：{method}")
         bubbles.append(
             {
                 "id": "solve-art",
@@ -423,7 +428,8 @@ def build_dialogue(
     if val:
         ok = val.get("ok")
         errs = val.get("errors") or val.get("checks") or []
-        msg = f"validate ok={ok}"
+        checks_n = len(val.get("checks") or []) if isinstance(val.get("checks"), list) else 0
+        msg = f"独立校验通过（{checks_n} 项检查全部合格）" if (ok and checks_n) else (f"独立校验通过" if ok else f"校验未通过（ok={ok}）")
         if isinstance(errs, list) and errs and not ok:
             msg += " · " + _clip(json.dumps(errs, ensure_ascii=False)[:200], 200)
         bubbles.append(
@@ -449,7 +455,7 @@ def build_dialogue(
                     "id": "model-art",
                     "role": _ROLE_MODEL,
                     "title": "建模摘要",
-                    "text": f"class={pc or '—'} · preferred_solve_mode={psm or '—'}",
+                    "text": f"问题类型：{pc or '—'}" + (f" · 优先求解模式：{psm}" if psm else ""),
                     "utc": "",
                     "source": "schema",
                 }
@@ -461,19 +467,20 @@ def build_dialogue(
         pi = steer.get("pi") if isinstance(steer.get("pi"), dict) else {}
         bits = []
         if lg.get("solve_mode"):
-            bits.append(f"mode={lg.get('solve_mode')}")
+            bits.append(f"求解模式：{lg.get('solve_mode')}")
         if lg.get("resume_from"):
-            bits.append(f"resume={lg.get('resume_from')}")
-        if pi.get("prefer_methods"):
-            bits.append("methods=" + ",".join(pi.get("prefer_methods") or []))
+            bits.append(f"重跑起点：{lg.get('resume_from')}")
+        pm = [str(m).strip() for m in (pi.get("prefer_methods") or []) if str(m).strip()]
+        if pm:
+            bits.append("优先方法：" + "、".join(pm))
         if pi.get("notes"):
-            bits.append(_clip(str(pi.get("notes")), 160))
+            bits.append(_clip(str(pi.get("notes")).strip(), 160))
         bubbles.append(
             {
                 "id": "human-steer",
                 "role": _ROLE_HUMAN,
-                "title": "人导（已落盘）",
-                "text": " · ".join(bits) if bits else "steer 文件存在",
+                "title": "人工策略引导（已落盘）",
+                "text": " · ".join(bits) if bits else "已记录人工干预指令",
                 "utc": str(steer.get("utc") or ""),
                 "source": "human-steer.json",
             }
@@ -481,12 +488,15 @@ def build_dialogue(
 
     if honesty_messages:
         for i, m in enumerate(honesty_messages[:4]):
+            m_str = str(m)
+            if m_str.startswith("LIVE=0:") or m_str.startswith("events_truncated:"):
+                continue
             bubbles.append(
                 {
                     "id": f"honest-{i}",
                     "role": _ROLE_SYSTEM,
                     "title": "说明",
-                    "text": _clip(str(m), 220),
+                    "text": _clip(m_str, 220),
                     "utc": "",
                     "source": "honesty",
                 }

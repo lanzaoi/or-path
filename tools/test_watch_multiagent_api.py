@@ -317,5 +317,46 @@ def test_studio_confirm_engine_graph_skips_multiagent(
     assert sol_doc.get("objective") == EXPECTED_OBJECTIVE
 
 
+def test_studio_confirm_multiagent_lifecycle_failed_returns_422(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When multiagent graph fails closed (lifecycle_status='FAILED'), /api/studio/confirm
+    must return ok=False and status='FAILED' rather than a false COMPLETED."""
+    monkeypatch.setenv("ORPATH_ENGINE", "multiagent")
+
+    class _FakeGraph:
+        def invoke(self, state: dict[str, Any], config: dict[str, Any] | None = None) -> dict[str, Any]:
+            slug = str(state["slug"])
+            out_dir = tmp_path / "outputs"
+            out_dir.mkdir(parents=True, exist_ok=True)
+            sol_p = out_dir / f"{slug}-solution.json"
+            val_p = out_dir / f"{slug}-validate.json"
+            sol_p.write_text(json.dumps({"objective": 1.0, "status": "FEASIBLE"}), encoding="utf-8")
+            val_p.write_text(json.dumps({"ok": False, "errors": ["recomputation mismatch"]}), encoding="utf-8")
+            return {
+                "lifecycle_status": "FAILED",
+                "failure_report_path": str(tmp_path / "notes" / f"{slug}-failure.md"),
+                "blocked_reason": "validation failed",
+                "solution_path": str(sol_p),
+                "validate_path": str(val_p),
+                "detected_class": "nlp",
+                "paper_path": "",
+                "paper_quality": "skipped",
+            }
+
+    monkeypatch.setattr(control_plane, "build_compiled_multiagent", lambda *a, **k: _FakeGraph())
+
+    slug = "ma-fail-closed"
+    with _serve(tmp_path) as base:
+        _import_tsp_folder(base, slug)
+        code, res = _confirm(base, slug)
+
+    assert code == 422
+    assert res.get("ok") is False
+    assert res.get("status") == "FAILED"
+    assert res.get("paper_generated") is False
+    assert "validation failed" in str(res.get("error") or "")
+
+
 if __name__ == "__main__":  # pragma: no cover - manual smoke check
     raise SystemExit(pytest.main([__file__, "-q", "-p", "no:langsmith"]))

@@ -72,6 +72,7 @@ DOMAIN_KEYWORDS: dict[str, tuple[str, ...]] = {
     "microgrid": ("microgrid", "micro_grid", "smart_grid", "photovoltaic", "pv", "储能", "光伏", "电网", "微网", "微电网", "battery", "soc", "dispatch"),
     "tube": ("tube", "圆管", "cutting", "bfd", "cutting_stock", "余料", "下料"),
     "polyomino": ("polyomino", "tiling", "骨牌", "多联", "多联骨牌", "覆盖", "铺放"),
+    "nlp": ("nlp", "minlp", "slsqp", "differential_evolution", "非线性规划", "非凸优化", "烟幕", "干扰弹", "遮蔽时长", "区间并集"),
 }
 
 #: problem_class keyword guess (canonical names only, via domain registry).
@@ -95,6 +96,8 @@ CLASS_KEYWORDS: dict[str, tuple[str, ...]] = {
     "tube_cut": ("tube", "圆管", "cutting", "下料"),
     "polyomino_cover": ("polyomino", "骨牌", "多联", "多联骨牌", "tiling"),
     "microgrid_dispatch": ("microgrid", "微网", "微电网", "储能", "光伏"),
+    "interval_coverage": ("遮蔽时长", "有效遮蔽", "干扰弹", "烟幕", "区间并集", "interval coverage", "interval union"),
+    "nlp_minlp": ("非线性规划", "非凸优化", "minlp", "differential_evolution", "slsqp"),
 }
 
 __all__ = [
@@ -472,7 +475,14 @@ def _preflight(state: Mapping[str, Any], t0: float) -> dict[str, Any]:
     profilers, _inspectors = domain_tool_registry()
     if domain in profilers:
         try:
-            raw = profilers[domain].invoke({})
+            _p_tool = profilers[domain]
+            _p_args = getattr(_p_tool, "args", {}) or {}
+            _p_kwargs: dict[str, Any] = {}
+            if "problem_id" in _p_args:
+                _p_kwargs["problem_id"] = slug
+            elif "slug" in _p_args:
+                _p_kwargs["slug"] = slug
+            raw = _p_tool.invoke(_p_kwargs)
             try:
                 parsed = json.loads(raw)
                 domain_profile = parsed if isinstance(parsed, dict) else {"raw": raw}
@@ -578,8 +588,7 @@ def validate_artifact(
             data, raw = _validate_in_process(root, problem_id, solution_path)
             if out.parent:
                 out.parent.mkdir(parents=True, exist_ok=True)
-                if not out.is_file():
-                    out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            out.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
             return bool(data.get("ok")), data, raw
         except Exception as exc:  # noqa: BLE001 - fall back to the dispatch seam
             err = f"in-process validate failed ({type(exc).__name__}: {exc})"

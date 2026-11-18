@@ -389,6 +389,16 @@ def _validate_vrp(problem_id: str, sol: dict) -> list[dict]:
             "detail": f"fixture vehicle_count={vehicle_count}",
         }
     )
+    checks.append(
+        {
+            "name": "vehicle_count_ok",
+            "ok": len(routes) <= vehicle_count and len(routes) <= len(capacities),
+            "detail": (
+                f"routes={len(routes)} vehicle_count={vehicle_count} "
+                f"capacities={len(capacities)}"
+            ),
+        }
+    )
 
     depot_endpoints_ok = True
     for ri, route in enumerate(routes):
@@ -456,9 +466,6 @@ def _validate_vrp(problem_id: str, sol: dict) -> list[dict]:
                     )
                 # after service at b
                 t = start_service + float(st.get(b, 0))
-                # also ensure a started within window when leaving (except pure start)
-                if a != depot or r.index(a) != 0:
-                    pass
 
     if cap_ok:
         checks.append({"name": "capacity", "ok": True})
@@ -964,7 +971,15 @@ def validate(problem_id: str, solution: dict, gold: dict | None = None, solution
     elif pc_norm == "hub_location":
         from validators.extended_solvers import validate_hub_location
         checks.extend(validate_hub_location(problem_id, solution))
-    elif pc_norm in {"custom_mip", "custom", "general_optimization", "custom_reduced"}:
+    elif pc_norm in {
+        "custom_mip",
+        "custom",
+        "general_optimization",
+        "custom_reduced",
+        "nlp_minlp",
+        "interval_coverage",
+        "general_or",
+    }:
         checks.extend(_validate_custom_mip(problem_id, solution, solution_path))
     elif pc_norm == "pyvrp" or pc_norm == "vrp_pdp" or solution.get("solver") == "pyvrp-hgs":
         from validators.extended_solvers import validate_pyvrp

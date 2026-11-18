@@ -13,9 +13,9 @@ function renderProblemWorkbench(s) {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;background:#fff;border:1px dashed var(--surface-2);border-radius:10px">
         <div>
           <div style="font-size:13px;font-weight:700;color:var(--ink)">尚未加载题面或当前 Slug 无题面资产</div>
-          <div style="font-size:12px;color:var(--ink-48);margin-top:3px">点击右侧「📥 导入/切换题目」可一键加载全部内置工业运筹赛题（如 2026 校赛 B 题异形圆管下料、M2 多联骨牌排样、CVRP 等），或上传 PDF/图片/文本题面。</div>
+          <div style="font-size:12px;color:var(--ink-48);margin-top:3px">点击右侧「导入/切换」加载内置工业运筹赛题，或上传 PDF / 图片 / 文本题面。</div>
         </div>
-        <button type="button" class="wb-btn primary" id="wbEmptyImportBtn" style="height:34px;padding:0 16px">📥 立即导入 / 选择赛题</button>
+        <button type="button" class="wb-btn primary" id="wbEmptyImportBtn" style="height:32px;padding:0 14px">导入 / 选择赛题</button>
       </div>`;
     const b = $("wbEmptyImportBtn");
     if (b) b.addEventListener("click", openIntakeModal);
@@ -53,7 +53,7 @@ function renderProblemWorkbench(s) {
         </div>`;
       }).join("") + `</div>`;
     } else {
-      subHtml = `<div class="wb-pre" style="max-height:170px">${esc(pv.brief_text || "无子问题拆分，请查看「题面原文」标签页。")}</div>`;
+      subHtml = `<div class="wb-pre" style="max-height:170px">${esc(pv.brief_text || "暂无额外文字题面，请在「数学模型」或「输入文件」中查看参数。")}</div>`;
     }
 
     const assets = pv.data_assets || [];
@@ -68,7 +68,7 @@ function renderProblemWorkbench(s) {
       <div class="wb-grid">
         <div style="display:grid;gap:8px">
           <div class="wb-card">
-            <h4><span>🎯 优化目标与硬约束</span><span>${esc(pv.problem_id || s.slug)}</span></h4>
+            <h4><span>优化目标与约束</span><span>${esc(pv.problem_id || s.slug)}</span></h4>
             <div style="font-size:12px;line-height:1.5">
               <div><strong>优化目标：</strong>${esc(pv.objectives_text || "见题面原文与数学模型 Schema")}</div>
               <div style="margin-top:4px"><strong>约束条件：</strong>${esc(pv.constraints_text || "见题面原文与数学模型 Schema")}</div>
@@ -76,7 +76,7 @@ function renderProblemWorkbench(s) {
             </div>
           </div>
           <div class="wb-card">
-            <h4><span>📦 数据附件与题面源 (${!isNaN(totalAssets) ? totalAssets : assets.length} 项)</span></h4>
+            <h4><span>输入文件 (${!isNaN(totalAssets) ? totalAssets : assets.length} 项)</span></h4>
             <div style="display:flex;gap:4px;flex-wrap:wrap">
               ${assetTags || `<span style="font-size:11.5px;color:var(--ink-48)">内置标准算例参数 (${esc(pv.brief_path || "fixture")})</span>`}
               ${moreAssets}
@@ -84,7 +84,7 @@ function renderProblemWorkbench(s) {
           </div>
         </div>
         <div class="wb-card">
-          <h4><span>📑 题目子问拆解 (${subs.length || 1} 问)</span><button type="button" class="art-view-btn" id="wbJumpBrief">查看完整题面原文 →</button></h4>
+          <h4><span>子问题列表 (${subs.length || 1} 问)</span><button type="button" class="art-view-btn" id="wbJumpBrief">查看完整原文 →</button></h4>
           ${subHtml}
         </div>
       </div>`;
@@ -97,7 +97,7 @@ function renderProblemWorkbench(s) {
     bodyEl.innerHTML = `
       <div class="wb-card">
         <h4>
-          <span>📄 题面完整原文 / Problem Brief (${esc(pv.brief_path || "内存")})</span>
+          <span>题面原文 / Problem Brief (${esc(pv.brief_path || "内存")})</span>
           ${pv.has_intake ? `<button type="button" class="art-view-btn" id="wbOpenIntakeJson">查看结构化 intake.json</button>` : ""}
         </h4>
         <pre class="wb-pre" style="max-height:230px">${esc(pv.brief_text || "暂无题面原文")}</pre>
@@ -110,23 +110,36 @@ function renderProblemWorkbench(s) {
   if (currentWbTab === "schema") {
     const sc = pv.schema_summary || {};
     if (!sc.exists) {
-      bodyEl.innerHTML = `<div class="wb-card"><div class="empty">当前任务尚未生成数学模型 Schema（请点击右上角「🚀 一键求解此题」运行流水线）</div></div>`;
+      bodyEl.innerHTML = `<div class="wb-card"><div class="empty">当前任务尚未生成数学模型 Schema（点击右上角「开始求解」运行流水线）</div></div>`;
       return;
     }
-    const vars = sc.variables ? JSON.stringify(sc.variables, null, 2) : "—";
-    const cList = (sc.constraints || []).map((c, i) => `<li><code>C${i + 1}:</code> ${esc(typeof c === "string" ? c : JSON.stringify(c))}</li>`).join("");
+    const hasVars = sc.variables && typeof sc.variables === "object" && Object.keys(sc.variables).length > 0;
+    const vars = hasVars
+      ? JSON.stringify(sc.variables, null, 2)
+      : (Array.isArray(sc.param_keys) && sc.param_keys.length
+        ? "核心参数集：" + sc.param_keys.join("、")
+        : "决策变量与约束已按题面物理几何建模（详见右侧形式化约束方程）");
+    const cList = (sc.constraints || []).map((c, i) => {
+      if (typeof c === "string") return `<li><code>C${i + 1}:</code> ${esc(c)}</li>`;
+      if (c && typeof c === "object") {
+        const nm = c.name ? `<strong>${esc(c.name)}</strong>` : "";
+        const ex = c.expr || c.description || "";
+        return `<li><code>C${i + 1}:</code> ${nm}${nm && ex ? "：" : ""}${ex ? `<code>${esc(ex)}</code>` : ""}</li>`;
+      }
+      return `<li><code>C${i + 1}:</code> ${esc(String(c))}</li>`;
+    }).join("");
     bodyEl.innerHTML = `
       <div class="wb-grid">
         <div class="wb-card">
-          <h4><span>📐 模型元信息与决策变量</span><button type="button" class="art-view-btn" id="wbOpenSchemaJson">查看完整 schema.json</button></h4>
+          <h4><span>模型元信息与决策变量</span><button type="button" class="art-view-btn" id="wbOpenSchemaJson">查看完整 schema.json</button></h4>
           <div style="font-size:12px;line-height:1.6;margin-bottom:6px">
             <div><strong>问题标识：</strong><code>${esc(sc.problem_id)}</code> · <strong>类别：</strong><code>${esc(sc.problem_class)}</code> · <strong>方向：</strong><code>${esc(sc.sense)}</code></div>
-            <div><strong>目标函数表达式：</strong><code>${esc(sc.objective || "—")}</code></div>
+            <div><strong>目标函数表达式：</strong><code>${esc(sc.objective || pv.objectives_text || "—")}</code></div>
           </div>
           <pre class="wb-pre" style="max-height:130px">${esc(vars)}</pre>
         </div>
         <div class="wb-card">
-          <h4><span>🔒 形式化约束方程 (${(sc.constraints || []).length} 条)</span><span style="color:var(--ok)">✓ 门禁已核验无答案泄漏</span></h4>
+          <h4><span>形式化约束方程 (${(sc.constraints || []).length} 条)</span><span style="color:var(--ok)">约束结构已校验</span></h4>
           <ul style="padding-left:18px;font-size:12px;line-height:1.6;max-height:185px;overflow-y:auto">${cList || "<li>默认域约束</li>"}</ul>
         </div>
       </div>`;
@@ -137,7 +150,7 @@ function renderProblemWorkbench(s) {
 
   if (currentWbTab === "solution") {
     if (!sol.exists) {
-      bodyEl.innerHTML = `<div class="wb-card"><div class="empty">尚未生成求解结果（请点击「🚀 一键求解此题」运行求解器与校验器）</div></div>`;
+      bodyEl.innerHTML = `<div class="wb-card"><div class="empty">尚未生成求解结果（点击「开始求解」运行求解器与校验器）</div></div>`;
       return;
     }
     let detailHtml = "";
@@ -204,11 +217,11 @@ function renderProblemWorkbench(s) {
       </div>
       <div class="wb-grid">
         <div class="wb-card" style="max-height:190px;overflow-y:auto">
-          <h4><span>📊 方案明细与排产表</span><button type="button" class="art-view-btn" id="wbOpenSolJson">查看完整 solution.json</button></h4>
-          ${isBlocked ? `<div class="empty" style="color:var(--fail)">平台规范拦截：当前领域无专用适配器，系统拒绝绑定无关金标伪造结果。</div>` : (detailHtml || `<div class="empty">请点击右上角查看完整 JSON</div>`)}
+          <h4><span>方案明细与排产表</span><button type="button" class="art-view-btn" id="wbOpenSolJson">查看完整 solution.json</button></h4>
+          ${isBlocked ? `<div class="empty" style="color:var(--fail)">已阻断：当前领域无专用适配器，未伪造数值结果。</div>` : (detailHtml || `<div class="empty">点击右上角查看完整 JSON</div>`)}
         </div>
         <div class="wb-card" style="max-height:190px;overflow-y:auto">
-          <h4><span>🛡️ 确定性重算与物理约束核验项</span><button type="button" class="art-view-btn" id="wbOpenValJson">查看完整 validate.json</button></h4>
+          <h4><span>独立验算与约束核验</span><button type="button" class="art-view-btn" id="wbOpenValJson">查看完整 validate.json</button></h4>
           ${checksHtml || `<div class="empty">暂无校验明细</div>`}
         </div>
       </div>`;
@@ -220,16 +233,19 @@ function renderProblemWorkbench(s) {
   }
 
   if (currentWbTab === "paper") {
+    const isExplainFallback = String(pv.paper_path || "").endsWith("-explain.md");
+    const artKind = isExplainFallback ? "explain" : "paper";
+    const artTitle = isExplainFallback ? "求解解释说明" : "技术报告 / 论文全稿";
     bodyEl.innerHTML = `
       <div class="wb-card">
         <h4>
-          <span>📝 工业技术报告 / 论文文稿 (${esc(pv.paper_path || "未生成")})</span>
-          ${pv.paper_path ? `<button type="button" class="art-view-btn" id="wbOpenPaperFull">全屏阅读报告</button>` : ""}
+          <span>${isExplainFallback ? "求解解释说明" : "技术报告 / 论文文稿"} (${esc(pv.paper_path || "未生成")})</span>
+          ${pv.paper_path ? `<button type="button" class="art-view-btn" id="wbOpenPaperFull">全屏阅读</button>` : ""}
         </h4>
-        <pre class="wb-pre" style="max-height:225px">${esc(pv.paper_preview || "当前任务尚未生成技术报告（待流水线运行至 draft_paper / provenance 站后自动产出）")}</pre>
+        <pre class="wb-pre" style="max-height:225px">${esc(pv.paper_preview || "当前任务尚未生成技术报告（运行深度模式或补生论文后查看）")}</pre>
       </div>`;
     const bP = $("wbOpenPaperFull");
-    if (bP) bP.addEventListener("click", () => openArtifactModal("paper", "工业技术报告 / 论文全稿"));
+    if (bP) bP.addEventListener("click", () => openArtifactModal(artKind, artTitle));
   }
 }
 

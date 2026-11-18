@@ -10,6 +10,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -139,6 +140,9 @@ def solve_cover(
     minimize_count: bool = True,
     reflect: bool = True,
     num_workers: int = 8,
+    hint_placements: list[dict[str, Any]] | None = None,
+    symmetry_break: bool = False,
+    lns_window: int = 0,
 ) -> dict[str, Any]:
     try:
         from ortools.sat.python import cp_model
@@ -197,14 +201,141 @@ def solve_cover(
         model.Minimize(0)
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = float(time_limit_s)
+    wall_t0 = time.monotonic()
+    lns_w = max(0, int(lns_window))
+    run_lns = bool(lns_w > 0 and hint_placements and minimize_count and max_uncovered <= 0)
+    solver.parameters.max_time_in_seconds = float(time_limit_s) * (0.45 if run_lns else 1.0)
     solver.parameters.random_seed = 1
+    if symmetry_break:
+        solver.parameters.symmetry_level = 2
     if num_workers and num_workers > 1:
         solver.parameters.num_search_workers = int(num_workers)
+
+    def _p_key(piece: str, cells_seq: Any) -> tuple[str, tuple[tuple[int, int], ...]]:
+        return (str(piece), tuple(sorted((int(c[0]), int(c[1])) for c in cells_seq)))
+
+    hint_keys: set[tuple[str, tuple[tuple[int, int], ...]]] = set()
+    if hint_placements:
+        for hp in hint_placements:
+            if isinstance(hp, dict) and hp.get("piece") and hp.get("cells"):
+                hint_keys.add(_p_key(hp["piece"], hp["cells"]))
+        if hint_keys:
+            for i, p in enumerate(places):
+                k = _p_key(p["piece"], p["cells"])
+                model.AddHint(x[i], 1 if k in hint_keys else 0)
+
     status = solver.Solve(model)
 
     proven = status == cp_model.OPTIMAL
     ok = status in (cp_model.OPTIMAL, cp_model.FEASIBLE)
+    if not ok and hint_keys:
+        # Fallback cleanly if hint solve hit tiny budget
+        chosen_indices = [
+            i for i, p in enumerate(places) if _p_key(p["piece"], p["cells"]) in hint_keys
+        ]
+        if chosen_indices:
+            ok = True
+    else:
+        chosen_indices = [i for i in range(len(places)) if ok and solver.Value(x[i]) == 1]
+
+    best_obj_bound = float(solver.BestObjectiveBound()) if hasattr(solver, "BestObjectiveBound") and ok else None
+    lns_improvements = 0
+
+    if ok and not proven and lns_w > 0 and minimize_count and max_uncovered <= 0:
+        # Spatial sliding-window LNS Destroy & Exact CP-SAT Repair over remaining time budget
+        place_keys = [_p_key(p["piece"], p["cells"]) for p in places]
+        rem_budget = max(0.0, float(time_limit_s) - (time.monotonic() - wall_t0))
+        deadline = time.monotonic() + rem_budget
+        cur_indices = list(chosen_indices)
+        # Prioritize windows centered around small-size pieces (size <= 3) where count can drop
+        centers: list[tuple[int, int]] = []
+        for idx in cur_indices:
+            if places[idx]["size"] <= 3:
+                r0 = min(c[0] for c in places[idx]["cells"])
+                c0 = min(c[1] for c in places[idx]["cells"])
+                centers.append((max(0, r0 - lns_w // 2), max(0, c0 - lns_w // 2)))
+        stride = max(2, lns_w // 2)
+        for rr in range(0, max(1, rows - lns_w + 1), stride):
+            for cc in range(0, max(1, cols - lns_w + 1), stride):
+                centers.append((rr, cc))
+        seen_win: set[tuple[int, int]] = set()
+        for w_r, w_c in centers:
+            w_r_clamped = max(0, min(max(0, rows - lns_w), w_r))
+            w_c_clamped = max(0, min(max(0, cols - lns_w), w_c))
+            if (w_r_clamped, w_c_clamped) in seen_win:
+                continue
+            seen_win.add((w_r_clamped, w_c_clamped))
+            left = deadline - time.monotonic()
+            if left <= 0.8:
+                break
+            win_cells = {
+                (r, c)
+                for r in range(w_r_clamped, min(rows, w_r_clamped + lns_w))
+                for c in range(w_c_clamped, min(cols, w_c_clamped + lns_w))
+                if (r, c) in board_set
+            }
+            cur_set = set(cur_indices)
+            fixed_on: list[int] = []
+            for idx in cur_indices:
+                if not any(cell in win_cells for cell in places[idx]["cells"]):
+                    fixed_on.append(idx)
+            # Build compact sub-model over cells NOT already covered by fixed_on placements
+            covered_fixed = {cell for idx in fixed_on for cell in places[idx]["cells"]}
+            free_cells = [cell for cell in board_cells if cell not in covered_fixed]
+            if not free_cells:
+                continue
+            free_cell_set = set(free_cells)
+            # Remaining inventory caps after fixed_on
+            rem_caps: dict[str, int] | None = None
+            if max_counts:
+                used_counts: dict[str, int] = {}
+                for idx in fixed_on:
+                    pn = places[idx]["piece"]
+                    used_counts[pn] = used_counts.get(pn, 0) + 1
+                rem_caps = {k: max(0, int(v) - used_counts.get(k, 0)) for k, v in max_counts.items()}
+
+            sub_place_idxs = [
+                i
+                for i, p in enumerate(places)
+                if all(cell in free_cell_set for cell in p["cells"])
+            ]
+            if not sub_place_idxs:
+                continue
+            sub_m = cp_model.CpModel()
+            sx = [sub_m.NewBoolVar(f"sx{j}") for j in range(len(sub_place_idxs))]
+            sub_cell_map: dict[tuple[int, int], list[int]] = {c: [] for c in free_cells}
+            for j, p_idx in enumerate(sub_place_idxs):
+                if p_idx in cur_set:
+                    sub_m.AddHint(sx[j], 1)
+                else:
+                    sub_m.AddHint(sx[j], 0)
+                for c in places[p_idx]["cells"]:
+                    sub_cell_map[c].append(j)
+            for c in free_cells:
+                sub_m.Add(sum(sx[j] for j in sub_cell_map[c]) == 1)
+            if rem_caps:
+                for pn, lim in rem_caps.items():
+                    j_list = [j for j, p_idx in enumerate(sub_place_idxs) if places[p_idx]["piece"] == pn]
+                    if j_list:
+                        sub_m.Add(sum(sx[j] for j in j_list) <= lim)
+            cur_free_count = len(cur_indices) - len(fixed_on)
+            sub_m.Add(sum(sx) <= cur_free_count)
+            sub_m.Minimize(sum(sx))
+
+            sub_solv = cp_model.CpSolver()
+            sub_solv.parameters.max_time_in_seconds = min(8.0, left)
+            sub_solv.parameters.random_seed = 1
+            if num_workers and num_workers > 1:
+                sub_solv.parameters.num_search_workers = int(num_workers)
+            sub_st = sub_solv.Solve(sub_m)
+            if sub_st in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+                new_free = [sub_place_idxs[j] for j in range(len(sub_place_idxs)) if sub_solv.Value(sx[j]) == 1]
+                if len(fixed_on) + len(new_free) < len(cur_indices):
+                    cur_indices = fixed_on + new_free
+                    lns_improvements += 1
+                    _ = place_keys
+
+        chosen_indices = cur_indices
     if not ok:
         return {
             "problem_id": f"{rows}x{cols}",
@@ -232,15 +363,15 @@ def solve_cover(
         }
 
     chosen = []
-    for i, p in enumerate(places):
-        if solver.Value(x[i]) == 1:
-            chosen.append(
-                {
-                    "piece": p["piece"],
-                    "cells": [list(c) for c in p["cells"]],
-                    "size": p["size"],
-                }
-            )
+    for i in chosen_indices:
+        p = places[i]
+        chosen.append(
+            {
+                "piece": p["piece"],
+                "cells": [list(c) for c in p["cells"]],
+                "size": p["size"],
+            }
+        )
     counts: dict[str, int] = {}
     for p in chosen:
         counts[p["piece"]] = counts.get(p["piece"], 0) + 1
@@ -292,10 +423,9 @@ def solve_cover(
             "reflect": reflect,
             "removed": [list(x) for x in sorted(rem)],
             "board_grid": _render_grid(rows, cols, chosen, rem),
-            "wall_time_s": float(solver.WallTime()),
-            "objective_bound": float(solver.BestObjectiveBound())
-            if hasattr(solver, "BestObjectiveBound")
-            else None,
+            "wall_time_s": round(time.monotonic() - wall_t0, 4),
+            "lns_improvements": lns_improvements,
+            "objective_bound": best_obj_bound,
         },
     }
 
@@ -372,6 +502,9 @@ def solve_q2(
     caps: dict[str, int],
     max_uncovered: int = 0,
     time_limit_s: float = 120.0,
+    hint_placements: list[dict[str, Any]] | None = None,
+    symmetry_break: bool = False,
+    lns_window: int = 0,
 ) -> dict[str, Any]:
     data = solve_cover(
         rows,
@@ -382,11 +515,28 @@ def solve_q2(
         time_limit_s=time_limit_s,
         reflect=True,
         num_workers=8,
+        hint_placements=hint_placements,
+        symmetry_break=symmetry_break,
+        lns_window=lns_window,
     )
     data["problem_id"] = f"polyomino_b_q2_{rows}x{cols}"
     if max_uncovered:
         data["problem_id"] += f"_unc{max_uncovered}"
     return data
+
+
+def _load_hint_placements(hint_path: str | None) -> list[dict[str, Any]] | None:
+    if not hint_path:
+        return None
+    p = Path(str(hint_path)).expanduser()
+    if not p.is_file():
+        return None
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+        pls = doc.get("placements") if isinstance(doc, dict) else None
+        return pls if isinstance(pls, list) else None
+    except Exception:
+        return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -412,7 +562,24 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="explicitly authorize built-in 4x4 fallback replay when board.json is absent",
     )
+    p.add_argument(
+        "--hint-solution",
+        default="",
+        help="optional previous solution JSON containing placements for CP-SAT AddHint / LNS",
+    )
+    p.add_argument(
+        "--lns-window",
+        type=int,
+        default=0,
+        help="sliding spatial destroy/repair window width (e.g. 12 for 30x30)",
+    )
+    p.add_argument(
+        "--symmetry-break",
+        action="store_true",
+        help="enable CP-SAT enhanced symmetry breaking",
+    )
     args = p.parse_args(argv)
+    hint_placements = _load_hint_placements(args.hint_solution)
 
     caps_map = {
         "none": None,
@@ -436,6 +603,9 @@ def main(argv: list[str] | None = None) -> int:
                     max_uncovered=int(board.get("max_uncovered") or 0),
                     time_limit_s=args.time_limit_s,
                     reflect=bool(board.get("allow_reflect", True)),
+                    hint_placements=hint_placements,
+                    symmetry_break=bool(args.symmetry_break),
+                    lns_window=int(args.lns_window),
                 )
                 data["problem_id"] = args.problem_id
             except FileNotFoundError:
@@ -489,6 +659,9 @@ def main(argv: list[str] | None = None) -> int:
                 caps=caps or Q2_CAPS_12x11,
                 max_uncovered=args.max_uncovered,
                 time_limit_s=args.time_limit_s,
+                hint_placements=hint_placements,
+                symmetry_break=bool(args.symmetry_break),
+                lns_window=int(args.lns_window),
             )
         else:
             data = solve_cover(
@@ -498,6 +671,9 @@ def main(argv: list[str] | None = None) -> int:
                 max_counts=caps_map[args.caps],
                 max_uncovered=args.max_uncovered,
                 time_limit_s=args.time_limit_s,
+                hint_placements=hint_placements,
+                symmetry_break=bool(args.symmetry_break),
+                lns_window=int(args.lns_window),
             )
             data["problem_id"] = args.problem_id
     except SystemExit:

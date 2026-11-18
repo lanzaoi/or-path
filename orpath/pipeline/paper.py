@@ -476,14 +476,16 @@ def node_revise_or_done(state: ORPathState) -> dict:
             root,
             slug,
             stage="revise",
-            status="exhausted",
-            detail=str(state.get("last_error") or ""),
+            status="degraded_pass",
+            detail=f"revise limit reached; auto-continuing to provenance ({state.get('last_error') or ''})",
             plan_file=state.get("plan_path"),
         )
         return {
-            "stage": "human_stop",
-            "human_required": True,
-            "last_error": f"paper revise exhausted: {state.get('last_error')}",
+            "stage": "provenance",
+            "human_required": False,
+            "paper_quality": "template_degraded",
+            "paper_degraded_reason": str(state.get("last_error") or "paper_revise_budget_exhausted")[:300],
+            "last_error": "",
         }
 
     paper = Path(state.get("paper_path") or "")

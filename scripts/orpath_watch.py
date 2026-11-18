@@ -59,6 +59,66 @@ STUDIO_HTML_NAME = "studio.html"
 DEFAULT_PORT = 8765
 MAX_PORT_TRIES = 20
 SSE_INTERVAL_S = 0.5
+_STUDIO_JOBS_LOCK = threading.Lock()
+_STUDIO_JOBS: dict[tuple[str, str], dict[str, Any]] = {}
+
+
+def _detect_env_llm_status(home: Path, workdir: Path) -> dict[str, Any]:
+    """Return non-secret availability metadata for configured .env/env LLM keys."""
+    from orpath.control_plane import is_real_llm_configured
+
+    spark_key = bool(os.environ.get("XFYUN_API_KEY", "").strip())
+    deepseek_key = bool(os.environ.get("DEEPSEEK_API_KEY", "").strip())
+    openai_key = bool(os.environ.get("OPENAI_API_KEY", "").strip())
+    ds_model = os.environ.get("DEEPSEEK_MODEL", "").strip()
+    xf_model = os.environ.get("XFYUN_MODEL", "").strip()
+    generic_model = os.environ.get("ORPATH_LLM_MODEL", "").strip()
+    for env_path in (workdir / ".env", home / ".env"):
+        if not env_path.is_file():
+            continue
+        try:
+            for raw in env_path.read_text(encoding="utf-8").splitlines():
+                s = raw.strip()
+                if not s or s.startswith("#") or "=" not in s:
+                    continue
+                k, _, v = s.partition("=")
+                k = k.strip()
+                v = v.strip().strip("'\"")
+                if not v:
+                    continue
+                if k == "XFYUN_API_KEY":
+                    spark_key = True
+                elif k == "DEEPSEEK_API_KEY":
+                    deepseek_key = True
+                elif k == "OPENAI_API_KEY":
+                    openai_key = True
+                elif k == "DEEPSEEK_MODEL" and not ds_model:
+                    ds_model = v
+                elif k == "XFYUN_MODEL" and not xf_model:
+                    xf_model = v
+                elif k == "ORPATH_LLM_MODEL" and not generic_model:
+                    generic_model = v
+        except Exception:
+            pass
+    env_ok = bool(spark_key or deepseek_key or openai_key or is_real_llm_configured())
+    provider = "deepseek" if deepseek_key else ("spark" if spark_key else ("openai" if openai_key else "none"))
+    if deepseek_key:
+        default_model = ds_model or generic_model or "deepseek-flash"
+    elif spark_key:
+        default_model = xf_model or generic_model or "spark-x2.6"
+    elif env_ok:
+        default_model = generic_model or "deepseek-flash"
+    else:
+        default_model = "offline"
+    return {
+        "ok": True,
+        "env_configured": env_ok,
+        "provider": provider,
+        "default_model": default_model,
+        "spark_configured": spark_key,
+        "deepseek_configured": deepseek_key,
+        "openai_configured": openai_key,
+    }
 
 def _load_problem_presets() -> list[dict[str, Any]]:
     """Load golden problem presets from fixtures/intake/presets.json."""
@@ -167,18 +227,24 @@ def _has_runnable_fixture(home: Path, workdir: Path, problem_id: str, norm_class
 
 
 _MODEL_PRESETS: list[dict[str, str]] = [
-    {"provider": "xfyun", "model": "spark-x2.6", "label": "讯飞星火 · spark-x2.6"},
+    {"provider": "deepseek", "model": "deepseek-flash", "label": "DeepSeek · deepseek-flash (深度推理)"},
     {"provider": "deepseek", "model": "deepseek-reasoner", "label": "DeepSeek · deepseek-reasoner (R1)"},
     {"provider": "deepseek", "model": "deepseek-chat", "label": "DeepSeek · deepseek-chat (V3)"},
-    {"provider": "deepseek", "model": "deepseek-v4-flash", "label": "DeepSeek · deepseek-v4-flash"},
+    {"provider": "xfyun", "model": "spark-x2.6", "label": "讯飞星火 · spark-x2.6"},
 ]
 
 
 def _get_model_pref(home: Path, workdir: Path | None = None) -> dict[str, Any]:
     pref_dir = (workdir or home) / "outputs"
     pref_path = pref_dir / ".model_pref.json"
-    provider = "xfyun"
-    model = os.environ.get("XFYUN_MODEL", "").strip() or "spark-x2.6"
+    env_st = _detect_env_llm_status(home, workdir or home)
+    provider = "deepseek" if env_st.get("provider") in {"deepseek", "none"} else ("xfyun" if env_st.get("provider") == "spark" else str(env_st.get("provider") or "deepseek"))
+    model = (
+        os.environ.get("DEEPSEEK_MODEL", "").strip()
+        or os.environ.get("ORPATH_LLM_MODEL", "").strip()
+        or (str(env_st.get("default_model") or "") if env_st.get("default_model") != "offline" else "")
+        or "deepseek-flash"
+    )
     if pref_path.is_file():
         try:
             data = json.loads(pref_path.read_text(encoding="utf-8", errors="replace"))
@@ -257,6 +323,30 @@ class WatchHandler(SimpleHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
         sys.stderr.write("[watch] " + (fmt % args) + "\n")
 
+    def _access_ok(self, parsed) -> bool:
+        """Localhost access control: reject cross-origin browser calls; when
+        ORPATH_WATCH_TOKEN is set, require a matching token (header or ?token=)."""
+        token = (os.environ.get("ORPATH_WATCH_TOKEN") or "").strip()
+        if token:
+            supplied = self.headers.get("X-ORPath-Token") or ""
+            if not supplied:
+                supplied = (parse_qs(parsed.query or "").get("token") or [""])[0]
+            if supplied != token:
+                return False
+        host = self.headers.get("Host") or ""
+        allowed = (f"http://{host}", f"https://{host}")
+        origin = self.headers.get("Origin")
+        if origin:
+            if origin not in allowed:
+                return False
+        else:
+            referer = self.headers.get("Referer")
+            if referer:
+                rp = urlparse(referer)
+                if f"{rp.scheme}://{rp.netloc}" not in allowed:
+                    return False
+        return True
+
     def _send_json(self, code: int, obj: object) -> None:
         raw = json.dumps(obj, ensure_ascii=False, indent=2).encode("utf-8")
         self.send_response(code)
@@ -299,6 +389,9 @@ class WatchHandler(SimpleHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path or "/"
+        if not self._access_ok(parsed):
+            self._send_json(403, {"ok": False, "error": "forbidden"})
+            return
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length) if length > 0 else b"{}"
         try:
@@ -382,6 +475,9 @@ class WatchHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path or "/"
         qs = parse_qs(parsed.query or "")
+        if not self._access_ok(parsed):
+            self._send_json(403, {"ok": False, "error": "forbidden"})
+            return
 
         if path == "/api/health":
             try:
@@ -412,6 +508,8 @@ class WatchHandler(SimpleHTTPRequestHandler):
                         "/api/studio/analyze",
                         "/api/studio/confirm",
                         "/api/studio/paper",
+                        "/api/studio/env_status",
+                        "/api/studio/job",
                         "/api/knowledge/search",
                         "/api/artifact/download",
                     ],
@@ -419,6 +517,24 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     "problem_workbench": True,
                 },
             )
+            return
+
+        if path == "/api/studio/env_status":
+            try:
+                self._send_json(200, _detect_env_llm_status(self._home, self._workdir))
+            except Exception as exc:  # noqa: BLE001
+                self._send_json(500, {"ok": False, "error": str(exc)})
+            return
+
+        if path == "/api/studio/job":
+            slug, _thread = self._qs_slug_thread(qs)
+            key = (str(self._workdir.resolve()), slug)
+            with _STUDIO_JOBS_LOCK:
+                job = dict(_STUDIO_JOBS.get(key) or {})
+            if not job:
+                self._send_json(404, {"ok": False, "error": f"no async job for slug={slug!r}"})
+                return
+            self._send_json(200, {"ok": True, "job": job})
             return
 
         if path == "/api/problems":
@@ -525,17 +641,7 @@ class WatchHandler(SimpleHTTPRequestHandler):
             self._sse_loop(slug, thread)
             return
 
-        if path in {"/", "/index.html", "/watch.html"}:
-            try:
-                sys.path.insert(0, str(ROOT))
-                from orpath.web.build import build
-                build()
-            except Exception:
-                pass
-            self._send_html_file(WEB_DIR / HTML_NAME)
-            return
-
-        if path in {"/studio", "/studio.html"}:
+        if path in {"/", "/index.html", "/studio", "/studio.html"}:
             try:
                 sys.path.insert(0, str(ROOT))
                 from orpath.web.build import build
@@ -543,6 +649,16 @@ class WatchHandler(SimpleHTTPRequestHandler):
             except Exception:
                 pass
             self._send_html_file(WEB_DIR / STUDIO_HTML_NAME)
+            return
+
+        if path in {"/watch", "/watch.html"}:
+            try:
+                sys.path.insert(0, str(ROOT))
+                from orpath.web.build import build
+                build()
+            except Exception:
+                pass
+            self._send_html_file(WEB_DIR / HTML_NAME)
             return
 
         if path.startswith("/static/") or path.startswith("/src/"):
@@ -885,7 +1001,14 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     if not isinstance(f, dict):
                         continue
                     rel = str(f.get("rel_path") or f.get("name") or "").strip().replace("\\", "/")
-                    if not rel or rel.startswith("/") or rel.startswith("../") or "/../" in f"/{rel}/":
+                    if (
+                        not rel
+                        or rel.startswith("/")
+                        or rel.startswith("../")
+                        or "/../" in f"/{rel}/"
+                        or re.match(r"^[A-Za-z]:", rel)  # Windows drive-letter path
+                        or rel.startswith("//")  # UNC path
+                    ):
                         self._send_json(400, {"ok": False, "error": f"invalid rel_path: {rel}"})
                         return
                     b64 = str(f.get("content_base64") or f.get("file_base64") or "").strip()
@@ -899,7 +1022,10 @@ class WatchHandler(SimpleHTTPRequestHandler):
                     if total_bytes > max_total_bytes:
                         self._send_json(400, {"ok": False, "error": "total folder size exceeds 25MB limit"})
                         return
-                    dest_p = inbox_dir / rel
+                    dest_p = (inbox_dir / rel).resolve()
+                    if not dest_p.is_relative_to(inbox_dir.resolve()):
+                        self._send_json(400, {"ok": False, "error": f"invalid rel_path: {rel}"})
+                        return
                     dest_p.parent.mkdir(parents=True, exist_ok=True)
                     dest_p.write_bytes(raw_bytes)
                     saved_files.append(dest_p)
@@ -1159,7 +1285,12 @@ class WatchHandler(SimpleHTTPRequestHandler):
         from orpath.studio_analyzer import run_deep_analysis
 
         api_key = str(body.get("api_key") or "").strip()
-        model = str(body.get("model") or "deepseek-reasoner").strip()
+        model = str(
+            body.get("model")
+            or os.environ.get("DEEPSEEK_MODEL")
+            or os.environ.get("ORPATH_LLM_MODEL")
+            or "deepseek-flash"
+        ).strip()
         base_url = str(body.get("base_url") or "").strip()
         if api_key.startswith("ak-"):
             os.environ["XFYUN_API_KEY"] = api_key
@@ -1345,380 +1476,504 @@ class WatchHandler(SimpleHTTPRequestHandler):
 
         # Scenario A: Runnable dataset OR live autonomous single-agent modeling
         if can_run_solver or can_run_single_agent:
-            conn = None
+            async_run = bool(body.get("async_run"))
+            async_key = (str(self._workdir.resolve()), slug)
+            req_to = body.get("timeout")
+            force_timeout = bool(body.get("force_timeout"))
+            engine_param = str(body.get("engine") or "").strip().lower()
             try:
-                from orpath.agents.callbacks import (
-                    MultiAgentSnapshotCallback,
-                    SUPERVISOR_NAME,
+                from orpath.agents.evolution_ledger import MAX_DEEP_ROUNDS, normalize_target_rounds
+
+                deep_rounds = (
+                    normalize_target_rounds(body.get("deep_rounds"), default=5)
+                    if run_mode == "deep"
+                    else 1
                 )
-                from orpath.control_plane import (
-                    _PROVIDER_DEFAULTS,
-                    _resolve_provider,
-                    build_compiled_multiagent,
-                    build_graph,
-                    default_initial,
-                    get_chat_model,
-                    open_sqlite_checkpointer,
-                    thread_config,
-                )
+            except Exception:
+                deep_rounds, MAX_DEEP_ROUNDS = (5 if run_mode == "deep" else 1), 10
 
-                k_mode = os.environ.get("ORPATH_KNOWLEDGE_MODE", "hybrid").strip().lower()
-                if k_mode not in {"off", "seed", "hybrid"}:
-                    k_mode = "hybrid"
+            def _run_scenario_a() -> tuple[int, dict[str, Any]]:
+                conn = None
+                try:
+                    from orpath.agents.callbacks import (
+                        MultiAgentSnapshotCallback,
+                        SUPERVISOR_NAME,
+                    )
+                    from orpath.control_plane import (
+                        _PROVIDER_DEFAULTS,
+                        _resolve_provider,
+                        build_compiled_multiagent,
+                        build_graph,
+                        default_initial,
+                        get_chat_model,
+                        open_sqlite_checkpointer,
+                        thread_config,
+                    )
 
-                eff_class = (
-                    detected_class
-                    if detected_class not in {"", "unknown", "unregistered", "none"}
-                    else ("custom_mip" if can_run_single_agent else detected_class)
-                )
-                eff_mode = chosen_algo or ("auto" if can_run_single_agent else "")
-                initial = default_initial(
-                    root=self._workdir,
-                    slug=slug,
-                    problem_id=slug,
-                    problem_class=eff_class,
-                    solve_mode=eff_mode,
-                    knowledge_mode=k_mode,
-                    live_subagent=live_agent_enabled,
-                    thread_id=slug,
-                    is_replay=False,
-                    replay_authorized=False,
-                    run_mode=run_mode,
-                    skip_paper=skip_paper,
-                )
-                if body.get("force_live_agent"):
-                    initial["force_live_agent"] = True
-                if chosen_model and chosen_model.lower() != "offline":
-                    initial["llm_model"] = chosen_model
+                    k_mode = os.environ.get("ORPATH_KNOWLEDGE_MODE", "hybrid").strip().lower()
+                    if k_mode not in {"off", "seed", "hybrid"}:
+                        k_mode = "hybrid"
 
-                # --- Task 9 / Phase 1: execution engine selection ---
-                # In Phase 1 fast mode (`run_mode == "fast"`), skip `_run_multiagent`
-                # (`build_compiled_multiagent`) completely to avoid the 60s swarm stall
-                # before deterministic solver execution. In `run_mode == "deep"`,
-                # honor `engine` / `ORPATH_ENGINE` (`multiagent` vs `graph`).
-                engine_param = str(body.get("engine") or "").strip().lower()
-                engine_env = (engine_param or os.environ.get("ORPATH_ENGINE", "multiagent")).strip().lower()
-                use_multiagent = (run_mode != "fast") and (engine_env in ("", "multiagent"))
-                snapshot_cb = MultiAgentSnapshotCallback(
-                    thread_id=slug, slug=slug, workdir=self._workdir
-                )
-                cfg = thread_config(slug)
-                cfg["callbacks"] = [snapshot_cb]
+                    eff_class = (
+                        detected_class
+                        if detected_class not in {"", "unknown", "unregistered", "none"}
+                        else ("custom_mip" if can_run_single_agent else detected_class)
+                    )
+                    eff_mode = chosen_algo or ("auto" if can_run_single_agent else "")
+                    initial = default_initial(
+                        root=self._workdir,
+                        slug=slug,
+                        problem_id=slug,
+                        problem_class=eff_class,
+                        solve_mode=eff_mode,
+                        knowledge_mode=k_mode,
+                        live_subagent=live_agent_enabled,
+                        thread_id=slug,
+                        is_replay=False,
+                        replay_authorized=False,
+                        run_mode=run_mode,
+                        skip_paper=skip_paper,
+                    )
+                    if body.get("force_live_agent"):
+                        initial["force_live_agent"] = True
+                    if chosen_model and chosen_model.lower() != "offline":
+                        initial["llm_model"] = chosen_model
+                    initial["deep_rounds"] = deep_rounds
+                    initial["deep_evolution"] = bool(run_mode == "deep")
+                    initial["evo_target_rounds"] = deep_rounds
+                    initial["evo_max_rounds"] = MAX_DEEP_ROUNDS
 
-                engine_used = "graph"
-                final: Any = None
-                if use_multiagent:
-                    engine_used = "multiagent"
-                    ma_http: Any = None
-                    ma_outcome: dict[str, Any] = {}
-                    abort_event = threading.Event()
+                    engine_env = (engine_param or os.environ.get("ORPATH_ENGINE", "multiagent")).strip().lower()
+                    use_multiagent = (run_mode != "fast") and (engine_env in ("", "multiagent"))
+                    snapshot_cb = MultiAgentSnapshotCallback(
+                        thread_id=slug, slug=slug, workdir=self._workdir
+                    )
+                    cfg = thread_config(slug)
+                    cfg["callbacks"] = [snapshot_cb]
 
-                    # Dynamic execution budget:
-                    # Priority: body['timeout'] -> ORPATH_MULTIAGENT_TIMEOUT -> default.
-                    # Default is 3.0s for automated/gate environments (ensuring failover
-                    # well within the 10.0s client timeout). In Web Studio and production,
-                    # the client passes body['timeout'] (e.g. 60s) or sets ORPATH_MULTIAGENT_TIMEOUT.
-                    req_to = body.get("timeout")
-                    env_to = os.environ.get("ORPATH_MULTIAGENT_TIMEOUT")
-                    if req_to is not None:
-                        try:
-                            ma_timeout = float(req_to)
-                        except (ValueError, TypeError):
-                            ma_timeout = 3.0
-                    elif env_to is not None and env_to.strip():
-                        try:
-                            ma_timeout = float(env_to.strip())
-                        except (ValueError, TypeError):
-                            ma_timeout = 3.0
-                    else:
-                        ma_timeout = 3.0
+                    engine_used = "graph"
+                    final: Any = None
+                    if use_multiagent:
+                        engine_used = "multiagent"
+                        ma_outcome: dict[str, Any] = {}
+                        abort_event = threading.Event()
 
-                    def _run_multiagent() -> None:
-                        """Attempt the compiled supervisor multi-agent solve.
-
-                        Runs with dedicated HTTP client & MemorySaver checkpointer.
-                        If the execution is aborted by caller on timeout, abort_event
-                        guards disk output files from being overwritten.
-                        """
-                        nonlocal ma_http, final
-                        try:
+                        env_to = os.environ.get("ORPATH_MULTIAGENT_TIMEOUT")
+                        evo_floor = (
+                            max(7200.0, float(deep_rounds) * 1600.0)
+                            if (run_mode == "deep" and live_agent_enabled)
+                            else (540.0 if live_agent_enabled else 180.0)
+                        )
+                        if env_to is not None and env_to.strip():
                             try:
-                                import httpx2 as _httpx  # type: ignore[import-not-found]
-                            except ImportError:  # pragma: no cover - classic httpx
-                                import httpx as _httpx  # type: ignore[import-not-found,no-redef]
-                            connect_to = min(2.5, ma_timeout)
-                            ma_http = _httpx.Client(
-                                timeout=_httpx.Timeout(timeout=ma_timeout, connect=connect_to),
-                                limits=_httpx.Limits(max_keepalive_connections=0),
-                            )
-                            ma_model = get_chat_model(
-                                model_name=chosen_model if chosen_model else None,
-                                http_client=ma_http,
-                            )
+                                ma_timeout = float(env_to.strip())
+                            except (ValueError, TypeError):
+                                ma_timeout = evo_floor
+                        elif req_to is not None:
                             try:
-                                ma_model.max_retries = 0
-                            except Exception:
-                                pass
-                            from langgraph.checkpoint.memory import MemorySaver
+                                ma_timeout = float(req_to)
+                            except (ValueError, TypeError):
+                                ma_timeout = 3.0 if os.environ.get("PYTEST_CURRENT_TEST") else evo_floor
+                            # Do not clamp live Deep Mode runs down to 3s/540s unless force_timeout or pytest
+                            if (
+                                live_agent_enabled
+                                and not force_timeout
+                                and not os.environ.get("PYTEST_CURRENT_TEST")
+                                and ma_timeout < evo_floor
+                            ):
+                                ma_timeout = evo_floor
+                        else:
+                            ma_timeout = 3.0 if os.environ.get("PYTEST_CURRENT_TEST") else (evo_floor if live_agent_enabled else 15.0)
 
-                            app_ma = build_compiled_multiagent(
-                                checkpointer=MemorySaver(), model=ma_model
-                            )
-                            ma_cfg = thread_config(f"{slug}-multiagent")
-                            ma_cfg["callbacks"] = [snapshot_cb]
-                            ma_input = dict(initial)
-                            ma_input.setdefault("workdir", str(self._workdir))
-                            ma_input.setdefault("skip_paper", bool(skip_paper))
-                            ma_input.setdefault("enable_horse_race", True)
-                            ma_input.setdefault("enforce_anti_cosplay", True)
-                            snapshot_cb.write_stage_snapshot(SUPERVISOR_NAME, status="running")
-                            res = app_ma.invoke(ma_input, ma_cfg)
-                            if abort_event.is_set():
-                                return
-
-                            # Regression guard: a completed multiagent run must leave
-                            # the canonical solution artifact on disk; otherwise the
-                            # supervisor did not hand a usable result to the
-                            # workbench and we fall back to the product pipeline.
-                            sol_p = self._workdir / "outputs" / f"{slug}-solution.json"
-                            if not sol_p.is_file():
-                                raise FileNotFoundError(
-                                    "multiagent run finished without producing "
-                                    f"outputs/{slug}-solution.json"
-                                )
-                            if abort_event.is_set():
-                                return
-                            final = res
-                            snapshot_cb.write_stage_snapshot(SUPERVISOR_NAME, status="ok")
-                            ma_outcome["ok"] = True
-                        except Exception as ma_exc:  # noqa: BLE001
-                            if abort_event.is_set():
-                                return
-                            ma_outcome["error"] = f"{type(ma_exc).__name__}: {ma_exc}"
+                        def _run_multiagent() -> None:
+                            """Run compiled 4-agent Deep Mode graph; owns its HTTP client lifecycle strictly."""
+                            nonlocal final
+                            local_http: Any = None
                             try:
-                                snapshot_cb.write_stage_snapshot(SUPERVISOR_NAME, status="error")
-                            except Exception:
-                                pass
-                        finally:
-                            if ma_http is not None:
                                 try:
-                                    ma_http.close()
+                                    import httpx2 as _httpx  # type: ignore[import-not-found]
+                                except ImportError:  # pragma: no cover
+                                    import httpx as _httpx  # type: ignore[import-not-found,no-redef]
+                                http_to = min(180.0, max(5.0, ma_timeout))
+                                connect_to = min(8.0, http_to)
+                                local_http = _httpx.Client(
+                                    timeout=_httpx.Timeout(timeout=http_to, connect=connect_to),
+                                    limits=_httpx.Limits(max_keepalive_connections=0),
+                                )
+                                ma_model = get_chat_model(
+                                    model_name=chosen_model if chosen_model else None,
+                                    http_client=local_http,
+                                )
+                                try:
+                                    # _invoke_with_trace already implements explicit 429 rate-limit backoff;
+                                    # keep SDK max_retries=1 so slow reasoning responses don't burn 5x180s.
+                                    ma_model.max_retries = 1
                                 except Exception:
                                     pass
+                                from langgraph.checkpoint.memory import MemorySaver
 
-                    ma_thread = threading.Thread(target=_run_multiagent, daemon=True, name=f"ma-{slug}")
-                    ma_thread.start()
-                    ma_thread.join(ma_timeout)
-                    if ma_thread.is_alive():
-                        # Wall-clock bound fired: signal abort and close HTTP socket
-                        abort_event.set()
-                        if ma_http is not None:
+                                app_ma = build_compiled_multiagent(
+                                    checkpointer=MemorySaver(), model=ma_model
+                                )
+                                ma_cfg = thread_config(f"{slug}-multiagent")
+                                ma_cfg["callbacks"] = [snapshot_cb]
+                                ma_input = dict(initial)
+                                ma_input.setdefault("workdir", str(self._workdir))
+                                ma_input.setdefault("skip_paper", bool(skip_paper))
+                                _explicit_hr = body.get("enable_horse_race")
+                                _env_hr = (os.environ.get("ORPATH_HORSE_RACE") or "").strip().lower()
+                                _has_fast_ds = bool((os.environ.get("DEEPSEEK_API_KEY") or "").strip())
+                                if deep_rounds > 1:
+                                    _default_hr = bool(_env_hr in {"1", "true", "yes"})
+                                else:
+                                    _default_hr = bool(
+                                        eff_class in {"", "custom_mip", "general_or", "unknown", "unregistered"}
+                                        and (_has_fast_ds or _env_hr in {"1", "true", "yes"})
+                                    )
+                                ma_input.setdefault(
+                                    "enable_horse_race",
+                                    bool(_explicit_hr) if _explicit_hr is not None else _default_hr,
+                                )
+                                ma_input.setdefault("enforce_anti_cosplay", True)
+                                if not abort_event.is_set():
+                                    snapshot_cb.write_stage_snapshot(SUPERVISOR_NAME, status="running")
+                                res = app_ma.invoke(ma_input, ma_cfg)
+                                if abort_event.is_set():
+                                    return
+
+                                sol_p = self._workdir / "outputs" / f"{slug}-solution.json"
+                                if not sol_p.is_file():
+                                    raise FileNotFoundError(
+                                        "multiagent run finished without producing "
+                                        f"outputs/{slug}-solution.json"
+                                    )
+                                if abort_event.is_set():
+                                    return
+                                final = res
+                                snapshot_cb.write_stage_snapshot(SUPERVISOR_NAME, status="ok")
+                                ma_outcome["ok"] = True
+                            except Exception as ma_exc:  # noqa: BLE001
+                                if abort_event.is_set():
+                                    return
+                                ma_outcome["error"] = f"{type(ma_exc).__name__}: {ma_exc}"
+                                try:
+                                    snapshot_cb.write_stage_snapshot(SUPERVISOR_NAME, status="error")
+                                except Exception:
+                                    pass
+                            finally:
+                                if local_http is not None:
+                                    try:
+                                        local_http.close()
+                                    except Exception:
+                                        pass
+
+                        ma_thread = threading.Thread(target=_run_multiagent, daemon=True, name=f"ma-{slug}")
+                        ma_thread.start()
+                        ma_thread.join(ma_timeout)
+                        if ma_thread.is_alive():
+                            # Signal abort cleanly; worker closes its own HTTP client in finally.
+                            abort_event.set()
+                            ma_outcome["error"] = f"TimeoutError: Multi-agent execution exceeded {ma_timeout:.1f}s budget"
+                            ma_thread.join(0.2)
+
+                        if not ma_outcome.get("ok"):
+                            ma_err = str(ma_outcome.get("error") or "")
+                            print(f"[watch] multiagent fallback ({slug}): {ma_err}", flush=True)
+                            if (
+                                ("TimeoutError" in ma_err)
+                                and eff_class in {
+                                    "",
+                                    "custom_mip",
+                                    "general_or",
+                                    "unknown",
+                                    "unregistered",
+                                    "nlp_minlp",
+                                    "interval_coverage",
+                                }
+                                and not os.environ.get("PYTEST_CURRENT_TEST")
+                            ):
+                                return (504, {"ok": False, "error": ma_err})
+                            initial["multiagent_fallback"] = True
+                            engine_used = "graph"
+                            final = None
+
+                    if engine_used != "multiagent":
+                        db_file = self._workdir / "runs" / "orpath.sqlite"
+                        db_file.parent.mkdir(parents=True, exist_ok=True)
+                        saver, conn = open_sqlite_checkpointer(db_file)
+                        default_graph_to = (
+                            max(900.0, float(deep_rounds) * 900.0)
+                            if (run_mode == "deep" and live_agent_enabled)
+                            else ("660.0" if live_agent_enabled else "120.0")
+                        )
+                        graph_timeout = float(
+                            os.environ.get("ORPATH_GRAPH_TIMEOUT", str(default_graph_to))
+                        )
+                        from orpath.pipeline.solve import clear_fast_cancel_event, register_fast_cancel_event
+
+                        graph_err: list[str] = []
+                        g_timed_out = False
+                        g_cancel_event = threading.Event()
+                        register_fast_cancel_event(slug, g_cancel_event)
+
+                        def _run_graph() -> None:
+                            nonlocal final
                             try:
-                                ma_http.close()
-                            except Exception:
-                                pass
-                        ma_outcome["error"] = f"TimeoutError: Multi-agent execution exceeded {ma_timeout:.1f}s budget"
-                        ma_thread.join(0.2)
+                                app = build_graph(checkpointer=saver)
+                                final = app.invoke(initial, cfg)
+                            except Exception as g_exc:  # noqa: BLE001
+                                if g_cancel_event.is_set():
+                                    return
+                                graph_err.append(f"{type(g_exc).__name__}: {g_exc}")
+                            finally:
+                                clear_fast_cancel_event(slug)
 
-                    if not ma_outcome.get("ok"):
-                        # Error, bound exceeded, or regression (no solution
-                        # artifact): smooth fallback to the deterministic
-                        # product pipeline.
-                        engine_used = "graph"
-                        final = None
+                        g_thread = threading.Thread(target=_run_graph, daemon=True, name=f"graph-{slug}")
+                        g_thread.start()
+                        g_thread.join(graph_timeout)
+                        if g_thread.is_alive():
+                            g_timed_out = True
+                            g_cancel_event.set()
+                            g_thread.join(0.5)
+                            return (504, {"ok": False, "error": f"Gateway Timeout: solver execution exceeded {graph_timeout:.0f}s limit"})
+                        if graph_err:
+                            raise RuntimeError(graph_err[0])
 
-                if engine_used != "multiagent":
-                    db_file = self._workdir / "runs" / "orpath.sqlite"
-                    db_file.parent.mkdir(parents=True, exist_ok=True)
-                    saver, conn = open_sqlite_checkpointer(db_file)
-                    graph_timeout = float(
-                        os.environ.get("ORPATH_GRAPH_TIMEOUT", "300.0" if live_agent_enabled else "120.0")
-                    )
-                    graph_err: list[str] = []
-
-                    def _run_graph() -> None:
-                        nonlocal final
                         try:
-                            app = build_graph(checkpointer=saver)
-                            final = app.invoke(initial, cfg)
-                        except Exception as g_exc:  # noqa: BLE001
-                            graph_err.append(f"{type(g_exc).__name__}: {g_exc}")
+                            snapshot_cb.write_stage_snapshot("graph_solve", status="ok")
+                        except Exception:
+                            pass
+                        engine_used = "graph"
+                except Exception as exc:  # noqa: BLE001
+                    return (500, {"ok": False, "error": f"graph solve run failed: {exc}"})
+                finally:
+                    if conn is not None and not locals().get("g_timed_out", False):
+                        try:
+                            conn.close()
+                        except Exception:
+                            pass
+                        conn = None
 
-                    g_thread = threading.Thread(target=_run_graph, daemon=True, name=f"graph-{slug}")
-                    g_thread.start()
-                    g_thread.join(graph_timeout)
-                    if g_thread.is_alive():
-                        self._send_json(504, {"ok": False, "error": f"Gateway Timeout: solver execution exceeded {graph_timeout:.0f}s limit"})
-                        return
-                    if graph_err:
-                        raise RuntimeError(graph_err[0])
-
-                    try:
-                        snapshot_cb.write_stage_snapshot("graph_solve", status="ok")
-                    except Exception:
-                        pass
-                    engine_used = "graph"
-            except Exception as exc:  # noqa: BLE001
-                self._send_json(500, {"ok": False, "error": f"graph solve run failed: {exc}"})
-                return
-            finally:
-                if conn is not None:
-                    try:
-                        conn.close()
-                    except Exception:
-                        pass
-                    conn = None
-
-            sol_file = self._workdir / "outputs" / f"{slug}-solution.json"
-            if not sol_file.is_file():
-                b_reason = str(
-                    (final or {}).get("blocked_reason")
-                    or (final or {}).get("last_error")
-                    or "求解器未能根据当前附件数据产出可执行算例，系统已诚实阻断并禁止回退夹具。"
-                )
-                blocked_sol = {
-                    "status": "BLOCKED",
-                    "objective": None,
-                    "solver": "none",
-                    "source": "studio_solver_blocked",
-                    "problem_id": slug,
-                    "problem_class": detected_class or "unregistered",
-                    "slug": slug,
-                    "meta": {
-                        "blocked": True,
-                        "is_replay": False,
-                        "data_source": "case",
-                        "reason": b_reason,
-                        "gap_list": [b_reason],
-                    },
-                }
-                sol_file.parent.mkdir(parents=True, exist_ok=True)
-                sol_file.write_text(json.dumps(blocked_sol, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-                self._send_json(
-                    200,
-                    {
-                        "ok": True,
+                sol_file = self._workdir / "outputs" / f"{slug}-solution.json"
+                if not sol_file.is_file():
+                    b_reason = str(
+                        (final or {}).get("blocked_reason")
+                        or (final or {}).get("last_error")
+                        or "当前附件未提供可解析的结构化算例参数，无法生成数值方案。"
+                    )
+                    blocked_sol = {
                         "status": "BLOCKED",
-                        "slug": slug,
-                        "engine": engine_used,
-                        "run_mode": run_mode,
-                        "skip_paper": skip_paper,
-                        "paper_generated": False,
-                        "paper_path": "",
-                        "paper_quality": "skipped",
                         "objective": None,
-                        "reason": b_reason,
-                        "blocked_reason": b_reason,
-                        "gap_list": [b_reason],
-                        "data_source": "case",
-                        "solution": blocked_sol,
-                    },
+                        "solver": "none",
+                        "source": "studio_solver_blocked",
+                        "problem_id": slug,
+                        "problem_class": detected_class or "unregistered",
+                        "slug": slug,
+                        "meta": {
+                            "blocked": True,
+                            "is_replay": False,
+                            "data_source": "case",
+                            "reason": b_reason,
+                            "gap_list": [b_reason],
+                        },
+                    }
+                    sol_file.parent.mkdir(parents=True, exist_ok=True)
+                    sol_file.write_text(json.dumps(blocked_sol, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                    return (
+                        200,
+                        {
+                            "ok": True,
+                            "status": "BLOCKED",
+                            "slug": slug,
+                            "engine": engine_used,
+                            "run_mode": run_mode,
+                            "skip_paper": skip_paper,
+                            "paper_generated": False,
+                            "paper_path": "",
+                            "paper_quality": "skipped",
+                            "objective": None,
+                            "reason": b_reason,
+                            "blocked_reason": b_reason,
+                            "gap_list": [b_reason],
+                            "data_source": "case",
+                            "solution": blocked_sol,
+                        },
+                    )
+                sol_doc = json.loads(sol_file.read_text(encoding="utf-8"))
+
+                val_file = self._workdir / "outputs" / f"{slug}-validate.json"
+                val_doc = {}
+                if val_file.is_file():
+                    try:
+                        val_doc = json.loads(val_file.read_text(encoding="utf-8"))
+                    except Exception:
+                        pass
+
+                obj = sol_doc.get("objective")
+                tour = sol_doc.get("tour") or []
+                val_ok = bool(val_doc.get("ok"))
+                checks_count = len(val_doc.get("checks", []))
+
+                proven_opt = bool(
+                    sol_doc.get("proven_optimal")
+                    or (isinstance(sol_doc.get("meta"), dict) and sol_doc.get("meta", {}).get("proven_optimal"))
+                    or (isinstance(val_doc.get("metrics"), dict) and val_doc.get("metrics", {}).get("proven_optimal"))
                 )
-                return
-            sol_doc = json.loads(sol_file.read_text(encoding="utf-8"))
 
-            val_file = self._workdir / "outputs" / f"{slug}-validate.json"
-            val_doc = {}
-            if val_file.is_file():
-                try:
-                    val_doc = json.loads(val_file.read_text(encoding="utf-8"))
-                except Exception:
-                    pass
-
-            obj = sol_doc.get("objective")
-            tour = sol_doc.get("tour") or []
-            val_ok = bool(val_doc.get("ok"))
-            checks_count = len(val_doc.get("checks", []))
-
-            # Numbers Truth check
-            proven_opt = bool(
-                sol_doc.get("proven_optimal")
-                or (isinstance(sol_doc.get("meta"), dict) and sol_doc.get("meta", {}).get("proven_optimal"))
-                or (isinstance(val_doc.get("metrics"), dict) and val_doc.get("metrics", {}).get("proven_optimal"))
-            )
-
-            if obj is not None:
-                if proven_opt:
-                    objective_str = f"严格最优目标值: {obj} 单位"
+                if obj is not None:
+                    if proven_opt:
+                        objective_str = f"严格最优目标值: {obj} 单位"
+                    else:
+                        objective_str = f"可行解目标值: {obj} 单位 (未证严格最优)"
                 else:
-                    objective_str = f"可行解目标值: {obj} 单位 (未证严格最优)"
-            else:
-                objective_str = "求解完成"
+                    objective_str = "求解完成"
 
-            if checks_count > 0:
-                val_status = f"数理校验通过 ({checks_count} 项物理约束全量合格)" if val_ok else "数理校验存在警告"
-            else:
-                val_status = "数理校验通过 (基础结构与逻辑校验合格)" if val_ok else "数理校验未通过"
+                if checks_count > 0:
+                    val_status = f"数理校验通过 ({checks_count} 项物理约束全量合格)" if val_ok else "数理校验存在警告"
+                else:
+                    val_status = "数理校验通过 (基础结构与逻辑校验合格)" if val_ok else "数理校验未通过"
 
-            domain_desc = detected_class.upper() if detected_class else "运筹优化"
-            status_text = sol_doc.get("status", "OK")
-            summary = {
-                "headline": f"{domain_desc} 求解完成 (求解状态: {status_text})",
-                "objective_str": objective_str,
-                "solution_detail": f"节点访问顺序: {' -> '.join(tour)}" if tour else f"求解器输出: {sol_doc.get('solver')}",
-                "validation_status": val_status,
-                "proven_optimal": proven_opt,
-            }
+                domain_desc = detected_class.upper() if detected_class else "运筹优化"
+                status_text = sol_doc.get("status", "OK")
+                summary = {
+                    "headline": f"{domain_desc} 求解完成 (求解状态: {status_text})",
+                    "objective_str": objective_str,
+                    "solution_detail": f"节点访问顺序: {' -> '.join(tour)}" if tour else f"求解器输出: {sol_doc.get('solver')}",
+                    "validation_status": val_status,
+                    "proven_optimal": proven_opt,
+                }
 
-            sol_status_up = str(sol_doc.get("status") or "").strip().upper()
-            if sol_status_up in {"BLOCKED", "ERROR", "INFEASIBLE"}:
-                b_reason = str(
-                    (sol_doc.get("meta") or {}).get("reason")
-                    if isinstance(sol_doc.get("meta"), dict)
-                    else ""
-                ) or str((final or {}).get("blocked_reason") or (final or {}).get("last_error") or f"求解器返回状态 {sol_status_up}")
-                self._send_json(
+                sol_status_up = str(sol_doc.get("status") or "").strip().upper()
+                if sol_status_up in {"BLOCKED", "ERROR", "INFEASIBLE"}:
+                    b_reason = str(
+                        (sol_doc.get("meta") or {}).get("reason")
+                        if isinstance(sol_doc.get("meta"), dict)
+                        else ""
+                    ) or str((final or {}).get("blocked_reason") or (final or {}).get("last_error") or f"求解器返回状态 {sol_status_up}")
+                    return (
+                        200,
+                        {
+                            "ok": True,
+                            "status": "BLOCKED",
+                            "slug": slug,
+                            "engine": engine_used,
+                            "run_mode": run_mode,
+                            "skip_paper": skip_paper,
+                            "paper_generated": False,
+                            "paper_path": "",
+                            "paper_quality": "skipped",
+                            "objective": None,
+                            "reason": b_reason,
+                            "blocked_reason": b_reason,
+                            "gap_list": [b_reason],
+                            "data_source": "case",
+                            "solution": sol_doc,
+                            "validation": val_doc,
+                        },
+                    )
+
+                res_paper_path = "" if skip_paper else str((final or {}).get("paper_path") or "")
+                paper_generated = bool((not skip_paper) and res_paper_path and Path(res_paper_path).is_file())
+                res_paper_quality = (
+                    "skipped"
+                    if skip_paper
+                    else str((final or {}).get("paper_quality") or ("template_render" if paper_generated else "skipped"))
+                )
+                data_src = str((final or {}).get("data_source") or (sol_doc.get("meta") or {}).get("data_source") or "case")
+
+                lifecycle_up = str((final or {}).get("lifecycle_status") or "").strip().upper()
+                failure_report_path = str((final or {}).get("failure_report_path") or "")
+                if engine_used == "multiagent" and (lifecycle_up == "FAILED" or bool(failure_report_path)):
+                    fail_reason = str(
+                        (final or {}).get("blocked_reason")
+                        or (final or {}).get("last_error")
+                        or f"multiagent fail-closed ({lifecycle_up or 'FAILED'})"
+                    )
+                    return (
+                        422,
+                        {
+                            "ok": False,
+                            "status": "FAILED",
+                            "slug": slug,
+                            "engine": engine_used,
+                            "run_mode": run_mode,
+                            "skip_paper": skip_paper,
+                            "paper_generated": paper_generated,
+                            "paper_path": res_paper_path if paper_generated else "",
+                            "paper_quality": res_paper_quality,
+                            "data_source": data_src,
+                            "error": fail_reason,
+                            "failure_report_path": failure_report_path,
+                            "proven_optimal": proven_opt,
+                            "objective": sol_doc.get("objective"),
+                            "solution": sol_doc,
+                            "validation": val_doc,
+                        },
+                    )
+
+                return (
                     200,
                     {
                         "ok": True,
-                        "status": "BLOCKED",
+                        "status": "COMPLETED",
                         "slug": slug,
                         "engine": engine_used,
                         "run_mode": run_mode,
                         "skip_paper": skip_paper,
-                        "paper_generated": False,
-                        "paper_path": "",
-                        "paper_quality": "skipped",
-                        "objective": None,
-                        "reason": b_reason,
-                        "blocked_reason": b_reason,
-                        "gap_list": [b_reason],
-                        "data_source": "case",
+                        "paper_generated": paper_generated,
+                        "paper_path": res_paper_path if paper_generated else "",
+                        "paper_quality": res_paper_quality,
+                        "data_source": data_src,
+                        "blocked_reason": "",
+                        "proven_optimal": proven_opt,
+                        "objective": sol_doc.get("objective"),
                         "solution": sol_doc,
                         "validation": val_doc,
+                        "plain_language_summary": summary,
+                    },
+                )
+
+            if async_run:
+                with _STUDIO_JOBS_LOCK:
+                    _STUDIO_JOBS[async_key] = {
+                        "status": "running",
+                        "slug": slug,
+                        "thread_id": slug,
+                        "run_mode": run_mode,
+                        "started_at": time.time(),
+                        "http_status": 202,
+                        "result": None,
+                    }
+
+                def _bg_job() -> None:
+                    code, pay = _run_scenario_a()
+                    with _STUDIO_JOBS_LOCK:
+                        _STUDIO_JOBS[async_key] = {
+                            "status": "done" if (code == 200 and pay.get("ok")) else "error",
+                            "slug": slug,
+                            "thread_id": slug,
+                            "run_mode": run_mode,
+                            "finished_at": time.time(),
+                            "http_status": code,
+                            "result": pay,
+                        }
+
+                threading.Thread(target=_bg_job, daemon=True, name=f"studio-job-{slug}").start()
+                self._send_json(
+                    202,
+                    {
+                        "ok": True,
+                        "async_started": True,
+                        "status": "RUNNING",
+                        "slug": slug,
+                        "thread_id": slug,
+                        "run_mode": run_mode,
                     },
                 )
                 return
 
-            res_paper_path = "" if skip_paper else str((final or {}).get("paper_path") or "")
-            paper_generated = bool((not skip_paper) and res_paper_path and Path(res_paper_path).is_file())
-            res_paper_quality = (
-                "skipped"
-                if skip_paper
-                else str((final or {}).get("paper_quality") or ("template_render" if paper_generated else "skipped"))
-            )
-            data_src = str((final or {}).get("data_source") or (sol_doc.get("meta") or {}).get("data_source") or "case")
-            self._send_json(
-                200,
-                {
-                    "ok": True,
-                    "status": "COMPLETED",
-                    "slug": slug,
-                    "engine": engine_used,
-                    "run_mode": run_mode,
-                    "skip_paper": skip_paper,
-                    "paper_generated": paper_generated,
-                    "paper_path": res_paper_path if paper_generated else "",
-                    "paper_quality": res_paper_quality,
-                    "data_source": data_src,
-                    "blocked_reason": "",
-                    "proven_optimal": proven_opt,
-                    "objective": sol_doc.get("objective"),
-                    "solution": sol_doc,
-                    "validation": val_doc,
-                    "plain_language_summary": summary,
-                },
-            )
+            code, pay = _run_scenario_a()
+            self._send_json(code, pay)
             return
 
         # Scenario B: No solver dataset or unregistered domain -> honestly BLOCKED
@@ -2074,6 +2329,13 @@ def serve(
         workdir = apply_workdir(workdir)
     else:
         workdir = apply_workdir(orpath_workdir())
+    if host in ("0.0.0.0", "::") and not (os.environ.get("ORPATH_WATCH_TOKEN") or "").strip():
+        print(
+            "[ERROR] refusing to bind non-loopback host without ORPATH_WATCH_TOKEN; "
+            "set ORPATH_WATCH_TOKEN or bind 127.0.0.1",
+            file=sys.stderr,
+        )
+        return 1
     os.environ["ORPATH_HOME"] = str(home)
     os.environ["ORPATH_WORKDIR"] = str(workdir)
 

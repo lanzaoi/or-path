@@ -181,7 +181,9 @@ function renderArtifacts(s) {
   if (dlg.steer_path) {
     html += `<div class="k">人导单</div><span class="path">${esc(dlg.steer_path)}${dlg.steer_exists ? "" : " （尚未写入）"}</span>`;
   }
-  const honest = (s.honesty && s.honesty.messages) || [];
+  const honest = ((s.honesty && s.honesty.messages) || []).filter(
+    (m) => !String(m).startsWith("LIVE=0:") && !String(m).startsWith("events_truncated:")
+  );
   if (honest.length) {
     html += `<div class="honesty"><strong>说明</strong><br/>${honest.map(esc).join("<br/>")}</div>`;
   }
@@ -214,7 +216,7 @@ function renderTier2(s) {
     </div>`;
   }).join("");
   if (!linksHtml) {
-    linksHtml = `<div class="empty">暂无深链（snapshot.tier2.deep_links）</div>`;
+    linksHtml = `<div class="empty">暂无扩展命令链接</div>`;
   }
   const recentHtml = recent.length
     ? `<div class="k">最近 session</div><div class="t2-recent">${recent.slice(0, 6).map((r) =>
@@ -223,7 +225,7 @@ function renderTier2(s) {
     : `<div class="k">最近 session</div><div class="t2-meta">无历史会话记录</div>`;
 
   panel.innerHTML = `
-    <h3>控制面观测 · Lean 4-Agent Runtime</h3>
+    <h3>运行时观测</h3>
     <div class="t2-meta">
       会话状态: ${t2.pi_session_env ? "已配置" : "标准无状态"} ·
       runs_root: ${esc(t2.sessions_root || "runs/")}
@@ -234,7 +236,7 @@ function renderTier2(s) {
       ${badge("or_writer", true)}
       ${badge("or_reviewer", true)}
     </div>
-    <div class="t2-meta">架构文档: ${esc(t2.docs || "docs/ARCHITECTURE.md")}</div>
+    <div class="t2-meta">运行状态: ${t2.pi_session_env ? "已配置" : "标准无状态"}</div>
     ${recentHtml}
     <div class="k" style="margin-top:8px">可复制等价 CLI 命令</div>
     ${linksHtml}

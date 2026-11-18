@@ -16,11 +16,11 @@ function updateFileListUI() {
   const totalBytes = studioState.loadedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
   const kbStr = fmtKB(totalBytes);
   $("studioFileList").innerHTML = `
-    <div style="font-weight:700;color:var(--blue);margin-bottom:6px">
-      📂 已解析待研判文件清单 (${studioState.loadedFiles.length} 个文件 · 共 ${kbStr}):
+    <div style="font-weight:600;color:var(--ink);margin-bottom:6px">
+      已载入文件 (${studioState.loadedFiles.length} 个 · 共 ${kbStr})
     </div>
-    <div style="max-height:120px;overflow-y:auto;background:var(--surface-2);border-radius:6px;padding:8px 10px;font-family:var(--mono);line-height:1.6">
-      ${studioState.loadedFiles.map(f => `<div>📄 ${esc(f.rel_path)} <span style="color:var(--ink-48);font-size:10px">(${fmtKB(f.size)})</span></div>`).join("")}
+    <div style="max-height:120px;overflow-y:auto;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-family:var(--mono);line-height:1.6">
+      ${studioState.loadedFiles.map(f => `<div>${esc(f.rel_path)} <span style="color:var(--ink-48);font-size:10px">(${fmtKB(f.size)})</span></div>`).join("")}
     </div>
   `;
 
@@ -210,6 +210,15 @@ function initStudioFiles() {
   }
   
   // --- Preset Data Loader ---
+  function utf8ToBase64(text) {
+    const bytes = new TextEncoder().encode(String(text || ""));
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) {
+      bin += String.fromCharCode(bytes[i]);
+    }
+    return btoa(bin);
+  }
+
   if ($("btnStudioLoadPreset")) {
     $("btnStudioLoadPreset").addEventListener("click", () => {
       $("studioSlugInput").value = "case-tsp-8";
@@ -219,11 +228,11 @@ function initStudioFiles() {
         { id: 3, x: 30, y: 15 }, { id: 4, x: 40, y: 20 }, { id: 5, x: 50, y: 25 },
         { id: 6, x: 60, y: 30 }, { id: 7, x: 70, y: 35 }
       ]};
-      const b64Coords = btoa(JSON.stringify(coords));
-      const b64Prob = btoa("# 8工位巡检问题\n问题一：访问8个工位并返回起点\n");
+      const b64Coords = utf8ToBase64(JSON.stringify(coords));
+      const b64Prob = utf8ToBase64("# 8工位巡检问题\n问题一：访问8个工位并返回起点\n");
       studioState.loadedFiles = [
-        { rel_path: "problem.md", content_base64: b64Prob, size: 120 },
-        { rel_path: "data/coords.json", content_base64: b64Coords, size: 240 },
+        { rel_path: "problem.md", content_base64: b64Prob, size: b64Prob.length },
+        { rel_path: "data/coords.json", content_base64: b64Coords, size: b64Coords.length },
       ];
       updateFileListUI();
     });

@@ -154,6 +154,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     # D2: human-steer resume_from when CLI --from-stage empty
     from orpath.human_steer import apply_steer_to_state, resume_from_steer
+    from orpath.nodes import _resolve_knowledge_mode
 
     if not getattr(args, "from_stage", None):
         rf = resume_from_steer(root, slug)
@@ -255,11 +256,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 problem_id=pid_clean,
                 problem_class=args.problem_class or "",
                 solve_mode=str(getattr(args, "solve_mode", "") or ""),
-                knowledge_mode=(
-                    __import__("orpath.nodes", fromlist=["_resolve_knowledge_mode"])._resolve_knowledge_mode(
-                        args.knowledge_mode
-                    )
-                ),
+                knowledge_mode=_resolve_knowledge_mode(args.knowledge_mode),
                 live_pi=bool(args.live_pi),
                 live_subagent=live_sa,
                 thread_id=thread_id,
@@ -394,6 +391,8 @@ def cmd_run(args: argparse.Namespace) -> int:
 
 def cmd_paper(args: argparse.Namespace) -> int:
     """Deferred / on-demand academic paper workflow over existing solved artifacts."""
+    from orpath.nodes import _resolve_knowledge_mode
+
     root = _resolve_data_root(args)
     apply_workdir(root)
     slug = str(args.slug or "").strip()
@@ -439,9 +438,7 @@ def cmd_paper(args: argparse.Namespace) -> int:
             pid = str(sol_data.get("problem_id") or slug)
             pc = str(sol_data.get("problem_class") or "")
             sm = str(sol_data.get("solver") or sol_data.get("solve_mode") or "auto")
-            k_mode = __import__("orpath.nodes", fromlist=["_resolve_knowledge_mode"])._resolve_knowledge_mode(
-                getattr(args, "knowledge_mode", "hybrid")
-            )
+            k_mode = _resolve_knowledge_mode(getattr(args, "knowledge_mode", "hybrid"))
             existing = _default_initial(
                 root=root,
                 slug=slug,

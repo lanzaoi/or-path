@@ -17,7 +17,7 @@ import os
 import time
 import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 try:
     from dotenv import load_dotenv
@@ -42,18 +42,21 @@ _PROVIDER_DEFAULTS: dict[str, dict[str, str]] = {
     "deepseek": {
         "api_key_env": "DEEPSEEK_API_KEY",
         "base_url_env": "DEEPSEEK_BASE_URL",
+        "model_env": "DEEPSEEK_MODEL",
         "base_url": "https://api.deepseek.com/v1",
         "model": "deepseek-chat",
     },
     "xfyun": {
         "api_key_env": "XFYUN_API_KEY",
         "base_url_env": "XFYUN_BASE_URL",
+        "model_env": "XFYUN_MODEL",
         "base_url": "https://spark-api-open.xf-yun.com/v1",
         "model": "spark-x2.6",
     },
     "openai": {
         "api_key_env": "OPENAI_API_KEY",
         "base_url_env": "OPENAI_BASE_URL",
+        "model_env": "OPENAI_MODEL",
         "base_url": "",
         "model": "gpt-4o-mini",
     },
@@ -64,7 +67,7 @@ _PROVIDER_ORDER: tuple[str, ...] = ("deepseek", "xfyun", "openai")
 def _resolve_provider(model: str) -> str:
     """Pick a provider from an explicit model hint, else the first env key present."""
     low = (model or "").strip().lower()
-    if "spark" in low or "xf" in low:
+    if "spark" in low or "xfyun" in low or "xf-yun" in low:
         return "xfyun"
     if "deepseek" in low:
         return "deepseek"
@@ -110,8 +113,18 @@ def get_chat_model(
         except (ValueError, TypeError):
             req_timeout = 120.0
 
+    effective_model = model
+    if not effective_model and api_key != "mock_key":
+        effective_model = (
+            os.environ.get(spec.get("model_env", ""))
+            or os.environ.get("ORPATH_LLM_MODEL")
+            or ""
+        ).strip()
+    if not effective_model:
+        effective_model = spec["model"]
+
     kwargs: dict[str, Any] = {
-        "model": model or spec["model"],
+        "model": effective_model,
         "api_key": api_key,
         "temperature": temperature,
         "request_timeout": req_timeout,
@@ -120,36 +133,77 @@ def get_chat_model(
         kwargs["base_url"] = base_url
     if http_client is not None:
         kwargs["http_client"] = http_client
+    if provider == "deepseek" and api_key != "mock_key":
+        is_flash = "flash" in effective_model.lower()
+        thinking_mode = (
+            os.environ.get("ORPATH_DEEPSEEK_THINKING")
+            or ("enabled" if is_flash else "")
+        ).strip().lower()
+        ds_effort = (
+            os.environ.get("ORPATH_DEEPSEEK_REASONING_EFFORT")
+            or ("high" if is_flash else "")
+        ).strip().lower()
+        ds_extra: dict[str, Any] = {}
+        if thinking_mode in {"enabled", "disabled"}:
+            ds_extra["thinking"] = {"type": thinking_mode}
+        if ds_effort in {"low", "medium", "high"}:
+            ds_extra["reasoning_effort"] = ds_effort
+        if ds_extra:
+            kwargs.setdefault("extra_body", ds_extra)
+    elif provider == "xfyun" and api_key != "mock_key":
+        # iFlytek MaaS buffers headers until full reasoning completes when stream=False;
+        # streaming=True delivers headers in 2-6s and prevents idle ReadTimeout on multi-minute turns.
+        kwargs.setdefault("streaming", True)
+        # Keep OpenAI client retry tight so 120s+ tool-gen calls do not multiply into 10-minute silent stalls.
+        kwargs.setdefault("max_retries", 1)
+        # Bound Spark empty reasoning CoT chains (~8 tok/s for 900s when unbounded) unless explicitly opted into full.
+        effort = (os.environ.get("ORPATH_SPARK_REASONING_EFFORT") or "low").strip().lower()
+        if effort in {"disabled", "none", "off", "0"}:
+            kwargs.setdefault("extra_body", {"thinking": {"type": "disabled"}})
+        elif effort in {"low", "medium", "high"}:
+            kwargs.setdefault("extra_body", {"reasoning_effort": effort})
     return ChatOpenAI(**kwargs)
 
 
 def get_tiered_chat_model(
-    role: Literal["fast", "reasoning"],
+    role: Literal["fast", "reasoning", "coding"],
     temperature: float = 0.2,
     http_client: Any = None,
     timeout: float | None = None,
 ) -> Any:
-    """Phase 3.4 — fast/reasoning dual-model routing.
+    """Phase 3.4 — role-based model routing (fast / reasoning / optional coding override).
 
-    ``fast`` (or_analyst structured extraction, tool param assembly):
-    reads ``ORPATH_FAST_MODEL``, falls back to the primary ``ORPATH_LLM_MODEL``
-    then the provider default. ``reasoning`` (Tier-B/C modeler, writer
-    formula derivation, reviewer deep review): reads ``ORPATH_REASONING_MODEL``,
-    with the same cascade. Single-model installs work unchanged — both tiers
-    resolve to the same provider default.
+    - ``fast`` (or_analyst structured extraction, tool param assembly): reads ``ORPATH_FAST_MODEL``.
+    - ``reasoning`` (Tier-B/C modeling, writer, reviewer): reads ``ORPATH_REASONING_MODEL``.
+    - ``coding`` (optional sandbox Python solver synthesis/patching): reads ``ORPATH_CODER_MODEL``
+      first, then falls back cleanly to ``ORPATH_REASONING_MODEL`` -> ``ORPATH_LLM_MODEL`` -> active
+      provider default (Spark ``spark-x2.6`` by default until explicitly overridden).
     """
     r = str(role or "fast").strip().lower()
-    if r not in {"fast", "reasoning"}:
-        raise ValueError(f"role must be 'fast' or 'reasoning', got {role!r}")
-    env_key = "ORPATH_FAST_MODEL" if r == "fast" else "ORPATH_REASONING_MODEL"
-    model = (os.environ.get(env_key) or "").strip()
-    if not model:
-        model = (os.environ.get("ORPATH_LLM_MODEL") or "").strip()
+    if r not in {"fast", "reasoning", "coding"}:
+        raise ValueError(f"role must be 'fast', 'reasoning', or 'coding', got {role!r}")
+    if r == "coding":
+        model = (
+            os.environ.get("ORPATH_CODER_MODEL")
+            or os.environ.get("ORPATH_REASONING_MODEL")
+            or os.environ.get("ORPATH_LLM_MODEL")
+            or ""
+        ).strip()
+    else:
+        env_key = "ORPATH_FAST_MODEL" if r == "fast" else "ORPATH_REASONING_MODEL"
+        model = (os.environ.get(env_key) or "").strip()
+        if not model:
+            model = (os.environ.get("ORPATH_LLM_MODEL") or "").strip()
+    eff_timeout = timeout
+    if eff_timeout is None and r in {"reasoning", "coding"} and not (os.environ.get("ORPATH_LLM_TIMEOUT") or "").strip():
+        # Heavy code-synthesis & math reasoning turns on Spark/DeepSeek often exceed 120s;
+        # avoid mid-turn ReadTimeout that triggers blind full-turn retries.
+        eff_timeout = 240.0
     return get_chat_model(
         model or None,
         temperature=temperature,
         http_client=http_client,
-        timeout=timeout,
+        timeout=eff_timeout,
     )
 
 
@@ -206,10 +260,15 @@ def build_multiagent_graph(
     workers: Any = None,
     prompt: str | None = None,
     state_schema: Any = None,
-    enable_guard: bool = True,
+    enable_guard: bool | None = None,
     **kwargs: Any,
 ) -> Any:
     """Build the unified 4-agent adaptive Deep Mode StateGraph (un-compiled)."""
+    if any(v is not None for v in (workers, prompt, state_schema, enable_guard)):
+        raise TypeError(
+            "build_multiagent_graph does not accept workers/prompt/state_schema/"
+            "enable_guard; the unified adaptive pipeline builds its own 4-agent graph"
+        )
     from orpath.agents.adaptive_graph import build_isolated_pipeline_graph as _build_isolated
 
     return _build_isolated(model=model, **kwargs)
@@ -221,10 +280,15 @@ def build_compiled_multiagent(
     workers: Any = None,
     prompt: str | None = None,
     state_schema: Any = None,
-    enable_guard: bool = True,
+    enable_guard: bool | None = None,
     **kwargs: Any,
 ) -> Any:
     """Build and compile the unified 4-agent adaptive Deep Mode graph."""
+    if any(v is not None for v in (workers, prompt, state_schema, enable_guard)):
+        raise TypeError(
+            "build_compiled_multiagent does not accept workers/prompt/state_schema/"
+            "enable_guard; the unified adaptive pipeline builds its own 4-agent graph"
+        )
     from orpath.agents.adaptive_graph import build_compiled_isolated_pipeline as _compile_isolated
 
     return _compile_isolated(checkpointer=checkpointer, model=model, **kwargs)
@@ -256,8 +320,8 @@ def db_path(root: Path) -> Path:
     return Path(root) / "runs" / "orpath.sqlite"
 
 
-def thread_config(thread_id: str) -> dict[str, Any]:
-    return {"configurable": {"thread_id": thread_id}}
+def thread_config(thread_id: str, recursion_limit: int = 80) -> dict[str, Any]:
+    return {"configurable": {"thread_id": thread_id}, "recursion_limit": int(recursion_limit)}
 
 
 def default_initial(
@@ -372,6 +436,9 @@ def default_initial(
 
 def _is_transient_llm_error(exc: BaseException) -> bool:
     """Return True when exc looks like a transient LLM/network error safe to retry."""
+    msg = str(exc).lower()
+    if any(m in msg for m in ("wall budget", "wall deadline", "cancelled by caller", "wall_timeout_abort")):
+        return False
     if isinstance(exc, TimeoutError):
         return True
     name = type(exc).__name__.lower()
@@ -380,7 +447,6 @@ def _is_transient_llm_error(exc: BaseException) -> bool:
     status = getattr(exc, "status_code", None)
     if status in (408, 429, 500, 502, 503, 504):
         return True
-    msg = str(exc).lower()
     transient_markers = (
         "timed out",
         "timeout",

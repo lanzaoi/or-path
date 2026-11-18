@@ -10,6 +10,7 @@ import contextlib
 import importlib
 import io
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -110,17 +111,28 @@ ADAPTER_SCRIPTS: dict[str, str] = {
 }
 
 
-def _run_py(script: Path, args: list[str], cwd: Path) -> tuple[int, str, str]:
+def _run_py(
+    script: Path,
+    args: list[str],
+    cwd: Path,
+    timeout_sec: int | None = None,
+) -> tuple[int, str, str]:
     cmd = [sys.executable, str(script), *args]
     env = os.environ.copy()
     env["ORPATH_WORKDIR"] = str(cwd)
+    if timeout_sec is None:
+        raw_env = (env.get("ORPATH_SOLVER_TIMEOUT") or "").strip()
+        eff_to = int(raw_env) if raw_env.isdigit() and int(raw_env) > 0 else 120
+    else:
+        eff_to = int(timeout_sec)
+    eff_to = min(600, max(10, eff_to))
     try:
         r = subprocess.run(
-            cmd, cwd=cwd, env=env, text=True, encoding="utf-8", errors="replace", capture_output=True, timeout=120
+            cmd, cwd=cwd, env=env, text=True, encoding="utf-8", errors="replace", capture_output=True, timeout=eff_to
         )
         return r.returncode, r.stdout, r.stderr
     except subprocess.TimeoutExpired:
-        return 124, "", f"subprocess timed out after 120s: {' '.join(str(c) for c in cmd)}"
+        return 124, "", f"subprocess timed out after {eff_to}s: {' '.join(str(c) for c in cmd)}"
 
 
 def _try_in_proc(script_name: str, args: list[str]) -> tuple[bool, int, str, str]:
@@ -137,11 +149,16 @@ def _try_in_proc(script_name: str, args: list[str]) -> tuple[bool, int, str, str
                         code = 0
                 except SystemExit as se:
                     code = se.code if isinstance(se.code, int) else (0 if se.code is None else 1)
-                except Exception:
+                except Exception as exc:
+                    logging.getLogger(__name__).debug(
+                        "in-proc adapter %s raised: %s", mod_name, exc
+                    )
                     return False, -1, "", ""
             return True, code, buf_out.getvalue(), buf_err.getvalue()
-    except Exception:
-        pass
+    except Exception as exc:
+        logging.getLogger(__name__).debug(
+            "import adapter %s failed: %s", mod_name, exc
+        )
     return False, -1, "", ""
 
 
@@ -710,8 +727,10 @@ def validate(
         out_path.write_text(json.dumps(v_res, indent=2, ensure_ascii=False), encoding="utf-8")
         is_ok = bool(v_res.get("ok"))
         return is_ok, v_res, json.dumps(v_res, ensure_ascii=False)
-    except Exception:
-        pass
+    except Exception as exc:
+        logging.getLogger(__name__).debug(
+            "in-proc validate_solution failed, falling back to subprocess: %s", exc
+        )
 
     # 2. Fallback to subprocess
     tools_dir = Path(__file__).resolve().parent

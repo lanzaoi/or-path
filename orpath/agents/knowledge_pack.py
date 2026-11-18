@@ -88,6 +88,8 @@ _LIT_DOMAIN_MAP: dict[str, tuple[str, ...]] = {
     "graph_coloring": ("graph_or", "constraint_programming", "combinatorial_optimization"),
     "max_clique": ("graph_or", "combinatorial_optimization", "integer_programming"),
     "game_theory": ("game_theory_or", "linear_programming"),
+    "nlp_minlp": ("nonlinear_convex", "metaheuristics", "integer_programming"),
+    "interval_coverage": ("combinatorial_optimization", "scheduling", "nonlinear_convex"),
 }
 
 #: Deterministic section keywords in knowledge/skills/or-problems.md
@@ -119,6 +121,8 @@ _FORMULATION_KEYS: dict[str, tuple[str, ...]] = {
     "qubo_ising": ("整数规划", "1.2"),
     "graph_coloring": ("整数规划", "1.2"),
     "max_clique": ("整数规划", "1.2"),
+    "nlp_minlp": ("非线性规划", "1.3", "混合整数"),
+    "interval_coverage": ("整数规划", "非线性规划", "调度"),
 }
 
 #: Targeted remediation playbooks triggered by validator error signatures
@@ -162,6 +166,16 @@ _ERROR_PLAYBOOKS: tuple[tuple[tuple[str, ...], str, str], ...] = (
         ("proven_optimal", "global_optimal", "optimality", "全局最优"),
         "numbers truth optimality claim",
         "最优性诚实声明违约：启发式/元启发式或限时截断 (status=FEASIBLE) 必须设 proven_optimal=False，严禁声称全局最优。",
+    ),
+    (
+        ("discret", "grid", "dt", "release_time", "det_time", "kinematic", "random_state", "seed", "timestep"),
+        "discretization kinematic forward simulation random seed alignment",
+        "离散化/仿真/随机种子口径一致律：求解器与 *-custom-validate.py 必须使用完全相同的网格步长 dt、前向因果动力学关系与固定 random_state/seed；严禁通过反向 clamp 破坏时间/物理因果律。",
+    ),
+    (
+        ("infeasible", "feasible=false", "solve_box_nlp", "0.0", "trivial", "subproblem", "missing"),
+        "physics to or reduction constraint sign c(x)>=0",
+        "非凸/耦合题求解失败或退化为 0.0：核对 `solve_box_nlp` 约束符号必须为 `c(x) >= 0`（非 <=0）；避免 >12 维盲目 DE，改用三阶段规约（物理离散建列 -> `select_max_union_subset(..., regime_groups=..., target_intervals_by_item=...)` / `milp_reduction` -> `solve_multistart_polish`），并确保多问全部写入 `subproblems`。",
     ),
 )
 
@@ -348,6 +362,88 @@ def extract_skill_highlights(
     return matched, checklist, solver_modes
 
 
+_UNIVERSAL_SKILL_TRIGGERS: dict[str, tuple[str, ...]] = {
+    "exploratory-data-analysis": (
+        "eda", "exploratory", "dataset", "tabular", "missing", "outlier", "distribution",
+        "correlation", "数据探索", "缺失值", "异常值", "特征分布", "数据清洗",
+    ),
+    "statistical-analysis": (
+        "statistical", "statistics", "hypothesis", "anova", "ttest", "t-test", "mannwhitney",
+        "kruskal", "chi2", "pvalue", "p-value", "regression", " 假设检验", "假设检验",
+        "显著性", "方差分析", "回归分析", "相关性检验", "置信区间", "统计学",
+    ),
+    "uncertainty-and-units": (
+        "uncertainty", "monte carlo", "bootstrap", "sensitivity", "discretization", "unit",
+        "units", "dimension", "error propagation", "不确定性", "蒙特卡洛", "灵敏度",
+        "敏感性", "误差传播", "量纲", "单位换算", "时间步长", "连续时间",
+    ),
+    "scikit-learn-modeling": (
+        "sklearn", "scikit-learn", "classification", "clustering", "kmeans", "random forest",
+        "gradient boosting", "forecast", "prediction", "cross-validation", "pca",
+        "机器学习", "分类", "聚类", "时间序列预测", "交叉验证", "特征工程", "预测模型",
+    ),
+    "experimental-design": (
+        "experimental design", "doe", "factorial", "latin hypercube", "sobol", "qmc",
+        "blocking", "confounding", "实验设计", "正交试验", "拉丁超立方", "参数扫描", "多因素",
+    ),
+    "scientific-visualization": (
+        "visualization", "plot", "figure", "chart", "gantt", "pareto", "heatmap",
+        "matplotlib", "seaborn", "可视化", "图表", "甘特图", "帕累托", "热力图", "灵敏度图",
+    ),
+}
+
+
+def _match_query_skills(
+    query_hint: str,
+    problem_class: str,
+    domain: str,
+    existing_ids: set[str],
+    home: Path,
+    limit: int = 2,
+) -> list[dict[str, str]]:
+    """Dynamically select up to `limit` query-relevant skills from knowledge/skills/*/SKILL.md."""
+    skills_root = home / "knowledge" / "skills"
+    if not skills_root.is_dir():
+        return []
+    raw_q = f"{query_hint} {problem_class} {domain}".lower()
+    if not raw_q.strip():
+        return []
+    q_toks = _tokens(raw_q)
+
+    scored: list[tuple[float, str, dict[str, str]]] = []
+    for sk_file in sorted(skills_root.glob("*/SKILL.md")):
+        sk_id = sk_file.parent.name
+        if sk_id in existing_ids:
+            continue
+        try:
+            text = sk_file.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+
+        triggers = _UNIVERSAL_SKILL_TRIGGERS.get(sk_id, ())
+        trig_hits = sum(1 for kw in triggers if kw.strip().lower() in raw_q)
+        body = _strip_frontmatter(text)
+        sk_toks = _tokens(f"{sk_id} {text[:900]}")
+        tok_overlap = len(q_toks & sk_toks)
+        score = trig_hits * 3.0 + min(float(tok_overlap), 6.0) * 0.5
+        if trig_hits == 0 and tok_overlap < 2:
+            continue
+        scored.append(
+            (
+                score,
+                sk_id,
+                {
+                    "id": sk_id,
+                    "path": f"knowledge/skills/{sk_id}/SKILL.md",
+                    "excerpt": body[:480],
+                },
+            )
+        )
+
+    scored.sort(key=lambda item: (-item[0], item[1]))
+    return [item[2] for item in scored[: max(0, limit)]]
+
+
 def load_pinned_knowledge(workdir: Path, slug: str, home: Path | None = None) -> list[dict[str, str]]:
     """Read human-pinned knowledge items from notes/<slug>-human-steer.json (Numbers-Truth safe)."""
     h = _resolve_home(home)
@@ -396,6 +492,60 @@ def load_pinned_knowledge(workdir: Path, slug: str, home: Path | None = None) ->
     return out
 
 
+_ROUTING_NOISE_TOKENS: frozenset[str] = frozenset(
+    {"cvrp", "vrp", "vrptw", "solomon", "pyvrp", "dijkstra", "shortest_path", "tsp"}
+)
+_DOMAIN_ROUTING_CLASSES: frozenset[str] = frozenset(
+    {"routing", "shortest_path", "tsp", "vrp", "pyvrp", "network_flow"}
+)
+_DOMAIN_SKILL_FALLBACK: dict[str, str] = {
+    "polyomino_cover": "polyomino-cover",
+    "microgrid_dispatch": "microgrid-dispatch",
+    "nlp_minlp": "nlp-minlp",
+    "interval_coverage": "interval-coverage",
+}
+
+
+def _filter_hits_by_domain(
+    hits: list[dict[str, Any]],
+    problem_class: str,
+    home: Path,
+    topk: int,
+) -> list[dict[str, Any]]:
+    """Suppress off-domain routing/CVRP/Dijkstra noise and inject local skill hints if needed."""
+    pc = (problem_class or "").strip().lower()
+    is_routing = pc in _DOMAIN_ROUTING_CLASSES
+    filtered: list[dict[str, Any]] = []
+    for item in hits:
+        if not isinstance(item, dict):
+            continue
+        blob = f"{item.get('source_path') or ''} {item.get('chunk_id') or ''} {item.get('snippet') or ''}".lower()
+        # Drop routing-exclusive hits when the active problem belongs to a non-routing class
+        if pc and pc not in {"unknown", "unregistered", "general_or", "general_optimization"} and not is_routing:
+            has_routing_noise = any(re.search(rf"(?<![a-z0-9_]){tok}(?![a-z0-9_])", blob) for tok in _ROUTING_NOISE_TOKENS)
+            has_same_class = pc.replace("_", " ") in blob or pc in blob or pc.split("_")[0] in blob
+            if has_routing_noise and not has_same_class:
+                continue
+        filtered.append(item)
+
+    sk_dir = _DOMAIN_SKILL_FALLBACK.get(pc)
+    if sk_dir:
+        sk_file = home / "knowledge" / "skills" / sk_dir / "SKILL.md"
+        if sk_file.is_file():
+            sk_rel = f"knowledge/skills/{sk_dir}/SKILL.md"
+            already = any(sk_rel in str(x.get("source_path") or "") for x in filtered)
+            if not already:
+                snip = _strip_frontmatter(sk_file.read_text(encoding="utf-8", errors="replace"))[:240]
+                filtered.insert(0, {
+                    "chunk_id": f"skill-{sk_dir}",
+                    "score": 1.0,
+                    "backend": "seed",
+                    "snippet": snip,
+                    "source_path": sk_rel,
+                })
+    return filtered[: max(1, topk)]
+
+
 def _retrieve_fast_or_hybrid(
     query: str,
     problem_class: str,
@@ -407,6 +557,7 @@ def _retrieve_fast_or_hybrid(
     if mode_env == "off":
         return {"query": query, "knowledge_mode": "off", "hits": [], "seed_facts": []}
 
+    fetch_k = max(topk * 4, 15)
     npy_sidecar = home / "knowledge" / "lightrag_ws" / "semantic_stub" / "stub_vectors.npy"
     try:
         if mode_env == "seed" or npy_sidecar.is_file():
@@ -415,11 +566,13 @@ def _retrieve_fast_or_hybrid(
             art = ks_retrieve(
                 query,
                 mode="seed" if mode_env == "seed" else "hybrid",
-                topk=topk,
+                topk=fetch_k,
                 root=home,
                 problem_class=problem_class or None,
             )
-            return artifact_to_payload(art)
+            payload = artifact_to_payload(art)
+            payload["hits"] = _filter_hits_by_domain(list(payload.get("hits") or []), problem_class, home, topk)
+            return payload
     except Exception:
         pass
 
@@ -430,7 +583,7 @@ def _retrieve_fast_or_hybrid(
         from knowledge_svc.fts_index import FTSIndex
 
         fts = FTSIndex(root=home)
-        for fh in fts.search(query, topk=topk):
+        for fh in fts.search(query, topk=fetch_k):
             hits_dict.append(fh.to_dict())
     except Exception:
         pass
@@ -443,7 +596,7 @@ def _retrieve_fast_or_hybrid(
     return {
         "query": query,
         "knowledge_mode": "hybrid_fts_fast",
-        "hits": hits_dict,
+        "hits": _filter_hits_by_domain(hits_dict, problem_class, home, topk),
         "seed_facts": seed_facts,
     }
 
@@ -519,8 +672,17 @@ def assemble_preflight_knowledge_pack(
     # 2. Process memory lessons (home seeds + local workdir auto-lessons)
     _les_json, les_md, lessons = _collect_combined_lessons(wd, h, slug, query, pc, topk=3)
 
-    # 3. DomainCartridge skills, checklist & or-problems.md canonical formulation
+    # 3. DomainCartridge skills, dynamic query-matched universal skills, checklist & formulation
     skills, checklist, solver_modes = extract_skill_highlights(dom, pc, home=h)
+    dyn_skills = _match_query_skills(
+        query_hint,
+        pc,
+        dom,
+        {str(s.get("id") or "") for s in skills},
+        home=h,
+        limit=2,
+    )
+    skills = [*skills, *dyn_skills]
     formulation = extract_formulation_snippet(pc, home=h)
 
     # 4. Authoritative top-journal literature from or_papers_top500.json
@@ -559,7 +721,7 @@ def assemble_preflight_knowledge_pack(
 
     if skills:
         lines.append("## 2. 领域技能核心规约 (`DomainCartridge.skill_topics`)")
-        for sk in skills[:3]:
+        for sk in skills[:5]:
             excerpt_one = re.sub(r"\s+", " ", sk["excerpt"]).strip()[:280]
             lines.append(f"- **`{sk['id']}`** (`{sk['path']}`): {excerpt_one}")
         lines.append("")

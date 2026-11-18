@@ -67,7 +67,7 @@ function renderStages(s) {
   const box = $("stages");
   const stages = s.stages || [];
   if (!stages.length) {
-    box.innerHTML = `<div class="empty">暂无阶段 — ${esc((s.honesty && s.honesty.messages || []).join("; ") || "尚无产品跑次")}</div>`;
+    box.innerHTML = `<div class="empty">暂无阶段 — ${esc((s.honesty && s.honesty.messages || []).join("; ") || "尚无运行记录")}</div>`;
     renderStageDetail(s);
     return;
   }
@@ -126,7 +126,7 @@ function renderTree(s) {
       : `<span class="role-zh">${esc(zh)}</span>`;
     return `<div class="tree-row${active}" data-di="${i}">
       <strong>${labelHtml}</strong>
-      <span class="tag ${hit}">${d.tool_call_detected ? "有工具调用" : "未见工具"}</span>
+      <span class="tag ${hit}">${d.tool_call_detected ? "有工具调用" : "无工具调用"}</span>
       <div style="color:var(--muted);font-size:11px;margin-top:2px">${esc((d.path || d.log || "").toString().slice(-80))}</div>
     </div>`;
   }).join("");

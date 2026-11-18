@@ -128,7 +128,13 @@ def _is_banned_module_name(mod_name: str) -> bool:
     top = low.split(".")[0]
     if top in BANNED_VALIDATOR_IMPORT_ROOTS:
         return True
-    if "custom_solver" in low or "custom-solver" in low:
+    if (
+        "custom_solver" in low
+        or "custom-solver" in low
+        or "nlp_minlp" in low
+        or "lns_hybrid" in low
+        or "milp_reduction" in low
+    ):
         return True
     return False
 

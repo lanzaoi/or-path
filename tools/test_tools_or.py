@@ -556,4 +556,34 @@ def test_skill_tools_registry():
     }
 
 
+def test_coding_edit_file_rejects_python_syntax_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    from orpath.agents.coding_tools import edit_file
+
+    monkeypatch.setenv("ORPATH_WORKDIR", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "outputs" / "sample_solver.py"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    original = "def calc(xs, i):\n    return xs[i]\n"
+    target.write_text(original, encoding="utf-8")
+
+    bad = json.loads(
+        edit_file.invoke(
+            {
+                "file_path": "outputs/sample_solver.py",
+                "old_text": "return xs[i]",
+                "new_text": "return xs[i]]",
+            }
+        )
+    )
+    assert bad["success"] is False
+    assert "SyntaxError" in bad["detail"]
+    assert target.read_text(encoding="utf-8") == original
+
+
+@pytest.mark.parametrize("topic", ["eda", "stats", "uncertainty", "sklearn"])
+def test_consult_or_skill_resolves_universal_math_modeling_skills(topic: str):
+    payload = _payload(consult_or_skill, topic=topic)
+    assert payload["success"] is True
+    assert payload.get("content") and len(payload["content"]) > 100
+    assert "Numbers Truth" in payload["content"] or "random_state" in payload["content"] or "SI" in payload["content"]
 

@@ -6,6 +6,7 @@ This module owns edges/routing only; runners must not duplicate state seeds.
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
 from pathlib import Path
 from typing import Any, Literal
@@ -188,8 +189,10 @@ def open_sqlite_checkpointer(db_path: Path) -> tuple[SqliteSaver, sqlite3.Connec
     saver = SqliteSaver(conn)
     try:
         saver.setup()
-    except Exception:
-        pass
+    except Exception as exc:  # noqa: BLE001 - surface but do not block startup
+        logging.getLogger(__name__).warning(
+            "SqliteSaver.setup() failed for %s: %s", db_path, exc
+        )
     return saver, conn
 
 

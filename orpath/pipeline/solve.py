@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -318,6 +319,19 @@ def _single_agent_live_eligible(state: dict[str, Any]) -> bool:
     return bool(state.get("force_live_agent") or is_real_llm_configured())
 
 
+_FAST_CANCEL_EVENTS: dict[str, Any] = {}
+
+
+def register_fast_cancel_event(thread_id: str, event: Any) -> None:
+    if thread_id:
+        _FAST_CANCEL_EVENTS[thread_id] = event
+
+
+def clear_fast_cancel_event(thread_id: str) -> None:
+    if thread_id:
+        _FAST_CANCEL_EVENTS.pop(thread_id, None)
+
+
 def _run_single_agent_modeler(
     root: Path,
     state: dict[str, Any],
@@ -344,22 +358,120 @@ def _run_single_agent_modeler(
     val_path = root / "outputs" / f"{slug}-validate.json"
     pc_effective = (pc or "").strip() or "custom_mip"
     inbox_dir = root / "inbox" / slug
-    knowledge_pack = root / "notes" / f"{slug}-knowledge_pack.md"
+    knowledge_pack = Path(str(state.get("knowledge_pack_path") or (root / "notes" / f"{slug}-knowledge-pack.md")))
+    if not knowledge_pack.is_file():
+        legacy_kp = root / "notes" / f"{slug}-knowledge_pack.md"
+        if legacy_kp.is_file():
+            knowledge_pack = legacy_kp
 
+    from langchain_core.callbacks import BaseCallbackHandler
     from langchain_core.messages import HumanMessage
     from orpath.agents.tools_or import GENERAL_OR_TOOLS
     from orpath.agents.workers import create_modeler_agent
 
     model_name = str(state.get("llm_model") or "").strip() or None
-    raw_timeout = float(os.environ.get("ORPATH_FAST_MODELER_TIMEOUT", "120.0"))
+    default_fast_to = "120.0" if os.environ.get("PYTEST_CURRENT_TEST") else "240.0"
+    raw_timeout = float(os.environ.get("ORPATH_FAST_MODELER_TIMEOUT", default_fast_to))
     timeout_s = min(300.0, max(5.0, raw_timeout))
     model = get_chat_model(model_name=model_name, timeout=timeout_s)
+    try:
+        model.max_retries = 1
+        # Fast Mode prioritizes rapid solver synthesis; disable long silent CoT streams on Spark unless opted in.
+        if (os.environ.get("ORPATH_FAST_THINKING") or "").strip().lower() not in {"1", "true", "yes"}:
+            m_name = str(getattr(model, "model_name", "") or model_name or "").lower()
+            base_url = str(getattr(model, "openai_api_base", "") or "").lower()
+            if ("spark" in m_name or "xf-yun" in base_url) and hasattr(model, "extra_body"):
+                eb = dict(getattr(model, "extra_body", None) or {})
+                eb.setdefault("thinking", {"type": "disabled"})
+                model.extra_body = eb
+    except Exception:
+        pass
+    fast_directive = (
+        "FAST MODE STRICT WORKFLOW:\n"
+        "- Do NOT run iterative math experiments, physics tests, or optimization trials inside `execute_python_sandbox` "
+        "(zero or at most 1 tiny header check; repeated `execute_python_sandbox` calls waste wall budget and fail the run).\n"
+        "- For multi-entity / combinatorial / multi-target / hybrid problems, NEVER run high-dim (>12D) blind `solve_box_nlp`! "
+        "Use Physics-to-OR 3-Stage Reduction: (1) NumPy candidate/column generation -> "
+        "(2) exact OR backbone (`select_max_union_subset(..., target_intervals_by_item=..., regime_groups=..., min_separation=...)` "
+        "or `tools.or_kernels.milp_reduction`) -> (3) fast `solve_multistart_polish` / low-dim `solve_box_nlp` (constraints `c(x) >= 0`).\n"
+        "- Total `custom_solver.py` runtime across ALL subproblems MUST be <= 35s (when using `solve_box_nlp` or loops across N subproblems, "
+        "cap per-subproblem `time_limit_s=5.0..8.0`, `n_lhs=32`, `popsize=8`, `maxiter=40` — NEVER `time_limit_s=60.0` per subproblem!).\n"
+        "- Multi-question problems (Q1..QK) MUST solve & validate ALL subproblems into `subproblems={...}` and populate any required output attachments.\n"
+        "- Immediately after reading the problem/data: (1) write `outputs/" + slug + "-custom_solver.py` (<=200 lines, fast <35s) and run `execute_custom_script`; "
+        "(2) write `outputs/" + slug + "-custom-validate.py` (<=110 lines, zero solver/optimizer imports, matching exact discretization grid `canonical_time_grid`) and run `execute_custom_script`; "
+        "(3) write structural `outputs/" + slug + "-schema.json` and call `validate_solution_tool`.\n"
+        "- NEVER finish your assistant response until BOTH scripts AND `validate_solution_tool` have executed and passed."
+    )
     agent = create_modeler_agent(
         model=model,
         extra_tools=list(GENERAL_OR_TOOLS),
+        domain_directive=fast_directive,
     )
-    max_steps = max(8, int(os.environ.get("ORPATH_FAST_MODELER_MAX_STEPS", "28")))
-    max_rounds = max(1, int(os.environ.get("ORPATH_FAST_REPAIR_ROUNDS", "4")))
+    max_steps = max(8, int(os.environ.get("ORPATH_FAST_MODELER_MAX_STEPS", "26")))
+    max_rounds = max(1, int(os.environ.get("ORPATH_FAST_REPAIR_ROUNDS", "5")))
+    wall_budget_s = float(os.environ.get("ORPATH_FAST_WALL_TIMEOUT", "580.0"))
+    wall_deadline = time.monotonic() + max(15.0, wall_budget_s)
+    tid_key = str(state.get("thread_id") or slug)
+    cancel_event = _FAST_CANCEL_EVENTS.get(tid_key)
+
+    class _FastDeadlineCallback(BaseCallbackHandler):
+        raise_error: bool = True
+
+        def _check(self) -> None:
+            if cancel_event is not None and getattr(cancel_event, "is_set", lambda: False)():
+                raise TimeoutError("fast single-agent modeler cancelled by caller timeout")
+            if time.monotonic() >= wall_deadline:
+                raise TimeoutError(f"fast single-agent modeler exceeded {wall_budget_s:.0f}s wall budget")
+
+        def on_llm_start(self, *args: Any, **kwargs: Any) -> None:
+            self._check()
+
+        def on_tool_start(self, *args: Any, **kwargs: Any) -> None:
+            self._check()
+
+        def on_chain_start(self, *args: Any, **kwargs: Any) -> None:
+            self._check()
+
+        def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
+            self._check()
+
+    kp_excerpt = ""
+    if knowledge_pack.is_file():
+        try:
+            kp_excerpt = knowledge_pack.read_text(encoding="utf-8", errors="replace").strip()[:1400]
+        except Exception:
+            kp_excerpt = ""
+    research_excerpt = ""
+    rp = Path(str(state.get("research_path") or ""))
+    if rp.is_file():
+        try:
+            research_excerpt = rp.read_text(encoding="utf-8", errors="replace").strip()[:800]
+        except Exception:
+            research_excerpt = ""
+
+    stmt_excerpt = ""
+    stmt_cands = [str(state.get("problem_file") or "").strip()]
+    if inbox_dir.is_dir():
+        stmt_cands.extend(
+            str(p) for p in sorted(inbox_dir.rglob("*")) if p.is_file() and p.suffix.lower() in {".pdf", ".docx", ".md", ".txt"}
+        )
+    for sc in stmt_cands:
+        if not sc or sc == "-":
+            continue
+        scp = Path(sc) if Path(sc).is_absolute() else (root / sc)
+        if scp.is_file():
+            try:
+                if scp.suffix.lower() in {".pdf", ".docx"}:
+                    from tools.intake_assets import read_statement_text
+
+                    raw_txt = read_statement_text(scp, max_chars=4500)
+                else:
+                    raw_txt = scp.read_text(encoding="utf-8", errors="replace")
+                stmt_excerpt = re.sub(r"\s+", " ", raw_txt).strip()[:3800]
+                if stmt_excerpt:
+                    break
+            except Exception:
+                pass
 
     initial_prompt = (
         f"[Fast Single-Agent Autonomous OR Engineer] workdir={root} slug={slug} "
@@ -368,36 +480,56 @@ def _run_single_agent_modeler(
         f"problem_file={state.get('problem_file') or ''}\n"
         f"profile_path={state.get('profile_path') or ''}\n"
         f"research_path={state.get('research_path') or ''}\n"
-        f"knowledge_pack_path={knowledge_pack if knowledge_pack.is_file() else ''}\n\n"
-        "Steps:\n"
-        "1. Inspect files in `inbox_dir` / `problem_file` / `profile_path` using `list_files`, `read_file`, or `read_problem_file`.\n"
-        "2. Check `list_available_solvers`. Track 1: if the problem matches or reduces cleanly to one of the 27 solvers "
-        "(consult `consult_or_skill(topic='reduction')`), format data/run `execute_or_solver` and record `reduction_manifest` if reduced.\n"
-        "3. Track 2 (open/custom/hybrid): write `outputs/" + slug + "-custom_solver.py` and an independent physical-isolation "
-        "validator `outputs/" + slug + "-custom-validate.py` (NO solver imports!) that writes `outputs/" + slug + "-custom-validate.json`, "
-        "execute both via `execute_custom_script` or `run_shell`.\n"
-        f"4. Persist structural-only schema (NO objective/values/tour/routes!) to '{sp}', validated solution JSON to '{sol_path}', "
-        f"and verify with `validate_solution_tool` saving report to '{val_path}'.\n"
+        f"knowledge_pack_path={knowledge_pack if knowledge_pack.is_file() else ''}\n"
+        + (f"statement_excerpt: {stmt_excerpt}\n\n" if stmt_excerpt else "\n")
+        + (f"=== Knowledge Pack Digest ===\n{kp_excerpt}\n\n" if kp_excerpt else "")
+        + (f"=== Research Digest ===\n{research_excerpt}\n\n" if research_excerpt else "")
+        + "Steps (strictly concise — minimize tool turns!):\n"
+        "1. Probe data headers/schemas in `inbox_dir` ONLY if needed (at most 1 quick probe; NEVER call `list_files('.')` on repo root and NEVER iterate solver prototypes inside `execute_python_sandbox`).\n"
+        "2. Track 1: If a registered solver in `list_available_solvers` fits directly, call `execute_or_solver`.\n"
+        "3. Track 2 (open/custom/hybrid — 3-Stage Physics-to-OR Reduction):\n"
+        "   a) Write a CONCISE, fast (<25s runtime, <=200 lines) Python solver `outputs/" + slug + "-custom_solver.py` via `write_custom_solver_script` and run `execute_custom_script`.\n"
+        "   b) IMMEDIATELY write a separate solver-free pure-Python/numpy validator `outputs/" + slug + "-custom-validate.py` (<=110 lines, NO optimizer/solver/milp_reduction/lns_hybrid/nlp_minlp imports!) writing `outputs/" + slug + "-custom-validate.json`, and run `execute_custom_script`.\n"
+        "   - Numerical Discipline: reuse `tools.or_kernels` helpers (`solve_general_milp`, `solve_budgeted_coverage_milp`, `solve_assignment_milp`, `select_max_union_subset(..., target_intervals_by_item=..., regime_groups=..., min_separation=...)`, `solve_multistart_polish`, `solve_box_nlp` with `c(x)>=0`, `canonical_time_grid`, `eval_projectile_detonation`, `build_custom_envelope`, `write_solution_and_report`) when applicable; "
+        "share IDENTICAL discretization `dt`, forward causality (`det_time == release_time + det_delay` without clamping), and `random_state`/`seed` across solver & validator; cover ALL requested sub-questions and ALL allowed entities/agents.\n"
+        f"4. Persist structural-only schema (NO objective/values/tour/routes!) to '{sp}' and verify with `validate_solution_tool` saving report to '{val_path}'.\n"
     )
 
     messages: list[Any] = [HumanMessage(content=initial_prompt)]
     last_error = "single-agent modeler did not produce a validated solution"
 
     for round_idx in range(1, max_rounds + 1):
+        rem_wall = wall_deadline - time.monotonic()
+        if (cancel_event is not None and getattr(cancel_event, "is_set", lambda: False)()) or rem_wall <= 0:
+            last_error = f"fast single-agent modeler hit wall deadline/cancel before round {round_idx}"
+            break
         prev_workdir = os.environ.get("ORPATH_WORKDIR")
+        prev_script_cap = os.environ.get("ORPATH_CUSTOM_SCRIPT_MAX_TIMEOUT")
         os.environ["ORPATH_WORKDIR"] = str(root)
+        if not prev_script_cap:
+            os.environ["ORPATH_CUSTOM_SCRIPT_MAX_TIMEOUT"] = str(max(20, min(90, int(rem_wall * 0.45))))
         try:
             resp = invoke_with_backoff(
                 agent,
                 {"messages": messages},
-                config={"recursion_limit": max_steps},
+                config={"recursion_limit": max_steps, "callbacks": [_FastDeadlineCallback()]},
+                max_retries=1,
             )
             if isinstance(resp, dict) and resp.get("messages"):
                 messages = list(resp["messages"])
+        except TimeoutError as exc:
+            last_error = str(exc)
+            break
         except Exception as exc:  # noqa: BLE001
             last_error = f"single-agent modeler failed (round {round_idx}/{max_rounds}): {type(exc).__name__}: {exc}"
             if round_idx < max_rounds:
-                messages.append(HumanMessage(content=f"[Execution Error Round {round_idx}] {last_error}\nPlease diagnose and fix your approach."))
+                messages.append(HumanMessage(
+                    content=(
+                        f"[Execution Error Round {round_idx}] {last_error}\n"
+                        "STOP using `execute_python_sandbox`; immediately patch `custom_solver.py`/`custom-validate.py` via `edit_file` "
+                        "(or write them via `write_custom_solver_script`), execute via `execute_custom_script`, and call `validate_solution_tool`."
+                    )
+                ))
                 continue
             break
         finally:
@@ -405,6 +537,10 @@ def _run_single_agent_modeler(
                 os.environ.pop("ORPATH_WORKDIR", None)
             else:
                 os.environ["ORPATH_WORKDIR"] = prev_workdir
+            if prev_script_cap is None:
+                os.environ.pop("ORPATH_CUSTOM_SCRIPT_MAX_TIMEOUT", None)
+            else:
+                os.environ["ORPATH_CUSTOM_SCRIPT_MAX_TIMEOUT"] = prev_script_cap
 
         if not sol_path.is_file():
             last_error = "single-agent modeler produced no solution file"
@@ -458,13 +594,24 @@ def _run_single_agent_modeler(
             diag = "; ".join(failed_details) if failed_details else msg
             last_error = f"single-agent validation failed: {diag or msg}"
             if round_idx < max_rounds:
+                val_script_p = root / "outputs" / f"{slug}-custom-validate.py"
+                missing_val_hint = (
+                    f"PRIORITY ACTION: '{sol_path}' already exists, but '{val_script_p}' / validation report is MISSING! "
+                    f"Do NOT rewrite '{slug}-custom_solver.py' right now — IMMEDIATELY call `write_custom_solver_script` to create "
+                    f"'{val_script_p}' (<=100 lines, zero solver/optimizer imports), run `execute_custom_script('{val_script_p}')`, "
+                    "and call `validate_solution_tool`.\n"
+                    if ("validator report missing" in last_error or not val_script_p.is_file())
+                    else ""
+                )
                 messages.append(
                     HumanMessage(
                         content=(
                             f"[Validation Gate Failed Round {round_idx}] gate_validate rejected '{sol_path}':\n"
                             f"{last_error}\n"
-                            "Inspect the error, ensure custom-validate.py performs independent recomputation without solver imports, "
-                            "patch files with `edit_file`, re-run scripts, and call `validate_solution_tool`."
+                            f"{missing_val_hint}"
+                            "Inspect ONLY the error above (NEVER call `execute_python_sandbox` during repair!), "
+                            "ensure custom-validate.py performs independent recomputation without solver imports, "
+                            "patch files directly with `edit_file`, re-run scripts via `execute_custom_script`, and call `validate_solution_tool`."
                         )
                     )
                 )
@@ -547,6 +694,12 @@ def _run_isolated_pipeline(root: Path, state: dict, sp: Path, sm: str) -> dict |
         slug = str(state["slug"])
         pid = str(state.get("problem_id") or slug)
         pc = str(state.get("problem_class") or "general_optimization")
+        from orpath.agents.evolution_ledger import MAX_DEEP_ROUNDS, normalize_target_rounds
+
+        deep_rounds = normalize_target_rounds(
+            state.get("deep_rounds") or state.get("evo_target_rounds") or os.environ.get("ORPATH_DEEP_MIN_ROUNDS") or 5,
+            default=5,
+        )
         pipe_state: dict[str, Any] = {
             "workdir": str(root),
             "slug": slug,
@@ -561,12 +714,28 @@ def _run_isolated_pipeline(root: Path, state: dict, sp: Path, sm: str) -> dict |
             "paper_path": str(root / "papers" / f"{slug}.md"),
             "review_path": str(root / "outputs" / f"{slug}-review.md"),
             "skip_paper": bool(state.get("skip_paper", True)),
-            "enable_horse_race": bool(state.get("enable_horse_race", True)),
+            "enable_horse_race": bool(state.get("enable_horse_race", False)),
             "enforce_anti_cosplay": bool(state.get("enforce_anti_cosplay", True)),
+            "deep_mode": True,
+            "deep_evolution": True,
+            "evo_target_rounds": deep_rounds,
+            "evo_max_rounds": MAX_DEEP_ROUNDS,
             "max_retries": int(state.get("max_retries") or 2),
         }
-        res = pipeline_app.invoke(pipe_state)
+        res = pipeline_app.invoke(pipe_state, config={"recursion_limit": 80})
         sol_path = root / "outputs" / f"{slug}-solution.json"
+        best_sol_path = root / "outputs" / f"{slug}-best_solution.json"
+        if not (isinstance(res, dict) and res.get("validation_ok") and sol_path.is_file()) and best_sol_path.is_file():
+            # Salvage verified incumbent if an exploratory round failed late
+            try:
+                best_doc = json.loads(best_sol_path.read_text(encoding="utf-8"))
+                if isinstance(best_doc, dict) and best_doc.get("status") in {"OPTIMAL", "FEASIBLE"}:
+                    sol_path.write_text(json.dumps(best_doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                    if isinstance(res, dict):
+                        res["validation_ok"] = True
+                        res["salvaged_incumbent"] = True
+            except Exception:
+                pass
         if isinstance(res, dict) and res.get("validation_ok") and sol_path.is_file():
             if not sp.is_file():
                 try:
@@ -584,9 +753,41 @@ def _run_isolated_pipeline(root: Path, state: dict, sp: Path, sm: str) -> dict |
                 sp.parent.mkdir(parents=True, exist_ok=True)
                 sp.write_text(json.dumps(cleaned, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
             return res
-    except Exception:
+        err_msg = str((res or {}).get("last_error") or (res or {}).get("reviewer_verdict") or "deep pipeline finished without validated solution")
+        _persist_deep_error(root, slug, err_msg)
+    except Exception as exc:
+        import traceback as _tb
+
+        slug_safe = str(state.get("slug") or "case")
+        _persist_deep_error(root, slug_safe, f"{type(exc).__name__}: {exc}", _tb.format_exc()[-2000:])
+        best_sol_path = root / "outputs" / f"{slug_safe}-best_solution.json"
+        sol_path = root / "outputs" / f"{slug_safe}-solution.json"
+        if best_sol_path.is_file():
+            try:
+                best_doc = json.loads(best_sol_path.read_text(encoding="utf-8"))
+                if isinstance(best_doc, dict) and str(best_doc.get("status", "")).upper() in {"OPTIMAL", "FEASIBLE"}:
+                    sol_path.write_text(json.dumps(best_doc, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+                    return {"validation_ok": True, "salvaged_incumbent": True, "last_error": f"{type(exc).__name__}: {exc}"}
+            except Exception:
+                pass
         return None
     return None
+
+
+def _persist_deep_error(root: Path, slug: str, error: str, trace_tail: str = "") -> None:
+    try:
+        notes_dir = root / "notes"
+        notes_dir.mkdir(parents=True, exist_ok=True)
+        (notes_dir / f"{slug}-deep-error.json").write_text(
+            json.dumps(
+                {"slug": slug, "error": str(error), "trace_tail": str(trace_tail)},
+                indent=2,
+                ensure_ascii=False,
+            ) + "\n",
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
 
 
 def _record_tier_b_gap(root: Path, slug: str, sol_path: Path, tier: str) -> str | None:
@@ -681,9 +882,12 @@ def node_model(state: ORPathState) -> dict:
             )
         if schema is None:
             fast_single = (
-                str(state.get("run_mode") or "deep").strip().lower() == "fast"
-                and not state.get("multiagent")
-                and not state.get("use_multiagent")
+                bool(state.get("multiagent_fallback"))
+                or (
+                    str(state.get("run_mode") or "deep").strip().lower() == "fast"
+                    and not state.get("multiagent")
+                    and not state.get("use_multiagent")
+                )
             )
             if fast_single:
                 res = _run_single_agent_modeler(root, dict(state), sp, pc or "", sm)
@@ -709,12 +913,19 @@ def node_model(state: ORPathState) -> dict:
                 if sp.is_file():
                     schema = json.loads(sp.read_text(encoding="utf-8"))
                 else:
+                    deep_err_detail = ""
+                    err_file = root / "notes" / f"{slug}-deep-error.json"
+                    if err_file.is_file():
+                        try:
+                            deep_err_detail = str(json.loads(err_file.read_text(encoding="utf-8")).get("error") or "")
+                        except Exception:
+                            deep_err_detail = ""
                     return {
                         "stage": "human_stop",
                         "human_required": True,
                         "last_error": (
-                            "model: unsupported class "
-                            f"(problem_class={pc!r}, problem_id={pid!r}); isolated pipeline unavailable"
+                            f"model: unsupported class in deep pipeline (problem_class={pc!r}, problem_id={pid!r})"
+                            + (f": {deep_err_detail}" if deep_err_detail else "; isolated pipeline unavailable")
                         ),
                     }
 

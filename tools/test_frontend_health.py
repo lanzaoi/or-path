@@ -107,8 +107,8 @@ def test_p1_functional_bugs_fixed():
     studio_js = _studio_js()
     inspector_js = _watch_js()
 
-    # 1. iconFor("gate") must return door emoji, not " entr"
-    assert 'gate: "🚪"' in common_js
+    # 1. iconFor("gate") uses shield icon (verification, not blocking gate)
+    assert 'gate: "🛡️"' in common_js
     assert '" entr"' not in common_js
 
     # 2. Studio file picker buttons aligned with studio.html
@@ -241,11 +241,15 @@ def test_dual_mode_and_lean_4agent_cockpit():
     assert "setPipelineStage" in studio_js
     assert "skip_paper:" in studio_js
 
-    # 4. On-demand paper button & multi-page header links
+    # 4. On-demand paper button & Studio-default header controls with Process Watch Drawer
     assert 'id="btnStudioGeneratePaper"' in studio_html
     assert "/api/studio/paper" in studio_js
-    assert 'href="/studio"' in header_html
     assert 'href="/"' in header_html
+    assert 'id="btnToggleWatchDrawer"' in header_html
+    assert 'id="watchDrawer"' in studio_html
+    assert 'id="tabVizMicrogrid"' in studio_html
+    assert "复制下方命令到终端执行" not in _watch_js()
+    assert 'id="dlgForm"' not in _watch_html()
 
 
 def test_dynamic_visualization_components():
@@ -320,7 +324,7 @@ def test_assembled_pages_contain_viz_and_watch_components():
 
 
 def test_http_routes_watch_and_studio(tmp_path: Path):
-    """Verify orpath_watch serves watch.html on GET / and studio.html on GET /studio."""
+    """Verify orpath_watch serves studio.html on GET / and /studio, and watch.html on GET /watch."""
     import threading
     import urllib.request
     from scripts.orpath_watch import make_server
@@ -330,16 +334,18 @@ def test_http_routes_watch_and_studio(tmp_path: Path):
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as resp:
+        for route in ("/", "/studio"):
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}{route}", timeout=5) as resp:
+                assert resp.status == 200
+                body_studio = resp.read().decode("utf-8")
+                assert 'id="studio-root"' in body_studio
+                assert 'id="watchDrawer"' in body_studio
+                assert 'id="watch-root"' not in body_studio
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/watch", timeout=5) as resp:
             assert resp.status == 200
             body_watch = resp.read().decode("utf-8")
             assert 'id="watch-root"' in body_watch
             assert 'id="studio-root"' not in body_watch
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/studio", timeout=5) as resp:
-            assert resp.status == 200
-            body_studio = resp.read().decode("utf-8")
-            assert 'id="studio-root"' in body_studio
-            assert 'id="watch-root"' not in body_studio
     finally:
         server.shutdown()
         server.server_close()

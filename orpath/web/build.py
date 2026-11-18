@@ -42,19 +42,21 @@ PAGES = {
     },
     "studio": {
         "out": STUDIO_OUT_FILE,
-        "title": "OR-Path 智能做题工作舱 · Studio",
+        "title": "OR-Path 运筹求解工作台 · Studio",
         "body_class": "mode-studio",
         "css": SHARED_CSS + [
             SRC_DIR / "css" / "studio" / "layout.css",
             SRC_DIR / "css" / "studio" / "pipeline_intake.css",
             SRC_DIR / "css" / "studio" / "cards.css",
             SRC_DIR / "css" / "studio" / "viz.css",
+            SRC_DIR / "css" / "studio" / "drawer.css",
         ],
         "html": [
             SRC_DIR / "html" / "header.html",
             SRC_DIR / "html" / "studio" / "shell.html",
             SRC_DIR / "html" / "studio" / "analysis.html",
             SRC_DIR / "html" / "studio" / "result.html",
+            SRC_DIR / "html" / "studio" / "drawer.html",
         ],
         "js": SHARED_JS + [
             SRC_DIR / "js" / "studio" / "state.js",
@@ -62,6 +64,7 @@ PAGES = {
             SRC_DIR / "js" / "studio" / "analyze.js",
             SRC_DIR / "js" / "studio" / "result.js",
             SRC_DIR / "js" / "studio" / "viz.js",
+            SRC_DIR / "js" / "studio" / "drawer.js",
             SRC_DIR / "js" / "studio" / "boot.js",
         ],
     },

@@ -433,3 +433,31 @@ def test_graph_builds_offline_with_default_workers() -> None:
     for name in ADAPTIVE_NODES:
         assert name in g.get_graph().nodes
     assert g.nodes["modeler"].bound is not None
+
+
+def test_invoke_with_trace_cooperative_cancel_and_partial_log(tmp_path: Path) -> None:
+    import threading
+    import time
+
+    from orpath.agents.adaptive_graph import _invoke_with_trace
+
+    aborted_in_callback = threading.Event()
+
+    class _SlowAgent:
+        def invoke(self, payload, config=None):  # noqa: ANN001
+            cbs = list((config or {}).get("callbacks") or [])
+            time.sleep(0.18)
+            for cb in cbs:
+                if hasattr(cb, "on_tool_start"):
+                    try:
+                        cb.on_tool_start({"name": "write_file"}, "{}")
+                    except TimeoutError:
+                        aborted_in_callback.set()
+                        raise
+            return {"messages": []}
+
+    with pytest.raises(TimeoutError, match="wall-clock ceiling"):
+        _invoke_with_trace(_SlowAgent(), "brief", tmp_path, "cancel-slug", "modeler", wall_timeout_s=0.05)
+
+    assert aborted_in_callback.wait(timeout=1.5), "hung worker thread must abort via deadline callback"
+    assert (tmp_path / "runs" / "cancel-slug" / "agent_logs" / "modeler_timeout.jsonl").is_file()

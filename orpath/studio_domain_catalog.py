@@ -45,6 +45,10 @@ def detect_problem_class_from_text(combined_text: str) -> str:
         return "lot_sizing"
     if any(k in low for k in ("博弈", "纳什均衡", "game theory", "nash")):
         return "game_theory"
+    if any(k in low for k in ("遮蔽时长", "有效遮蔽", "干扰弹", "烟幕", "区间并集", "interval coverage", "interval union")):
+        return "interval_coverage"
+    if any(k in low for k in ("非线性规划", "非凸优化", "minlp", "differential_evolution", "slsqp")):
+        return "nlp_minlp"
     if any(k in low for k in ("车辆路径", "车队", "vrp", "cvrp", "vrptw", "容量限制", "准时制")):
         return "vrp"
     if any(k in low for k in ("最短路", "导航", "shortest", "路径规划", "dijkstra")):
@@ -462,6 +466,38 @@ _CATALOG: dict[str, tuple[str, str, list[dict[str, Any]], str]] = {
         ],
         "检测到收益矩阵与竞争对抗策略，推荐采用 Nashpy 支持枚举算法求解混合策略纳什均衡。",
     ),
+    "interval_coverage": (
+        "时空区间并集覆盖与非线性拦截规划 (Interval Coverage + NLP/CP-SAT)",
+        "sandbox",
+        [
+            {
+                "name": "OR-Kernels DE/Dual-Annealing + SLSQP + 时空区间并集协同 (沙箱多轮进化)",
+                "recommended": True,
+                "pros": "基于 tools.or_kernels 向量化几何遮蔽判定、精确连续区间合并与离散-连续解耦，支持多轮沙箱进化与独立物理验算",
+                "cons": "非凸时空风景不保证全局最优证明，需多轮多起点加压收敛",
+            },
+            {
+                "name": "纯单起点局部梯度 (SLSQP)",
+                "recommended": False,
+                "pros": "收敛快",
+                "cons": "分段零梯度平台（未遮蔽区）会导致局部梯度直接卡死在零解",
+            },
+        ],
+        "检测到时空动态拦截/区间并集覆盖与非凸连续决策结构，推荐启用 tools.or_kernels 时空覆盖与非凸优化沙箱多轮进化框架。",
+    ),
+    "nlp_minlp": (
+        "通用非凸非线性 / 混合整数规划 (NLP / MINLP)",
+        "sandbox",
+        [
+            {
+                "name": "OR-Kernels LHS + Differential Evolution + SLSQP 混合优化 (沙箱多轮进化)",
+                "recommended": True,
+                "pros": "结合拉丁超立方全局扫描、差分进化/模拟退火与局部序列二次规划，支持离散-连续两阶段解耦及独立数值验算",
+                "cons": "非凸问题仅输出经过严格可行性重算的可行改善解",
+            },
+        ],
+        "检测到复杂连续非凸/混合整数非线性规划特征，推荐采用 tools.or_kernels.nlp_minlp 沙箱多轮进化内核求解。",
+    ),
 }
 
 _ALIASES: dict[str, str] = {
@@ -496,3 +532,185 @@ def get_domain_spec(detected_class: str) -> tuple[str, str, list[dict[str, Any]]
         ],
         "当前题面属于自定义或扩展运筹问题，系统已完成语义解析并给出建议，但诚实限制数值虚假绑定。",
     )
+
+
+_DOMAIN_CLARIFICATION_SPECS: dict[str, list[dict[str, Any]]] = {
+    "microgrid_dispatch": [
+        {
+            "id": "q_subproblem",
+            "question": "请确认微电网多问调控优化范围：",
+            "options": [
+                {
+                    "id": "full_q1_q4",
+                    "label": "Q1–Q4 全问联合优化 (推荐 · 日前计划 + 334天盲态基准 + 6h/15min MPC + 动态电价)",
+                    "recommended": True,
+                },
+                {
+                    "id": "q1_only",
+                    "label": "仅评估典型日前确定性最优调度 (Q1 144 时段 LP)",
+                    "recommended": False,
+                },
+            ],
+            "recommended": "full_q1_q4",
+        },
+        {
+            "id": "q_battery_policy",
+            "question": "请确认储能充放电与应急供电约束策略：",
+            "options": [
+                {
+                    "id": "strict_soc_and_5x_penalty",
+                    "label": "严格 SOC [10%, 90%] 与 5 倍应急购电惩罚 (推荐 · 完全对齐国赛物理规范)",
+                    "recommended": True,
+                },
+                {
+                    "id": "mpc_rolling_horizon",
+                    "label": "滚动时域误差自适应平抑 (增强日内预测偏差抗扰动)",
+                    "recommended": False,
+                },
+            ],
+            "recommended": "strict_soc_and_5x_penalty",
+        },
+    ],
+    "job_shop": [
+        {
+            "id": "q_subproblem",
+            "question": "请确认车间排产核心优化目标：",
+            "options": [
+                {"id": "min_makespan", "label": "最小化最大完工时间 Cmax (Makespan, 推荐)", "recommended": True},
+                {"id": "min_tardiness", "label": "兼顾交期拖期惩罚与换模切换成本", "recommended": False},
+            ],
+            "recommended": "min_makespan",
+        },
+    ],
+    "rcpsp": [
+        {
+            "id": "q_subproblem",
+            "question": "请确认项目排程资源约束规则：",
+            "options": [
+                {"id": "renewable_strict", "label": "严格可再生资源日/时上限 + 紧前关系 CP-SAT 精确求解 (推荐)", "recommended": True},
+                {"id": "cpm_baseline", "label": "附带无资源限制关键路径 (CPM) 下界对比", "recommended": False},
+            ],
+            "recommended": "renewable_strict",
+        },
+    ],
+    "tube_cut": [
+        {
+            "id": "q_subproblem",
+            "question": "请确认空间圆管切割与余料排产范围：",
+            "options": [
+                {"id": "q1_q4_common_cut", "label": "Q1–Q4 四问联动 (含四模式端部共切 DP 与余料跨批结转，推荐)", "recommended": True},
+                {"id": "q1_standard_only", "label": "仅做单批标准母材定长下料方案", "recommended": False},
+            ],
+            "recommended": "q1_q4_common_cut",
+        },
+    ],
+    "polyomino_cover": [
+        {
+            "id": "q_subproblem",
+            "question": "请确认离散网格覆盖/排样策略：",
+            "options": [
+                {"id": "exact_cover_cpsat", "label": "CP-SAT 精确无重叠覆盖与旋转镜像全搜索 (推荐)", "recommended": True},
+                {"id": "shared_boundary", "label": "附带最小外接边界与共边紧凑度优化", "recommended": False},
+            ],
+            "recommended": "exact_cover_cpsat",
+        },
+    ],
+    "facility_location": [
+        {
+            "id": "q_subproblem",
+            "question": "请确认供应链网络选址约束重点：",
+            "options": [
+                {"id": "fixed_plus_transport", "label": "设施固定投资 + 运输总成本联合最小化 (MILP 推荐)", "recommended": True},
+                {"id": "capacity_strict", "label": "强化单仓最大吞吐与服务半径上限", "recommended": False},
+            ],
+            "recommended": "fixed_plus_transport",
+        },
+    ],
+    "routing": [
+        {
+            "id": "q_subproblem",
+            "question": "请确认优化目标与回路连通性范围：",
+            "options": [
+                {
+                    "id": "full_closed_loop",
+                    "label": "全局闭环优化 (推荐 · 访问全部点位并返回起始点，总距离最短)",
+                    "recommended": True,
+                },
+                {
+                    "id": "open_path",
+                    "label": "开放式单向路径 (仅到达终点，不计算返程距离)",
+                    "recommended": False,
+                },
+            ],
+            "recommended": "full_closed_loop",
+        },
+        {
+            "id": "q_distance_metric",
+            "question": "请确认工位/站点空间距离度量准则：",
+            "options": [
+                {
+                    "id": "euclidean",
+                    "label": "标准欧氏几何直线距离 sqrt((x1-x2)^2 + (y1-y2)^2) (推荐)",
+                    "recommended": True,
+                },
+                {
+                    "id": "manhattan",
+                    "label": "曼哈顿网格距离 |x1-x2| + |y1-y2| (适用于有直角通道约束的场景)",
+                    "recommended": False,
+                },
+            ],
+            "recommended": "euclidean",
+        },
+    ],
+}
+
+
+def get_domain_clarification_questions(
+    detected_class: str,
+    rec_algo: str,
+    comparisons: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Build domain-aligned clarification questions without cross-domain leakage."""
+    key = _ALIASES.get(detected_class, detected_class)
+    q_algo = {
+        "id": "q_algorithm",
+        "question": "请确认推荐的求解引擎与求解策略：",
+        "options": [
+            {
+                "id": rec_algo if rec_algo != "none" else "qualitative",
+                "label": f"推荐方案：{comparisons[0]['name']}",
+                "recommended": True,
+            },
+            {
+                "id": "alternative",
+                "label": f"备选方案：{comparisons[1]['name'] if len(comparisons) > 1 else '通用启发式/沙箱建模策略'}",
+                "recommended": False,
+            },
+        ],
+        "recommended": rec_algo if rec_algo != "none" else "qualitative",
+    }
+    if key in {"tsp", "vrp", "shortest_path"}:
+        extra = _DOMAIN_CLARIFICATION_SPECS["routing"]
+    elif key in _DOMAIN_CLARIFICATION_SPECS:
+        extra = _DOMAIN_CLARIFICATION_SPECS[key]
+    else:
+        extra = [
+            {
+                "id": "q_subproblem",
+                "question": "请确认本次求解的精度与校验偏好：",
+                "options": [
+                    {
+                        "id": "exact_and_verify",
+                        "label": "优先数学精确建模与沙箱独立验算闭环 (推荐)",
+                        "recommended": True,
+                    },
+                    {
+                        "id": "fast_feasible",
+                        "label": "优先快速获得高质量可行解并报告收敛间隙",
+                        "recommended": False,
+                    },
+                ],
+                "recommended": "exact_and_verify",
+            }
+        ]
+    return [q_algo, *extra]

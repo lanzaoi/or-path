@@ -8,60 +8,64 @@
   <style>
 /* === src/css/base.css === */
 :root {
-  /* Huashu Design Modern Palette (Slate / Zinc + Refined Accents) */
-  --bg: #f8fafc;
-  --ink: #0f172a;
-  --ink-80: #334155;
-  --ink-60: #475569;
-  --ink-48: #64748b;
-  --ink-36: #94a3b8;
+  /* Technical Workbench Palette — Neutral Zinc + Disciplined Accent */
+  --bg: #f6f7f9;
+  --ink: #111827;
+  --ink-80: #374151;
+  --ink-60: #4b5563;
+  --ink-48: #6b7280;
+  --ink-36: #9ca3af;
   --white: #ffffff;
-  --blue: #2563eb;
-  --blue-hover: #1d4ed8;
+  --blue: #1d4ed8;
+  --blue-hover: #1e40af;
   --blue-light: #eff6ff;
-  --link: #2563eb;
-  --ok: #10b981;
-  --ok-hover: #059669;
+  --link: #1d4ed8;
+  --ok: #059669;
+  --ok-hover: #047857;
   --ok-light: #ecfdf5;
-  --fail: #ef4444;
+  --fail: #dc2626;
   --fail-light: #fef2f2;
-  --warn: #f59e0b;
+  --warn: #d97706;
   --warn-light: #fffbeb;
-  --blocked: #8b5cf6;
+  --blocked: #6d28d9;
   --blocked-light: #f5f3ff;
-  --run: #f59e0b;
-  --idle: #94a3b8;
+  --run: #d97706;
+  --idle: #9ca3af;
   --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --surface-3: #e2e8f0;
-  --border: rgba(226, 232, 240, 0.85);
-  --border-strong: #cbd5e1;
-  --border-dark: rgba(255, 255, 255, 0.12);
-  --radius-xl: 18px;
-  --radius-lg: 14px;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-xs: 6px;
+  --surface-2: #f1f3f5;
+  --surface-3: #e5e7eb;
+  --border: #e2e5ea;
+  --border-strong: #cbd2dc;
+  --border-dark: rgba(255, 255, 255, 0.1);
+  --radius-xl: 12px;
+  --radius-lg: 10px;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-xs: 4px;
   --pill: 9999px;
-  --font: system-ui, -apple-system, "Inter", BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --top-h: 52px;
-  --tool-h: 48px;
+  --font: system-ui, -apple-system, "Inter", BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono: "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --top-h: 50px;
+  --tool-h: 46px;
   --panel: #ffffff;
   --text: var(--ink);
   --muted: var(--ink-48);
   --accent: var(--blue);
   --cosplay: var(--fail);
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 28px -4px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+  --shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-sm: 0 1px 3px rgba(17, 24, 39, 0.05), 0 1px 2px rgba(17, 24, 39, 0.03);
+  --shadow-md: 0 4px 12px rgba(17, 24, 39, 0.06), 0 1px 3px rgba(17, 24, 39, 0.04);
+  --shadow-lg: 0 12px 28px rgba(17, 24, 39, 0.1), 0 4px 10px rgba(17, 24, 39, 0.04);
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 html, body {
@@ -158,83 +162,87 @@ body.mode-inspector footer {
   display: flex !important;
 }
 
-/* Row 1: Brand Header Bar - Modern Dark Glassmorphism */
+/* Row 1: Top Header Bar */
 header.nav {
   grid-row: 1;
   min-height: var(--top-h);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 0 20px;
-  background: rgba(15, 23, 42, 0.94);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  gap: 10px 14px;
+  padding: 6px 20px;
+  background: #111318;
+  border-bottom: 1px solid #232730;
+  color: #f9fafb;
   z-index: 50;
-  overflow: hidden;
 }
 
 .nav-brand {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
 
 .nav-brand .brand-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-  font-size: 13px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #1f2430;
+  border: 1px solid #323846;
+  color: #f3f4f6;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .nav-brand span {
-  color: #94a3b8;
+  color: #9ca3af;
   font-weight: 400;
   font-size: 12.5px;
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 .nav-right {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
-  overflow: hidden;
+  gap: 10px 14px;
+  max-width: 100%;
 }
 
-/* Modern Mode Switcher Pills */
+/* Segmented Header Navigation */
 .mode-toggle-group {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  background: rgba(30, 41, 59, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--pill);
-  padding: 3px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  background: #1a1e26;
+  border: 1px solid #2c313c;
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
 }
 
 .mode-btn {
-  padding: 5px 14px;
-  border-radius: var(--pill);
+  padding: 4px 12px;
+  border-radius: 5px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: #9ca3af;
   text-decoration: none;
-  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -242,13 +250,12 @@ header.nav {
 }
 
 .mode-btn:hover {
-  color: #f1f5f9;
+  color: #f3f4f6;
 }
 
 .mode-btn.on {
-  background: #2563eb;
+  background: #2b313e;
   color: #ffffff;
-  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
 }
 
 .badges {
@@ -333,45 +340,39 @@ header.nav {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 6px 13px;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
   font-size: 12px;
-  color: #0f172a;
+  color: #111827;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
   box-shadow: var(--shadow-xs);
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   cursor: pointer;
 }
 .wb-btn:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 .wb-btn.primary {
-  background: #2563eb;
+  background: #1d4ed8;
   color: #ffffff;
   border-color: #1d4ed8;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
 }
 .wb-btn.primary:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #1e40af;
   border-color: #1e40af;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 .wb-btn.success {
-  background: #059669;
+  background: #111827;
   color: #ffffff;
-  border-color: #047857;
-  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.25);
+  border-color: #111827;
 }
 .wb-btn.success:hover:not(:disabled) {
-  background: #047857;
-  border-color: #065f46;
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+  background: #1f2937;
+  border-color: #1f2937;
 }
 
 
@@ -395,7 +396,7 @@ header.nav {
 }
 .ctrl {
   display: flex;
-  gap: 10px;
+  gap: 7px;
   align-items: center;
   flex-wrap: wrap;
   width: 100%;
@@ -406,62 +407,62 @@ header.nav {
   font-weight: 500;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   white-space: nowrap;
 }
 .ctrl input[type="text"], .ctrl select {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: #fafafa;
+  border: 1px solid var(--border-strong);
   color: var(--ink);
-  padding: 0 12px;
-  height: 32px;
-  border-radius: var(--pill);
+  padding: 0 9px;
+  height: 30px;
+  border-radius: 6px;
   font-size: 12px;
   outline: none;
-  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .ctrl input[type="text"]:focus, .ctrl select:focus {
   background: #ffffff;
   border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.12);
 }
-.ctrl input[type="text"] { width: 140px; font-family: var(--mono); }
-.ctrl select { min-width: 190px; max-width: 280px; cursor: pointer; }
+.ctrl input[type="text"] { width: 108px; font-family: var(--mono); }
+.ctrl select { min-width: 120px; max-width: 190px; flex-shrink: 1; cursor: pointer; }
 .nav-btn, .chip {
-  height: 32px;
-  padding: 0 14px;
-  border-radius: var(--pill);
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 6px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--ink);
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border: 1px solid var(--border-strong);
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   cursor: pointer;
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .nav-btn.primary {
   background: var(--blue);
   color: #fff;
   border-color: var(--blue);
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
 }
 .nav-btn:hover:not(:disabled), .chip:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
-  transform: translateY(-1px);
+  background: var(--surface-2);
+  border-color: #9ca3af;
 }
 .nav-btn.primary:hover:not(:disabled) {
   background: var(--blue-hover);
   border-color: var(--blue-hover);
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
 }
 .chip.on {
-  background: rgba(37, 99, 235, 0.1);
-  border-color: rgba(37, 99, 235, 0.35);
+  background: #eff6ff;
+  border-color: #bfdbfe;
   color: var(--blue);
+  font-weight: 600;
 }
 .model-toast { display: none; font-size: 11px; color: var(--ok); font-weight: 600; }
 .model-toast.show { display: inline; }
@@ -473,11 +474,11 @@ header.nav {
   display: none;
   width: 100%;
   background: #fef2f2;
-  border-bottom: 1px solid rgba(239, 68, 68, 0.25);
-  color: #1e293b;
-  padding: 12px 18px;
+  border-bottom: 1px solid #fecaca;
+  color: var(--ink);
+  padding: 10px 18px;
   font-size: 12px;
-  max-height: 38vh;
+  max-height: 22vh;
   overflow: auto;
 }
 #errBanner.show { display: block; }
@@ -699,7 +700,7 @@ header.nav {
 /* Main work area */
 main {
   grid-row: 6;
-  min-height: 0;
+  min-height: 240px;
   display: grid;
   grid-template-columns:
     minmax(180px, 0.85fr)
@@ -778,7 +779,7 @@ main h2 .hint {
   margin-bottom: 4px;
   text-transform: uppercase;
 }
-.bubble.system { align-self: center; max-width: 100%; background: #f1f5f9; color: #475569; }
+.bubble.system { align-self: flex-start; max-width: 100%; background: #f1f5f9; color: #475569; }
 .bubble.research, .bubble.pi { align-self: flex-start; border-color: rgba(37, 99, 235, 0.25); background: #f8faff; }
 .bubble.model { align-self: flex-start; border-color: rgba(139, 92, 246, 0.3); background: #faf8ff; }
 .bubble.solve { align-self: flex-start; background: #f0fdf4; border-color: rgba(16, 185, 129, 0.35); }
@@ -1041,20 +1042,22 @@ footer {
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  max-height: 38vh;
-  transition: max-height .2s ease;
+  max-height: 30vh;
   overflow: hidden;
 }
 #problemWorkbench.collapsed {
-  max-height: 44px;
+  max-height: none;
+}
+#problemWorkbench.collapsed .wb-body {
+  display: none;
 }
 .wb-bar {
-  min-height: 44px;
+  min-height: 42px;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 6px 18px;
-  background: linear-gradient(90deg, #f8fafc 0%, #fff 100%);
+  background: #fafafa;
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
 }
@@ -1062,41 +1065,41 @@ footer {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 0;
-  flex: 1;
+  min-width: 220px;
+  flex: 1 1 260px;
+  flex-wrap: wrap;
 }
 .wb-icon {
-  width: 26px; height: 26px; border-radius: 8px;
-  background: var(--blue); color: #fff;
+  width: 24px; height: 24px; border-radius: 6px;
+  background: #111827; color: #fff;
   display: inline-flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; flex-shrink: 0;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+  font-size: 11px; font-weight: 600; flex-shrink: 0;
 }
 .wb-title {
-  font-size: 13.5px; font-weight: 700; color: var(--ink);
+  font-size: 13px; font-weight: 600; color: var(--ink);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  max-width: 420px;
+  max-width: min(360px, 100%);
 }
 .wb-pill {
-  font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: var(--pill);
-  background: #f8fafc; color: #334155; border: 1px solid #cbd5e1;
+  font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 5px;
+  background: var(--surface-2); color: var(--ink-80); border: 1px solid var(--border);
   white-space: nowrap; flex-shrink: 0;
 }
-.wb-pill.ok { background: rgba(16, 185, 129, 0.15); color: #065f46; border-color: rgba(16, 185, 129, 0.35); }
-.wb-pill.blue { background: rgba(37, 99, 235, 0.12); color: var(--blue); border-color: rgba(37, 99, 235, 0.3); }
+.wb-pill.ok { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.wb-pill.blue { background: #eff6ff; color: var(--blue); border-color: #bfdbfe; }
 .wb-tabs {
-  display: flex; gap: 4px; align-items: center;
-  background: #f1f5f9; padding: 3px; border-radius: var(--pill);
+  display: flex; gap: 3px; align-items: center; flex-wrap: wrap;
+  background: var(--surface-2); padding: 2px; border-radius: 7px;
   border: 1px solid var(--border);
 }
 .wb-tab {
-  font-size: 11.5px; font-weight: 600; padding: 4px 12px; border-radius: var(--pill);
-  color: #64748b; transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease; white-space: nowrap;
+  font-size: 11.5px; font-weight: 500; padding: 4px 10px; border-radius: 5px;
+  color: var(--ink-60); transition: background-color 0.15s ease, color 0.15s ease; white-space: nowrap;
 }
 .wb-tab:hover { color: var(--ink); }
 .wb-tab.active {
-  background: #fff; color: var(--blue);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: #fff; color: var(--ink); font-weight: 600;
+  box-shadow: var(--shadow-xs);
 }
 .wb-actions {
   display: flex; gap: 8px; align-items: center; flex-shrink: 0;
@@ -1107,17 +1110,23 @@ footer {
 }
 .wb-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.5fr);
+  grid-template-columns: minmax(240px, 1fr) minmax(280px, 1.5fr);
   gap: 14px;
   align-items: start;
+}
+@media (max-width: 768px) {
+  .wb-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .wb-card {
   background: #fff; border: 1px solid var(--border); border-radius: 12px;
   padding: 12px 14px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  min-width: 0;
 }
 .wb-card h4 {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .04em; color: #64748b; margin-bottom: 8px;
+  font-size: 11.5px; font-weight: 600;
+  color: var(--ink-60); margin-bottom: 8px;
   display: flex; justify-content: space-between; align-items: center;
 }
 .wb-sub-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; }
@@ -1234,22 +1243,39 @@ footer {
   main > #dialogueSection { grid-column: 1 / -1; max-height: 42vh; order: -1; border-bottom: 1px solid var(--border); }
   main > section:last-child { grid-column: 1 / -1; max-height: 28vh; border-top: 1px solid var(--border); }
 }
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
+  body.mode-inspector {
+    height: auto !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    grid-template-rows: auto !important;
+  }
+  .badges {
+    flex-wrap: wrap;
+    max-width: 100%;
+    margin-left: 0;
+  }
+  #errBanner,
+  #problemWorkbench {
+    max-height: none;
+  }
   main {
     grid-template-columns: 1fr;
-    overflow: auto;
+    overflow: visible;
   }
   main > section {
     max-height: none;
-    min-height: 220px;
+    min-height: 240px;
     border-right: 0;
     border-bottom: 1px solid var(--border);
     order: 0;
   }
-  main > #dialogueSection { max-height: none; min-height: 320px; order: -1; }
+  main > #dialogueSection { max-height: none; min-height: 280px; order: -1; }
   main > section:last-child { max-height: none; }
   .ctrl input[type="text"] { width: 110px; }
-  .ctrl select { min-width: 160px; max-width: 200px; }
+  .ctrl select { min-width: 140px; max-width: 100%; }
 }
 @media (max-width: 560px) {
   .nav-brand span { display: none; }
@@ -1262,13 +1288,13 @@ footer {
 <!-- === src/html/header.html === -->
   <header class="nav">
     <div class="nav-brand">
-      <div class="brand-logo">⚡</div>
-      <span>OR-Path 智能做题工作舱 · Live Watch</span>
+      <div class="brand-logo">OR</div>
+      <span>OR-Path 运筹求解工作台</span>
     </div>
     <div class="nav-right">
       <div class="mode-toggle-group">
-        <a class="mode-btn" id="btnModeStudio" href="/studio">✨ 极简做题模式 (Studio)</a>
-        <a class="mode-btn" id="btnModeInspector" href="/">🛠️ 专家监视模式 (Inspector)</a>
+        <a class="mode-btn" id="btnModeStudio" href="/">工作台</a>
+        <button type="button" class="mode-btn" id="btnToggleWatchDrawer" title="展开/收起过程监视抽屉">过程监视</button>
       </div>
       <div class="badges" id="badges"></div>
     </div>
@@ -1284,8 +1310,8 @@ footer {
       <label>线程 <input type="text" id="thread" value="test" placeholder="默认=任务" /></label>
       <button type="button" class="nav-btn primary" id="btnApply">应用</button>
       <button type="button" class="nav-btn" id="btnRefresh">刷新</button>
-      <button type="button" class="nav-btn primary" id="btnOpenIntake" title="一键导入题面文件、粘贴赛题或从内置题库加载" style="background:#0066cc">📥 一键导入 / 题库</button>
-      <button type="button" class="chip on" id="btnToggleWorkbench" title="展开/收起题面与结果查看工作台">📋 题面与结果看板</button>
+      <button type="button" class="nav-btn primary" id="btnOpenIntake" title="导入题面文件、粘贴赛题或从内置题库加载">导入题库</button>
+      <button type="button" class="chip on" id="btnToggleWorkbench" title="展开/收起题面与结果看板">题面看板</button>
       <button type="button" id="btnFollow" class="chip on" title="自动跟随最新阶段">跟随最新</button>
       <button type="button" id="btnPause" class="chip" title="暂停自动刷新">暂停刷新</button>
       <span class="ctrl-spacer"></span>
@@ -1303,7 +1329,8 @@ footer {
       <strong id="errTitle">需要处理</strong>
       <span id="errCopyToast">已复制</span>
       <div class="err-actions">
-        <button type="button" class="primary" id="errCopy" title="复制中文说明+技术原文">复制说明</button>
+        <button type="button" class="primary" id="errRetry" title="直接在前端重新触发求解与校验">一键重试求解</button>
+        <button type="button" id="errCopy" title="复制错误说明">复制说明</button>
         <button type="button" id="errJump" title="跳到失败阶段">跳到该步</button>
         <span class="x" id="errDismiss" title="关闭">✕</span>
       </div>
@@ -1319,13 +1346,9 @@ footer {
       <div class="ex-card"><div class="k">你怎么做</div><div class="v" id="errDo"></div></div>
     </div>
     <details class="err-tech" id="errTechWrap">
-      <summary>技术原文（一般不用看）</summary>
+      <summary>技术原文（沙箱异常诊断日志）</summary>
       <pre id="errText"></pre>
     </details>
-    <div id="nextActions" data-m1-next-actions="1">
-      <div class="na-label">建议操作 <span>· 点「复制命令」→ 粘贴到终端执行</span></div>
-      <div id="nextActionsList"></div>
-    </div>
   </div>
 
   <div id="problemWorkbench" data-orpath-problem-workbench="1">
@@ -1336,15 +1359,15 @@ footer {
         <span id="wbPills" style="display:inline-flex;gap:5px;flex-wrap:wrap"></span>
       </div>
       <div class="wb-tabs" id="wbTabs">
-        <button type="button" class="wb-tab active" data-wb-tab="overview">📋 题面与子问</button>
-        <button type="button" class="wb-tab" data-wb-tab="brief">📄 题面原文</button>
-        <button type="button" class="wb-tab" data-wb-tab="schema">📐 数学模型</button>
-        <button type="button" class="wb-tab" data-wb-tab="solution">🏆 求解结果与质检</button>
-        <button type="button" class="wb-tab" data-wb-tab="paper">📝 技术报告</button>
+        <button type="button" class="wb-tab active" data-wb-tab="overview">题面与子问</button>
+        <button type="button" class="wb-tab" data-wb-tab="brief">题面原文</button>
+        <button type="button" class="wb-tab" data-wb-tab="schema">数学模型</button>
+        <button type="button" class="wb-tab" data-wb-tab="solution">求解结果</button>
+        <button type="button" class="wb-tab" data-wb-tab="paper">技术报告</button>
       </div>
       <div class="wb-actions">
-        <button type="button" class="wb-btn primary" id="wbBtnImport">📥 导入/切换题目</button>
-        <button type="button" class="wb-btn success" id="wbBtnRun" title="对此题目启动运筹建模与求解流水线">🚀 一键求解此题</button>
+        <button type="button" class="wb-btn primary" id="wbBtnImport">导入/切换</button>
+        <button type="button" class="wb-btn success" id="wbBtnRun" title="启动运筹建模与求解流水线">开始求解</button>
         <button type="button" class="wb-btn" id="wbBtnCollapse" title="折叠或展开题面工作台">收起 ▲</button>
       </div>
     </div>
@@ -1366,51 +1389,8 @@ footer {
       <div id="stageDetail" data-m1-stage-detail="1"></div>
     </section>
     <section id="dialogueSection" data-orpath-dialogue="1">
-      <h2>协作对话 <span class="hint">阶段精要 · 人导 · 非 LLM 编造</span></h2>
+      <h2>协作与自愈轨迹 <span class="hint">沙箱实录 · 只读观测</span></h2>
       <div id="dlgBubbles" aria-live="polite"></div>
-      <div id="dlgForm" data-orpath-steer-form="1">
-        <div class="note">参数偏好 → 写入引导 · 引导备注 → 下一轮智能体 · <strong>禁止填写 objective / 最优值</strong> · 全程无暂停阻塞</div>
-        <div class="row">
-          <label>求解模式
-            <select id="dlgMode" aria-label="solve_mode">
-              <option value="">— 不改 —</option>
-              <option value="networkx">networkx</option>
-              <option value="cpsat">cpsat</option>
-              <option value="highs">highs</option>
-              <option value="ortools">ortools</option>
-              <option value="polyomino">polyomino</option>
-              <option value="tube">tube</option>
-              <option value="mock">mock</option>
-            </select>
-          </label>
-          <label>续跑起点
-            <select id="dlgResume" aria-label="resume_from">
-              <option value="">—</option>
-              <option value="research">research</option>
-              <option value="model">model</option>
-              <option value="solve">solve</option>
-              <option value="gate_validate">gate_validate</option>
-              <option value="explain">explain</option>
-            </select>
-          </label>
-          <label class="grow" style="flex-direction:row;align-items:center;gap:6px;margin-top:14px">
-            <input type="checkbox" id="dlgFresh" />
-            强制 --fresh
-          </label>
-        </div>
-        <label class="grow">方法偏好 (逗号分隔)
-          <input type="text" id="dlgMethods" placeholder="cpsat, column_generation, …" autocomplete="off" />
-        </label>
-        <label>引导备注
-          <textarea id="dlgNotes" placeholder="例如：Q2 共切优先四模式包络；不要只 BFD"></textarea>
-        </label>
-        <div class="actions">
-          <button type="button" class="primary" id="dlgSubmit">写入人导</button>
-          <button type="button" id="dlgClear">清空表单</button>
-          <span id="dlgToast"></span>
-        </div>
-        <div id="dlgCta"></div>
-      </div>
     </section>
     <section>
       <h2>派工与事件 · L1 / L2 / L3</h2>
@@ -1443,12 +1423,12 @@ footer {
   <div class="or-modal-backdrop" id="intakeModal">
     <div class="or-modal">
       <div class="or-modal-head">
-        <h3>📥 题目一键导入与工业案例库</h3>
+        <h3>导入题面与算例库</h3>
         <div style="display:flex;gap:8px;align-items:center">
           <div class="wb-tabs" id="intakeModalTabs">
-            <button type="button" class="wb-tab active" data-im-tab="presets">📚 内置赛题与工业案例</button>
-            <button type="button" class="wb-tab" data-im-tab="upload">📤 上传文件 (PDF/图/MD)</button>
-            <button type="button" class="wb-tab" data-im-tab="text">✍️ 粘贴题面文本</button>
+            <button type="button" class="wb-tab active" data-im-tab="presets">内置赛题</button>
+            <button type="button" class="wb-tab" data-im-tab="upload">上传文件 (PDF / 图片 / MD)</button>
+            <button type="button" class="wb-tab" data-im-tab="text">粘贴文本</button>
           </div>
           <button type="button" class="wb-btn" id="btnCloseIntake">✕ 关闭</button>
         </div>
@@ -1468,14 +1448,13 @@ footer {
               <span style="font-size:11.5px;color:var(--ink-48)">支持 PDF 题面、扫描图片 (PNG/JPG)、Markdown 或 TXT（自动调用 pdf_text / RapidOCR 与结构化审题门禁）</span>
             </div>
             <div class="dropzone" id="upDropzone">
-              <div style="font-size:24px;margin-bottom:6px">📄</div>
-              <div style="font-size:13px;font-weight:600" id="upFileLabel">点击选择或拖拽题面文件到此处 (.pdf / .png / .jpg / .md / .txt)</div>
-              <div style="font-size:11.5px;color:var(--ink-48);margin-top:4px">自动提取子问题 Q1..Qn、目标层级、约束条件与数据附件清单（遵守 1.1 禁数字铁律）</div>
+              <div style="font-size:13px;font-weight:600" id="upFileLabel">点击选择或拖拽题面文件到此处（.pdf / .png / .jpg / .md / .txt）</div>
+              <div style="font-size:11.5px;color:var(--ink-48);margin-top:4px">自动提取子问题 Q1..Qn、目标层级、约束条件与附件清单</div>
               <input type="file" id="upFileInput" accept=".pdf,.png,.jpg,.jpeg,.webp,.md,.txt" style="display:none" />
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <button type="button" class="wb-btn primary" id="btnDoUpload" style="height:34px;padding:0 18px">🔍 开始 OCR 识别与一键导入查看</button>
-              <button type="button" class="wb-btn success" id="btnDoUploadAndRun" style="height:34px;padding:0 18px">⚡ 导入并立即启动求解</button>
+              <button type="button" class="wb-btn primary" id="btnDoUpload" style="height:34px;padding:0 16px">识别并导入</button>
+              <button type="button" class="wb-btn success" id="btnDoUploadAndRun" style="height:34px;padding:0 16px">导入并开始求解</button>
               <span id="upStatus" style="font-size:12px;font-weight:600;color:var(--blue)"></span>
             </div>
           </div>
@@ -1498,8 +1477,8 @@ footer {
               <textarea id="txtRaw" rows="9" placeholder="在此粘贴数学建模或工业运筹题面描述（包含背景、问题一/问题二、约束条件、目标说明等）…" style="width:100%;padding:10px;border:1px solid var(--surface-2);border-radius:8px;font-family:var(--mono);font-size:12px;line-height:1.5"></textarea>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <button type="button" class="wb-btn primary" id="btnDoTextImport" style="height:34px;padding:0 18px">🔍 解析题面并一键查看</button>
-              <button type="button" class="wb-btn success" id="btnDoTextAndRun" style="height:34px;padding:0 18px">⚡ 解析并立即启动求解</button>
+              <button type="button" class="wb-btn primary" id="btnDoTextImport" style="height:34px;padding:0 16px">解析并导入</button>
+              <button type="button" class="wb-btn success" id="btnDoTextAndRun" style="height:34px;padding:0 16px">解析并开始求解</button>
               <span id="txtStatus" style="font-size:12px;font-weight:600;color:var(--blue)"></span>
             </div>
           </div>
@@ -1539,13 +1518,20 @@ const NODE_ZH = {
   or_modeler: "数学建模",
   or_writer: "学术写稿",
   or_reviewer: "审稿红队",
+  or_researcher: "知识调研",
+  analyst: "领域研判",
+  modeler: "数学建模",
+  writer: "学术写稿",
+  reviewer: "审稿红队",
+  tier_c_focus: "分问深挖",
+  graph_solve: "图谱求解",
   retrieve: "检索",
   research: "调研",
   model: "建模",
-  gate_schema: "结构门禁",
+  gate_schema: "结构校验",
   solve: "求解",
-  gate_validate: "校验",
-  human_stop: "人工确认",
+  gate_validate: "独立验算",
+  human_stop: "异常收口",
   explain: "解释",
   draft_paper: "写稿",
   cite_pack: "引用打包",
@@ -1561,7 +1547,7 @@ const STATUS_ZH = {
   blocked: "受阻",
   running: "运行中",
   idle: "空闲",
-  no_product_run: "尚无产品跑次",
+  no_product_run: "尚无运行记录",
   available: "有思维链",
   thinking_unavailable: "无思维链",
 };
@@ -1607,7 +1593,11 @@ function esc(x) {
 
 function fmtKB(bytes) {
   if (bytes == null || isNaN(bytes)) return "? KB";
-  return Math.round(bytes / 1024) + " KB";
+  const b = Number(bytes);
+  if (b <= 0) return "0 B";
+  if (b < 1024) return b + " B";
+  const kb = b / 1024;
+  return (kb < 10 ? kb.toFixed(1) : Math.round(kb)) + " KB";
 }
 
 function showToast(msg, type = "info") {
@@ -1689,7 +1679,7 @@ function iconFor(kind) {
     clock: "⏱",
     hand: "🖐",
     warn: "⚠",
-    gate: "🚪",
+    gate: "🛡️",
     schema: "📐",
     solve: "🧮",
     paper: "📄",
@@ -1699,12 +1689,16 @@ function iconFor(kind) {
 }
 
 /**
- * 同步顶部导航栏激活状态 (/studio vs /)
+ * 同步顶部导航栏激活状态 (/ Studio vs 过程监视抽屉)
  */
 function syncHeaderNavState() {
   const isStudio = document.body.classList.contains("mode-studio");
   if ($("btnModeStudio")) $("btnModeStudio").classList.toggle("on", isStudio);
-  if ($("btnModeInspector")) $("btnModeInspector").classList.toggle("on", !isStudio);
+  if ($("btnToggleWatchDrawer")) {
+    const dr = $("watchDrawer");
+    const isWatchActive = !isStudio || Boolean(dr && !dr.hidden);
+    $("btnToggleWatchDrawer").classList.toggle("on", isWatchActive);
+  }
 }
 
 
@@ -1758,13 +1752,14 @@ function showErrorBanner(s) {
   const t = (e.last_error || "").trim();
   const ex = e.explain || {};
   const banner = $("errBanner");
-  if (!e.has_error || !t || t === errDismissed) {
-    if ((!e.has_error || !t) && banner) banner.classList.remove("show");
+  const overallOk = String((s && s.status) || "").toLowerCase() === "ok" && !e.human_required;
+  if (overallOk || !e.has_error || !t || t === errDismissed) {
+    if ((overallOk || !e.has_error || !t) && banner) banner.classList.remove("show");
     renderNextActions(s);
     return;
   }
   const headline = (ex.headline || "").trim()
-    || (e.human_required ? "需要你看一下" : "运行出错");
+    || (e.human_required ? "需要处理" : "运行出错");
   if ($("errTitle")) $("errTitle").textContent = e.human_required ? "需要人工处理" : "出错了";
   if ($("errHeadline")) {
     $("errHeadline").hidden = false;
@@ -1775,7 +1770,11 @@ function showErrorBanner(s) {
     $("errExplain").hidden = false;
     if ($("errWhat")) $("errWhat").textContent = ex.what || ("卡在「" + nodeLabel(e.node || e.stage) + "」。");
     if ($("errWhy")) $("errWhy").textContent = ex.why || t;
-    if ($("errDo")) $("errDo").textContent = ex.do || "复制下方命令到终端执行；网页不会自动续跑。";
+    const rawDo = String(ex.do || "").trim();
+    const safeDo = (rawDo && (!rawDo.includes("建议操作") || $("nextActions")))
+      ? rawDo
+      : "请点击右上角「跳到该步」定位失败阶段，或展开下方技术日志查看上下文。";
+    if ($("errDo")) $("errDo").textContent = safeDo;
   }
   if ($("errText")) $("errText").textContent = t;
   const meta = [
@@ -1789,60 +1788,11 @@ function showErrorBanner(s) {
     autoJumpedError = true;
     selectedStageSeq = Number(e.stage_seq);
   }
-  renderNextActions(s);
 }
 
-function renderNextActions(s) {
+function renderNextActions(_s) {
   const box = $("nextActions");
-  const list = $("nextActionsList");
-  if (!box || !list) return;
-  const acts = (s && (s.next_actions || (s.error && s.error.next_actions))) || [];
-  if (!acts.length) {
-    box.classList.remove("show");
-    list.innerHTML = "";
-    return;
-  }
-  box.classList.add("show");
-  const banner = $("errBanner");
-  if (banner && !banner.classList.contains("show")) {
-    banner.classList.add("show");
-    if ($("errTitle")) $("errTitle").textContent = "建议下一步";
-    if ($("errHeadline")) {
-      $("errHeadline").hidden = false;
-      if ($("errHeadlineText")) $("errHeadlineText").textContent = "可以继续，但要你在终端执行";
-      if ($("errIcon")) $("errIcon").textContent = "👉";
-    }
-    if ($("errExplain")) $("errExplain").hidden = true;
-    if ($("errText")) $("errText").textContent = "";
-    if ($("errMeta")) $("errMeta").textContent = "状态：" + statusLabel((s && s.status) || "");
-  }
-  list.innerHTML = acts.map((a, i) => {
-    const title = esc(a.title || ("操作 " + (i + 1)));
-    const reason = esc(a.reason || "");
-    const cmd = esc(a.command || "");
-    const rec = i === 0 || /推荐/.test(a.title || "");
-    return `<div class="na-item${rec ? " rec" : ""}" data-na-idx="${i}">
-      <strong>${title}</strong>
-      <button type="button" class="na-copy" data-na-copy="${i}">复制命令</button>
-      <div class="na-reason">${reason}</div>
-      <pre class="na-cmd" id="naCmd${i}">${cmd}</pre>
-    </div>`;
-  }).join("");
-  list.querySelectorAll("[data-na-copy]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const i = btn.getAttribute("data-na-copy");
-      const pre = document.getElementById("naCmd" + i);
-      const text = pre ? pre.textContent : "";
-      if (!text) return;
-      const ok = await copyToClipboard(text);
-      if (ok) {
-        btn.textContent = "已复制 ✓";
-        setTimeout(() => { btn.textContent = "复制命令"; }, 1200);
-      } else {
-        if ($("fetchErr")) $("fetchErr").textContent = "复制命令失败";
-      }
-    });
-  });
+  if (box) box.classList.remove("show");
 }
 
 async function copyErrorText() {
@@ -1947,7 +1897,6 @@ function renderBadges(s) {
       ? `<span class="badge st-blocked">需人工</span>` : "",
     s.thinking
       ? `<span class="badge">${esc(statusLabel(s.thinking.status))}</span>` : "",
-    poll.events_truncated ? `<span class="badge st-fail">事件截断</span>` : "",
     t2.pi_session_env ? `<span class="badge on">会话</span>` : `<span class="badge off">无会话</span>`,
     t3.enabled ? `<span class="badge on">观测</span>` : "",
     paused ? `<span class="badge st-blocked">已暂停</span>` : "",
@@ -2028,7 +1977,7 @@ function renderStages(s) {
   const box = $("stages");
   const stages = s.stages || [];
   if (!stages.length) {
-    box.innerHTML = `<div class="empty">暂无阶段 — ${esc((s.honesty && s.honesty.messages || []).join("; ") || "尚无产品跑次")}</div>`;
+    box.innerHTML = `<div class="empty">暂无阶段 — ${esc((s.honesty && s.honesty.messages || []).join("; ") || "尚无运行记录")}</div>`;
     renderStageDetail(s);
     return;
   }
@@ -2087,7 +2036,7 @@ function renderTree(s) {
       : `<span class="role-zh">${esc(zh)}</span>`;
     return `<div class="tree-row${active}" data-di="${i}">
       <strong>${labelHtml}</strong>
-      <span class="tag ${hit}">${d.tool_call_detected ? "有工具调用" : "未见工具"}</span>
+      <span class="tag ${hit}">${d.tool_call_detected ? "有工具调用" : "无工具调用"}</span>
       <div style="color:var(--muted);font-size:11px;margin-top:2px">${esc((d.path || d.log || "").toString().slice(-80))}</div>
     </div>`;
   }).join("");
@@ -2350,7 +2299,9 @@ function renderArtifacts(s) {
   if (dlg.steer_path) {
     html += `<div class="k">人导单</div><span class="path">${esc(dlg.steer_path)}${dlg.steer_exists ? "" : " （尚未写入）"}</span>`;
   }
-  const honest = (s.honesty && s.honesty.messages) || [];
+  const honest = ((s.honesty && s.honesty.messages) || []).filter(
+    (m) => !String(m).startsWith("LIVE=0:") && !String(m).startsWith("events_truncated:")
+  );
   if (honest.length) {
     html += `<div class="honesty"><strong>说明</strong><br/>${honest.map(esc).join("<br/>")}</div>`;
   }
@@ -2383,7 +2334,7 @@ function renderTier2(s) {
     </div>`;
   }).join("");
   if (!linksHtml) {
-    linksHtml = `<div class="empty">暂无深链（snapshot.tier2.deep_links）</div>`;
+    linksHtml = `<div class="empty">暂无扩展命令链接</div>`;
   }
   const recentHtml = recent.length
     ? `<div class="k">最近 session</div><div class="t2-recent">${recent.slice(0, 6).map((r) =>
@@ -2392,7 +2343,7 @@ function renderTier2(s) {
     : `<div class="k">最近 session</div><div class="t2-meta">无历史会话记录</div>`;
 
   panel.innerHTML = `
-    <h3>控制面观测 · Lean 4-Agent Runtime</h3>
+    <h3>运行时观测</h3>
     <div class="t2-meta">
       会话状态: ${t2.pi_session_env ? "已配置" : "标准无状态"} ·
       runs_root: ${esc(t2.sessions_root || "runs/")}
@@ -2403,7 +2354,7 @@ function renderTier2(s) {
       ${badge("or_writer", true)}
       ${badge("or_reviewer", true)}
     </div>
-    <div class="t2-meta">架构文档: ${esc(t2.docs || "docs/ARCHITECTURE.md")}</div>
+    <div class="t2-meta">运行状态: ${t2.pi_session_env ? "已配置" : "标准无状态"}</div>
     ${recentHtml}
     <div class="k" style="margin-top:8px">可复制等价 CLI 命令</div>
     ${linksHtml}
@@ -2443,9 +2394,9 @@ function renderProblemWorkbench(s) {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;background:#fff;border:1px dashed var(--surface-2);border-radius:10px">
         <div>
           <div style="font-size:13px;font-weight:700;color:var(--ink)">尚未加载题面或当前 Slug 无题面资产</div>
-          <div style="font-size:12px;color:var(--ink-48);margin-top:3px">点击右侧「📥 导入/切换题目」可一键加载全部内置工业运筹赛题（如 2026 校赛 B 题异形圆管下料、M2 多联骨牌排样、CVRP 等），或上传 PDF/图片/文本题面。</div>
+          <div style="font-size:12px;color:var(--ink-48);margin-top:3px">点击右侧「导入/切换」加载内置工业运筹赛题，或上传 PDF / 图片 / 文本题面。</div>
         </div>
-        <button type="button" class="wb-btn primary" id="wbEmptyImportBtn" style="height:34px;padding:0 16px">📥 立即导入 / 选择赛题</button>
+        <button type="button" class="wb-btn primary" id="wbEmptyImportBtn" style="height:32px;padding:0 14px">导入 / 选择赛题</button>
       </div>`;
     const b = $("wbEmptyImportBtn");
     if (b) b.addEventListener("click", openIntakeModal);
@@ -2483,7 +2434,7 @@ function renderProblemWorkbench(s) {
         </div>`;
       }).join("") + `</div>`;
     } else {
-      subHtml = `<div class="wb-pre" style="max-height:170px">${esc(pv.brief_text || "无子问题拆分，请查看「题面原文」标签页。")}</div>`;
+      subHtml = `<div class="wb-pre" style="max-height:170px">${esc(pv.brief_text || "暂无额外文字题面，请在「数学模型」或「输入文件」中查看参数。")}</div>`;
     }
 
     const assets = pv.data_assets || [];
@@ -2498,7 +2449,7 @@ function renderProblemWorkbench(s) {
       <div class="wb-grid">
         <div style="display:grid;gap:8px">
           <div class="wb-card">
-            <h4><span>🎯 优化目标与硬约束</span><span>${esc(pv.problem_id || s.slug)}</span></h4>
+            <h4><span>优化目标与约束</span><span>${esc(pv.problem_id || s.slug)}</span></h4>
             <div style="font-size:12px;line-height:1.5">
               <div><strong>优化目标：</strong>${esc(pv.objectives_text || "见题面原文与数学模型 Schema")}</div>
               <div style="margin-top:4px"><strong>约束条件：</strong>${esc(pv.constraints_text || "见题面原文与数学模型 Schema")}</div>
@@ -2506,7 +2457,7 @@ function renderProblemWorkbench(s) {
             </div>
           </div>
           <div class="wb-card">
-            <h4><span>📦 数据附件与题面源 (${!isNaN(totalAssets) ? totalAssets : assets.length} 项)</span></h4>
+            <h4><span>输入文件 (${!isNaN(totalAssets) ? totalAssets : assets.length} 项)</span></h4>
             <div style="display:flex;gap:4px;flex-wrap:wrap">
               ${assetTags || `<span style="font-size:11.5px;color:var(--ink-48)">内置标准算例参数 (${esc(pv.brief_path || "fixture")})</span>`}
               ${moreAssets}
@@ -2514,7 +2465,7 @@ function renderProblemWorkbench(s) {
           </div>
         </div>
         <div class="wb-card">
-          <h4><span>📑 题目子问拆解 (${subs.length || 1} 问)</span><button type="button" class="art-view-btn" id="wbJumpBrief">查看完整题面原文 →</button></h4>
+          <h4><span>子问题列表 (${subs.length || 1} 问)</span><button type="button" class="art-view-btn" id="wbJumpBrief">查看完整原文 →</button></h4>
           ${subHtml}
         </div>
       </div>`;
@@ -2527,7 +2478,7 @@ function renderProblemWorkbench(s) {
     bodyEl.innerHTML = `
       <div class="wb-card">
         <h4>
-          <span>📄 题面完整原文 / Problem Brief (${esc(pv.brief_path || "内存")})</span>
+          <span>题面原文 / Problem Brief (${esc(pv.brief_path || "内存")})</span>
           ${pv.has_intake ? `<button type="button" class="art-view-btn" id="wbOpenIntakeJson">查看结构化 intake.json</button>` : ""}
         </h4>
         <pre class="wb-pre" style="max-height:230px">${esc(pv.brief_text || "暂无题面原文")}</pre>
@@ -2540,23 +2491,36 @@ function renderProblemWorkbench(s) {
   if (currentWbTab === "schema") {
     const sc = pv.schema_summary || {};
     if (!sc.exists) {
-      bodyEl.innerHTML = `<div class="wb-card"><div class="empty">当前任务尚未生成数学模型 Schema（请点击右上角「🚀 一键求解此题」运行流水线）</div></div>`;
+      bodyEl.innerHTML = `<div class="wb-card"><div class="empty">当前任务尚未生成数学模型 Schema（点击右上角「开始求解」运行流水线）</div></div>`;
       return;
     }
-    const vars = sc.variables ? JSON.stringify(sc.variables, null, 2) : "—";
-    const cList = (sc.constraints || []).map((c, i) => `<li><code>C${i + 1}:</code> ${esc(typeof c === "string" ? c : JSON.stringify(c))}</li>`).join("");
+    const hasVars = sc.variables && typeof sc.variables === "object" && Object.keys(sc.variables).length > 0;
+    const vars = hasVars
+      ? JSON.stringify(sc.variables, null, 2)
+      : (Array.isArray(sc.param_keys) && sc.param_keys.length
+        ? "核心参数集：" + sc.param_keys.join("、")
+        : "决策变量与约束已按题面物理几何建模（详见右侧形式化约束方程）");
+    const cList = (sc.constraints || []).map((c, i) => {
+      if (typeof c === "string") return `<li><code>C${i + 1}:</code> ${esc(c)}</li>`;
+      if (c && typeof c === "object") {
+        const nm = c.name ? `<strong>${esc(c.name)}</strong>` : "";
+        const ex = c.expr || c.description || "";
+        return `<li><code>C${i + 1}:</code> ${nm}${nm && ex ? "：" : ""}${ex ? `<code>${esc(ex)}</code>` : ""}</li>`;
+      }
+      return `<li><code>C${i + 1}:</code> ${esc(String(c))}</li>`;
+    }).join("");
     bodyEl.innerHTML = `
       <div class="wb-grid">
         <div class="wb-card">
-          <h4><span>📐 模型元信息与决策变量</span><button type="button" class="art-view-btn" id="wbOpenSchemaJson">查看完整 schema.json</button></h4>
+          <h4><span>模型元信息与决策变量</span><button type="button" class="art-view-btn" id="wbOpenSchemaJson">查看完整 schema.json</button></h4>
           <div style="font-size:12px;line-height:1.6;margin-bottom:6px">
             <div><strong>问题标识：</strong><code>${esc(sc.problem_id)}</code> · <strong>类别：</strong><code>${esc(sc.problem_class)}</code> · <strong>方向：</strong><code>${esc(sc.sense)}</code></div>
-            <div><strong>目标函数表达式：</strong><code>${esc(sc.objective || "—")}</code></div>
+            <div><strong>目标函数表达式：</strong><code>${esc(sc.objective || pv.objectives_text || "—")}</code></div>
           </div>
           <pre class="wb-pre" style="max-height:130px">${esc(vars)}</pre>
         </div>
         <div class="wb-card">
-          <h4><span>🔒 形式化约束方程 (${(sc.constraints || []).length} 条)</span><span style="color:var(--ok)">✓ 门禁已核验无答案泄漏</span></h4>
+          <h4><span>形式化约束方程 (${(sc.constraints || []).length} 条)</span><span style="color:var(--ok)">约束结构已校验</span></h4>
           <ul style="padding-left:18px;font-size:12px;line-height:1.6;max-height:185px;overflow-y:auto">${cList || "<li>默认域约束</li>"}</ul>
         </div>
       </div>`;
@@ -2567,7 +2531,7 @@ function renderProblemWorkbench(s) {
 
   if (currentWbTab === "solution") {
     if (!sol.exists) {
-      bodyEl.innerHTML = `<div class="wb-card"><div class="empty">尚未生成求解结果（请点击「🚀 一键求解此题」运行求解器与校验器）</div></div>`;
+      bodyEl.innerHTML = `<div class="wb-card"><div class="empty">尚未生成求解结果（点击「开始求解」运行求解器与校验器）</div></div>`;
       return;
     }
     let detailHtml = "";
@@ -2634,11 +2598,11 @@ function renderProblemWorkbench(s) {
       </div>
       <div class="wb-grid">
         <div class="wb-card" style="max-height:190px;overflow-y:auto">
-          <h4><span>📊 方案明细与排产表</span><button type="button" class="art-view-btn" id="wbOpenSolJson">查看完整 solution.json</button></h4>
-          ${isBlocked ? `<div class="empty" style="color:var(--fail)">平台规范拦截：当前领域无专用适配器，系统拒绝绑定无关金标伪造结果。</div>` : (detailHtml || `<div class="empty">请点击右上角查看完整 JSON</div>`)}
+          <h4><span>方案明细与排产表</span><button type="button" class="art-view-btn" id="wbOpenSolJson">查看完整 solution.json</button></h4>
+          ${isBlocked ? `<div class="empty" style="color:var(--fail)">已阻断：当前领域无专用适配器，未伪造数值结果。</div>` : (detailHtml || `<div class="empty">点击右上角查看完整 JSON</div>`)}
         </div>
         <div class="wb-card" style="max-height:190px;overflow-y:auto">
-          <h4><span>🛡️ 确定性重算与物理约束核验项</span><button type="button" class="art-view-btn" id="wbOpenValJson">查看完整 validate.json</button></h4>
+          <h4><span>独立验算与约束核验</span><button type="button" class="art-view-btn" id="wbOpenValJson">查看完整 validate.json</button></h4>
           ${checksHtml || `<div class="empty">暂无校验明细</div>`}
         </div>
       </div>`;
@@ -2650,16 +2614,19 @@ function renderProblemWorkbench(s) {
   }
 
   if (currentWbTab === "paper") {
+    const isExplainFallback = String(pv.paper_path || "").endsWith("-explain.md");
+    const artKind = isExplainFallback ? "explain" : "paper";
+    const artTitle = isExplainFallback ? "求解解释说明" : "技术报告 / 论文全稿";
     bodyEl.innerHTML = `
       <div class="wb-card">
         <h4>
-          <span>📝 工业技术报告 / 论文文稿 (${esc(pv.paper_path || "未生成")})</span>
-          ${pv.paper_path ? `<button type="button" class="art-view-btn" id="wbOpenPaperFull">全屏阅读报告</button>` : ""}
+          <span>${isExplainFallback ? "求解解释说明" : "技术报告 / 论文文稿"} (${esc(pv.paper_path || "未生成")})</span>
+          ${pv.paper_path ? `<button type="button" class="art-view-btn" id="wbOpenPaperFull">全屏阅读</button>` : ""}
         </h4>
-        <pre class="wb-pre" style="max-height:225px">${esc(pv.paper_preview || "当前任务尚未生成技术报告（待流水线运行至 draft_paper / provenance 站后自动产出）")}</pre>
+        <pre class="wb-pre" style="max-height:225px">${esc(pv.paper_preview || "当前任务尚未生成技术报告（运行深度模式或补生论文后查看）")}</pre>
       </div>`;
     const bP = $("wbOpenPaperFull");
-    if (bP) bP.addEventListener("click", () => openArtifactModal("paper", "工业技术报告 / 论文全稿"));
+    if (bP) bP.addEventListener("click", () => openArtifactModal(artKind, artTitle));
   }
 }
 
@@ -2714,6 +2681,12 @@ async function openArtifactModal(kind, title) {
 // === src/js/watch/intake_modal.js ===
 // Watch Intake Modal & problem catalog loader
 async function openIntakeModal() {
+  document.querySelectorAll("#intakeModalTabs [data-im-tab]").forEach((b) => {
+    b.classList.toggle("active", b.getAttribute("data-im-tab") === "presets");
+  });
+  if ($("imTabPresets")) $("imTabPresets").hidden = false;
+  if ($("imTabUpload")) $("imTabUpload").hidden = true;
+  if ($("imTabText")) $("imTabText").hidden = true;
   const modal = $("intakeModal");
   if (modal) {
     modal.classList.add("show");
@@ -2732,7 +2705,7 @@ async function loadProblemsCatalog() {
     if (!j.ok) return;
     const cases = j.cases || [];
     if (cases.length && casesBar) {
-      casesBar.innerHTML = `<div style="font-weight:700;margin-bottom:5px;color:var(--ink-80)">🗂️ 当前工作区已有案例（点击一键切换查看）：</div>` +
+      casesBar.innerHTML = `<div style="font-weight:600;margin-bottom:5px;color:var(--ink-80)">工作区已有任务（点击切换查看）：</div>` +
         `<div style="display:flex;gap:6px;flex-wrap:wrap">` +
         cases.map((c) => {
           const objStr = c.objective != null ? ` · obj=${esc(c.objective)}` : "";
@@ -2758,10 +2731,10 @@ async function loadProblemsCatalog() {
         <div class="p-tags">${(p.tags || []).map((t) => `<span class="p-tag">${esc(t)}</span>`).join("")}</div>
         <div class="p-desc">${esc(p.desc)}</div>
         <div class="p-acts">
-          <button type="button" class="wb-btn primary" data-preset-import="${esc(p.id)}" style="flex:1;justify-content:center">👁️ 一键导入并查看</button>
+          <button type="button" class="wb-btn primary" data-preset-import="${esc(p.id)}" style="flex:1;justify-content:center">导入查看</button>
           ${p.can_solve === false || p.intake_only
             ? `<span class="wb-pill" style="display:inline-flex;align-items:center;padding:0 8px">仅审题演示</span>`
-            : `<button type="button" class="wb-btn success" data-preset-run="${esc(p.id)}" title="导入后立即启动求解流水线">⚡ 导入并求解</button>`}
+            : `<button type="button" class="wb-btn success" data-preset-run="${esc(p.id)}" title="导入后立即启动求解流水线">导入并求解</button>`}
         </div>
       </div>
     `).join("");
@@ -2902,7 +2875,7 @@ async function runCurrentProblem(hintObj) {
     setTimeout(() => {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = "🚀 一键求解此题";
+        btn.textContent = "开始求解";
       }
     }, 1500);
   }
@@ -3112,6 +3085,11 @@ function boot() {
 
   on("btnApply", "click", applyControls);
   on("btnRefresh", "click", () => fetchSnapshot(true));
+  on("btnToggleWatchDrawer", "click", () => {
+    const rail = $("rail");
+    if (rail && rail.scrollIntoView) rail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    fetchSnapshot(true);
+  });
   on("btnFollow", "click", () => {
     followTail = !followTail;
     if ($("btnFollow")) $("btnFollow").classList.toggle("on", followTail);
@@ -3121,6 +3099,7 @@ function boot() {
     if ($("btnPause")) $("btnPause").classList.toggle("on", paused);
     if (!paused) fetchSnapshot(true);
   });
+  on("errRetry", "click", () => runCurrentProblem());
   on("errCopy", "click", copyErrorText);
   on("errJump", "click", jumpToErrorStage);
   on("errDismiss", "click", () => {

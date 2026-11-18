@@ -1,5 +1,11 @@
 // Watch Intake Modal & problem catalog loader
 async function openIntakeModal() {
+  document.querySelectorAll("#intakeModalTabs [data-im-tab]").forEach((b) => {
+    b.classList.toggle("active", b.getAttribute("data-im-tab") === "presets");
+  });
+  if ($("imTabPresets")) $("imTabPresets").hidden = false;
+  if ($("imTabUpload")) $("imTabUpload").hidden = true;
+  if ($("imTabText")) $("imTabText").hidden = true;
   const modal = $("intakeModal");
   if (modal) {
     modal.classList.add("show");
@@ -18,7 +24,7 @@ async function loadProblemsCatalog() {
     if (!j.ok) return;
     const cases = j.cases || [];
     if (cases.length && casesBar) {
-      casesBar.innerHTML = `<div style="font-weight:700;margin-bottom:5px;color:var(--ink-80)">🗂️ 当前工作区已有案例（点击一键切换查看）：</div>` +
+      casesBar.innerHTML = `<div style="font-weight:600;margin-bottom:5px;color:var(--ink-80)">工作区已有任务（点击切换查看）：</div>` +
         `<div style="display:flex;gap:6px;flex-wrap:wrap">` +
         cases.map((c) => {
           const objStr = c.objective != null ? ` · obj=${esc(c.objective)}` : "";
@@ -44,10 +50,10 @@ async function loadProblemsCatalog() {
         <div class="p-tags">${(p.tags || []).map((t) => `<span class="p-tag">${esc(t)}</span>`).join("")}</div>
         <div class="p-desc">${esc(p.desc)}</div>
         <div class="p-acts">
-          <button type="button" class="wb-btn primary" data-preset-import="${esc(p.id)}" style="flex:1;justify-content:center">👁️ 一键导入并查看</button>
+          <button type="button" class="wb-btn primary" data-preset-import="${esc(p.id)}" style="flex:1;justify-content:center">导入查看</button>
           ${p.can_solve === false || p.intake_only
             ? `<span class="wb-pill" style="display:inline-flex;align-items:center;padding:0 8px">仅审题演示</span>`
-            : `<button type="button" class="wb-btn success" data-preset-run="${esc(p.id)}" title="导入后立即启动求解流水线">⚡ 导入并求解</button>`}
+            : `<button type="button" class="wb-btn success" data-preset-run="${esc(p.id)}" title="导入后立即启动求解流水线">导入并求解</button>`}
         </div>
       </div>
     `).join("");
@@ -188,7 +194,7 @@ async function runCurrentProblem(hintObj) {
     setTimeout(() => {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = "🚀 一键求解此题";
+        btn.textContent = "开始求解";
       }
     }, 1500);
   }

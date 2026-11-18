@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Iterable
 
-# Canonical product classes (schema / solve / validate) - 10 Core Solvers
+# Canonical product classes (schema / solve / validate)
 CANONICAL_CLASSES: frozenset[str] = frozenset(
     {
         "shortest_path",
@@ -32,15 +32,6 @@ CANONICAL_CLASSES: frozenset[str] = frozenset(
         "max_clique",
         "game_theory",
         "hub_location",
-    }
-)
-
-CUSTOM_OPTIMIZATION_CLASSES: frozenset[str] = frozenset(
-    {
-        "custom_mip",
-        "custom",
-        "general_optimization",
-        "custom_reduced",
     }
 )
 
@@ -183,6 +174,9 @@ CUSTOM_OPTIMIZATION_CLASSES: frozenset[str] = frozenset(
         "custom",
         "general_optimization",
         "custom_reduced",
+        "nlp_minlp",
+        "interval_coverage",
+        "general_or",
     }
 )
 

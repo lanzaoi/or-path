@@ -146,6 +146,14 @@ class AdaptivePipelineState(CorePipelineState, total=False):  # type: ignore[mis
     revision_count: int
     max_revisions: int
     deep_mode: bool
+    deep_evolution: bool
+    evo_round: int
+    evo_target_rounds: int
+    evo_max_rounds: int
+    evo_promoted: bool
+    incumbent_objective: float | None
+    incumbent_available: bool
+    evolution_ledger_path: str
     refinement_rounds: int
     max_refinement_rounds: int
     best_objective: float
@@ -191,8 +199,44 @@ _MAXIMIZATION_CLASSES = frozenset(
         "max_clique",
         "knapsack",
         "portfolio_opt",
+        "interval_coverage",
     }
 )
+
+_RECURSION_LIMIT_SENTINEL = "sorry, need more steps to process this request"
+
+
+def _is_recursion_exhausted_text(text: str | None) -> bool:
+    """Return True when text is LangGraph's recursion-exhaustion fallback string."""
+    low = str(text or "").strip().lower()
+    if not low:
+        return False
+    return _RECURSION_LIMIT_SENTINEL in low
+
+
+def _summarize_salvaged_solution(sol_path: Path, round_idx: int | None = None) -> str:
+    """Build a factual concise summary from a solution artifact on disk."""
+    prefix = f"R{round_idx} " if round_idx else ""
+    if not sol_path.is_file():
+        return f"{prefix}completed without summary note"
+    try:
+        doc = json.loads(sol_path.read_text(encoding="utf-8"))
+        if isinstance(doc, Mapping):
+            solver = str(doc.get("solver") or "custom_solver").strip()
+            status = str(doc.get("status") or "-").strip()
+            obj = doc.get("objective")
+            return f"{prefix}{solver}: status={status}, objective={obj}"
+    except Exception:
+        pass
+    return f"{prefix}solution artifact written to {sol_path.name}"
+
+
+def _sanitize_hypothesis(raw_text: str | None, sol_path: Path, round_idx: int | None = None) -> str:
+    """Replace empty/recursion-sentinel hypotheses with factual artifact metadata."""
+    cleaned = str(raw_text or "").strip()
+    if not cleaned or _is_recursion_exhausted_text(cleaned):
+        return _summarize_salvaged_solution(sol_path, round_idx=round_idx)
+    return cleaned[:160]
 
 
 # --------------------------------------------------------------------------- #
@@ -268,6 +312,48 @@ def _brief(state: Mapping[str, Any], workdir: Path, slug: str, extra_lines: list
     if state.get("remediation_path"):
         lines.append(f"- remediation_path: {state.get('remediation_path')}")
     lines.append("允许读写目录: outputs/ notes/ papers/ runs/")
+    # Inline a compact pre-digested profile + statement excerpt so specialists
+    # don't waste 15 LLM calls listing the repo and reading large files piecemeal.
+    prof_raw = str(state.get("profile_path") or "").strip()
+    if prof_raw and Path(prof_raw).is_file():
+        try:
+            pdoc = json.loads(Path(prof_raw).read_text(encoding="utf-8"))
+            if isinstance(pdoc, Mapping):
+                p_items = []
+                for inp in (pdoc.get("input_files") or [])[:6]:
+                    if isinstance(inp, Mapping):
+                        p_items.append(f"{inp.get('file')}(fmt={inp.get('format')},rows={inp.get('rows')},sheets={list((inp.get('sheets') or {}).keys())[:3]})")
+                if p_items:
+                    lines.append("数据探针摘要: " + " ; ".join(p_items)[:900])
+        except Exception:
+            pass
+    stmt_candidates = [str(state.get("problem_file") or "").strip()] + [
+        str(df) for df in (state.get("data_files") or []) if str(df).lower().endswith((".txt", ".md", ".pdf", ".docx"))
+    ]
+    if not any(c and c != "-" for c in stmt_candidates):
+        inbox_slug = workdir / "inbox" / str(state.get("slug") or "")
+        if inbox_slug.is_dir():
+            stmt_candidates.extend(
+                str(p) for p in sorted(inbox_slug.rglob("*")) if p.is_file() and p.suffix.lower() in {".pdf", ".docx", ".md", ".txt"}
+            )
+    for cand in stmt_candidates:
+        if not cand or cand == "-":
+            continue
+        cp = Path(cand) if Path(cand).is_absolute() else (workdir / cand)
+        if cp.is_file():
+            try:
+                if cp.suffix.lower() in {".pdf", ".docx"}:
+                    from tools.intake_assets import read_statement_text
+
+                    raw_stmt = read_statement_text(cp, max_chars=4500)
+                else:
+                    raw_stmt = cp.read_text(encoding="utf-8", errors="replace")
+                excerpt = re.sub(r"\s+", " ", raw_stmt).strip()[:3600]
+                if excerpt:
+                    lines.append(f"题面核心摘录({cp.name}): {excerpt}")
+                break
+            except Exception:
+                pass
     lines.extend(extra_lines)
     return "\n".join(lines)
 
@@ -290,9 +376,155 @@ def _invoke_with_trace(
     root: Path,
     slug: str,
     stage_name: str,
+    *,
+    wall_timeout_s: float | None = None,
+    max_rec_limit: int | None = None,
 ) -> tuple[str, list[Any]]:
     """Invoke an elite worker in a fresh 1-message list and persist its stage JSONL log."""
-    resp = agent.invoke({"messages": [HumanMessage(brief)]})
+    import concurrent.futures as _cf
+    import contextvars as _cv
+    import time as _time
+
+    rec_limit = (
+        int(max_rec_limit)
+        if max_rec_limit and int(max_rec_limit) > 0
+        else (26 if stage_name in ("analyst", "writer", "reviewer") else 32)
+    )
+    payload = {"messages": [HumanMessage(brief)]}
+    try:
+        import inspect
+
+        sig = inspect.signature(agent.invoke)
+        accepts_cfg = (
+            "config" in sig.parameters
+            or any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values())
+        )
+    except Exception:
+        accepts_cfg = False
+
+    agent_label = {
+        "analyst": "or_analyst",
+        "writer": "or_writer",
+        "reviewer": "or_reviewer",
+    }.get(stage_name, "or_modeler" if "modeler" in stage_name or "tier_c" in stage_name else f"or_{stage_name}")
+
+    def _invoke_with_trace_abort_err(label: str, limit_s: float) -> TimeoutError:
+        return TimeoutError(f"{label} exceeded {float(limit_s):.1f}s wall-clock ceiling")
+
+    cancel_event = None
+    partial_trace: list[dict[str, Any]] = []
+    if wall_timeout_s is not None and float(wall_timeout_s) > 0:
+        import threading as _th
+        import time as _mono
+
+        from langchain_core.callbacks import BaseCallbackHandler
+
+        cancel_event = _th.Event()
+        deadline_mono = _mono.monotonic() + float(wall_timeout_s)
+
+        class _DeadlineCancelCallback(BaseCallbackHandler):
+            raise_error: bool = True
+
+            def _check(self, phase: str) -> None:
+                if cancel_event.is_set() or _mono.monotonic() >= deadline_mono:
+                    partial_trace.append({"stage": stage_name, "event": "wall_timeout_abort", "phase": phase})
+                    try:
+                        persist_agent_stage_log(root, slug, f"{stage_name}_timeout", partial_trace[-2:])
+                    except Exception:
+                        pass
+                    raise _invoke_with_trace_abort_err(agent_label, float(wall_timeout_s))
+
+            def on_llm_start(self, serialized: Any, prompts: Any, **kwargs: Any) -> Any:
+                self._check("on_llm_start")
+
+            def on_chat_model_start(self, serialized: Any, messages: Any, **kwargs: Any) -> Any:
+                self._check("on_chat_model_start")
+
+            def on_llm_new_token(self, token: str, **kwargs: Any) -> Any:
+                self._check("on_llm_new_token")
+
+            def on_tool_start(self, serialized: Any, input_str: str, **kwargs: Any) -> Any:
+                name = (serialized or {}).get("name") if isinstance(serialized, Mapping) else str(serialized)
+                partial_trace.append({"stage": stage_name, "event": "tool_start", "tool": name})
+                self._check(f"on_tool_start:{name}")
+
+            def on_tool_end(self, output: Any, **kwargs: Any) -> Any:
+                partial_trace.append({"stage": stage_name, "event": "tool_end", "len": len(str(output or ""))})
+                self._check("on_tool_end")
+
+        deadline_cb: Any = _DeadlineCancelCallback()
+    else:
+        deadline_cb = None
+
+    def _call_once() -> Any:
+        if accepts_cfg:
+            child_cfg: dict[str, Any] = {
+                "recursion_limit": rec_limit,
+                "run_name": agent_label,
+                "metadata": {"agent": agent_label, "langgraph_node": stage_name},
+            }
+            if deadline_cb is not None:
+                from langchain_core.runnables.config import merge_configs, var_child_runnable_config
+
+                child_cfg["callbacks"] = [deadline_cb]
+                child_cfg = merge_configs(var_child_runnable_config.get(), child_cfg)
+            return agent.invoke(payload, config=child_cfg)
+        return agent.invoke(payload)
+
+    resp: Any = None
+    for attempt in range(4):
+        try:
+            if wall_timeout_s is not None and float(wall_timeout_s) > 0:
+                ex = _cf.ThreadPoolExecutor(max_workers=1)
+                ctx = _cv.copy_context()
+                fut = ex.submit(ctx.run, _call_once)
+                try:
+                    resp = fut.result(timeout=float(wall_timeout_s))
+                except _cf.TimeoutError:
+                    if cancel_event is not None:
+                        cancel_event.set()
+                    try:
+                        persist_agent_stage_log(
+                            root,
+                            slug,
+                            f"{stage_name}_timeout",
+                            partial_trace or [{"stage": stage_name, "event": "wall_timeout", "limit_s": float(wall_timeout_s)}],
+                        )
+                    except Exception:
+                        pass
+                    raise
+                finally:
+                    ex.shutdown(wait=False, cancel_futures=True)
+            else:
+                resp = _call_once()
+            break
+        except _cf.TimeoutError as t_exc:
+            raise _invoke_with_trace_abort_err(agent_label, float(wall_timeout_s)) from t_exc
+        except TimeoutError:
+            if cancel_event is not None and cancel_event.is_set():
+                if partial_trace:
+                    try:
+                        persist_agent_stage_log(root, slug, f"{stage_name}_timeout", partial_trace)
+                    except Exception:
+                        pass
+                raise
+            if attempt < 1:
+                _time.sleep(5.0 * (attempt + 1))
+                continue
+            raise
+        except Exception as exc:
+            msg = str(exc).lower()
+            is_transient = (
+                "429" in msg
+                or "rate limit" in msg
+                or "frequency limit" in msg
+                or ("timed out" in msg and attempt < 1)
+                or ("timeout" in msg and attempt < 1)
+            )
+            if is_transient and attempt < 3:
+                _time.sleep(5.0 * (attempt + 1))
+                continue
+            raise
     msgs = list(resp.get("messages") or []) if isinstance(resp, Mapping) else [AIMessage(content=str(resp))]
     text = _extract_ai_text(msgs)
     try:
@@ -347,6 +579,7 @@ def _check_and_quarantine_cosplay(
     schema_path: Path,
     *,
     enforce: bool,
+    fenced_executed: bool = False,
 ) -> tuple[bool, str, list[str]]:
     """Detect schema leaks or tool-free solution writes and quarantine fake artifacts."""
     if not enforce:
@@ -368,7 +601,7 @@ def _check_and_quarantine_cosplay(
                     quarantined.append(q_p)
                 reasons.append(f"schema.json contains forbidden solution keys: {', '.join(bad_keys)}")
 
-    if not _has_tool_execution(msgs) and sol_path.is_file():
+    if not fenced_executed and not _has_tool_execution(msgs) and sol_path.is_file():
         q_p = _quarantine_file(sol_path)
         if q_p:
             quarantined.append(q_p)
@@ -530,17 +763,72 @@ def render_truth_tables(state: Mapping[str, Any]) -> dict[str, Any]:
         for k, v in list(allocations.items())[:50]:
             out.append(f"| {k} | {_format_num(v)} |")
         out.append("")
-    subs = sol.get("subproblems") if isinstance(sol.get("subproblems"), dict) else {}
-    if subs:
-        out += ["| subproblem | objective | status |", "|---|---|---|"]
-        for q, v in subs.items():
+    subs_raw = sol.get("subproblems")
+    subs_rows: list[tuple[str, str, str]] = []
+    if isinstance(subs_raw, dict):
+        for q, v in subs_raw.items():
             if isinstance(v, dict):
-                out.append(f"| {q} | {_format_num(v.get('objective', v.get('total_cost')))} | {v.get('status', '-')} |")
+                val = None
+                for vk in (
+                    "objective",
+                    "value",
+                    "total_cost",
+                    "total",
+                    "duration_s",
+                    "total_duration_s",
+                    "recomputed_duration_s",
+                    "coverage",
+                    "coverage_M1",
+                    "cost",
+                    "score",
+                ):
+                    if v.get(vk) is not None:
+                        val = v.get(vk)
+                        break
+                if val is None:
+                    for k2, v2 in v.items():
+                        if k2 not in ("id", "name", "status") and isinstance(v2, (int, float)) and not isinstance(v2, bool):
+                            val = v2
+                            break
+                subs_rows.append((str(q), _format_num(val), str(v.get("status", "-"))))
             else:
-                out.append(f"| {q} | {_format_num(v)} | - |")
+                subs_rows.append((str(q), _format_num(v), "-"))
+    elif isinstance(subs_raw, list):
+        for idx, item in enumerate(subs_raw):
+            if not isinstance(item, dict):
+                subs_rows.append((f"sub_{idx + 1}", _format_num(item), "-"))
+                continue
+            sid = str(item.get("id") or item.get("name") or f"sub_{idx + 1}")
+            val = None
+            for vk in ("objective", "total", "total_cost", "coverage_M1", "coverage", "value"):
+                if item.get(vk) is not None:
+                    val = item.get(vk)
+                    break
+            if val is None:
+                for k, v in item.items():
+                    if k not in ("id", "name", "status") and isinstance(v, (int, float)) and not isinstance(v, bool):
+                        val = v
+                        break
+            subs_rows.append((sid, _format_num(val), str(item.get("status", "-"))))
+    if subs_rows:
+        out += ["| subproblem | objective | status |", "|---|---|---|"]
+        for sid, val_str, st_str in subs_rows:
+            out.append(f"| {sid} | {val_str} | {st_str} |")
         out.append("")
-    if not (routes or allocations or subs):
+    if not (routes or allocations or subs_rows):
         out.append("(无领域分解数据；空真值表由确定性渲染器如实记录。)")
+
+    # Section 3.5: Deep Evolution multi-round ledger if present (0 LLM)
+    exp_p = root / "notes" / f"{slug}-experiments.json"
+    if exp_p.is_file():
+        try:
+            from orpath.agents.evolution_ledger import format_ledger_summary
+
+            exp_doc = json.loads(exp_p.read_text(encoding="utf-8"))
+            if isinstance(exp_doc, dict) and (exp_doc.get("rounds") or []):
+                out += ["", format_ledger_summary(exp_doc), ""]
+        except Exception:
+            pass
 
     # Section 4: deterministic knowledge & bibliography anchors (0 LLM)
     out += ["", "## 4. 知识库方法先验与真实文献锚点 (Verified Knowledge & Literature Anchors)", ""]
@@ -637,6 +925,12 @@ def run_deterministic_doc_gate(state: Mapping[str, Any]) -> dict[str, Any]:
     if not paper.is_file():
         return {"doc_gate_ok": False, "doc_gate_errors": [f"paper not found: {paper}"], "last_error": "paper not found"}
     text = paper.read_text(encoding="utf-8", errors="replace")
+    if not text.strip() or _is_recursion_exhausted_text(text):
+        return {
+            "doc_gate_ok": False,
+            "doc_gate_errors": ["paper is empty or contains recursion-limit fallback placeholder"],
+            "last_error": "invalid paper content",
+        }
     errors: list[str] = []
     for group in REQUIRED_PAPER_KEYWORD_GROUPS:
         if not any(kw in text for kw in group):
@@ -685,13 +979,16 @@ _NO_FATAL_RE = re.compile(r"(无|没有|未发现|未检出|未见)\s*FATAL|no F
 def parse_review_reply(text: str) -> tuple[str, list[str]]:
     """Deterministically parse a reviewer reply: verdict + FATAL defects.
 
-    Verdict resolution is strictly deterministic (no LLM): any genuine FATAL
-    defect line (``[W*] FATAL:`` / ``**FATAL**`` / ``FATAL:``, excluding
-    "未发现 FATAL" disclaimers) forces REVISE; otherwise an explicit
-    ``Verdict`` line wins (PASS > REVISE). MAJOR/MINOR-only replies without an
-    explicit verdict are treated as PASS so the boilerplate "Revision Plan"
-    heading cannot generate false REVISE verdicts.
+    Verdict resolution is strictly deterministic (no LLM): empty or
+    recursion-exhausted replies force REVISE; any genuine FATAL defect line
+    (``[W*] FATAL:`` / ``**FATAL**`` / ``FATAL:``, excluding "未发现 FATAL"
+    disclaimers) forces REVISE; otherwise an explicit ``Verdict`` line wins
+    (PASS > REVISE). MAJOR/MINOR-only replies without an explicit verdict are
+    treated as PASS so the boilerplate "Revision Plan" heading cannot generate
+    false REVISE verdicts.
     """
+    if not text or not text.strip() or _is_recursion_exhausted_text(text):
+        return "REVISE", ["FATAL: reviewer produced empty or recursion-exhausted response"]
     fatal_lines: list[str] = []
     for line in text.splitlines():
         if _NO_FATAL_RE.search(line):
@@ -723,6 +1020,47 @@ def parse_review_reply(text: str) -> tuple[str, list[str]]:
 # --------------------------------------------------------------------------- #
 # Graph builder
 # --------------------------------------------------------------------------- #
+_EXPLICIT_SENSE_RE = re.compile(
+    r"""(?:["']?objective_sense["']?|["']?sense["']?)\s*[:=]\s*["']?(min(?:imize|imise)?|max(?:imize|imise)?)["']?""",
+    re.IGNORECASE,
+)
+_OBJ_MAX_CUE_RE = re.compile(
+    r"(?:\bmaximize\b|\bmaximise\b|\bmaximization\b|\bmax\s*[_{(]|max_\{|最大化|尽可能长|尽可能大|尽可能多|尽可能高|有效.{0,8}时间.{0,8}长)",
+    re.IGNORECASE,
+)
+_OBJ_MIN_CUE_RE = re.compile(
+    r"(?:\bminimize\b|\bminimise\b|\bminimization\b|\bmin\s*[_{(]|min_\{|最小化|尽可能短|尽可能小|尽可能少|尽可能低|总(?:成本|费用|距离|耗时)最小)",
+    re.IGNORECASE,
+)
+_KNOWN_MINIMIZATION_CLASSES = frozenset(
+    {
+        "shortest_path",
+        "tsp",
+        "cvrp",
+        "vrptw",
+        "jssp",
+        "fjssp",
+        "rcpsp",
+        "binpack",
+        "cflp",
+        "facility_location",
+        "hub_location",
+        "lotsizing",
+        "staff_rostering",
+        "microgrid",
+    }
+)
+
+
+def _normalize_sense_token(raw: Any) -> str | None:
+    low = str(raw or "").strip().lower()
+    if low in {"min", "minimize", "minimise"}:
+        return "min"
+    if low in {"max", "maximize", "maximise"}:
+        return "max"
+    return None
+
+
 def _infer_objective_sense(
     state: Mapping[str, Any],
     root: Path,
@@ -730,34 +1068,76 @@ def _infer_objective_sense(
     candidate_docs: list[Mapping[str, Any]],
 ) -> str:
     """Deterministically infer optimization direction ('min' or 'max')."""
-    explicit = str(state.get("objective_sense") or "").strip().lower()
-    if explicit in {"min", "minimize", "minimise"}:
-        return "min"
-    if explicit in {"max", "maximize", "maximise"}:
-        return "max"
+    if (s := _normalize_sense_token(state.get("objective_sense"))):
+        return s
 
+    sdoc: Mapping[str, Any] = {}
     schema_p = Path(str(state.get("schema_path") or (root / "outputs" / f"{slug}-schema.json")))
     if schema_p.is_file():
         try:
-            sdoc = json.loads(schema_p.read_text(encoding="utf-8"))
-            if isinstance(sdoc, Mapping):
-                ss = str(sdoc.get("objective_sense") or sdoc.get("sense") or "").strip().lower()
-                if ss in {"min", "minimize", "minimise"}:
-                    return "min"
-                if ss in {"max", "maximize", "maximise"}:
-                    return "max"
+            loaded = json.loads(schema_p.read_text(encoding="utf-8"))
+            if isinstance(loaded, Mapping):
+                sdoc = loaded
         except Exception:
-            pass
+            sdoc = {}
+    if (s := _normalize_sense_token(sdoc.get("objective_sense") or sdoc.get("sense"))):
+        return s
 
     for doc in candidate_docs:
-        ss = str(doc.get("objective_sense") or doc.get("sense") or "").strip().lower()
-        if ss in {"min", "minimize", "minimise"}:
-            return "min"
-        if ss in {"max", "maximize", "maximise"}:
-            return "max"
+        meta = doc.get("meta") if isinstance(doc.get("meta"), Mapping) else {}
+        if (s := _normalize_sense_token(doc.get("objective_sense") or doc.get("sense") or meta.get("objective_sense"))):
+            return s
 
-    pc = str(state.get("problem_class") or "").strip().lower()
-    return "max" if pc in _MAXIMIZATION_CLASSES else "min"
+    pc = str(state.get("problem_class") or sdoc.get("problem_class") or "").strip().lower()
+    if pc in _MAXIMIZATION_CLASSES:
+        return "max"
+
+    analyst_texts: list[str] = []
+    for cand_ap in (
+        Path(str(state.get("analyst_brief_path") or "")),
+        Path(str(state.get("research_path") or "")),
+        root / "notes" / f"{slug}-analyst.md",
+    ):
+        if cand_ap.name and cand_ap.is_file():
+            try:
+                analyst_texts.append(cand_ap.read_text(encoding="utf-8", errors="replace")[:12000])
+                break
+            except OSError:
+                pass
+    if state.get("analyst_summary"):
+        analyst_texts.append(str(state.get("analyst_summary")))
+
+    for atext in analyst_texts:
+        m = _EXPLICIT_SENSE_RE.search(atext)
+        if m and (s := _normalize_sense_token(m.group(1))):
+            return s
+
+    if pc in _KNOWN_MINIMIZATION_CLASSES:
+        return "min"
+
+    # Generic / custom / NLP classes: inspect objective text in schema, analyst report, and statement.
+    cue_sources: list[str] = []
+    for k in ("objective", "objective_description", "goal"):
+        if sdoc.get(k):
+            cue_sources.append(json.dumps(sdoc.get(k), ensure_ascii=False))
+    cue_sources.extend(analyst_texts)
+    if state.get("raw_problem_text"):
+        cue_sources.append(str(state.get("raw_problem_text"))[:8000])
+    pf = str(state.get("problem_file") or "").strip()
+    if pf and Path(pf).is_file():
+        try:
+            cue_sources.append(Path(pf).read_text(encoding="utf-8", errors="replace")[:8000])
+        except OSError:
+            pass
+
+    max_hits = 0
+    min_hits = 0
+    for blob in cue_sources:
+        max_hits += len(_OBJ_MAX_CUE_RE.findall(blob))
+        min_hits += len(_OBJ_MIN_CUE_RE.findall(blob))
+    if max_hits > min_hits:
+        return "max"
+    return "min"
 
 
 def build_adaptive_graph(
@@ -857,11 +1237,23 @@ def build_adaptive_graph(
         root = _resolve_root(state)
         slug = _slug(state, root)
         brief = _brief(state, root, slug, [
-            "职责: 题面精读 + 数据画像核对 + 查阅 knowledge_pack_path 领域规约 + 数学分类确认 + Tier 分档建议 (严禁求解/猜解)。",
-            "若题面包含多个递增子问题 (如 Q1/Q2/Q3), 请另起一行输出 SUBPROBLEMS=[\"q1\",\"q2\",\"q3\"]。",
+            "职责: 题面精读 + 数据画像核对 + 领域规约确认 + 数学分类与 Tier 分档 (严禁求解/猜解)。",
+            "效率纪律: 简报已附数据探针摘要与题面摘录，严禁调用 `list_files('.')` 或 `read_file` 重读 `profile.json`！仅在缺失参数时调用 `profile_<domain>_data(problem_id=slug)` 或 `read_problem_file(..., max_chars=2500)`（合计 ≤1 次工具调用），随后直接输出精简结构化 JSON 工程规格。",
+            "优化方向要求: 必须在 JSON 中显式输出 `\"objective_sense\": \"max\"` 或 `\"min\"`（最大化目标填 `\"max\"`，最小化目标填 `\"min\"`）。",
+            "分问拆解约束: 仅当题目确属必须跨批继承动态物理状态的序贯规划 (排除 microgrid_dispatch / tube_cut / 可在同一套 Python 脚本内共核求解的多问赛题如几何轨迹/规划), 才在末尾另起一行输出 SUBPROBLEMS=[\"q1\",\"q2\",...]；常规多问建模题请勿输出 SUBPROBLEMS, 交由后续 modeler 统一编写一体化求解器闭环完成。",
             "输出: 结构化分析结论, 交 modeler 承接。",
         ])
-        text, _msgs = _invoke_with_trace(_get_role_agent("analyst", state), brief, root, slug, "analyst")
+        try:
+            text, _msgs = _invoke_with_trace(
+                _get_role_agent("analyst", state),
+                brief,
+                root,
+                slug,
+                "analyst",
+                wall_timeout_s=360.0,
+            )
+        except TimeoutError as exc:
+            text = f"# analyst interrupted ({exc})\n"
         (root / "notes").mkdir(parents=True, exist_ok=True)
         analyst_p = root / "notes" / f"{slug}-analyst.md"
         analyst_p.write_text(text, encoding="utf-8")
@@ -877,16 +1269,133 @@ def build_adaptive_graph(
                 except Exception:
                     pass
 
-        merged_state = {**state, **common, "subproblems": subs}
+        merged_state = {**state, **common, "subproblems": subs, "analyst_brief_path": str(analyst_p)}
+        inferred_sense = _infer_objective_sense(merged_state, root, slug, [])
         out: dict[str, Any] = {
             "analyst_summary": text[:2000],
             "analyst_brief_path": str(analyst_p),
             "research_path": str(analyst_p),
+            "objective_sense": inferred_sense,
             "tier": decide_tier(merged_state),
         }
         if subs:
             out["subproblems"] = subs
         return out
+
+    def _maybe_run_fenced_scripts(
+        text: str,
+        root: Path,
+        slug: str,
+        sol_target: Path,
+        timeout_budget_s: int,
+    ) -> bool:
+        """Extract ```python blocks, AST-check syntax, write to disk, and run if needed."""
+        try:
+            from orpath.agents.evolution_ledger import (
+                MAX_SCRIPT_TIMEOUT_SEC,
+                extract_and_write_fenced_code,
+            )
+        except Exception:
+            return False
+
+        default_rel = f"outputs/{slug}-custom_solver.py"
+        pre_mtime = sol_target.stat().st_mtime if sol_target.is_file() else 0.0
+        extracted = extract_and_write_fenced_code(root, text, default_rel_path=default_rel)
+        written_py = [item for item in extracted if item.get("ok") and str(item.get("path", "")).endswith(".py")]
+        if not written_py:
+            return False
+
+        import subprocess as _sp
+        import sys as _sys
+
+        cap_to = min(MAX_SCRIPT_TIMEOUT_SEC, max(30, int(timeout_budget_s)))
+        env = dict(os.environ)
+        env["ORPATH_WORKDIR"] = str(root)
+        ran_any = False
+
+        # Execute solver script(s) first (non-validator), then validator script(s)
+        solver_paths = [
+            Path(item["abs_path"])
+            for item in written_py
+            if "validate" not in str(item["path"]).lower()
+        ]
+        val_paths = [
+            Path(item["abs_path"])
+            for item in written_py
+            if "validate" in str(item["path"]).lower()
+        ]
+        if not val_paths:
+            cand_val = root / "outputs" / f"{slug}-custom-validate.py"
+            if cand_val.is_file():
+                val_paths.append(cand_val)
+
+        canonical_sol = root / "outputs" / f"{slug}-solution.json"
+        for sp_py in solver_paths:
+            if not sp_py.is_file():
+                continue
+            try:
+                _sp.run(
+                    [_sys.executable, str(sp_py)],
+                    cwd=str(root),
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=cap_to,
+                )
+                ran_any = True
+            except Exception:
+                pass
+        if not sol_target.is_file() and canonical_sol.is_file() and sol_target != canonical_sol:
+            try:
+                shutil.copy2(canonical_sol, sol_target)
+            except OSError:
+                pass
+        for vp_py in val_paths:
+            if not vp_py.is_file():
+                continue
+            try:
+                _sp.run(
+                    [_sys.executable, str(vp_py)],
+                    cwd=str(root),
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=min(120, cap_to),
+                )
+                ran_any = True
+            except Exception:
+                pass
+        post_mtime = sol_target.stat().st_mtime if sol_target.is_file() else 0.0
+        return bool(ran_any and (post_mtime > pre_mtime or sol_target.is_file()))
+
+    def _salvage_disk_scripts(root: Path, slug: str, sol_target: Path, timeout_budget_s: int) -> bool:
+        """Run existing outputs/<slug>-custom_solver.py + validator if modeler stalled mid-loop."""
+        import subprocess as _sp
+        import sys as _sys
+
+        sp = root / "outputs" / f"{slug}-custom_solver.py"
+        vp = root / "outputs" / f"{slug}-custom-validate.py"
+        if not sp.is_file():
+            return False
+        cap_to = min(600, max(30, int(timeout_budget_s)))
+        env = dict(os.environ)
+        env["ORPATH_WORKDIR"] = str(root)
+        try:
+            _sp.run([_sys.executable, str(sp)], cwd=str(root), env=env, capture_output=True, text=True, timeout=cap_to)
+        except Exception:
+            pass
+        canonical_sol = root / "outputs" / f"{slug}-solution.json"
+        if not sol_target.is_file() and canonical_sol.is_file() and sol_target != canonical_sol:
+            try:
+                shutil.copy2(canonical_sol, sol_target)
+            except OSError:
+                pass
+        if vp.is_file():
+            try:
+                _sp.run([_sys.executable, str(vp)], cwd=str(root), env=env, capture_output=True, text=True, timeout=min(120, cap_to))
+            except Exception:
+                pass
+        return sol_target.is_file()
 
     def _run_modeler_track(
         agent_obj: Any,
@@ -898,15 +1407,83 @@ def build_adaptive_graph(
         schema_path: Path,
         *,
         enforce_cosplay: bool,
+        timeout_budget_s: int = 180,
+        max_rec_limit: int = 20,
     ) -> tuple[str, list[str]]:
         max_cosplay_retries = 2 if enforce_cosplay else 0
         quarantined_all: list[str] = []
         brief_cur = base_brief
         last_text = ""
+        invoke_wall = min(1500.0, max(900.0, float(timeout_budget_s) + 600.0))
+        timeout_retries_used = 0
         for attempt_idx in range(max_cosplay_retries + 1):
-            last_text, msgs = _invoke_with_trace(agent_obj, brief_cur, root, slug, stage_name)
+            pre_mtime = sol_target.stat().st_mtime if sol_target.is_file() else 0.0
+            msgs: list[Any] = []
+            try:
+                last_text, msgs = _invoke_with_trace(
+                    agent_obj,
+                    brief_cur,
+                    root,
+                    slug,
+                    stage_name,
+                    wall_timeout_s=invoke_wall,
+                    max_rec_limit=max_rec_limit,
+                )
+            except Exception as exc:
+                err_name = type(exc).__name__.lower()
+                err_msg = str(exc).lower()
+                recoverable = (
+                    "timeout" in err_name
+                    or "timeout" in err_msg
+                    or "recursion" in err_name
+                    or "recursion" in err_msg
+                )
+                if not recoverable:
+                    raise
+                last_text = f"modeler stage interrupted ({type(exc).__name__}: {exc})"
+                salvaged = _salvage_disk_scripts(root, slug, sol_target, timeout_budget_s)
+                if salvaged:
+                    return last_text + " [salvaged disk solver]", quarantined_all
+                if attempt_idx < max_cosplay_retries and timeout_retries_used < 1:
+                    timeout_retries_used += 1
+                    brief_cur = (
+                        f"RETRY (previous attempt stalled/hit step limit: {type(exc).__name__}): "
+                        f"SKIP all exploration! Do NOT call list_files/read_file/grep_search/execute_python_sandbox. "
+                        f"Immediately write concise `outputs/{slug}-custom_solver.py` + `outputs/{slug}-custom-validate.py` "
+                        f"via `write_custom_solver_script`, run both with `execute_custom_script`, then call `validate_solution_tool`.\n\n"
+                        + base_brief
+                    )
+                    continue
+                return last_text, quarantined_all
+            post_mtime = sol_target.stat().st_mtime if sol_target.is_file() else 0.0
+            fenced_executed = False
+            if post_mtime <= pre_mtime:
+                fenced_executed = _maybe_run_fenced_scripts(
+                    last_text, root, slug, sol_target, timeout_budget_s
+                )
+            if not sol_target.is_file():
+                _salvage_disk_scripts(root, slug, sol_target, timeout_budget_s)
+            if _is_recursion_exhausted_text(last_text):
+                if sol_target.is_file():
+                    last_text = _summarize_salvaged_solution(sol_target)
+                elif attempt_idx < max_cosplay_retries and timeout_retries_used < 1:
+                    timeout_retries_used += 1
+                    brief_cur = (
+                        f"RETRY (previous attempt exhausted step limit without writing solution): "
+                        f"SKIP all exploration! Do NOT call list_files/read_file/grep_search/execute_python_sandbox. "
+                        f"Immediately write concise `outputs/{slug}-custom_solver.py` + `outputs/{slug}-custom-validate.py` "
+                        f"via `write_custom_solver_script`, run both with `execute_custom_script`, then call `validate_solution_tool`.\n\n"
+                        + base_brief
+                    )
+                    continue
+                else:
+                    last_text = "modeler exhausted step limit without producing a solution artifact"
             hit, reason, q_files = _check_and_quarantine_cosplay(
-                msgs, sol_target, schema_path, enforce=enforce_cosplay
+                msgs,
+                sol_target,
+                schema_path,
+                enforce=enforce_cosplay,
+                fenced_executed=fenced_executed,
             )
             quarantined_all.extend(q_files)
             if not hit:
@@ -916,12 +1493,24 @@ def build_adaptive_graph(
                     f"RETRY {attempt_idx + 1}/{max_cosplay_retries}: Previous output was quarantined to "
                     f".cosplay-quarantine ({reason}). You MUST call real solver/script tools "
                     f"(execute_or_solver / write_custom_solver_script / execute_custom_script / run_shell) "
-                    f"and write ONLY structural formulation fields (never objective/tour/routes/path/optimal) "
-                    f"into {schema_path}.\n\n{base_brief}"
+                    f"or emit `# file: outputs/{slug}-custom_solver.py` and write ONLY structural formulation fields "
+                    f"(never objective/tour/routes/path/optimal) into {schema_path}.\n\n{base_brief}"
                 )
         return last_text, quarantined_all
 
     def node_modeler(state: AdaptivePipelineState) -> dict:
+        import time as _time
+        from orpath.agents.evolution_ledger import (
+            MAX_DEEP_ROUNDS,
+            MAX_SCRIPT_TIMEOUT_SEC,
+            best_solver_path,
+            format_ledger_summary,
+            get_stage_directive,
+            load_ledger,
+            normalize_target_rounds,
+            round_timeout_budget,
+        )
+
         root = _resolve_root(state)
         slug = _slug(state, root)
         (root / "outputs").mkdir(parents=True, exist_ok=True)
@@ -929,9 +1518,30 @@ def build_adaptive_graph(
 
         tier = decide_tier({**state, **common})
         domain = str(state.get("domain_cartridge") or "")
-        general_or = domain == "general_or" or domain == ""
+        pc_low = str(state.get("problem_class") or "").strip().lower()
+        general_or = (
+            domain in {"", "general_or", "nlp"}
+            or pc_low in {"custom_mip", "custom", "general_optimization", "custom_reduced", "nlp_minlp", "interval_coverage", "general_or"}
+        )
         schema_path = Path(str(state.get("schema_path") or (root / "outputs" / f"{slug}-schema.json")))
         canonical_sol = root / "outputs" / f"{slug}-solution.json"
+
+        evo_enabled = bool(state.get("deep_evolution")) or normalize_target_rounds(state.get("evo_target_rounds"), default=1) > 1
+        evo_target = normalize_target_rounds(state.get("evo_target_rounds"), default=5 if state.get("deep_evolution") else 1)
+        evo_max = min(MAX_DEEP_ROUNDS, max(evo_target, int(state.get("evo_max_rounds") or MAX_DEEP_ROUNDS)))
+        prev_round = int(state.get("evo_round") or 0)
+        cur_round = prev_round + 1
+        stage_code, stage_directive = get_stage_directive(cur_round)
+        budget_s = round_timeout_budget(cur_round, max_cap=MAX_SCRIPT_TIMEOUT_SEC) if evo_enabled else 180
+        round_started = _time.monotonic()
+
+        custom_solver_p = root / "outputs" / f"{slug}-custom_solver.py"
+        inc_solver_p = best_solver_path(root, slug)
+        if cur_round >= 2 and inc_solver_p.is_file():
+            try:
+                shutil.copy2(inc_solver_p, custom_solver_p)
+            except OSError:
+                pass
 
         enforce_cosplay = bool(
             state.get("enforce_anti_cosplay")
@@ -939,37 +1549,103 @@ def build_adaptive_graph(
             else using_default_agents
         )
         use_horse_race = bool(
-            state.get("enable_horse_race")
+            (state.get("enable_horse_race") and not (evo_enabled and cur_round >= 2))
             or race_tracks == 2
-            or (using_default_agents and race_tracks != 1 and state.get("enable_horse_race") is not False)
             or ("or_modeler_track_a" in resolved_agents or "or_modeler_track_b" in resolved_agents)
         )
 
+        inbox_dir = root / "inbox" / slug
+        inbox_files = (
+            sorted(p.relative_to(root).as_posix() for p in inbox_dir.rglob("*") if p.is_file())[:12]
+            if inbox_dir.is_dir()
+            else []
+        )
+
+        has_existing_custom = bool(cur_round >= 2 and custom_solver_p.is_file())
         extra_lines: list[str] = [
-            "先验参考: 请优先查阅 knowledge_pack_path 中的标准数学规划范式、允许算子与历史防坑经验 (严禁将其当作算例数值答案)。"
+            (
+                f"增量修复启动: 第 {cur_round} 轮已有 `outputs/{slug}-custom_solver.py`；**严禁再重复 read_file research/knowledge_pack 或调用 `list_files('.')`**，仅按下方报错精确定位片段 `edit_file` 后立即跑通！"
+                if has_existing_custom
+                else (
+                    f"输入文件清单(已定位): {inbox_files}；请先仅 read_file 本题研究报告 `{state.get('research_path') or f'notes/{slug}-analyst.md'}`，严禁调用 `list_files('.')` / `grep_search` 翻查无关目录或 `tools/` 源码。"
+                    if inbox_files
+                    else "先验参考: 仅在必要时查阅 research_path / knowledge_pack_path；简报已附题面摘要与数据路径，严禁反复调用 list_files('.')。"
+                )
+            ),
+            *(
+                [
+                    f"效率纪律: 本题已匹配领域算子 ({pc_low or domain})，请构建结构化 schema.json 并优先调用 execute_or_solver 与 validate_solution_tool 闭环真算。"
+                    + (
+                        " 若为 polyomino_cover 多轮深化，可传入 extra_args='--hint-solution outputs/" + f"{slug}-best_solution.json --lns-window 12 --symmetry-break --time-limit-s {budget_s}'。"
+                        if pc_low == "polyomino_cover" and cur_round >= 2 and (root / "outputs" / f"{slug}-best_solution.json").is_file()
+                        else ""
+                    )
+                ]
+                if not general_or
+                else []
+            ),
         ]
-        if state.get("remediation_path"):
+        if evo_enabled:
+            sense = _infer_objective_sense(state, root, slug, [])
+            ledger = load_ledger(root, slug, minimize=(sense != "max"), target_rounds=evo_target, max_rounds=evo_max)
             extra_lines.append(
-                f"⚠️ 上轮独立验证器打回修复指令: 必须先读取靶向修复包 remediation_path: {state.get('remediation_path')} "
-                f"并逐条消除错误: {'; '.join(str(x) for x in (state.get('validator_errors') or [])[:3])}"
+                f"🚀 Deep 自主进化第 {cur_round}/{evo_target} 轮 (上限 {evo_max} 轮, 本轮脚本最长 {budget_s}s): "
+                f"[{stage_code}] {stage_directive}"
+            )
+            if cur_round >= 2 and (ledger.get("rounds") or []):
+                extra_lines.append(format_ledger_summary(ledger))
+                inc_doc = ledger.get("incumbent") if isinstance(ledger.get("incumbent"), dict) else {}
+                inc_val = inc_doc.get("objective")
+                if sense == "max" and isinstance(inc_val, (int, float)) and abs(float(inc_val)) <= 1e-9:
+                    extra_lines.append(
+                        "🚨 警告: 上轮最大化目标仍停留在 0.0 退化平凡解！本轮必须先逐行核对题面坐标符号、航向角约定、离散网格步长与碰撞/遮蔽条件，并先用域内解析可行点验算得严格 > 0 的基线目标后，再启动局部或混合寻优。"
+                    )
+                if custom_solver_p.is_file():
+                    extra_lines.append(
+                        f"增量改进纪律: 当前快照已恢复到 outputs/{slug}-custom_solver.py；优先修复仍为 0.0 或未满足多主体约束的子问（用域内解析初值/低维分解替代盲目高维随机盒；多载体循环必须参数化 `for agent_id in allowed_agents:` 严禁硬编码单一载体 ID；同一载体跨目标须共享一致物理状态、累计产能/弹数上限与冷却间隔），"
+                        f"直接 read_file 相关片段后用 edit_file 做几十行局部升级（禁止另写多余 probe 脚本或从头全量重写；若上轮 custom-validate.py 报错或离散网格步长不一致须同步对齐），"
+                        f"然后迅速执行 solver -> validate -> validate_solution_tool（≤8 步内收尾）。"
+                    )
+        if state.get("remediation_path"):
+            rem_digest = ""
+            rem_file = Path(str(state.get("remediation_path")))
+            if not rem_file.is_absolute():
+                rem_file = root / rem_file
+            if rem_file.is_file():
+                try:
+                    rem_digest = rem_file.read_text(encoding="utf-8", errors="replace")[:1100].strip()
+                except OSError:
+                    rem_digest = ""
+            extra_lines.append(
+                f"⚠️ 上轮独立验证器打回修复指令 (remediation_path={state.get('remediation_path')}): "
+                f"{'; '.join(str(x) for x in (state.get('validator_errors') or [])[:4])}"
+                + (f"\n--- 靶向修复摘要 ---\n{rem_digest}" if rem_digest else "")
             )
         if general_or:
             extra_lines.extend([
-                "装备包: general_or (无现成专用适配器) — 自定义开放赛题闭环协议:",
-                "  ① 先用 get_problem_formulation_template / consult_or_skill 从 knowledge/skills/or-problems.md "
-                "取得最相近数学规划范式 (决策变量/目标/约束编号);",
-                "  ② 用 write_custom_solver_script 把独立 Python 求解脚本写入 outputs/<slug>-custom_solver.py "
-                "(ortools.sat.python.cp_model / highspy / pulp), 再用 execute_custom_script 运行;",
-                "  ③ 把独立重算校验脚本写入 outputs/<slug>-custom-validate.py (脱离求解器变量, 直接用原始输入数据重算"
-                "约束满足度与目标值), 运行并产出 outputs/<slug>-custom-validate.json;",
-                "  ④ solution.json 必须携带 problem_class=custom_mip 与 validation_report 指针。",
-                "严禁: 不得宣称 proven_optimal 除非 CP-SAT 返回 OPTIMAL; 不得抄写任何上游 agent 的对话文本。",
+                "装备包: 三阶段物理离散规约 + 通用数学规划内核 (tools.or_kernels) 闭环协议:",
+                f"  ① 严禁反复 read_file/grep_search 翻源码，严禁在 execute_python_sandbox 里跑计算或调试！务必精简代码（`custom_solver.py` ≤220行、`custom-validate.py` ≤120行），每次工具调用只写 1 个文件。**多问全覆与多目标覆盖律：若题面包含多个子问题（如 Q1..QK），`custom_solver.py` 与 `custom-validate.py` 必须逐一求解并独立验算全部子问，严禁遗漏任一子问，并在 `build_custom_envelope(..., subproblems={{...}})` 中完整记录各子问客观数值与附件交付文件；若包含多个服务对象/目标，Stage 1 必须为每个目标单独生成可达锚点候选列（严禁只围绕单一目标采样导致其余目标零覆盖）！** 对耦合多实体/多目标组合连续混合题，严禁把 >12 维变量直接塞进盲目 DE：应先 Stage 1 (NumPy 物理前向离散建列) -> Stage 2 (CP-SAT/HiGHS MILP 精确求组合骨架与上界) -> Stage 3 (`solve_multistart_polish` / 低维 `solve_box_nlp` 局部抛光)，全脚本控制在 {max(45, int(budget_s * 0.85))}s 内完成，多子问按比例分配 `time_limit_s`（所有子问 `time_limit_s` 之和 ≤ {max(30, int(budget_s * 0.65))}s）:",
+                "     - `tools.or_kernels.milp_reduction`: `solve_general_milp(c, *, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=None, integrality=None, maximize=False, time_limit_s=30.0)` / `solve_budgeted_coverage_milp(item_coverages, *, universe_weights=None, item_costs=None, max_items=None, budget=None, cover_all=False, regime_groups=None, conflicts=())` / `solve_assignment_milp(...)`",
+                "     - `tools.or_kernels.lns_hybrid`: `select_max_union_subset(intervals_by_item=None, *, target_intervals_by_item=None, target_weights=None, max_items=None, group_caps=None, regime_groups=None, conflicts=(), item_times=None, min_separation=0.0, warm_start=(), time_limit_s=30.0)` -> 返回 `{'selected', 'selected_regimes', 'union_length', 'union_by_target', 'proven_optimal'}`（原生支持多目标独立时间轴、同载体单一工况互斥 `regime_groups={carrier: {reg: (items, cap)}}` 与 `min_separation` 冷却间隔！）",
+                "     - `tools.or_kernels.nlp_minlp`: `solve_box_nlp(obj_fn, bounds, *, maximize=False, constraints=(), n_lhs=96, global_method='de', popsize=12, maxiter=120, n_local_starts=5, time_limit_s=..., initial_points=())` -> 返回 `{'x', 'objective', 'feasible', 'ok'}`（键名是 `'objective'` 非 `'fun'`；**注意约束遵循 SciPy SLSQP 口径：可行域为 `c(x) >= 0`，切勿写反符号！**）；Stage 3 精修用 `solve_multistart_polish(obj_fn, bounds, initial_points, *, maximize=False, constraints=(), time_limit_s=10.0)`",
+                "     - `tools.or_kernels.interval_coverage`: `canonical_time_grid(t_max, dt)` / `eval_projectile_detonation(origin_t0, speed, direction_xy, release_time, det_delay, g=9.8)` (其中 `origin_t0` 必须是载体 `t=0` 初始坐标，严禁提前加上 `v*release_time` 再传入导致双重位移!) -> 前向运动学强制保证 **`det_time == release_time + det_delay`** 与单位航向（严禁 clamp `release_time=max(0,...)` 却不更新 `det_time`!）；`sample_cylinder_surface(...)` / `eval_smoke_masking_intervals(...)` -> **通用离散与仿真一致律：solver 终算与 custom-validate 必须使用完全相同的时间/空间步长 `dt`、采样密度与固定随机种子**",
+                f"     - `from tools.or_kernels.envelope_io import build_custom_envelope, write_solution_and_report` -> `env = build_custom_envelope(problem_id=..., slug=..., problem_class=..., objective=..., solver_name=..., source_script=..., validator_script=..., validation_report='outputs/{slug}-custom-validate.json', decision_payload=..., proven_optimal=False, subproblems=..., wall_time_s=...); write_solution_and_report('outputs/{slug}-solution.json', env)` -> **⚠️ `build_custom_envelope` 只返回 dict 不写磁盘，必须调用 `write_solution_and_report` 落盘！必填非空 `validation_report`（严禁传 `\"\"`）**；生成的 JSON 把 `decision_payload` 存在顶层键 **`\"solution\"`**（不是 `\"decision_payload\"`!；可选调用 `get_problem_formulation_template`）",
+                f"  ② 依次写入：`outputs/{slug}-schema.json`（含 `\"objective_sense\": \"max\"|\"min\"`，仅结构不含解）-> `outputs/{slug}-custom_solver.py`（写入 `outputs/{slug}-solution.json`）-> `outputs/{slug}-custom-validate.py`；",
+                f"  ③ 物理隔离校验脚本 `outputs/{slug}-custom-validate.py` **必须无命令行参数可直接运行**（读 `outputs/{slug}-solution.json`，取 `pl = env.get('solution') or {{}}` 匹配 solver 写入键名，写 `outputs/{slug}-custom-validate.json` `{{\"ok\": bool, \"objective\": float, \"checks\": [...]}}`），采用与 solver 一致的 `canonical_time_grid` 重算物理与区间并集，严禁导入 scipy.optimize / ortools / highspy / pulp / custom_solver / nlp_minlp / lns_hybrid / milp_reduction；",
+                f"  ④ 闭环运行：依次调 `execute_custom_script('outputs/{slug}-custom_solver.py', timeout_sec={budget_s})` -> `execute_custom_script('outputs/{slug}-custom-validate.py', timeout_sec=60)` -> `validate_solution_tool`；校验通过后直接用 1 句话总结本轮算法假设与目标值，报错则用 `edit_file` 修补失败行，禁止改用 execute_python_sandbox。",
+                "严禁: 不得宣称 proven_optimal=True 除非精确求解器返回 OPTIMAL 且 Gap=0; 不得抄写上游对话。",
             ])
 
         quarantined_files: list[str] = list(state.get("cosplay_quarantined") or [])
         retry_next = int(state.get("model_retry_count") or 0) + 1
 
         if not use_horse_race:
+            if evo_enabled and cur_round >= 2 and (root / "outputs" / f"{slug}-best_solution.json").is_file():
+                if canonical_sol.is_file():
+                    try:
+                        canonical_sol.unlink()
+                    except OSError:
+                        pass
             if tier == "A":
                 focus = (
                     "求解模式: 精确求解 (成熟算子 exact)。使用 CP-SAT/HiGHS/NetworkX 等，"
@@ -999,6 +1675,8 @@ def build_adaptive_graph(
                 canonical_sol,
                 schema_path,
                 enforce_cosplay=enforce_cosplay,
+                timeout_budget_s=budget_s,
+                max_rec_limit=30 if cur_round == 1 else 24,
             )
             quarantined_files.extend(q_files)
             (root / "notes" / f"{slug}-modeler.md").write_text(text, encoding="utf-8")
@@ -1010,6 +1688,9 @@ def build_adaptive_graph(
                 "cosplay_quarantined": quarantined_files,
                 "model_retry_count": retry_next,
                 "model_attempts": retry_next,
+                "evo_round": cur_round,
+                "evo_target_rounds": evo_target,
+                "evo_max_rounds": evo_max,
                 "last_error": "" if ok else "modeler produced no solution artifact",
             }
 
@@ -1098,8 +1779,85 @@ def build_adaptive_graph(
             "cosplay_quarantined": quarantined_files,
             "model_retry_count": retry_next,
             "model_attempts": retry_next,
+            "evo_round": cur_round,
+            "evo_target_rounds": evo_target,
+            "evo_max_rounds": evo_max,
             "last_error": "" if first_candidate else "both dual-track modelers produced no solution artifact",
         }
+
+    def _record_evo_round(
+        state: Mapping[str, Any],
+        root: Path,
+        slug: str,
+        updates: dict[str, Any],
+    ) -> dict[str, Any]:
+        from orpath.agents.evolution_ledger import (
+            MAX_SCRIPT_TIMEOUT_SEC,
+            best_solution_path,
+            get_stage_directive,
+            ledger_path,
+            normalize_target_rounds,
+            record_experiment,
+            round_timeout_budget,
+        )
+
+        evo_enabled = bool(state.get("deep_evolution")) or normalize_target_rounds(state.get("evo_target_rounds"), default=1) > 1
+        if not evo_enabled:
+            return updates
+        cur_r = max(1, int(state.get("evo_round") or 1))
+        t_r = normalize_target_rounds(state.get("evo_target_rounds"), default=5)
+        stage_code, _ = get_stage_directive(cur_r)
+        sol_p_raw = str(updates.get("solution_path") or state.get("solution_path") or "").strip()
+        sol_p = Path(sol_p_raw) if sol_p_raw else (root / "outputs" / f"{slug}-solution.json")
+        cdocs: list[Mapping[str, Any]] = []
+        wall_t = 0.0
+        if sol_p.is_file():
+            try:
+                cdoc = json.loads(sol_p.read_text(encoding="utf-8"))
+                if isinstance(cdoc, dict):
+                    cdocs.append(cdoc)
+                    wall_t = float((cdoc.get("meta") or {}).get("wall_time_s") or cdoc.get("solve_time_sec") or 0.0)
+            except Exception:
+                pass
+        sense = str(updates.get("objective_sense") or _infer_objective_sense(state, root, slug, cdocs))
+        obj_v = updates.get("recomputed_objective")
+        if obj_v is None:
+            obj_v = updates.get("objective_value")
+        obj_f = float(obj_v) if isinstance(obj_v, (int, float)) and not isinstance(obj_v, bool) else None
+        val_ok = bool(updates.get("validation_ok") and obj_f is not None)
+        solver_script = root / "outputs" / f"{slug}-custom_solver.py"
+        gap_raw = updates.get("optimality_gap")
+        gap_f = float(gap_raw) if isinstance(gap_raw, (int, float)) and not isinstance(gap_raw, bool) else None
+        rec_res = record_experiment(
+            root,
+            slug,
+            round_idx=cur_r,
+            strategy_stage=stage_code,
+            hypothesis=_sanitize_hypothesis(
+                updates.get("modeler_summary") or state.get("modeler_summary"),
+                sol_p,
+                round_idx=cur_r,
+            ),
+            timeout_budget_s=round_timeout_budget(cur_r, max_cap=MAX_SCRIPT_TIMEOUT_SEC),
+            wall_time_s=wall_t,
+            objective=obj_f,
+            best_bound=None,
+            gap=gap_f,
+            proven_optimal=bool(updates.get("proven_optimal")),
+            validation_ok=val_ok,
+            minimize=(sense != "max"),
+            target_rounds=t_r,
+            solver_script=solver_script if solver_script.is_file() else None,
+            solution_path=sol_p if val_ok and sol_p.is_file() else None,
+            error_summary="; ".join(str(x) for x in (updates.get("validator_errors") or [])[:2]),
+        )
+        inc = (rec_res.get("ledger") or {}).get("incumbent") or {}
+        b_sol = best_solution_path(root, slug)
+        updates["evo_promoted"] = bool(rec_res.get("promoted"))
+        updates["incumbent_objective"] = inc.get("objective")
+        updates["incumbent_available"] = bool(b_sol.is_file())
+        updates["evolution_ledger_path"] = str(ledger_path(root, slug))
+        return updates
 
     def node_validator(state: AdaptivePipelineState) -> dict:
         root = _resolve_root(state)
@@ -1128,6 +1886,7 @@ def build_adaptive_graph(
                     or "; ".join(updates.get("validator_errors") or [])[:400]
                     or "validation failed"
                 )
+            updates = _record_evo_round(state, root, slug, updates)
             return {
                 k: v for k, v in updates.items()
                 if k not in ("domain_audit", "validator_took_sec")
@@ -1239,7 +1998,7 @@ def build_adaptive_graph(
             if w_val_p.is_file():
                 shutil.copy2(w_val_p, canonical_validate)
                 shutil.copy2(w_val_p, canonical_validation)
-            return {
+            updates_dual = {
                 "solution_path": str(canonical_sol),
                 "validate_path": str(canonical_validate if canonical_validate.is_file() else canonical_validation),
                 "tournament_path": str(tournament_path),
@@ -1255,6 +2014,7 @@ def build_adaptive_graph(
                 "lifecycle_status": "INDEPENDENTLY_VALIDATED",
                 "last_error": "",
             }
+            return _record_evo_round(state, root, slug, updates_dual)
 
         all_errs: list[str] = []
         rem_path = ""
@@ -1264,7 +2024,7 @@ def build_adaptive_graph(
                 all_errs.extend(f"{tname}: {e}" for e in tr["errors"][:3])
             if not rem_path and tr.get("remediation_path"):
                 rem_path = str(tr["remediation_path"])
-        return {
+        fail_dual = {
             "tournament_path": str(tournament_path),
             "winning_track": "",
             "objective_sense": sense,
@@ -1275,12 +2035,36 @@ def build_adaptive_graph(
             "lifecycle_status": "FAILED",
             "last_error": "; ".join(all_errs)[:400] or "all dual-track candidates failed validation",
         }
+        return _record_evo_round(state, root, slug, fail_dual)
 
     def node_table_render(state: AdaptivePipelineState) -> dict:
+        root = _resolve_root(state)
+        slug = _slug(state, root)
+        effective_state: dict[str, Any] = dict(state)
+        evo_enabled = bool(effective_state.get("deep_evolution")) or int(effective_state.get("evo_target_rounds") or 1) > 1
+        if evo_enabled:
+            from orpath.agents.evolution_ledger import best_solution_path
+
+            best_sol = best_solution_path(root, slug)
+            canonical_sol = root / "outputs" / f"{slug}-solution.json"
+            if best_sol.is_file():
+                try:
+                    shutil.copy2(best_sol, canonical_sol)
+                    effective_state["solution_path"] = str(canonical_sol)
+                    v_updates = run_deterministic_validator(effective_state)
+                    effective_state.update({
+                        k: v for k, v in v_updates.items()
+                        if k not in ("domain_audit", "validator_took_sec")
+                    })
+                except Exception:
+                    pass
         try:
-            rendered = render_truth_tables(state)
-            if state.get("skip_paper"):
+            rendered = render_truth_tables(effective_state)
+            if effective_state.get("skip_paper"):
                 rendered["lifecycle_status"] = "INDEPENDENTLY_VALIDATED"
+            for sync_k in ("solution_path", "validate_path", "validation_ok", "objective_value", "recomputed_objective", "proven_optimal", "optimality_gap"):
+                if sync_k in effective_state and sync_k not in rendered:
+                    rendered[sync_k] = effective_state[sync_k]
             return rendered
         except Exception as exc:  # noqa: BLE001
             return {"tables_path": "", "last_error": f"table renderer failed: {type(exc).__name__}: {exc}"}
@@ -1301,6 +2085,7 @@ def build_adaptive_graph(
             rev_notes.append(f"请用 read_file 阅读 {paper} 并用 edit_file 或 export_paper_markdown 逐项外科修复上述缺陷。")
         brief = _brief(state, root, slug, [
             "职责: 严格基于预渲染真值表撰写六章学术论文 (docs/or-paper-sop.md)。",
+            "效率纪律: 务必精简工具步数！只需调用 `read_file` 阅读一次真值表（返修时可再读一次现有论文），随后立即调用 `export_paper_markdown` 一次性写出完整六章论文到 PAPER_PATH；严禁浏览仓库目录或大量翻读源码脚本。",
             f"真值表唯一数据来源: {tables}",
             f"双轨赛马结果: tournament_path={state.get('tournament_path') or '-'} winner={state.get('winning_track') or '-'}",
             "文献引用纪律: 仅可引用真值表第4节与 knowledge_pack_path 中的真实文献锚点，严禁编造任何未验证外部文献。",
@@ -1309,17 +2094,73 @@ def build_adaptive_graph(
             f"必须调用 export_paper_markdown / edit_file 写入: PAPER_PATH={paper}",
             *rev_notes,
         ])
-        text, _msgs = _invoke_with_trace(_get_role_agent("writer", state), brief, root, slug, "writer")
+        pre_mtime = paper.stat().st_mtime if paper.is_file() else 0.0
+        try:
+            text, _msgs = _invoke_with_trace(
+                _get_role_agent("writer", state),
+                brief,
+                root,
+                slug,
+                "writer",
+                wall_timeout_s=600.0,
+                max_rec_limit=28,
+            )
+        except TimeoutError as exc:
+            text = paper.read_text(encoding="utf-8", errors="replace") if paper.is_file() else f"# (writer timeout: {exc})\n"
+
+        # Guard against LangGraph recursion-limit exhaustion without leaving bogus placeholder on disk.
+        fresh_paper = paper.is_file() and paper.stat().st_mtime > pre_mtime
+        if paper.is_file():
+            try:
+                disk_text = paper.read_text(encoding="utf-8", errors="replace")
+                if _is_recursion_exhausted_text(disk_text):
+                    paper.unlink()
+                    fresh_paper = False
+            except OSError:
+                pass
+        if (not fresh_paper) and _is_recursion_exhausted_text(text):
+            tables_excerpt = ""
+            tables_p = Path(tables)
+            if tables_p.is_file():
+                try:
+                    tables_excerpt = tables_p.read_text(encoding="utf-8", errors="replace")[:12000]
+                except OSError:
+                    tables_excerpt = ""
+            retry_brief = _brief(state, root, slug, [
+                "RETRY (上次因工具步数耗尽未落盘论文): 严禁调用 read_file / list_files / grep_search / run_shell！",
+                f"请直接依据下方完整真值表，立刻调用一次 `export_paper_markdown` 将完整六章学术论文写入 PAPER_PATH={paper}！",
+                f"目标值: objective={obj} proven_optimal={prov}",
+                *rev_notes,
+                "--- 预渲染真值表全文/摘要 ---",
+                tables_excerpt or "(真值表为空，请如实写明)",
+            ])
+            try:
+                text, _msgs = _invoke_with_trace(
+                    _get_role_agent("writer", state),
+                    retry_brief,
+                    root,
+                    slug,
+                    "writer_retry",
+                    wall_timeout_s=420.0,
+                    max_rec_limit=16,
+                )
+            except TimeoutError as exc:
+                text = f"# (writer retry timeout: {exc})\n"
+            fresh_paper = paper.is_file() and paper.stat().st_mtime > pre_mtime
+
         if not paper.is_file():
-            paper.parent.mkdir(parents=True, exist_ok=True)
-            paper.write_text(text or "# (writer produced no content)\n", encoding="utf-8")
+            cleaned_w = (text or "").strip()
+            if cleaned_w and not _is_recursion_exhausted_text(cleaned_w) and not cleaned_w.startswith("# (writer"):
+                paper.parent.mkdir(parents=True, exist_ok=True)
+                paper.write_text(text, encoding="utf-8")
         retry_w = int(state.get("paper_retry_count") or 0) + 1
+        writer_err = "" if paper.is_file() else "writer exhausted steps or timed out before writing paper"
         return {
             "paper_path": str(paper),
             "paper_retry_count": retry_w,
             "writer_attempts": retry_w,
             "revision_count": retry_w,
-            "last_error": "",
+            "last_error": writer_err,
         }
 
     def node_doc_gate(state: AdaptivePipelineState) -> dict:
@@ -1332,24 +2173,127 @@ def build_adaptive_graph(
         root = _resolve_root(state)
         slug = _slug(state, root)
         paper = Path(state.get("paper_path") or (root / "papers" / f"{slug}.md"))
+        tables = Path(state.get("tables_path") or (root / "outputs" / f"{slug}-tables.md"))
         review_path = root / "papers" / f"{slug}-review.md"
+
+        # Hard pre-check: missing, empty, or recursion-sentinel paper is an automatic FATAL rejection.
+        paper_body = ""
+        if paper.is_file():
+            try:
+                paper_body = paper.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                paper_body = ""
+        if not paper.is_file() or not paper_body.strip() or _is_recursion_exhausted_text(paper_body):
+            err_rev = (
+                "## Summary\n待审论文缺失、为空或仅包含步数耗尽占位符，无法通过学术评审。\n\n"
+                "## Weaknesses\n- [W1] **FATAL:** 待审论文未完整生成（缺失或为空）。\n\n"
+                "## Verdict\nREVISE\n\n"
+                "## Revision Plan\n请重新运行 writer 生成完整六章论文并写入指定路径。\n"
+            )
+            review_path.parent.mkdir(parents=True, exist_ok=True)
+            review_path.write_text(err_rev, encoding="utf-8")
+            verdict, fatal = parse_review_reply(err_rev)
+            return {
+                "review_path": str(review_path),
+                "review_verdict": verdict,
+                "fatal_defects": fatal,
+                "reviewer_summary": err_rev[:2000],
+                "lifecycle_status": "PROPOSED",
+                "last_error": "missing or invalid paper rejected before review",
+            }
+
         brief = _brief(state, root, slug, [
-            "职责: 扮演严苛同行审稿人，调用 read_file / validate_solution_tool / run_shell 等核对工具后按十项核对表检查论文与解工件。",
+            "职责: 扮演严苛同行审稿人，按十项核对表检查论文与解工件并出具分级评审意见。",
+            f"效率纪律: 确定性验证已执行 (`validation_ok={state.get('validation_ok')}`)。严禁陷入漫长重算循环！仅调用 `read_file` 阅读 `{paper}` 与 `{tables}`（最多2~4次工具调用），随后立即调用 `export_paper_markdown` 写入 `REVIEW_PATH={review_path}`！",
+            "包膜约定说明: 对包含多个独立子问题 (subproblems: Q1..Qk) 的建模案例，校验包膜中的标量 `objective` 常为校验器核对用的子问题分项汇总值；只要论文清晰分列各子问独立指标并如实界定汇总检验口径，不应以『校验包膜使用了汇总 scalar』单独判定 FATAL。",
             f"待审论文: {paper}",
+            f"真值表路径: {tables}",
             f"确定性校验结论: validation_ok={state.get('validation_ok')} proven_optimal={state.get('proven_optimal')}",
             f"必须调用 export_paper_markdown 写入评审报告: REVIEW_PATH={review_path}",
             "输出 FATAL/MAJOR/MINOR 分级缺陷与 Verdict (PASS/REVISE)。",
         ])
-        text, _msgs = _invoke_with_trace(_get_role_agent("reviewer", state), brief, root, slug, "reviewer")
-        if not review_path.is_file():
+        pre_rev_mtime = review_path.stat().st_mtime if review_path.is_file() else 0.0
+        try:
+            text, _msgs = _invoke_with_trace(
+                _get_role_agent("reviewer", state),
+                brief,
+                root,
+                slug,
+                "reviewer",
+                wall_timeout_s=360.0,
+                max_rec_limit=36,
+            )
+        except TimeoutError as exc:
+            text = f"Verdict: REVISE\n- [FATAL] reviewer timed out: {exc}\n"
+
+        fresh_rev = review_path.is_file() and review_path.stat().st_mtime > pre_rev_mtime
+        if review_path.is_file():
+            try:
+                disk_chk = review_path.read_text(encoding="utf-8", errors="replace")
+                if _is_recursion_exhausted_text(disk_chk):
+                    review_path.unlink()
+                    fresh_rev = False
+            except OSError:
+                pass
+        if (not fresh_rev) and _is_recursion_exhausted_text(text):
+            tables_excerpt = ""
+            if tables.is_file():
+                try:
+                    tables_excerpt = tables.read_text(encoding="utf-8", errors="replace")[:5000]
+                except OSError:
+                    tables_excerpt = ""
+            paper_excerpt = (
+                paper_body
+                if len(paper_body) <= 16000
+                else (paper_body[:10000] + "\n\n... [middle truncated for size] ...\n\n" + paper_body[-6000:])
+            )
+            retry_brief = _brief(state, root, slug, [
+                "RETRY (上次因工具步数耗尽未写入评审报告): 严禁调用 read_file / list_files / grep_search / run_shell！",
+                f"请直接基于下方论文与真值表摘要，立即调用一次 `export_paper_markdown` 写入评审报告到 REVIEW_PATH={review_path}！",
+                f"确定性校验结论: validation_ok={state.get('validation_ok')} proven_optimal={state.get('proven_optimal')}",
+                "--- 待审论文内容 ---",
+                paper_excerpt,
+                "--- 真值表摘要 ---",
+                tables_excerpt or "-",
+            ])
+            try:
+                text, _msgs = _invoke_with_trace(
+                    _get_role_agent("reviewer", state),
+                    retry_brief,
+                    root,
+                    slug,
+                    "reviewer_retry",
+                    wall_timeout_s=300.0,
+                    max_rec_limit=16,
+                )
+            except TimeoutError as exc:
+                text = f"Verdict: REVISE\n- [FATAL] reviewer retry timed out: {exc}\n"
+            fresh_rev = review_path.is_file() and review_path.stat().st_mtime > pre_rev_mtime
+
+        if not fresh_rev:
+            cleaned_r = (text or "").strip()
+            if not cleaned_r or _is_recursion_exhausted_text(cleaned_r):
+                text = (
+                    "## Summary\n审稿人未能完成评审报告（步数耗尽或输出为空）。\n\n"
+                    "## Weaknesses\n- [W1] **FATAL:** reviewer failed to produce valid review report.\n\n"
+                    "## Verdict\nREVISE\n"
+                )
             review_path.parent.mkdir(parents=True, exist_ok=True)
-            review_path.write_text(text or "# (reviewer produced no content)\n", encoding="utf-8")
-        verdict, fatal = parse_review_reply(text)
+            review_path.write_text(text, encoding="utf-8")
+        review_body = text
+        if fresh_rev and review_path.is_file():
+            try:
+                disk_rev = review_path.read_text(encoding="utf-8", errors="replace")
+                if disk_rev.strip():
+                    review_body = disk_rev
+            except OSError:
+                pass
+        verdict, fatal = parse_review_reply(review_body)
         return {
             "review_path": str(review_path),
             "review_verdict": verdict,
             "fatal_defects": fatal,
-            "reviewer_summary": text[:2000],
+            "reviewer_summary": review_body[:2000],
             "lifecycle_status": "ACCEPTED" if (verdict == "PASS" and not fatal) else "PROPOSED",
             "last_error": "",
         }
@@ -1386,13 +2330,17 @@ def build_adaptive_graph(
                 "完成后回复: 结果摘要+本题工件路径+账本更新摘要。",
             ])
             # Fresh isolated message list per question — zero cross-question context pollution.
-            text, _msgs = _invoke_with_trace(
-                _get_role_agent("modeler", state),
-                brief,
-                root,
-                slug,
-                f"tier_c_{q}",
-            )
+            try:
+                text, _msgs = _invoke_with_trace(
+                    _get_role_agent("modeler", state),
+                    brief,
+                    root,
+                    slug,
+                    f"tier_c_{q}",
+                    wall_timeout_s=600.0,
+                )
+            except TimeoutError as exc:
+                text = f"tier_c_{q} timeout: {exc}"
             summaries.append(text[:800])
             if not qpath.is_file():
                 failed.append(q)
@@ -1540,7 +2488,7 @@ def build_adaptive_graph(
     g.add_conditional_edges(
         "modeler",
         _after_modeler,
-        {"validator": "validator", "fail_closed": "fail_closed"},
+        {"validator": "validator", "modeler": "modeler", "fail_closed": "fail_closed"},
     )
     g.add_conditional_edges(
         "validator",
@@ -1595,15 +2543,57 @@ def _after_analyst(state: Mapping[str, Any]) -> Literal["tier_c_focus", "modeler
     return "tier_c_focus" if decide_tier(state) == "C" else "modeler"
 
 
-def _after_modeler(state: Mapping[str, Any]) -> Literal["validator", "fail_closed"]:
-    return "validator" if state.get("solution_path") else "fail_closed"
+def _after_modeler(state: Mapping[str, Any]) -> Literal["validator", "modeler", "fail_closed"]:
+    if state.get("solution_path"):
+        return "validator"
+    evo_enabled = bool(state.get("deep_evolution")) or int(state.get("evo_target_rounds") or 1) > 1
+    if evo_enabled:
+        # Always pass through node_validator in evolution mode so failed rounds are
+        # recorded in the experiment ledger and incumbent restoration stays centralized.
+        return "validator"
+    if _cap(state) < int(state.get("max_retries") or 3):
+        return "modeler"
+    return "fail_closed"
 
 
 def _after_validator(state: Mapping[str, Any]) -> Literal["table_render", "modeler", "fail_closed"]:
-    if state.get("validation_ok"):
+    evo_enabled = bool(state.get("deep_evolution")) or int(state.get("evo_target_rounds") or 1) > 1
+    if not evo_enabled:
+        if state.get("validation_ok"):
+            return "table_render"
+        if _cap(state) < int(state.get("max_retries") or 3):
+            return "modeler"
+        return "fail_closed"
+
+    cur_r = max(1, int(state.get("evo_round") or 1))
+    t_r = max(1, min(10, int(state.get("evo_target_rounds") or 5)))
+    m_r = max(t_r, min(10, int(state.get("evo_max_rounds") or 10)))
+
+    # Early exit ONLY when exact optimality with zero gap is genuinely proven
+    # (never early-exit on a degenerate 0.0 maximization outcome).
+    obj_val = state.get("recomputed_objective")
+    if obj_val is None:
+        obj_val = state.get("objective_value")
+    zero_max_degenerate = (
+        str(state.get("objective_sense") or "").strip().lower() == "max"
+        and isinstance(obj_val, (int, float))
+        and not isinstance(obj_val, bool)
+        and abs(float(obj_val)) <= 1e-9
+    )
+    if (
+        not zero_max_degenerate
+        and state.get("validation_ok")
+        and (state.get("proven_optimal") is True or state.get("optimality_gap") == 0.0)
+    ):
         return "table_render"
-    if _cap(state) < int(state.get("max_retries") or 3):
+
+    if cur_r < t_r:
         return "modeler"
+    if t_r <= cur_r < m_r and bool(state.get("evo_promoted")):
+        return "modeler"
+
+    if state.get("validation_ok") or state.get("incumbent_available"):
+        return "table_render"
     return "fail_closed"
 
 

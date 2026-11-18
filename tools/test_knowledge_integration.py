@@ -346,3 +346,37 @@ def test_watch_knowledge_search_and_pinned_confirm(tmp_path: Path) -> None:
     finally:
         srv.shutdown()
         srv.server_close()
+
+
+def test_dynamic_universal_skills_matched_across_domains(tmp_path: Path) -> None:
+    """Universal EDA/statistics/ML/DOE/visualization skills auto-surface across problems."""
+    from orpath.agents.knowledge_pack import assemble_preflight_knowledge_pack, build_error_remediation_pack
+
+    pack_stats = assemble_preflight_knowledge_pack(
+        tmp_path,
+        "stats-ml-demo",
+        domain="general_or",
+        problem_class="unregistered",
+        query_hint="针对实验数据进行探索性数据分析(EDA)、ANOVA显著性检验以及scikit-learn随机森林预测分类",
+    )
+    matched_ids = {m["id"] for m in pack_stats["matched_skills"]}
+    assert matched_ids & {"statistical-analysis", "scikit-learn-modeling", "exploratory-data-analysis"}
+
+    pack_doe = assemble_preflight_knowledge_pack(
+        tmp_path,
+        "doe-viz-demo",
+        domain="general_or",
+        problem_class="nlp_minlp",
+        query_hint="多因素拉丁超立方DOE参数敏感性分析与误差传播，并绘制高分辨率帕累托图",
+    )
+    doe_ids = {m["id"] for m in pack_doe["matched_skills"]}
+    assert doe_ids & {"experimental-design", "scientific-visualization", "uncertainty-and-units"}
+
+    rem = build_error_remediation_pack(
+        tmp_path,
+        "dt-seed-demo",
+        problem_class="nlp_minlp",
+        validator_errors=["objective mismatch with dt=0.2 grid vs dt=0.1 and det_time != release_time + det_delay"],
+    )
+    rem_text = Path(rem["remediation_path"]).read_text(encoding="utf-8")
+    assert "random_state" in rem_text or "步长 dt" in rem_text

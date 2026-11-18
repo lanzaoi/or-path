@@ -1,0 +1,61 @@
+  <!-- Process Watch Drawer (Slide-over non-blocking telemetry panel) -->
+  <div id="watchDrawerBackdrop" hidden></div>
+  <aside id="watchDrawer" class="watch-drawer" aria-label="过程监视抽屉" hidden>
+    <div class="watch-drawer-header">
+      <div class="watch-drawer-title">
+        <span>过程监视</span>
+        <span class="wd-status-pill" id="wdStatusPill">空闲</span>
+      </div>
+      <div class="watch-drawer-controls">
+        <span class="wd-slug-tag" id="wdSlugTag">-</span>
+        <button type="button" class="wb-btn" id="btnWdRetry" title="直接重新求解当前任务">重新求解</button>
+        <button type="button" class="wb-btn" id="btnWdRefresh" title="立即刷新">↻ 刷新</button>
+        <button type="button" class="wb-btn" id="btnWdClose" title="关闭抽屉">✕ 关闭</button>
+      </div>
+    </div>
+
+    <div class="watch-drawer-body">
+      <div class="wd-section" id="wdErrorBox" style="border-left:3px solid var(--fail);background:#fef2f2" hidden>
+        <div class="wd-section-title" id="wdErrorTitle" style="color:#b91c1c;margin-bottom:4px">运行受阻</div>
+        <div id="wdErrorDesc" style="font-size:12px;color:var(--ink-80);line-height:1.5"></div>
+      </div>
+      <div class="wd-kpi-row" id="wdKpiRow">
+        <div class="wd-kpi"><span class="wd-kpi-label">当前阶段</span><strong id="wdStageText">待命</strong></div>
+        <div class="wd-kpi"><span class="wd-kpi-label">沙箱自愈</span><strong id="wdRepairCount">0 轮</strong></div>
+        <div class="wd-kpi"><span class="wd-kpi-label">执行引擎</span><strong id="wdEngineText">-</strong></div>
+      </div>
+
+      <div class="wd-section" id="wdEvolutionSection" hidden>
+        <div class="wd-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>演化记录 (R1..R10)</span>
+          <span id="wdEvoIncumbent" style="font-family:var(--mono);font-size:11px;color:#047857">最优基线: —</span>
+        </div>
+        <div id="wdEvolutionList" class="wd-stages-list"></div>
+      </div>
+
+      <div class="wd-section">
+        <div class="wd-section-title">阶段耗时</div>
+        <div id="wdStagesList" class="wd-stages-list">
+          <div class="wd-empty">开始求解后将在此显示各阶段耗时</div>
+        </div>
+      </div>
+
+      <div class="wd-section">
+        <div class="wd-section-title">执行事件</div>
+        <div id="wdEventsList" class="wd-events-list">
+          <div class="wd-empty">暂无执行事件</div>
+        </div>
+      </div>
+
+      <div class="wd-section">
+        <div class="wd-section-title">产物预览</div>
+        <div class="wd-art-tabs" id="wdArtTabs">
+          <button type="button" class="wd-art-btn active" data-wd-art="solution">solution.json</button>
+          <button type="button" class="wd-art-btn" data-wd-art="validate">validate.json</button>
+          <button type="button" class="wd-art-btn" data-wd-art="schema">schema.json</button>
+          <button type="button" class="wd-art-btn" data-wd-art="paper">paper.md</button>
+        </div>
+        <pre id="wdArtPreview" class="wd-art-preview">选择上方文件查看输出内容</pre>
+      </div>
+    </div>
+  </aside>

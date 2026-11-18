@@ -22,10 +22,15 @@ from orpath.control_plane import get_chat_model
 ENV_KEYS = (
     "DEEPSEEK_API_KEY",
     "DEEPSEEK_BASE_URL",
+    "DEEPSEEK_MODEL",
     "XFYUN_API_KEY",
     "XFYUN_BASE_URL",
+    "XFYUN_MODEL",
     "OPENAI_API_KEY",
     "OPENAI_BASE_URL",
+    "ORPATH_LLM_MODEL",
+    "ORPATH_DEEPSEEK_THINKING",
+    "ORPATH_DEEPSEEK_REASONING_EFFORT",
 )
 
 
@@ -102,3 +107,16 @@ def test_os_environ_absent_keys_do_not_raise(clean_env: Any) -> None:
     for key in ENV_KEYS:
         assert not os.environ.get(key)
     assert isinstance(get_chat_model(), ChatOpenAI)
+
+
+def test_deepseek_flash_injects_thinking_and_reasoning_effort(
+    clean_env: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "sk-deepseek-flash-test")
+    monkeypatch.setenv("DEEPSEEK_MODEL", "deepseek-flash")
+    model = get_chat_model()
+    assert model.model_name == "deepseek-flash"
+    assert model.extra_body == {
+        "thinking": {"type": "enabled"},
+        "reasoning_effort": "high",
+    }

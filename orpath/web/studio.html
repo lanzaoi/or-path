@@ -4,64 +4,68 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;" />
-  <title>OR-Path 智能做题工作舱 · Studio</title>
+  <title>OR-Path 运筹求解工作台 · Studio</title>
   <style>
 /* === src/css/base.css === */
 :root {
-  /* Huashu Design Modern Palette (Slate / Zinc + Refined Accents) */
-  --bg: #f8fafc;
-  --ink: #0f172a;
-  --ink-80: #334155;
-  --ink-60: #475569;
-  --ink-48: #64748b;
-  --ink-36: #94a3b8;
+  /* Technical Workbench Palette — Neutral Zinc + Disciplined Accent */
+  --bg: #f6f7f9;
+  --ink: #111827;
+  --ink-80: #374151;
+  --ink-60: #4b5563;
+  --ink-48: #6b7280;
+  --ink-36: #9ca3af;
   --white: #ffffff;
-  --blue: #2563eb;
-  --blue-hover: #1d4ed8;
+  --blue: #1d4ed8;
+  --blue-hover: #1e40af;
   --blue-light: #eff6ff;
-  --link: #2563eb;
-  --ok: #10b981;
-  --ok-hover: #059669;
+  --link: #1d4ed8;
+  --ok: #059669;
+  --ok-hover: #047857;
   --ok-light: #ecfdf5;
-  --fail: #ef4444;
+  --fail: #dc2626;
   --fail-light: #fef2f2;
-  --warn: #f59e0b;
+  --warn: #d97706;
   --warn-light: #fffbeb;
-  --blocked: #8b5cf6;
+  --blocked: #6d28d9;
   --blocked-light: #f5f3ff;
-  --run: #f59e0b;
-  --idle: #94a3b8;
+  --run: #d97706;
+  --idle: #9ca3af;
   --surface: #ffffff;
-  --surface-2: #f1f5f9;
-  --surface-3: #e2e8f0;
-  --border: rgba(226, 232, 240, 0.85);
-  --border-strong: #cbd5e1;
-  --border-dark: rgba(255, 255, 255, 0.12);
-  --radius-xl: 18px;
-  --radius-lg: 14px;
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-xs: 6px;
+  --surface-2: #f1f3f5;
+  --surface-3: #e5e7eb;
+  --border: #e2e5ea;
+  --border-strong: #cbd2dc;
+  --border-dark: rgba(255, 255, 255, 0.1);
+  --radius-xl: 12px;
+  --radius-lg: 10px;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-xs: 4px;
   --pill: 9999px;
-  --font: system-ui, -apple-system, "Inter", BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --top-h: 52px;
-  --tool-h: 48px;
+  --font: system-ui, -apple-system, "Inter", BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono: "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --top-h: 50px;
+  --tool-h: 46px;
   --panel: #ffffff;
   --text: var(--ink);
   --muted: var(--ink-48);
   --accent: var(--blue);
   --cosplay: var(--fail);
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 28px -4px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+  --shadow-xs: 0 1px 2px rgba(17, 24, 39, 0.04);
+  --shadow-sm: 0 1px 3px rgba(17, 24, 39, 0.05), 0 1px 2px rgba(17, 24, 39, 0.03);
+  --shadow-md: 0 4px 12px rgba(17, 24, 39, 0.06), 0 1px 3px rgba(17, 24, 39, 0.04);
+  --shadow-lg: 0 12px 28px rgba(17, 24, 39, 0.1), 0 4px 10px rgba(17, 24, 39, 0.04);
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 html, body {
@@ -158,83 +162,87 @@ body.mode-inspector footer {
   display: flex !important;
 }
 
-/* Row 1: Brand Header Bar - Modern Dark Glassmorphism */
+/* Row 1: Top Header Bar */
 header.nav {
   grid-row: 1;
   min-height: var(--top-h);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 0 20px;
-  background: rgba(15, 23, 42, 0.94);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  gap: 10px 14px;
+  padding: 6px 20px;
+  background: #111318;
+  border-bottom: 1px solid #232730;
+  color: #f9fafb;
   z-index: 50;
-  overflow: hidden;
 }
 
 .nav-brand {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.015em;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
 
 .nav-brand .brand-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-  font-size: 13px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #1f2430;
+  border: 1px solid #323846;
+  color: #f3f4f6;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .nav-brand span {
-  color: #94a3b8;
+  color: #9ca3af;
   font-weight: 400;
   font-size: 12.5px;
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 .nav-right {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
-  overflow: hidden;
+  gap: 10px 14px;
+  max-width: 100%;
 }
 
-/* Modern Mode Switcher Pills */
+/* Segmented Header Navigation */
 .mode-toggle-group {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  background: rgba(30, 41, 59, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: var(--pill);
-  padding: 3px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  background: #1a1e26;
+  border: 1px solid #2c313c;
+  border-radius: 7px;
+  padding: 2px;
+  gap: 2px;
 }
 
 .mode-btn {
-  padding: 5px 14px;
-  border-radius: var(--pill);
+  padding: 4px 12px;
+  border-radius: 5px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   border: none;
   background: transparent;
-  color: #94a3b8;
+  color: #9ca3af;
   text-decoration: none;
-  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -242,13 +250,12 @@ header.nav {
 }
 
 .mode-btn:hover {
-  color: #f1f5f9;
+  color: #f3f4f6;
 }
 
 .mode-btn.on {
-  background: #2563eb;
+  background: #2b313e;
   color: #ffffff;
-  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
 }
 
 .badges {
@@ -333,45 +340,39 @@ header.nav {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 6px 13px;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
   font-size: 12px;
-  color: #0f172a;
+  color: #111827;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
   box-shadow: var(--shadow-xs);
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   cursor: pointer;
 }
 .wb-btn:hover:not(:disabled) {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 .wb-btn.primary {
-  background: #2563eb;
+  background: #1d4ed8;
   color: #ffffff;
   border-color: #1d4ed8;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
 }
 .wb-btn.primary:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #1e40af;
   border-color: #1e40af;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 .wb-btn.success {
-  background: #059669;
+  background: #111827;
   color: #ffffff;
-  border-color: #047857;
-  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.25);
+  border-color: #111827;
 }
 .wb-btn.success:hover:not(:disabled) {
-  background: #047857;
-  border-color: #065f46;
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+  background: #1f2937;
+  border-color: #1f2937;
 }
 
 
@@ -401,227 +402,211 @@ header.nav {
   background: rgba(148, 163, 184, 0.45);
 }
 
-/* Hero Section */
+/* Page Header Strip (understated, zero SaaS hero bloat) */
 .studio-hero {
-  background: linear-gradient(135deg, rgba(239, 246, 255, 0.85) 0%, rgba(245, 243, 255, 0.8) 50%, rgba(236, 253, 245, 0.6) 100%);
-  border: 1px solid rgba(191, 219, 254, 0.6);
-  border-radius: 18px;
-  padding: 24px 30px;
-  margin-bottom: 22px;
+  padding: 6px 2px 18px 2px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   flex-wrap: wrap;
-  gap: 16px;
-  box-shadow: var(--shadow-sm);
-  position: relative;
-  overflow: hidden;
-}
-
-.studio-hero::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
-  pointer-events: none;
+  gap: 12px 20px;
 }
 
 .studio-hero-title {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  color: #0f172a;
-  margin: 0 0 6px 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0 0 4px 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .studio-hero-tag {
   font-size: 11px;
-  background: #2563eb;
-  color: #ffffff;
-  padding: 3px 10px;
-  border-radius: var(--pill);
+  font-family: var(--mono);
+  background: var(--surface-2);
+  color: var(--ink-60);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 5px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  letter-spacing: 0.01em;
 }
 
 .studio-hero-desc {
   margin: 0;
-  font-size: 13px;
-  color: #64748b;
-  line-height: 1.6;
+  font-size: 12.5px;
+  color: var(--ink-48);
+  line-height: 1.5;
 }
 
 .studio-hero-truth {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  border-radius: var(--pill);
-  font-size: 11.5px;
+  padding: 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
   font-family: var(--mono);
-  color: #047857;
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  color: var(--ink-60);
+  font-weight: 500;
 }
 
 /* AI Config Bar */
 #studioAiConfigBar {
-  background: #ffffff;
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 14px 20px;
-  margin-bottom: 22px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 18px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px 10px;
   flex-wrap: wrap;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-#studioAiConfigBar:hover {
-  box-shadow: var(--shadow-md);
-  border-color: rgba(203, 213, 225, 0.9);
+  box-shadow: var(--shadow-xs);
 }
 
 .ai-config-label {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #1e293b;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-80);
   white-space: nowrap;
 }
 
 .ai-config-inputs {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex: 1;
-  min-width: 320px;
+  gap: 7px;
+  flex: 1 1 280px;
+  min-width: 240px;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 720px) {
+  .ai-config-inputs {
+    flex-wrap: wrap;
+  }
 }
 
 #studioApiKeyInput {
-  flex: 1;
-  height: 36px;
-  padding: 0 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: var(--pill);
+  flex: 1 1 120px;
+  min-width: 96px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
   font-size: 12px;
   font-family: var(--mono);
   outline: none;
-  background: #f8fafc;
-  color: #0f172a;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+  background: #fafafa;
+  color: var(--ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
 
 #studioApiKeyInput:focus {
   background: #ffffff;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.12);
 }
 
 #studioModelSelect {
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: var(--pill);
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
   font-size: 12px;
-  background: #f8fafc;
-  color: #0f172a;
+  line-height: 30px;
+  background: #fafafa;
+  color: var(--ink);
   cursor: pointer;
   outline: none;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 #studioModelSelect:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.12);
 }
 
 #studioApiKeyBadge {
   font-size: 11px;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: var(--pill);
+  font-weight: 500;
+  font-family: var(--mono);
+  padding: 3px 9px;
+  border-radius: 6px;
   white-space: nowrap;
-  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 /* Step Cards */
 .studio-card {
-  background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 16px;
-  box-shadow: var(--shadow-sm);
-  padding: 26px 28px;
-  margin-bottom: 24px;
-  transition: box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-xs);
+  padding: 22px 24px;
+  margin-bottom: 18px;
+  transition: border-color 0.18s ease;
 }
 
 .studio-card:hover {
-  box-shadow: var(--shadow-md);
-  border-color: rgba(203, 213, 225, 0.9);
+  border-color: var(--border-strong);
 }
 
 .studio-step-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--surface-2);
   flex-wrap: wrap;
 }
 
 .step-num-badge {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  color: #ffffff;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--ink-80);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 800;
-  font-size: 13.5px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 12px;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
-.step-num-badge.step-1 {
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
-}
-
-.step-num-badge.step-2 {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.35);
-}
-
+.step-num-badge.step-1,
+.step-num-badge.step-2,
 .step-num-badge.step-3 {
-  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+  background: #111827;
+  border-color: #111827;
+  color: #ffffff;
 }
 
 .studio-step-title {
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 15.5px;
+  font-weight: 600;
   letter-spacing: -0.015em;
-  color: #0f172a;
+  color: var(--ink);
   margin: 0;
 }
 
 .studio-step-sub {
-  font-size: 12.5px;
-  color: #64748b;
+  font-size: 12px;
+  color: var(--ink-48);
   margin-left: auto;
 }
 
@@ -630,18 +615,16 @@ header.nav {
 /* === src/css/studio/pipeline_intake.css === */
 /* Dual-Mode Execution Strip (Fast 4-Step / Deep Lean 4-Agent) */
 #studioPipelineStrip {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .fast-progress-bar,
 .deep-4agent-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: 12px;
-  padding: 12px 14px;
+  gap: 8px;
+  background: transparent;
+  padding: 0;
 }
 
 .fast-progress-bar[hidden],
@@ -665,21 +648,21 @@ header.nav {
 
 .fast-step-item,
 .deep-agent-card {
-  background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 12px;
-  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 11px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+  gap: 9px;
+  box-shadow: var(--shadow-xs);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .deep-agent-card {
   flex-direction: column;
   align-items: stretch;
-  gap: 6px;
+  gap: 5px;
 }
 
 .deep-agent-top {
@@ -689,35 +672,37 @@ header.nav {
 }
 
 .deep-agent-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: #f1f5f9;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--ink-60);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-family: var(--mono);
   flex-shrink: 0;
 }
 
 .deep-agent-name {
   font-size: 12px;
-  font-weight: 700;
-  color: #0f172a;
+  font-weight: 600;
+  color: var(--ink);
   font-family: var(--mono);
 }
 
 .deep-agent-role {
-  font-size: 10.5px;
-  color: #64748b;
+  font-size: 11px;
+  color: var(--ink-48);
 }
 
 .deep-agent-tool {
   font-size: 10px;
-  color: #475569;
-  background: rgba(241, 245, 249, 0.9);
-  border: 1px solid rgba(203, 213, 225, 0.6);
-  border-radius: 5px;
+  color: var(--ink-60);
+  background: var(--surface-2);
+  border-radius: 4px;
   padding: 2px 6px;
   font-family: var(--mono);
   white-space: nowrap;
@@ -726,13 +711,14 @@ header.nav {
 }
 
 .fast-step-dot {
-  width: 24px;
-  height: 24px;
-  border-radius: var(--pill);
-  background: #e2e8f0;
-  color: #475569;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--ink-60);
+  font-family: var(--mono);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -741,35 +727,34 @@ header.nav {
 
 .fast-step-item.active,
 .deep-agent-card.active {
-  border-color: #3b82f6;
-  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18), 0 4px 12px -2px rgba(59, 130, 246, 0.14);
+  border-color: var(--blue);
+  background: #ffffff;
 }
 
 .fast-step-item.active .fast-step-dot {
-  background: #2563eb;
+  background: var(--blue);
   color: #ffffff;
 }
 
 .fast-step-item.done,
 .deep-agent-card.done {
-  border-color: rgba(16, 185, 129, 0.45);
-  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+  border-color: #a7f3d0;
+  background: #ffffff;
 }
 
 .fast-step-item.done .fast-step-dot {
-  background: #10b981;
+  background: var(--ok);
   color: #ffffff;
 }
 
 .fast-step-item.blocked,
 .deep-agent-card.blocked {
-  border-color: rgba(239, 68, 68, 0.45);
-  background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+  border-color: #fecaca;
+  background: #fef2f2;
 }
 
 .fast-step-item.blocked .fast-step-dot {
-  background: #ef4444;
+  background: var(--fail);
   color: #ffffff;
 }
 
@@ -780,127 +765,174 @@ header.nav {
 
 .fast-step-title {
   font-size: 12px;
-  font-weight: 700;
-  color: #0f172a;
+  font-weight: 600;
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .fast-step-sub {
-  font-size: 10.5px;
-  color: #64748b;
+  font-size: 11px;
+  color: var(--ink-48);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .fast-step-badge {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-weight: 500;
   padding: 2px 7px;
-  border-radius: var(--pill);
+  border-radius: 5px;
   margin-left: auto;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
 .fast-step-badge.waiting {
-  background: rgba(148, 163, 184, 0.12);
-  color: #64748b;
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--surface-2);
+  color: var(--ink-48);
 }
 
 .fast-step-badge.active {
-  background: rgba(59, 130, 246, 0.14);
-  color: #1d4ed8;
-  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: #eff6ff;
+  color: var(--blue);
+  border: 1px solid #bfdbfe;
 }
 
 .fast-step-badge.done {
-  background: rgba(16, 185, 129, 0.14);
-  color: #059669;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
 }
 
 .fast-step-badge.blocked {
-  background: rgba(239, 68, 68, 0.14);
-  color: #dc2626;
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
-/* Run Mode Pill Switcher */
+/* Run Mode Segmented Control */
 .studio-runmode-group {
   display: inline-flex;
   align-items: center;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  border-radius: var(--pill);
-  padding: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 2px;
   gap: 2px;
 }
 
 .runmode-btn {
-  padding: 5px 12px;
-  border-radius: var(--pill);
+  padding: 4px 10px;
+  border-radius: 5px;
   font-size: 12px;
-  font-weight: 600;
-  color: #475569;
+  font-weight: 500;
+  color: var(--ink-60);
   background: transparent;
-  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
 
 .runmode-btn:hover {
-  color: #0f172a;
+  color: var(--ink);
 }
 
 .runmode-btn.active {
-  background: #2563eb;
-  color: #ffffff;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+}
+
+.studio-deep-rounds-group {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 2px 3px;
+  gap: 2px;
+}
+
+.studio-deep-rounds-group[hidden] {
+  display: none;
+}
+
+.deeprounds-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-60);
+  padding: 0 5px;
+  white-space: nowrap;
+}
+
+.deeprounds-btn {
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-60);
+  background: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.deeprounds-btn:hover {
+  color: var(--ink);
+}
+
+.deeprounds-btn.active {
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
 }
 
 /* Dropzone */
 #studioDropzone {
-  border: 2px dashed #93c5fd;
-  border-radius: 14px;
-  background: rgba(248, 250, 252, 0.85);
-  padding: 30px 20px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 9px;
+  background: #fafafa;
+  padding: 24px 18px;
   text-align: center;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 #studioDropzone:hover,
 #studioDropzone.dragover {
-  border-color: #2563eb;
-  background: rgba(239, 246, 255, 0.85);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.12);
+  border-color: var(--blue);
+  background: #f4f7ff;
 }
 
 .dropzone-icon {
-  font-size: 38px;
-  margin-bottom: 8px;
-  display: inline-block;
-  transition: transform 0.2s ease;
-}
-
-#studioDropzone:hover .dropzone-icon {
-  transform: scale(1.08);
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 10px auto;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-60);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .dropzone-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1e293b;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
   margin-bottom: 4px;
 }
 
 .dropzone-hint {
   font-size: 12px;
-  color: #64748b;
+  color: var(--ink-48);
   margin-bottom: 14px;
 }
 
@@ -908,17 +940,17 @@ header.nav {
 #studioFileList {
   margin-top: 12px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--ink-48);
 }
 
 #studioFileActionNotice {
   display: none;
-  margin-top: 14px;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.05);
+  margin-top: 12px;
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ok);
+  border-radius: 8px;
+  padding: 10px 14px;
 }
 
 /* Status & Feedback */
@@ -944,46 +976,65 @@ header.nav {
   line-height: 1.6;
 }
 
+.studio-composer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.studio-step1-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+@media (max-width: 820px) {
+  .studio-composer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 
 /* === src/css/studio/cards.css === */
 /* Diagnosis Banner */
 #studioDiagnosisBanner {
-  background: linear-gradient(135deg, rgba(245, 243, 255, 0.9) 0%, rgba(238, 242, 255, 0.7) 100%);
-  border: 1px solid rgba(139, 92, 246, 0.25);
-  border-left: 4px solid #7c3aed;
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin-bottom: 18px;
-  box-shadow: 0 1px 3px rgba(139, 92, 246, 0.04);
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ink);
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
 }
 
 /* Knowledge Banner */
 #studioKnowledgeBanner {
   display: none;
-  background: linear-gradient(135deg, rgba(238, 242, 255, 0.9) 0%, rgba(245, 243, 255, 0.7) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  border-left: 4px solid #6366f1;
-  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: 8px;
   padding: 14px 18px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 /* Algorithm Comparison Cards */
 #studioAlgoList {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .studio-algo-item {
-  border-radius: 10px;
-  padding: 12px 14px;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  border-radius: 8px;
+  padding: 11px 14px;
+  transition: border-color 0.15s ease;
 }
 
 .studio-algo-item:hover {
-  transform: translateY(-1px);
+  border-color: var(--border-strong);
 }
 
 /* Data Variables Alignment List */
@@ -995,30 +1046,30 @@ header.nav {
 
 .studio-data-item {
   border: 1px solid var(--border);
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 10px 14px;
+  background: #fafafa;
+  border-radius: 8px;
+  padding: 9px 13px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: background-color 0.18s ease, border-color 0.18s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .studio-data-item:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--surface-2);
+  border-color: var(--border-strong);
 }
 
 /* Clarification Questions Box */
 #studioQuestionsBox {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .studio-question-card {
-  border-bottom: 1px dashed rgba(203, 213, 225, 0.8);
-  padding-bottom: 14px;
+  border-bottom: 1px solid var(--surface-2);
+  padding-bottom: 12px;
 }
 
 .studio-question-card:last-child {
@@ -1033,32 +1084,34 @@ header.nav {
   font-size: 12.5px;
   cursor: pointer;
   padding: 6px 10px;
-  border-radius: 8px;
-  transition: background 0.15s ease;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
 }
 
 .studio-option-label:hover {
-  background: rgba(241, 245, 249, 0.9);
+  background: var(--surface-2);
 }
 
 /* Result Card */
 #studioResultCard {
-  background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 80%);
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  box-shadow: 0 4px 24px -2px rgba(16, 185, 129, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--ok);
+  box-shadow: var(--shadow-sm);
 }
 
 #studioResultCard.is-blocked {
-  background: linear-gradient(180deg, #fef2f2 0%, #ffffff 80%);
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  box-shadow: 0 4px 24px -2px rgba(239, 68, 68, 0.08);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--fail);
+  box-shadow: var(--shadow-sm);
 }
 
 #studioHeadline {
-  font-size: 18px;
-  font-weight: 800;
-  color: #065f46;
-  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
   letter-spacing: -0.015em;
 }
 
@@ -1067,9 +1120,9 @@ header.nav {
 }
 
 #studioObjective {
-  font-size: 32px;
-  font-weight: 800;
-  color: #047857;
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--ink);
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
   margin-bottom: 6px;
@@ -1081,9 +1134,9 @@ header.nav {
 }
 
 #studioValidation {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
-  color: #065f46;
+  color: #047857;
 }
 
 #studioResultCard.is-blocked #studioValidation {
@@ -1093,7 +1146,7 @@ header.nav {
 #studioSolutionDetail {
   margin-top: 10px;
   font-size: 12px;
-  color: #047857;
+  color: var(--ink-60);
   font-family: var(--mono);
   line-height: 1.6;
 }
@@ -1105,7 +1158,7 @@ header.nav {
 /* Artifact Download Buttons */
 #studioDownloads {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -1113,24 +1166,26 @@ header.nav {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 16px;
+  padding: 7px 14px;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
   font-size: 12px;
-  color: #0f172a;
+  color: var(--ink);
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
   box-shadow: var(--shadow-xs);
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
   cursor: pointer;
 }
 
+.studio-dl-btn[hidden] {
+  display: none;
+}
+
 .studio-dl-btn:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 
 .studio-dl-btn:active {
@@ -1142,13 +1197,12 @@ header.nav {
 /* === src/css/studio/viz.css === */
 /* Dynamic OR Visualization & Convergence Dashboard */
 .studio-viz-card {
-  background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.85);
-  border-radius: 16px;
-  padding: 22px 26px;
-  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
-  margin-top: 24px;
-  margin-bottom: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 18px 20px;
+  margin-top: 18px;
+  margin-bottom: 18px;
 }
 
 .viz-header {
@@ -1156,10 +1210,10 @@ header.nav {
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-bottom: 18px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid #f1f5f9;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--surface-2);
 }
 
 .viz-title-group {
@@ -1169,69 +1223,64 @@ header.nav {
 }
 
 .viz-icon {
-  font-size: 22px;
-  line-height: 1;
+  display: none;
 }
 
 .viz-title {
-  font-size: 14.5px;
-  font-weight: 700;
-  color: #0f172a;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
   letter-spacing: -0.01em;
 }
 
 .viz-subtitle {
   font-size: 11px;
-  color: #64748b;
-  font-weight: 500;
+  color: var(--ink-48);
+  font-weight: 400;
   margin-top: 2px;
 }
 
 .viz-badge {
   font-size: 11px;
-  background: rgba(139, 92, 246, 0.12);
-  color: #7c3aed;
-  border: 1px solid rgba(139, 92, 246, 0.25);
-  padding: 2px 10px;
-  border-radius: 9999px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-family: var(--mono);
+  background: var(--surface-2);
+  color: var(--ink-60);
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-weight: 500;
 }
 
 .viz-tabs {
   display: flex;
-  gap: 6px;
-  background: #f1f5f9;
+  gap: 4px;
+  background: var(--surface-2);
   padding: 3px;
-  border-radius: 10px;
+  border-radius: 7px;
 }
 
 .viz-tab {
   background: transparent;
   border: 1px solid transparent;
   font-size: 11.5px;
-  font-weight: 600;
-  color: #64748b;
-  padding: 6px 14px;
-  border-radius: 8px;
+  font-weight: 500;
+  color: var(--ink-60);
+  padding: 5px 11px;
+  border-radius: 5px;
   cursor: pointer;
-  transition: background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1), color 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .viz-tab:hover {
-  color: #0f172a;
-  background: rgba(255, 255, 255, 0.65);
-}
-
-.viz-tab:active {
-  transform: scale(0.97);
+  color: var(--ink);
 }
 
 .viz-tab.active {
   background: #ffffff;
-  color: #2563eb;
-  border-color: rgba(226, 232, 240, 0.9);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.02);
+  color: var(--ink);
+  font-weight: 600;
+  border-color: var(--border);
+  box-shadow: var(--shadow-xs);
 }
 
 .viz-body {
@@ -1261,16 +1310,22 @@ header.nav {
 }
 
 .viz-tooltip-pill {
-  margin-top: 12px;
-  padding: 8px 14px;
-  background: #0f172a;
-  color: #f8fafc;
-  border-radius: 8px;
+  position: absolute;
+  top: 34px;
+  right: 12px;
+  z-index: 10;
+  pointer-events: none;
+  margin: 0;
+  padding: 6px 12px;
+  background: rgba(17, 24, 39, 0.94);
+  color: #f9fafb;
+  border-radius: 6px;
   font-size: 11px;
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  max-width: min(460px, 85%);
+  box-shadow: var(--shadow-sm);
   animation: fadeInPill 0.15s ease-out;
 }
 
@@ -1303,6 +1358,7 @@ header.nav {
 
 .route-node {
   cursor: pointer;
+  pointer-events: bounding-box;
   transition: transform 0.15s ease;
 }
 
@@ -1323,6 +1379,274 @@ header.nav {
 }
 
 
+
+/* === src/css/studio/drawer.css === */
+/* Slide-over Process Watch Drawer inside Studio */
+#watchDrawerBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.38);
+  backdrop-filter: blur(2px);
+  z-index: 900;
+}
+
+#watchDrawerBackdrop[hidden] {
+  display: none;
+}
+
+.watch-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(560px, 96vw);
+  background: #ffffff;
+  border-left: 1px solid var(--border);
+  box-shadow: -12px 0 36px rgba(15, 23, 42, 0.16);
+  z-index: 910;
+  display: flex;
+  flex-direction: column;
+}
+
+.watch-drawer[hidden] {
+  display: none;
+}
+
+.watch-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #111318;
+  color: #f9fafb;
+  border-bottom: 1px solid #232730;
+}
+
+.watch-drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.wd-status-pill {
+  font-size: 10.5px;
+  font-family: var(--mono);
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: #232730;
+  color: #d1d5db;
+  font-weight: 500;
+}
+
+.wd-status-pill.running {
+  background: rgba(59, 130, 246, 0.3);
+  color: #93c5fd;
+}
+
+.wd-status-pill.ok {
+  background: rgba(16, 185, 129, 0.28);
+  color: #6ee7b7;
+}
+
+.wd-status-pill.warn {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fcd34d;
+}
+
+.watch-drawer-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.watch-drawer-controls .wb-btn {
+  background: #232730;
+  color: #f3f4f6;
+  border: 1px solid #353b48;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  text-decoration: none;
+}
+
+.watch-drawer-controls .wb-btn:hover:not(:disabled) {
+  background: #2f3542;
+  color: #ffffff;
+  border-color: #4b5563;
+}
+
+.wd-slug-tag {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: #94a3b8;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watch-drawer-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 16px 18px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #f8fafc;
+}
+
+.wd-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wd-kpi {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wd-kpi-label {
+  font-size: 10.5px;
+  color: var(--ink-48);
+}
+
+.wd-kpi strong {
+  font-size: 12.5px;
+  color: var(--ink);
+  font-family: var(--mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wd-section {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.wd-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+
+.wd-stages-list,
+.wd-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 210px;
+  overflow-y: auto;
+}
+
+.wd-stage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 11.5px;
+}
+
+.wd-evo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.wd-evo-row.improved {
+  background: #ecfdf5;
+  border-color: #6ee7b7;
+}
+
+.wd-evo-row.invalid {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.wd-event-row {
+  padding: 6px 10px;
+  background: #f8fafc;
+  border-left: 3px solid #3b82f6;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: #334155;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.wd-event-row.err {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.wd-empty {
+  font-size: 11.5px;
+  color: var(--ink-48);
+  padding: 8px 4px;
+}
+
+.wd-art-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.wd-art-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: var(--mono);
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+}
+
+.wd-art-btn.active {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.wd-art-preview {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.5;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
   </style>
 </head>
 <body class="mode-studio">
@@ -1330,13 +1654,13 @@ header.nav {
 <!-- === src/html/header.html === -->
   <header class="nav">
     <div class="nav-brand">
-      <div class="brand-logo">⚡</div>
-      <span>OR-Path 智能做题工作舱 · Live Watch</span>
+      <div class="brand-logo">OR</div>
+      <span>OR-Path 运筹求解工作台</span>
     </div>
     <div class="nav-right">
       <div class="mode-toggle-group">
-        <a class="mode-btn" id="btnModeStudio" href="/studio">✨ 极简做题模式 (Studio)</a>
-        <a class="mode-btn" id="btnModeInspector" href="/">🛠️ 专家监视模式 (Inspector)</a>
+        <a class="mode-btn" id="btnModeStudio" href="/">工作台</a>
+        <button type="button" class="mode-btn" id="btnToggleWatchDrawer" title="展开/收起过程监视抽屉">过程监视</button>
       </div>
       <div class="badges" id="badges"></div>
     </div>
@@ -1346,20 +1670,20 @@ header.nav {
 <!-- === src/html/studio/shell.html === -->
   <div id="studio-root">
   <div id="studioContainer">
-    <!-- Hero Banner -->
+    <!-- Page Header -->
     <div class="studio-hero">
       <div>
         <h1 class="studio-hero-title">
-          <span>✨ 智能运筹做题工作舱</span>
-          <span class="studio-hero-tag">OR Studio</span>
+          <span>运筹建模与求解</span>
+          <span class="studio-hero-tag">Studio</span>
         </h1>
         <p class="studio-hero-desc">
-          文件夹一键拖拽解析 · 数据探针自动对齐 · 快速单体闭环 / Deep 4-Agent 协同 · 策略自动直通求解与按需研报
+          导入题面或算例目录，自动完成建模诊断、精确求解与独立验算
         </p>
       </div>
       <div>
         <div class="studio-hero-truth">
-          <span>🛡️ 严守数字真理底线 (Numbers Truth)</span>
+          <span>Numbers Truth · 独立验算校验</span>
         </div>
       </div>
     </div>
@@ -1367,10 +1691,10 @@ header.nav {
     <!-- Dual-Mode Execution Strip: Fast Mode (4-step) OR Deep Mode (Lean 4-Agent) -->
     <div id="studioPipelineStrip">
       <div class="fast-progress-bar" id="studioFastProgress" data-mode="fast">
-        <div class="fast-step-item active" id="fastStepProbe" data-fast-step="probe">
+        <div class="fast-step-item" id="fastStepProbe" data-fast-step="probe">
           <div class="fast-step-dot">1</div>
           <div class="fast-step-meta">
-            <div class="fast-step-title">📥 数据探针 (Preflight)</div>
+            <div class="fast-step-title">数据探针 · Preflight</div>
             <div class="fast-step-sub" id="fastStepProbeSub">等待导入或输入题面</div>
           </div>
           <span class="fast-step-badge waiting" id="fastStepProbeState">待命</span>
@@ -1378,7 +1702,7 @@ header.nav {
         <div class="fast-step-item" id="fastStepPlan" data-fast-step="plan">
           <div class="fast-step-dot">2</div>
           <div class="fast-step-meta">
-            <div class="fast-step-title">🧠 单体规划 (Single-Agent)</div>
+            <div class="fast-step-title">建模规划 · Planner</div>
             <div class="fast-step-sub" id="fastStepPlanSub">结构化建模与策略选择</div>
           </div>
           <span class="fast-step-badge waiting" id="fastStepPlanState">待命</span>
@@ -1386,7 +1710,7 @@ header.nav {
         <div class="fast-step-item" id="fastStepSolve" data-fast-step="solve">
           <div class="fast-step-dot">3</div>
           <div class="fast-step-meta">
-            <div class="fast-step-title">🧮 求解器真算 (Solver)</div>
+            <div class="fast-step-title">求解计算 · Solver</div>
             <div class="fast-step-sub" id="fastStepSolveSub">确定性算子精确求解</div>
           </div>
           <span class="fast-step-badge waiting" id="fastStepSolveState">待命</span>
@@ -1394,20 +1718,20 @@ header.nav {
         <div class="fast-step-item" id="fastStepGate" data-fast-step="gate">
           <div class="fast-step-dot">4</div>
           <div class="fast-step-meta">
-            <div class="fast-step-title">🚪 物理门禁 (Validation)</div>
-            <div class="fast-step-sub" id="fastStepGateSub">独立重算与 Numbers Truth</div>
+            <div class="fast-step-title">独立验算 · Validator</div>
+            <div class="fast-step-sub" id="fastStepGateSub">约束复核与 Numbers Truth</div>
           </div>
           <span class="fast-step-badge waiting" id="fastStepGateState">待命</span>
         </div>
       </div>
 
       <div class="deep-4agent-strip" id="studioDeepStrip" data-mode="deep" hidden>
-        <div class="deep-agent-card active" id="deepCardAnalyst" data-deep-agent="or_analyst">
+        <div class="deep-agent-card" id="deepCardAnalyst" data-deep-agent="or_analyst">
           <div class="deep-agent-top">
-            <span class="deep-agent-icon">🔎</span>
+            <span class="deep-agent-icon">01</span>
             <div>
               <div class="deep-agent-name">or_analyst</div>
-              <div class="deep-agent-role">题面解析 · 领域挂载</div>
+              <div class="deep-agent-role">题面解析 · 领域识别</div>
             </div>
             <span class="fast-step-badge waiting" id="deepStateAnalyst">待命</span>
           </div>
@@ -1415,7 +1739,7 @@ header.nav {
         </div>
         <div class="deep-agent-card" id="deepCardModeler" data-deep-agent="or_modeler">
           <div class="deep-agent-top">
-            <span class="deep-agent-icon">📐</span>
+            <span class="deep-agent-icon">02</span>
             <div>
               <div class="deep-agent-name">or_modeler</div>
               <div class="deep-agent-role">数学建模 · 求解调优</div>
@@ -1426,7 +1750,7 @@ header.nav {
         </div>
         <div class="deep-agent-card" id="deepCardWriter" data-deep-agent="or_writer">
           <div class="deep-agent-top">
-            <span class="deep-agent-icon">📝</span>
+            <span class="deep-agent-icon">03</span>
             <div>
               <div class="deep-agent-name">or_writer</div>
               <div class="deep-agent-role">真值表渲染 · 六章论文</div>
@@ -1437,10 +1761,10 @@ header.nav {
         </div>
         <div class="deep-agent-card" id="deepCardReviewer" data-deep-agent="or_reviewer">
           <div class="deep-agent-top">
-            <span class="deep-agent-icon">🎯</span>
+            <span class="deep-agent-icon">04</span>
             <div>
-              <span class="deep-agent-name">or_reviewer</span>
-              <div class="deep-agent-role">R1/R2 审计 · DIMO 红队</div>
+              <div class="deep-agent-name">or_reviewer</div>
+              <div class="deep-agent-role">R1/R2 审计 · DIMO 校验</div>
             </div>
             <span class="fast-step-badge waiting" id="deepStateReviewer">待命</span>
           </div>
@@ -1449,48 +1773,56 @@ header.nav {
       </div>
     </div>
 
-    <!-- AI Deep Thinking & Run Mode Configuration Bar -->
+    <!-- Execution & Model Config Bar -->
     <div id="studioAiConfigBar">
       <div class="studio-runmode-group" id="studioRunModeGroup" role="group" aria-label="执行模式选择">
-        <button type="button" class="runmode-btn active" id="btnRunModeFast" data-run-mode="fast" title="快速单智能体模式：仅执行真算与物理门禁校验，跳过长论文撰写（结果确认后可按需补生）">⚡ 快速模式 (Fast)</button>
-        <button type="button" class="runmode-btn" id="btnRunModeDeep" data-run-mode="deep" title="深度多智能体模式：完整运行 Lean 4-Agent 与 6 章论文红队审稿闭环">🔬 深度模式 (Deep)</button>
+        <button type="button" class="runmode-btn active" id="btnRunModeFast" data-run-mode="fast" title="快速模式：仅执行求解与验算校验，跳过长论文撰写（结果确认后可按需补生）">快速求解 (Fast)</button>
+        <button type="button" class="runmode-btn" id="btnRunModeDeep" data-run-mode="deep" title="深度模式：运行多智能体协同与六章论文审稿流程">深度多轮 (Deep)</button>
       </div>
-      <div class="ai-config-label">
-        <span>🤖 模型配置</span>
+      <div class="studio-deep-rounds-group" id="studioDeepRoundsGroup" role="group" aria-label="深度演化轮次档位" title="深度模式沙箱演化轮次档位（单轮脚本上限 600s；正向改进可自主延展至多 10 轮）" hidden>
+        <span class="deeprounds-label">迭代</span>
+        <button type="button" class="deeprounds-btn" id="btnDeepRounds3" data-deep-rounds="3">3 轮</button>
+        <button type="button" class="deeprounds-btn active" id="btnDeepRounds5" data-deep-rounds="5">5 轮</button>
+        <button type="button" class="deeprounds-btn" id="btnDeepRounds8" data-deep-rounds="8">8 轮</button>
       </div>
       <div class="ai-config-inputs">
-        <input type="password" id="studioApiKeyInput" placeholder="输入 API Key (讯飞 ak-... 或 DeepSeek sk-...) · 留空使用离线探针" />
+        <label class="ai-config-label" for="studioApiKeyInput"><span>API Key</span></label>
+        <input type="password" id="studioApiKeyInput" placeholder="ak-... / sk-...，留空则用服务端环境变量或离线探针" />
+        <label class="ai-config-label" for="studioModelSelect"><span>模型</span></label>
         <select id="studioModelSelect">
-          <option value="spark-x2.6">讯飞星辰 Spark X2.6 (深度思考链)</option>
-          <option value="deepseek-reasoner">DeepSeek-R1 (深度推理链)</option>
-          <option value="deepseek-chat">DeepSeek-V3 (通用建模问答)</option>
-          <option value="offline">离线模式 (本地规则探针 · 无需Key)</option>
+          <option value="deepseek-flash">DeepSeek-Flash</option>
+          <option value="deepseek-reasoner">DeepSeek-R1</option>
+          <option value="deepseek-chat">DeepSeek-V3</option>
+          <option value="spark-x2.6">Spark X2.6</option>
+          <option value="offline">离线规则探针</option>
         </select>
         <button type="button" class="wb-btn" id="btnSaveApiKey">保存</button>
       </div>
-      <div id="studioApiKeyBadge" style="background:rgba(245,158,11,0.12);color:#d97706;border:1px solid rgba(245,158,11,0.3)">
-        ⚠️ 离线规则探针 (未配置 API Key)
+      <div id="studioApiKeyBadge" style="background:var(--surface-2);color:var(--ink-60);border:1px solid var(--border)">
+        离线规则探针（未配置 Key）
       </div>
     </div>
 
-    <!-- Step 1: Input Composer (Folder / Multi-file Drag & Drop + Prompt) -->
+    <!-- Step 1: Input Composer -->
     <div class="studio-card" id="studioStep1">
       <div class="studio-step-header">
         <div class="step-num-badge step-1">1</div>
-        <h2 class="studio-step-title">上传题目附件与输入需求</h2>
-        <span class="studio-step-sub">支持题目文件夹拖入 / 多选文件 (MD/PDF/CSV/XLSX/JSON)</span>
+        <h2 class="studio-step-title">导入题面与输入数据</h2>
+        <span class="studio-step-sub">支持目录拖拽或选择文件（MD / PDF / CSV / XLSX / JSON）</span>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div class="studio-composer-grid">
         <!-- Left: Drag and drop folder zone -->
         <div>
           <div id="studioDropzone">
-            <div class="dropzone-icon">📁</div>
-            <div class="dropzone-title">点击此处选择文件，或直接将文件夹/附件拖入</div>
-            <div class="dropzone-hint">支持多层级子目录与混合文件类型（题面、坐标矩阵、需求表）</div>
-            <div style="display:flex;gap:10px;justify-content:center">
-              <button type="button" class="wb-btn" id="btnPickFiles">📄 选择多个文件</button>
-              <button type="button" class="wb-btn" id="btnPickFolder">📁 选择整个文件夹</button>
+            <div class="dropzone-icon" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="dropzone-title">拖入题面目录或数据文件，或点击浏览</div>
+            <div class="dropzone-hint">支持嵌套子目录与混合附件（题面说明、坐标矩阵、需求表）</div>
+            <div style="display:flex;gap:8px;justify-content:center">
+              <button type="button" class="wb-btn" id="btnPickFiles">选择文件</button>
+              <button type="button" class="wb-btn" id="btnPickFolder">选择文件夹</button>
             </div>
             <input type="file" id="studioFileInput" multiple webkitdirectory style="display:none" />
             <input type="file" id="studioFilesOnlyInput" multiple style="display:none" />
@@ -1498,12 +1830,12 @@ header.nav {
 
           <div id="studioFileList"></div>
 
-          <!-- Quick Action Notice (Direct Next Step) -->
+          <!-- Quick Action Notice -->
           <div id="studioFileActionNotice">
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-              <span style="font-size:12.5px;color:#047857;font-weight:700" id="studioFileReadyText">✅ 文件已就绪</span>
-              <button type="button" class="wb-btn primary" id="btnStudioQuickAnalyze">
-                🚀 一键分析并立即求解 ➔
+              <span style="font-size:12px;color:#047857;font-weight:600" id="studioFileReadyText">文件已就绪</span>
+              <button type="button" class="wb-btn" id="btnStudioQuickAnalyze">
+                立即分析并求解
               </button>
             </div>
           </div>
@@ -1511,24 +1843,24 @@ header.nav {
 
         <!-- Right: Problem Name + Prompt input -->
         <div style="display:flex;flex-direction:column;gap:12px">
-          <div style="display:flex;gap:12px">
+          <div style="display:flex;gap:10px">
             <div style="flex:1">
-              <label style="font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;color:#475569">题目任务标识 (Slug)</label>
-              <input type="text" id="studioSlugInput" value="case-my-problem" style="width:100%;height:36px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;font-family:var(--mono);outline:none;background:#f8fafc" />
+              <label style="font-size:11.5px;font-weight:600;display:block;margin-bottom:5px;color:var(--ink-60)">任务标识 (Slug)</label>
+              <input type="text" id="studioSlugInput" value="case-my-problem" style="width:100%;height:34px;padding:0 11px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;font-family:var(--mono);outline:none;background:#fafafa;color:var(--ink)" />
             </div>
             <div style="display:flex;align-items:flex-end">
-              <button type="button" class="wb-btn" id="btnStudioLoadPreset" style="height:36px;font-size:11.5px">📚 加载 8 工位巡检测试算例</button>
+              <button type="button" class="wb-btn" id="btnStudioLoadPreset" style="height:34px;font-size:11.5px">载入示例：8 工位巡检</button>
             </div>
           </div>
           <div style="flex:1;display:flex;flex-direction:column">
-            <label style="font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;color:#475569">自然语言需求与业务偏好 (提示词)</label>
-            <textarea id="studioPromptInput" rows="4" placeholder="例如：请为这8个检测工位规划一条最短巡检封闭回路，优先兼顾求解速度与距离最优，站点坐标请参考附件 coords.json…" style="width:100%;flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font-size:12.5px;line-height:1.55;resize:vertical;background:#f8fafc;outline:none"></textarea>
+            <label style="font-size:11.5px;font-weight:600;display:block;margin-bottom:5px;color:var(--ink-60)">补充说明与约束要求</label>
+            <textarea id="studioPromptInput" rows="4" placeholder="描述目标函数、约束条件或补充说明；例如：为 8 个检测工位规划总里程最短的封闭巡检回路，站点坐标见 coords.json" style="width:100%;flex:1;padding:10px 12px;border:1px solid var(--border-strong);border-radius:7px;font-size:12.5px;line-height:1.55;resize:vertical;background:#fafafa;color:var(--ink);outline:none"></textarea>
           </div>
           <div id="studioAnalyzeError" class="studio-error-box"></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+          <div class="studio-step1-footer">
             <span id="studioStep1Status" class="studio-status-text" style="color:var(--blue)"></span>
-            <button type="button" class="wb-btn primary" id="btnStudioAnalyze" style="height:38px;padding:0 24px;font-size:13px;font-weight:700">
-              🚀 一键分析并求解
+            <button type="button" class="wb-btn primary" id="btnStudioAnalyze" style="height:36px;padding:0 20px;font-size:12.5px;font-weight:600">
+              分析并求解
             </button>
           </div>
         </div>
@@ -1536,57 +1868,56 @@ header.nav {
     </div>
 
 
-
 <!-- === src/html/studio/analysis.html === -->
-    <!-- Step 2: Deep Thinking Analysis & Strategy Parameter Card (Non-blocking) -->
+    <!-- Step 2: Modeling Diagnosis & Strategy Parameters -->
     <div class="studio-card" id="studioAnalysisCard" style="display:none">
       <div class="studio-step-header">
         <div class="step-num-badge step-2">2</div>
-        <h2 class="studio-step-title">建模思路研判与策略参数</h2>
-        <span class="studio-step-sub">全自动直通求解 · 已默认采用推荐策略（可随时微调重算）</span>
+        <h2 class="studio-step-title">建模诊断与参数策略</h2>
+        <span class="studio-step-sub">默认按推荐策略自动求解，可在此调整后重算</span>
       </div>
 
       <div id="studioDiagnosisBanner"></div>
       <div id="studioKnowledgeBanner" style="display:none"></div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+      <div id="studioCompareGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
         <div>
-          <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;color:#334155">⚖️ 求解算法可行性推演对比</div>
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--ink-80)">算法对比</div>
           <div id="studioAlgoList"></div>
         </div>
-        <div>
-          <div style="font-size:12.5px;font-weight:700;margin-bottom:8px;color:#334155">📊 数据探针与输入参数对齐</div>
+        <div id="studioDataCol">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--ink-80)">参数对齐</div>
           <div id="studioDataList"></div>
         </div>
       </div>
 
-      <details style="margin-bottom:18px;background:#f8fafc;border-radius:12px;padding:12px 16px;border:1px solid var(--border)" id="studioThinkingDetails">
-        <summary style="font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;color:#334155">
-          <span>🧠 查看深度推演过程与思考链 (Deep Thinking)</span>
-          <span id="studioThinkingBadge" style="font-size:11px;padding:3px 10px;border-radius:var(--pill);font-weight:600;margin-left:auto"></span>
+      <details style="margin-bottom:16px;background:#fafafa;border-radius:8px;padding:11px 14px;border:1px solid var(--border)" id="studioThinkingDetails">
+        <summary style="font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--ink-80)">
+          <span>查看推理过程</span>
+          <span id="studioThinkingBadge" style="font-size:11px;font-family:var(--mono);padding:2px 8px;border-radius:5px;font-weight:500;margin-left:auto"></span>
         </summary>
-        <div id="studioKeyPromptBanner" style="display:none;margin:12px 0 8px 0;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;line-height:1.5">
-          💡 <strong>离线模式提示：</strong>当前未配置 API Key，展示的是基于本地知识库的确定性规则推演。在上方填入 Key 即可启动真正的深度语义推理链。
+        <div id="studioKeyPromptBanner" style="display:none;margin:10px 0 8px 0;background:var(--warn-light);border:1px solid #fde68a;border-radius:6px;padding:9px 12px;font-size:12px;color:#92400e;line-height:1.5">
+          <strong>离线规则说明：</strong>未检测到服务端或浏览器 API Key，当前展示基于本地知识库的规则诊断。
         </div>
-        <div id="studioThinkingContent" style="margin-top:12px;font-size:11.5px;font-family:var(--mono);line-height:1.65;white-space:pre-wrap;color:#475569;background:#ffffff;padding:12px;border-radius:8px;border:1px solid #e2e8f0;max-height:220px;overflow-y:auto"></div>
+        <div id="studioThinkingContent" style="margin-top:10px;font-size:11.5px;font-family:var(--mono);line-height:1.65;white-space:pre-wrap;color:var(--ink-60);background:#ffffff;padding:12px;border-radius:6px;border:1px solid var(--border);max-height:220px;overflow-y:auto"></div>
       </details>
 
-      <div style="background:#f8fafc;border-radius:14px;padding:18px 20px;margin-bottom:18px;border:1px solid var(--border)">
-        <div style="font-size:13.5px;font-weight:800;margin-bottom:14px;color:#1e293b">⚙️ 求解策略与参数预设（已自动采用推荐方向，可按需微调后重算）：</div>
+      <div style="background:#fafafa;border-radius:8px;padding:16px 18px;margin-bottom:16px;border:1px solid var(--border)">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:12px;color:var(--ink)">求解策略与参数设置</div>
         <div id="studioQuestionsBox"></div>
       </div>
 
-      <div style="margin-bottom:18px">
-        <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px;color:#475569">💬 自由补充指令（选填）：</label>
-        <input type="text" id="studioExtraPrompt" placeholder="例如：请将巡检结果用通俗报告呈现，标明总里程…" style="width:100%;height:38px;padding:0 14px;border:1px solid #cbd5e1;border-radius:10px;font-size:12.5px;outline:none;background:#f8fafc" />
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px;color:var(--ink-60)">附加约束指令（选填）</label>
+        <input type="text" id="studioExtraPrompt" placeholder="补充输出格式要求或业务偏好…" style="width:100%;height:34px;padding:0 12px;border:1px solid var(--border-strong);border-radius:7px;font-size:12px;outline:none;background:#fafafa;color:var(--ink)" />
       </div>
 
       <div id="studioConfirmError" class="studio-error-box"></div>
 
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-        <span id="studioStep2Status" style="font-size:12px;color:#64748b">修改上方策略或知识库锚点后，可一键按新参数重新求解</span>
-        <button type="button" class="wb-btn success" id="btnStudioConfirmSolve" style="height:40px;padding:0 28px;font-size:14px;font-weight:700">
-          🔄 应用参数微调并重算
+        <span id="studioStep2Status" style="font-size:12px;color:var(--ink-48)">修改上方策略或知识库锚点后，可按新参数重新求解</span>
+        <button type="button" class="wb-btn success" id="btnStudioConfirmSolve" style="height:36px;padding:0 20px;font-size:12.5px;font-weight:600">
+          按新参数重算
         </button>
       </div>
     </div>
@@ -1598,78 +1929,143 @@ header.nav {
     <div class="studio-card" id="studioResultCard" style="display:none">
       <div class="studio-step-header">
         <div class="step-num-badge step-3">3</div>
-        <h2 class="studio-step-title">求解成果与全维交付物</h2>
-        <span class="studio-step-sub" id="studioStep3Sub">纯真数字 · 数学验算合格</span>
+        <h2 class="studio-step-title">求解结果与交付文件</h2>
+        <span class="studio-step-sub" id="studioStep3Sub">数值已独立验算</span>
       </div>
 
-      <div id="studioResultBanner" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:14px;padding:20px 26px;margin-bottom:22px">
+      <div id="studioResultBanner" style="background:#fafafa;border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin-bottom:18px">
         <div id="studioHeadline"></div>
-        <div style="display:flex;gap:36px;align-items:baseline;flex-wrap:wrap">
+        <div style="display:flex;gap:32px;align-items:baseline;flex-wrap:wrap">
           <div id="studioObjective"></div>
           <div id="studioValidation"></div>
         </div>
         <div id="studioSolutionDetail"></div>
       </div>
 
-      <!-- Step 3.5: Dynamic OR Visualization Cockpit -->
+      <!-- Dynamic OR Visualization & Convergence View -->
       <div id="studioVizContainer" class="studio-viz-card">
         <div class="viz-header">
           <div class="viz-title-group">
-            <span class="viz-icon">📊</span>
             <div>
-              <div class="viz-title">动态运筹图谱与收敛驾驶舱</div>
-              <div class="viz-subtitle">高精度纯矢量图谱 · 真实算子数据驱动 · 毫米级时序与拓扑研判</div>
+              <div class="viz-title">方案与收敛视图</div>
+              <div class="viz-subtitle">基于本次真实求解输出生成</div>
             </div>
-            <span class="viz-badge" id="vizDomainBadge">车间调度 / 路径 / 收敛</span>
+            <span class="viz-badge" id="vizDomainBadge">排产 / 路径 / 收敛</span>
           </div>
           <div class="viz-tabs" id="vizTabs">
-            <button type="button" class="viz-tab active" data-viz-tab="gantt" id="tabVizGantt">🏭 车间排产甘特图</button>
-            <button type="button" class="viz-tab" data-viz-tab="routes" id="tabVizRoutes">🚚 物流路线地图轨迹</button>
-            <button type="button" class="viz-tab" data-viz-tab="gap" id="tabVizGap">📈 ALNS 下界收敛曲线</button>
+            <button type="button" class="viz-tab active" data-viz-tab="gantt" id="tabVizGantt">排产甘特图</button>
+            <button type="button" class="viz-tab" data-viz-tab="routes" id="tabVizRoutes">路线轨迹</button>
+            <button type="button" class="viz-tab" data-viz-tab="microgrid" id="tabVizMicrogrid">微电网调度</button>
+            <button type="button" class="viz-tab" data-viz-tab="gap" id="tabVizGap">收敛曲线</button>
           </div>
         </div>
         <div class="viz-body">
-          <div class="viz-panel active" id="vizPanelGantt"></div>
-          <div class="viz-panel" id="vizPanelRoutes" style="display:none"></div>
-          <div class="viz-panel" id="vizPanelGap" style="display:none"></div>
           <div id="vizInteractiveTooltip" class="viz-tooltip-pill" style="display:none">
-            <span class="viz-tt-icon">💡</span>
+            <span class="viz-tt-icon">•</span>
             <span class="viz-tt-text" id="vizTooltipText"></span>
           </div>
+          <div class="viz-panel active" id="vizPanelGantt"></div>
+          <div class="viz-panel" id="vizPanelRoutes" style="display:none"></div>
+          <div class="viz-panel" id="vizPanelMicrogrid" style="display:none"></div>
+          <div class="viz-panel" id="vizPanelGap" style="display:none"></div>
         </div>
       </div>
 
-      <div style="margin-bottom:22px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#1e293b">📦 成果一键打包与下载：</div>
+      <div style="margin-bottom:18px">
+        <div style="font-size:12.5px;font-weight:600;margin-bottom:10px;color:var(--ink)">导出文件</div>
         <div id="studioDownloads">
           <a class="studio-dl-btn" id="dlSolution" href="#" download>
-            📥 求解输出数据 (solution.json)
+            solution.json
           </a>
           <a class="studio-dl-btn" id="dlValidation" href="#" download>
-            🛡️ 物理与数学质检报告 (validate.json)
+            validate.json
           </a>
-          <a class="studio-dl-btn" id="dlPaper" href="#" download>
-            📑 工业与学术研报 (paper.md)
+          <a class="studio-dl-btn" id="dlPaper" href="#" download hidden>
+            paper.md
           </a>
           <a class="studio-dl-btn" id="dlAnalysis" href="#" download>
-            🧠 建模研判方案 (analysis.json)
+            analysis.json
           </a>
           <button type="button" class="wb-btn primary" id="btnStudioGeneratePaper" hidden>
-            📑 按需生成完整学术论文
+            生成学术论文
           </button>
-          <span id="studioPaperStatus" style="font-size:12px;font-weight:600;color:#475569;align-self:center"></span>
+          <span id="studioPaperStatus" style="font-size:12px;font-weight:500;color:var(--ink-48);align-self:center"></span>
         </div>
       </div>
 
       <div style="text-align:right">
-        <a class="wb-btn" id="btnStudioViewInspector" href="/" style="font-size:12px;text-decoration:none">
-          🔍 在「专家监视模式」中查看底层控制面与验证完整细节 →
-        </a>
+        <button type="button" class="wb-btn" id="btnStudioViewInspector" style="font-size:12px">
+          展开过程监视抽屉 →
+        </button>
       </div>
     </div>
   </div>
   </div> <!-- #studio-root -->
   <!-- ==================== END STUDIO MODE CONTAINER ==================== -->
+
+
+<!-- === src/html/studio/drawer.html === -->
+  <!-- Process Watch Drawer (Slide-over non-blocking telemetry panel) -->
+  <div id="watchDrawerBackdrop" hidden></div>
+  <aside id="watchDrawer" class="watch-drawer" aria-label="过程监视抽屉" hidden>
+    <div class="watch-drawer-header">
+      <div class="watch-drawer-title">
+        <span>过程监视</span>
+        <span class="wd-status-pill" id="wdStatusPill">空闲</span>
+      </div>
+      <div class="watch-drawer-controls">
+        <span class="wd-slug-tag" id="wdSlugTag">-</span>
+        <button type="button" class="wb-btn" id="btnWdRetry" title="直接重新求解当前任务">重新求解</button>
+        <button type="button" class="wb-btn" id="btnWdRefresh" title="立即刷新">↻ 刷新</button>
+        <button type="button" class="wb-btn" id="btnWdClose" title="关闭抽屉">✕ 关闭</button>
+      </div>
+    </div>
+
+    <div class="watch-drawer-body">
+      <div class="wd-section" id="wdErrorBox" style="border-left:3px solid var(--fail);background:#fef2f2" hidden>
+        <div class="wd-section-title" id="wdErrorTitle" style="color:#b91c1c;margin-bottom:4px">运行受阻</div>
+        <div id="wdErrorDesc" style="font-size:12px;color:var(--ink-80);line-height:1.5"></div>
+      </div>
+      <div class="wd-kpi-row" id="wdKpiRow">
+        <div class="wd-kpi"><span class="wd-kpi-label">当前阶段</span><strong id="wdStageText">待命</strong></div>
+        <div class="wd-kpi"><span class="wd-kpi-label">沙箱自愈</span><strong id="wdRepairCount">0 轮</strong></div>
+        <div class="wd-kpi"><span class="wd-kpi-label">执行引擎</span><strong id="wdEngineText">-</strong></div>
+      </div>
+
+      <div class="wd-section" id="wdEvolutionSection" hidden>
+        <div class="wd-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>演化记录 (R1..R10)</span>
+          <span id="wdEvoIncumbent" style="font-family:var(--mono);font-size:11px;color:#047857">最优基线: —</span>
+        </div>
+        <div id="wdEvolutionList" class="wd-stages-list"></div>
+      </div>
+
+      <div class="wd-section">
+        <div class="wd-section-title">阶段耗时</div>
+        <div id="wdStagesList" class="wd-stages-list">
+          <div class="wd-empty">开始求解后将在此显示各阶段耗时</div>
+        </div>
+      </div>
+
+      <div class="wd-section">
+        <div class="wd-section-title">执行事件</div>
+        <div id="wdEventsList" class="wd-events-list">
+          <div class="wd-empty">暂无执行事件</div>
+        </div>
+      </div>
+
+      <div class="wd-section">
+        <div class="wd-section-title">产物预览</div>
+        <div class="wd-art-tabs" id="wdArtTabs">
+          <button type="button" class="wd-art-btn active" data-wd-art="solution">solution.json</button>
+          <button type="button" class="wd-art-btn" data-wd-art="validate">validate.json</button>
+          <button type="button" class="wd-art-btn" data-wd-art="schema">schema.json</button>
+          <button type="button" class="wd-art-btn" data-wd-art="paper">paper.md</button>
+        </div>
+        <pre id="wdArtPreview" class="wd-art-preview">选择上方文件查看输出内容</pre>
+      </div>
+    </div>
+  </aside>
 
 
   <script>
@@ -1688,13 +2084,20 @@ const NODE_ZH = {
   or_modeler: "数学建模",
   or_writer: "学术写稿",
   or_reviewer: "审稿红队",
+  or_researcher: "知识调研",
+  analyst: "领域研判",
+  modeler: "数学建模",
+  writer: "学术写稿",
+  reviewer: "审稿红队",
+  tier_c_focus: "分问深挖",
+  graph_solve: "图谱求解",
   retrieve: "检索",
   research: "调研",
   model: "建模",
-  gate_schema: "结构门禁",
+  gate_schema: "结构校验",
   solve: "求解",
-  gate_validate: "校验",
-  human_stop: "人工确认",
+  gate_validate: "独立验算",
+  human_stop: "异常收口",
   explain: "解释",
   draft_paper: "写稿",
   cite_pack: "引用打包",
@@ -1710,7 +2113,7 @@ const STATUS_ZH = {
   blocked: "受阻",
   running: "运行中",
   idle: "空闲",
-  no_product_run: "尚无产品跑次",
+  no_product_run: "尚无运行记录",
   available: "有思维链",
   thinking_unavailable: "无思维链",
 };
@@ -1756,7 +2159,11 @@ function esc(x) {
 
 function fmtKB(bytes) {
   if (bytes == null || isNaN(bytes)) return "? KB";
-  return Math.round(bytes / 1024) + " KB";
+  const b = Number(bytes);
+  if (b <= 0) return "0 B";
+  if (b < 1024) return b + " B";
+  const kb = b / 1024;
+  return (kb < 10 ? kb.toFixed(1) : Math.round(kb)) + " KB";
 }
 
 function showToast(msg, type = "info") {
@@ -1838,7 +2245,7 @@ function iconFor(kind) {
     clock: "⏱",
     hand: "🖐",
     warn: "⚠",
-    gate: "🚪",
+    gate: "🛡️",
     schema: "📐",
     solve: "🧮",
     paper: "📄",
@@ -1848,12 +2255,16 @@ function iconFor(kind) {
 }
 
 /**
- * 同步顶部导航栏激活状态 (/studio vs /)
+ * 同步顶部导航栏激活状态 (/ Studio vs 过程监视抽屉)
  */
 function syncHeaderNavState() {
   const isStudio = document.body.classList.contains("mode-studio");
   if ($("btnModeStudio")) $("btnModeStudio").classList.toggle("on", isStudio);
-  if ($("btnModeInspector")) $("btnModeInspector").classList.toggle("on", !isStudio);
+  if ($("btnToggleWatchDrawer")) {
+    const dr = $("watchDrawer");
+    const isWatchActive = !isStudio || Boolean(dr && !dr.hidden);
+    $("btnToggleWatchDrawer").classList.toggle("on", isWatchActive);
+  }
 }
 
 
@@ -1879,18 +2290,25 @@ async function orpathIntakeImport(payload, signal) {
 // Studio shared state, AI config, run-mode & 4-stage pipeline indicator
 const studioState = {
   runMode: (localStorage.getItem("orpath_run_mode") || "fast") === "deep" ? "deep" : "fast",
+  deepRounds: [3, 5, 8].includes(Number(localStorage.getItem("orpath_deep_rounds")))
+    ? Number(localStorage.getItem("orpath_deep_rounds"))
+    : 5,
   lastSolvedSlug: "",
   domainKey: "default",
   loadedFiles: [],
   currentAnalysis: null,
   analyzeAbortController: null,
   confirmAbortController: null,
+  deepPollTimer: null,
   vizTabsBound: false,
+  serverEnvConfigured: false,
+  serverProvider: "none",
+  serverDefaultModel: "deepseek-flash",
 };
 
 const DOMAIN_BADGES = {
-  cutting: "下料切剖 / 共边DP",
-  routing: "物流路径 / HGS遗传",
+  cutting: "下料切剖 / 共边优化",
+  routing: "路径规划 / TSP · VRP",
   scheduling: "车间排产 / 析取图",
   project: "工程进度 / 累积资源",
   inventory: "供应链库存 / WW-DP",
@@ -1904,12 +2322,64 @@ const DOMAIN_BADGES = {
 
 function setRunMode(mode) {
   const m = mode === "deep" ? "deep" : "fast";
+  const changed = studioState.runMode !== m;
   studioState.runMode = m;
   try { localStorage.setItem("orpath_run_mode", m); } catch (_) {}
   if ($("btnRunModeFast")) $("btnRunModeFast").classList.toggle("active", m === "fast");
   if ($("btnRunModeDeep")) $("btnRunModeDeep").classList.toggle("active", m === "deep");
   if ($("studioFastProgress")) $("studioFastProgress").hidden = (m !== "fast");
   if ($("studioDeepStrip")) $("studioDeepStrip").hidden = (m !== "deep");
+  if ($("studioDeepRoundsGroup")) $("studioDeepRoundsGroup").hidden = (m !== "deep");
+  if (changed && typeof resetStudioRunUI === "function") {
+    resetStudioRunUI(false);
+  }
+}
+
+function setDeepRounds(rounds) {
+  const parsed = Number(rounds);
+  const r = [3, 5, 8].includes(parsed) ? parsed : 5;
+  studioState.deepRounds = r;
+  try { localStorage.setItem("orpath_deep_rounds", String(r)); } catch (_) {}
+  [3, 5, 8].forEach(val => {
+    const btn = $(`btnDeepRounds${val}`);
+    if (btn) btn.classList.toggle("active", val === r);
+  });
+  if ($("deepToolModeler")) {
+    $("deepToolModeler").textContent = `R1..R${r} (≤600s/轮)`;
+  }
+}
+
+function resetStudioRunUI(resetAnalysis = false) {
+  if (studioState.deepPollTimer) {
+    clearInterval(studioState.deepPollTimer);
+    studioState.deepPollTimer = null;
+  }
+  const rc = $("studioResultCard");
+  if (rc) {
+    rc.style.display = "none";
+    rc.classList.remove("is-blocked");
+  }
+  if (resetAnalysis && $("studioAnalysisCard")) {
+    $("studioAnalysisCard").style.display = "none";
+  }
+  if ($("studioHeadline")) $("studioHeadline").textContent = "等待求解";
+  if ($("studioObjective")) $("studioObjective").textContent = "—";
+  if ($("studioValidation")) $("studioValidation").textContent = "—";
+  if ($("studioSolutionDetail")) $("studioSolutionDetail").textContent = "";
+  if ($("studioPaperStatus")) $("studioPaperStatus").textContent = "";
+  if ($("btnStudioGeneratePaper")) $("btnStudioGeneratePaper").hidden = true;
+  if ($("dlPaper")) $("dlPaper").hidden = true;
+  ["dlSolution", "dlValidation", "dlPaper", "dlAnalysis"].forEach(id => {
+    if ($(id)) $(id).href = "#";
+  });
+  ["vizPanelGantt", "vizPanelRoutes", "vizPanelMicrogrid", "vizPanelGap"].forEach(id => {
+    if ($(id)) $(id).innerHTML = "";
+  });
+  const err2 = $("studioConfirmError");
+  if (err2) { err2.style.display = "none"; err2.textContent = ""; }
+  const st2 = $("studioStep2Status");
+  if (st2) st2.textContent = "修改上方策略或知识库锚点后，可一键按新参数重新求解";
+  setPipelineStage("idle", "待命");
 }
 
 function updateApiKeyBadge() {
@@ -1918,27 +2388,52 @@ function updateApiKeyBadge() {
   const apiKeyBadge = $("studioApiKeyBadge");
   if (!apiKeyBadge) return;
   const key = (apiKeyInput?.value || "").trim();
-  const mod = modelSelect?.value || "spark-x2.6";
+  const mod = modelSelect?.value || "deepseek-flash";
   if (mod === "offline") {
-    apiKeyBadge.style.background = "rgba(142,142,147,0.15)";
+    apiKeyBadge.style.background = "var(--surface-2)";
     apiKeyBadge.style.color = "var(--ink-48)";
-    apiKeyBadge.style.borderColor = "rgba(142,142,147,0.3)";
-    apiKeyBadge.textContent = "⚪ 离线探针模式 (无需 Key)";
+    apiKeyBadge.style.borderColor = "var(--border)";
+    apiKeyBadge.textContent = "离线规则模式";
   } else if (key.length > 5) {
-    apiKeyBadge.style.background = "rgba(52,199,89,0.15)";
-    apiKeyBadge.style.color = "#30d158";
-    apiKeyBadge.style.borderColor = "rgba(52,199,89,0.35)";
+    apiKeyBadge.style.background = "#ecfdf5";
+    apiKeyBadge.style.color = "#047857";
+    apiKeyBadge.style.borderColor = "#a7f3d0";
     if (key.startsWith("ak-") || mod.startsWith("spark")) {
-      apiKeyBadge.textContent = "🟢 讯飞星辰深度思考已就绪 (Spark X2.6)";
+      apiKeyBadge.textContent = "已配置 · Spark X2.6";
     } else {
-      apiKeyBadge.textContent = "🟢 DeepSeek 深度思考已就绪 (" + (mod === "deepseek-reasoner" ? "R1" : "V3") + ")";
+      const dsLabel = mod === "deepseek-flash" ? "Flash" : (mod === "deepseek-reasoner" ? "R1" : "V3");
+      apiKeyBadge.textContent = `已配置 · DeepSeek-${dsLabel}`;
     }
+  } else if (studioState.serverEnvConfigured) {
+    apiKeyBadge.style.background = "#ecfdf5";
+    apiKeyBadge.style.color = "#047857";
+    apiKeyBadge.style.borderColor = "#a7f3d0";
+    const provLabel = studioState.serverProvider === "spark" ? "Spark" : (studioState.serverProvider || "服务端");
+    apiKeyBadge.textContent = `服务端 Key · ${provLabel} / ${mod}`;
   } else {
-    apiKeyBadge.style.background = "rgba(255,159,10,0.15)";
-    apiKeyBadge.style.color = "#d97706";
-    apiKeyBadge.style.borderColor = "rgba(255,159,10,0.35)";
-    apiKeyBadge.textContent = "⚠️ 离线规则探针 (未配置 API Key)";
+    apiKeyBadge.style.background = "#fffbeb";
+    apiKeyBadge.style.color = "#b45309";
+    apiKeyBadge.style.borderColor = "#fde68a";
+    apiKeyBadge.textContent = "离线规则探针（未配置 Key）";
   }
+}
+
+async function fetchEnvStatus() {
+  try {
+    const res = await fetch("/api/studio/env_status");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data || !data.ok) return;
+    studioState.serverEnvConfigured = Boolean(data.env_configured);
+    studioState.serverProvider = String(data.provider || "none");
+    studioState.serverDefaultModel = String(data.default_model || "deepseek-flash");
+    const savedOverride = localStorage.getItem("orpath_model_name");
+    const modelSelect = $("studioModelSelect");
+    if (modelSelect && !savedOverride && studioState.serverDefaultModel) {
+      modelSelect.value = studioState.serverDefaultModel;
+    }
+    updateApiKeyBadge();
+  } catch (_) {}
 }
 
 function scrollStudioToCard(card) {
@@ -1969,16 +2464,19 @@ function setPipelineStage(stageKey, stateText, detailText) {
   const fastIds = ["fastStepProbe", "fastStepPlan", "fastStepSolve", "fastStepGate"];
   const deepIds = ["deepCardAnalyst", "deepCardModeler", "deepCardWriter", "deepCardReviewer"];
   const stageIdxMap = {
+    idle: -1,
     probe: 0,
     analyze: 0,
     plan: 1,
     solve: 2,
     gate: 3,
     paper: 2,
+    review: 3,
     gate_done: 99,
     done: 99,
     paper_done: 99,
     blocked: -2,
+    error: -3,
   };
   const activeIdx = stageIdxMap[stageKey] !== undefined ? stageIdxMap[stageKey] : 0;
 
@@ -1987,7 +2485,21 @@ function setPipelineStage(stageKey, stateText, detailText) {
       const el = $(id);
       if (!el) return;
       const badge = el.querySelector(badgeSel);
+      const wasActive = el.classList.contains("active");
       el.classList.remove("active", "done", "blocked");
+      if (activeIdx === -1) {
+        if (badge) { badge.className = "fast-step-badge waiting"; badge.textContent = "待命"; }
+        return;
+      }
+      if (activeIdx === -3) {
+        if (wasActive || idx === ids.length - 1) {
+          el.classList.add("blocked");
+          if (badge) { badge.className = "fast-step-badge blocked"; badge.textContent = stateText || "异常中止"; }
+        } else {
+          if (badge) { badge.className = "fast-step-badge waiting"; badge.textContent = "待命"; }
+        }
+        return;
+      }
       if (activeIdx === -2) {
         if (idx <= 2) {
           el.classList.add("done");
@@ -2018,18 +2530,37 @@ function setPipelineStage(stageKey, stateText, detailText) {
   }
 }
 
+function updateDeepPipelineFromSnapshot(snap) {
+  if (!snap || typeof snap !== "object") return;
+  const node = String((snap.current && snap.current.node) || "").toLowerCase();
+  if (node.includes("review") || node.includes("validate") || node.includes("provenance") || node.includes("cite")) {
+    setPipelineStage("review", "审稿验算中…");
+  } else if (node.includes("writer") || node.includes("paper") || node.includes("draft")) {
+    setPipelineStage("paper", "学术写稿中…");
+  } else if (node.includes("model") || node.includes("solve")) {
+    setPipelineStage("solve", "多智能体建模求解中…");
+  } else if (node.includes("analyst") || node.includes("intake") || node.includes("research")) {
+    setPipelineStage("analyze", "领域研判中…");
+  }
+}
+
 function initStudioConfig() {
   const btnModeFast = $("btnRunModeFast");
   const btnModeDeep = $("btnRunModeDeep");
   if (btnModeFast) btnModeFast.addEventListener("click", () => setRunMode("fast"));
   if (btnModeDeep) btnModeDeep.addEventListener("click", () => setRunMode("deep"));
+  [3, 5, 8].forEach(val => {
+    const btn = $(`btnDeepRounds${val}`);
+    if (btn) btn.addEventListener("click", () => setDeepRounds(val));
+  });
   setRunMode(studioState.runMode);
+  setDeepRounds(studioState.deepRounds);
 
   const apiKeyInput = $("studioApiKeyInput");
   const modelSelect = $("studioModelSelect");
   const btnSaveApiKey = $("btnSaveApiKey");
   const savedKey = localStorage.getItem("orpath_deepseek_key") || "";
-  const savedModel = localStorage.getItem("orpath_model_name") || "spark-x2.6";
+  const savedModel = localStorage.getItem("orpath_model_name") || "deepseek-flash";
   if (apiKeyInput) apiKeyInput.value = savedKey;
   if (modelSelect) modelSelect.value = savedModel;
   updateApiKeyBadge();
@@ -2040,7 +2571,7 @@ function initStudioConfig() {
       if (val.startsWith("ak-") && modelSelect && modelSelect.value !== "spark-x2.6" && modelSelect.value !== "offline") {
         modelSelect.value = "spark-x2.6";
       } else if (val.startsWith("sk-") && modelSelect && modelSelect.value === "spark-x2.6") {
-        modelSelect.value = "deepseek-reasoner";
+        modelSelect.value = "deepseek-flash";
       }
       localStorage.setItem("orpath_deepseek_key", val);
       updateApiKeyBadge();
@@ -2050,7 +2581,7 @@ function initStudioConfig() {
   if (btnSaveApiKey) {
     btnSaveApiKey.addEventListener("click", () => {
       localStorage.setItem("orpath_deepseek_key", (apiKeyInput?.value || "").trim());
-      localStorage.setItem("orpath_model_name", modelSelect?.value || "deepseek-reasoner");
+      localStorage.setItem("orpath_model_name", modelSelect?.value || "deepseek-flash");
       updateApiKeyBadge();
       btnSaveApiKey.textContent = "已保存 ✓";
       setTimeout(() => { if (btnSaveApiKey) btnSaveApiKey.textContent = "保存"; }, 1500);
@@ -2085,11 +2616,11 @@ function updateFileListUI() {
   const totalBytes = studioState.loadedFiles.reduce((acc, f) => acc + (f.size || 0), 0);
   const kbStr = fmtKB(totalBytes);
   $("studioFileList").innerHTML = `
-    <div style="font-weight:700;color:var(--blue);margin-bottom:6px">
-      📂 已解析待研判文件清单 (${studioState.loadedFiles.length} 个文件 · 共 ${kbStr}):
+    <div style="font-weight:600;color:var(--ink);margin-bottom:6px">
+      已载入文件 (${studioState.loadedFiles.length} 个 · 共 ${kbStr})
     </div>
-    <div style="max-height:120px;overflow-y:auto;background:var(--surface-2);border-radius:6px;padding:8px 10px;font-family:var(--mono);line-height:1.6">
-      ${studioState.loadedFiles.map(f => `<div>📄 ${esc(f.rel_path)} <span style="color:var(--ink-48);font-size:10px">(${fmtKB(f.size)})</span></div>`).join("")}
+    <div style="max-height:120px;overflow-y:auto;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-family:var(--mono);line-height:1.6">
+      ${studioState.loadedFiles.map(f => `<div>${esc(f.rel_path)} <span style="color:var(--ink-48);font-size:10px">(${fmtKB(f.size)})</span></div>`).join("")}
     </div>
   `;
 
@@ -2279,6 +2810,15 @@ function initStudioFiles() {
   }
   
   // --- Preset Data Loader ---
+  function utf8ToBase64(text) {
+    const bytes = new TextEncoder().encode(String(text || ""));
+    let bin = "";
+    for (let i = 0; i < bytes.length; i++) {
+      bin += String.fromCharCode(bytes[i]);
+    }
+    return btoa(bin);
+  }
+
   if ($("btnStudioLoadPreset")) {
     $("btnStudioLoadPreset").addEventListener("click", () => {
       $("studioSlugInput").value = "case-tsp-8";
@@ -2288,11 +2828,11 @@ function initStudioFiles() {
         { id: 3, x: 30, y: 15 }, { id: 4, x: 40, y: 20 }, { id: 5, x: 50, y: 25 },
         { id: 6, x: 60, y: 30 }, { id: 7, x: 70, y: 35 }
       ]};
-      const b64Coords = btoa(JSON.stringify(coords));
-      const b64Prob = btoa("# 8工位巡检问题\n问题一：访问8个工位并返回起点\n");
+      const b64Coords = utf8ToBase64(JSON.stringify(coords));
+      const b64Prob = utf8ToBase64("# 8工位巡检问题\n问题一：访问8个工位并返回起点\n");
       studioState.loadedFiles = [
-        { rel_path: "problem.md", content_base64: b64Prob, size: 120 },
-        { rel_path: "data/coords.json", content_base64: b64Coords, size: 240 },
+        { rel_path: "problem.md", content_base64: b64Prob, size: b64Prob.length },
+        { rel_path: "data/coords.json", content_base64: b64Coords, size: b64Coords.length },
       ];
       updateFileListUI();
     });
@@ -2313,15 +2853,16 @@ async function triggerStudioAnalyze() {
   const slug = ($("studioSlugInput")?.value || "case-studio").trim();
   const prompt = ($("studioPromptInput")?.value || "").trim();
   const apiKey = ($("studioApiKeyInput")?.value || "").trim();
-  const model = $("studioModelSelect")?.value || "deepseek-reasoner";
+  const model = $("studioModelSelect")?.value || "deepseek-flash";
+  if (typeof resetStudioRunUI === "function") resetStudioRunUI(true);
   const st1 = $("studioStep1Status");
   const errBox = $("studioAnalyzeError");
   if (errBox) { errBox.style.display = "none"; errBox.textContent = ""; }
-  if (st1) st1.innerHTML = `<span style="color:var(--blue)">⏳ 正在上传附件并由数据探针与深度模型研判中…</span>`;
-  if ($("btnStudioAnalyze")) { $("btnStudioAnalyze").disabled = true; $("btnStudioAnalyze").textContent = "⏳ 正在研判中…"; }
+  if (st1) st1.innerHTML = `<span style="color:var(--blue)">正在上传文件并执行模型诊断…</span>`;
+  if ($("btnStudioAnalyze")) { $("btnStudioAnalyze").disabled = true; $("btnStudioAnalyze").textContent = "正在分析…"; }
   const btnQuick = $("btnStudioQuickAnalyze");
   if (btnQuick) btnQuick.disabled = true;
-  setPipelineStage("analyze", "研判中…", "结构化探针与题面解析");
+  setPipelineStage("analyze", "诊断中", "结构化探针与题面解析");
 
   try {
     if (studioState.loadedFiles.length > 0) {
@@ -2347,8 +2888,8 @@ async function triggerStudioAnalyze() {
       if (signal.aborted) return;
       const errText = String(anaJson.error || "");
       const rText = String(anaJson.analysis?.thinking_meta?.reasoning_text || "");
-      if ((anaRes.status === 429 || errText.includes("429") || rText.includes("HTTP 429") || rText.includes("限流")) && attempt < 2) {
-        if (st1) st1.innerHTML = `<span style="color:#d97706">⏳ 遇到 429 限流，正在自动重试 (${attempt + 1}/2)…</span>`;
+        if ((anaRes.status === 429 || errText.includes("429") || rText.includes("HTTP 429") || rText.includes("限流")) && attempt < 2) {
+        if (st1) st1.innerHTML = `<span style="color:var(--warn)">请求受限 (429)，正在重试 (${attempt + 1}/2)…</span>`;
         await new Promise((resolve, reject) => {
           const tm = setTimeout(resolve, 2000 * (attempt + 1));
           signal.addEventListener("abort", () => {
@@ -2368,22 +2909,23 @@ async function triggerStudioAnalyze() {
     renderStudioAnalysisCard(studioState.currentAnalysis);
     if (st1) {
       st1.innerHTML = isLive
-        ? '<span style="color:#059669">✅ 深度研判完成，正在自动直通真算…</span>'
-        : '<span style="color:#d97706">✅ 离线探针研判完成，正在自动直通真算…</span>';
+        ? '<span style="color:#047857">诊断完成，开始求解…</span>'
+        : '<span style="color:var(--ink-60)">离线探针诊断完成，开始求解…</span>';
     }
     await executeStudioSolve(signal);
     if (!signal.aborted && st1) {
-      st1.innerHTML = '<span style="color:#059669">✅ 研判与自动求解已闭环完成</span>';
+      st1.innerHTML = '<span style="color:#047857">分析与求解完成</span>';
     }
   } catch (err) {
     if (err.name === "AbortError" || signal.aborted) return;
-    if (st1) st1.innerHTML = '<span style="color:#dc2626">❌ 研判或求解受阻</span>';
+    setPipelineStage("error", "研判受阻", err.message);
+    if (st1) st1.innerHTML = '<span style="color:#b91c1c">运行失败</span>';
     if (errBox) {
       errBox.style.display = "block";
-      errBox.innerHTML = `<strong>⚠️ 运行失败：</strong> ${esc(err.message)} <br/><span style="font-size:11px;opacity:0.8">请检查文件格式或 API 配置后重试。</span>`;
+      errBox.innerHTML = `<strong>运行失败：</strong> ${esc(err.message)} <br/><span style="font-size:11px;opacity:0.85">请检查文件格式或 API 配置后重试。</span>`;
     }
   } finally {
-    if ($("btnStudioAnalyze")) { $("btnStudioAnalyze").disabled = false; $("btnStudioAnalyze").textContent = "🚀 一键分析并求解"; }
+    if ($("btnStudioAnalyze")) { $("btnStudioAnalyze").disabled = false; $("btnStudioAnalyze").textContent = "分析并求解"; }
     if (btnQuick) btnQuick.disabled = false;
   }
 }
@@ -2400,19 +2942,24 @@ function renderStudioAnalysisCard(ana) {
   const promptBanner = $("studioKeyPromptBanner");
   if (badge) {
     if (isLive) {
-      badge.style.background = "rgba(16,185,129,0.15)";
+      badge.style.background = "#ecfdf5";
       badge.style.color = "#047857";
       const modelUsed = String(meta.model_used || "");
       const modelLabel = /spark/i.test(modelUsed)
-        ? "讯飞星辰 Spark X2.6"
+        ? "Spark X2.6"
         : (modelUsed && modelUsed !== "deepseek-reasoner" ? modelUsed : "DeepSeek-R1");
-      badge.textContent = `🟢 ${modelLabel} 实时思考已启用`;
+      badge.textContent = `${modelLabel} · 实时推理`;
       if (promptBanner) promptBanner.style.display = "none";
     } else {
-      badge.style.background = "rgba(255,159,10,0.15)";
-      badge.style.color = "#d97706";
-      badge.textContent = "🟡 离线规则探针 (未配置 API Key)";
-      if (promptBanner) promptBanner.style.display = "block";
+      const mSel = $("studioModelSelect")?.value || "deepseek-flash";
+      badge.style.background = "var(--surface-2)";
+      badge.style.color = "var(--ink-60)";
+      badge.textContent = mSel === "offline"
+        ? "离线规则诊断"
+        : "本地规则诊断";
+      if (promptBanner) {
+        promptBanner.style.display = (!studioState.serverEnvConfigured && mSel !== "offline") ? "block" : "none";
+      }
     }
   }
 
@@ -2421,10 +2968,10 @@ function renderStudioAnalysisCard(ana) {
   if (diagBanner) {
     diagBanner.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px">
-        <strong style="font-size:15px;color:#6d28d9">🎯 识别领域：${esc(diag.domain_name || diag.problem_class)}</strong>
-        <span style="font-size:11px;background:#8b5cf6;color:#fff;padding:2px 8px;border-radius:10px;font-weight:600">第一推荐：${esc(diag.recommended_algorithm)}</span>
+        <strong style="font-size:14px;color:var(--ink)">识别领域：${esc(diag.domain_name || diag.problem_class)}</strong>
+        <span style="font-size:11px;font-family:var(--mono);background:var(--surface-2);color:var(--ink);border:1px solid var(--border);padding:2px 8px;border-radius:5px;font-weight:600">推荐求解：${esc(diag.recommended_algorithm)}</span>
       </div>
-      <p style="margin:0;font-size:12px;line-height:1.5;color:var(--ink-60)">${esc(diag.rationale || '')}</p>
+      <p style="margin:0;font-size:12px;line-height:1.55;color:var(--ink-60)">${esc(diag.rationale || '')}</p>
     `;
   }
 
@@ -2435,7 +2982,7 @@ function renderStudioAnalysisCard(ana) {
   if (kBanner) {
     kBanner.style.display = "block";
     const renderHitRow = (kh, checked = true) => `
-      <label style="display:flex;align-items:flex-start;gap:8px;background:#fff;border:1px solid #e0e7ff;border-radius:6px;padding:7px 10px;font-size:11px;cursor:pointer">
+      <label style="display:flex;align-items:flex-start;gap:8px;background:#fff;border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:11px;cursor:pointer">
         <input type="checkbox" class="studio-pin-kb" ${checked ? "checked" : ""}
           data-kb-id="${esc(kh.chunk_id || kh.id || '')}"
           data-kb-title="${esc(kh.title || kh.chunk_id || '')}"
@@ -2444,8 +2991,8 @@ function renderStudioAnalysisCard(ana) {
           style="margin-top:2px;cursor:pointer" />
         <div style="flex:1;min-width:0">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;gap:6px">
-            <span style="font-weight:600;color:#1e1b4b">📄 ${esc(kh.title || kh.chunk_id)}</span>
-            <span style="font-size:10px;color:#6366f1;font-family:var(--mono)">相关度: ${esc(kh.score ?? '-')}</span>
+            <span style="font-weight:600;color:var(--ink)">${esc(kh.title || kh.chunk_id)}</span>
+            <span style="font-size:10px;color:var(--ink-48);font-family:var(--mono)">score: ${esc(kh.score ?? '-')}</span>
           </div>
           <div style="color:var(--ink-48);line-height:1.4;font-size:10.5px">${esc(kh.snippet || '')}</div>
         </div>
@@ -2454,19 +3001,19 @@ function renderStudioAnalysisCard(ana) {
 
     kBanner.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">
-        <strong style="font-size:13px;color:#4338ca">📚 运筹知识库先验工作台 (勾选锁定项将注入建模与论文锚点)</strong>
-        <span style="font-size:10px;background:#e0e7ff;color:#3730a3;padding:2px 8px;border-radius:8px;font-weight:600">Hybrid BM25 + bge-m3 + Top500 顶刊</span>
+        <strong style="font-size:12.5px;color:var(--ink)">建模方法与参考先验（勾选条目将参与建模与论文引用）</strong>
+        <span style="font-size:10px;font-family:var(--mono);background:var(--surface-2);color:var(--ink-60);border:1px solid var(--border);padding:2px 7px;border-radius:4px">Hybrid BM25 + bge-m3</span>
       </div>
-      ${kSkills.length > 0 ? `
+      ${kSkills.filter(sk => !["or-numbers-truth", "or-verify", "or-paper-sop", "or-reviewer"].includes(String(sk.id || ""))).length > 0 ? `
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-          ${kSkills.map((sk, idx) => `
-            <label style="display:inline-flex;align-items:center;gap:5px;background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;padding:3px 9px;border-radius:999px;font-size:10.5px;font-weight:600;cursor:pointer">
+          ${kSkills.filter(sk => !["or-numbers-truth", "or-verify", "or-paper-sop", "or-reviewer"].includes(String(sk.id || ""))).map((sk, idx) => `
+            <label style="display:inline-flex;align-items:center;gap:5px;background:#ffffff;border:1px solid var(--border-strong);color:var(--ink-80);padding:2px 8px;border-radius:5px;font-size:11px;cursor:pointer">
               <input type="checkbox" class="studio-pin-kb" ${idx < 2 ? "checked" : ""}
                 data-kb-id="${esc(sk.id)}"
-                data-kb-title="${esc(sk.id)}"
+                data-kb-title="${esc(sk.label || sk.id)}"
                 data-kb-kind="skill"
-                data-kb-snippet="${esc((sk.excerpt || '').slice(0, 160))}" />
-              🛠️ Skill: ${esc(sk.id)}
+                data-kb-snippet="" />
+              ${esc(sk.label || sk.id)}
             </label>
           `).join("")}
         </div>
@@ -2475,15 +3022,15 @@ function renderStudioAnalysisCard(ana) {
         ${kHits.map((kh, idx) => renderHitRow(kh, idx < 2)).join("")}
       </div>
       ${kLit.length > 0 ? `
-        <div style="background:#f5f3ff;border:1px dashed #c4b5fd;border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:10.5px;color:#4c1d95;line-height:1.5">
-          <strong>🏛️ 匹配权威顶刊文献锚点：</strong>
-          ${kLit.map(l => `<span style="margin-right:10px">• ${esc(l.cite_label)} <em>${esc(l.title)}</em> (${esc(l.venue)})</span>`).join("")}
+        <div style="background:#ffffff;border:1px dashed var(--border-strong);border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:10.5px;color:var(--ink-60);line-height:1.5">
+          <strong>匹配文献：</strong>
+          ${kLit.map(l => `<span style="margin-right:10px">${esc(l.cite_label)} <em>${esc(l.title)}</em> (${esc(l.venue)})</span>`).join("")}
         </div>
       ` : ""}
       <div style="display:flex;gap:6px;align-items:center">
-        <input type="text" id="studioKbSearchInput" placeholder="实时检索知识库方法/模型/割平面 (例如: cutting plane subtour, column generation)…"
-          style="flex:1;height:30px;padding:0 10px;border:1px solid #c7d2fe;border-radius:6px;font-size:11.5px;background:#fff;outline:none" />
-        <button type="button" class="wb-btn" id="btnStudioKbSearch" style="height:30px;padding:0 12px;font-size:11.5px">🔍 检索并锁定</button>
+        <input type="text" id="studioKbSearchInput" placeholder="检索知识库方法、模型或割平面（如 cutting plane subtour, column generation）…"
+          style="flex:1;height:30px;padding:0 10px;border:1px solid var(--border-strong);border-radius:6px;font-size:11.5px;background:#fff;outline:none" />
+        <button type="button" class="wb-btn" id="btnStudioKbSearch" style="height:30px;padding:0 12px;font-size:11.5px">检索并添加</button>
       </div>
     `;
 
@@ -2507,7 +3054,7 @@ function renderStudioAnalysisCard(ana) {
         }
       } catch (_) {
       } finally {
-        if (kbBtn) { kbBtn.disabled = false; kbBtn.textContent = "🔍 检索并锁定"; }
+        if (kbBtn) { kbBtn.disabled = false; kbBtn.textContent = "检索并添加"; }
       }
     };
     if (kbBtn) kbBtn.addEventListener("click", doKbSearch);
@@ -2517,35 +3064,46 @@ function renderStudioAnalysisCard(ana) {
   const algoList = $("studioAlgoList");
   if (algoList) {
     algoList.innerHTML = (diag.algorithm_comparison || []).map(al => `
-      <div class="studio-algo-item" style="border:1px solid ${al.recommended ? 'var(--blue)' : 'var(--border)'};background:${al.recommended ? 'rgba(37,99,235,0.04)' : '#f8fafc'};">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <strong style="font-size:12.5px;color:#0f172a">${esc(al.name)}</strong>
-          ${al.recommended ? '<span style="font-size:10.5px;background:rgba(37,99,235,0.12);color:var(--blue);font-weight:700;padding:2px 8px;border-radius:9999px">★ 推荐方案</span>' : ''}
+      <div class="studio-algo-item" style="border:1px solid ${al.recommended ? 'var(--blue)' : 'var(--border)'};background:${al.recommended ? '#f8faff' : '#fafafa'};">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <strong style="font-size:12.5px;color:var(--ink)">${esc(al.name)}</strong>
+          ${al.recommended ? '<span style="font-size:10.5px;background:#eff6ff;color:var(--blue);border:1px solid #bfdbfe;font-weight:600;padding:1px 7px;border-radius:5px">推荐</span>' : ''}
         </div>
-        <div style="font-size:11.5px;color:#64748b;line-height:1.5">
-          <div><span style="color:#059669;font-weight:700">✓ 优势:</span> ${esc(al.pros || '')}</div>
-          <div><span style="color:#d97706;font-weight:700">⚠ 考量:</span> ${esc(al.cons || '')}</div>
+        <div style="font-size:11.5px;color:var(--ink-60);line-height:1.5">
+          <div><span style="color:#047857;font-weight:600">优势：</span>${esc(al.pros || '')}</div>
+          <div><span style="color:#b45309;font-weight:600">局限：</span>${esc(al.cons || '')}</div>
         </div>
       </div>
     `).join("");
   }
 
   const dataList = $("studioDataList");
+  const dataCol = $("studioDataCol");
+  const cmpGrid = $("studioCompareGrid");
+  const matchedVars = ana.data_alignment?.matched_variables || [];
+  if (dataCol && cmpGrid) {
+    const showDataCol = matchedVars.length > 0;
+    dataCol.style.display = showDataCol ? "block" : "none";
+    cmpGrid.style.gridTemplateColumns = showDataCol ? "1fr 1fr" : "1fr";
+  }
   if (dataList) {
-    dataList.innerHTML = (ana.data_alignment?.matched_variables || []).map(mv => `
+    dataList.innerHTML = matchedVars.map(mv => `
       <div class="studio-data-item">
         <div>
-          <strong style="font-size:12.5px;color:#0f172a">${esc(mv.name)}</strong>
-          <div style="font-size:11px;color:#64748b;margin-top:2px">${esc(mv.source)} · ${esc(mv.details)}</div>
+          <strong style="font-size:12.5px;color:var(--ink)">${esc(mv.name)}</strong>
+          <div style="font-size:11px;color:var(--ink-48);margin-top:2px">${esc(mv.source)} · ${esc(mv.details)}</div>
         </div>
-        <span style="font-size:10.5px;background:rgba(16,185,129,0.15);color:#047857;border:1px solid rgba(16,185,129,0.3);padding:2px 8px;border-radius:9999px;font-weight:700">${esc(mv.status)}</span>
+        <span style="font-size:10.5px;font-family:var(--mono);background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:2px 7px;border-radius:5px;font-weight:600">${esc(mv.status)}</span>
       </div>
     `).join("");
   }
 
   const thinkingContent = $("studioThinkingContent");
   if (thinkingContent) {
-    thinkingContent.textContent = meta.reasoning_text || "无思考日志";
+    const cleaned = String(meta.reasoning_text || "无思考日志")
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
+      .replace(/`([^`]+)`/g, "$1");
+    thinkingContent.textContent = cleaned;
   }
 
   const qBox = $("studioQuestionsBox");
@@ -2578,7 +3136,81 @@ function initStudioAnalyze() {
 // === src/js/studio/result.js ===
 // --- Studio Solve (auto-chained after Analyze, or re-run with tweaked params) ---
 
+function clearDeepPollTimer() {
+  if (studioState.deepPollTimer) {
+    clearInterval(studioState.deepPollTimer);
+    studioState.deepPollTimer = null;
+  }
+}
+
+function pollDeepJob(slug, signal) {
+  clearDeepPollTimer();
+  const st2 = $("studioStep2Status");
+  const startedAt = Date.now();
+  const maxWaitMs = 660000;
+  return new Promise((resolve, reject) => {
+    let busy = false;
+    const stopWith = (fn, arg) => {
+      clearDeepPollTimer();
+      fn(arg);
+    };
+    if (signal) {
+      if (signal.aborted) {
+        stopWith(reject, new DOMException("Aborted", "AbortError"));
+        return;
+      }
+      signal.addEventListener("abort", () => {
+        stopWith(reject, new DOMException("Aborted", "AbortError"));
+      }, { once: true });
+    }
+    const tick = async () => {
+      if (busy || (signal && signal.aborted)) return;
+      if (Date.now() - startedAt > maxWaitMs) {
+        stopWith(reject, new Error("深度多智能体协作超时 (480s)，请查看过程监视抽屉日志。"));
+        return;
+      }
+      busy = true;
+      try {
+        const [jobRes, snapRes] = await Promise.all([
+          fetch(`/api/studio/job?slug=${encodeURIComponent(slug)}`, { signal }),
+          fetch(`/api/snapshot?slug=${encodeURIComponent(slug)}&thread=${encodeURIComponent(slug)}`, { signal }).catch(() => null),
+        ]);
+        if (snapRes && snapRes.ok) {
+          const snap = await snapRes.json().catch(() => null);
+          if (snap) {
+            if (typeof updateDeepPipelineFromSnapshot === "function") updateDeepPipelineFromSnapshot(snap);
+            if (st2 && snap.current && snap.current.node) {
+              const elapsed = Math.round((Date.now() - startedAt) / 1000);
+              st2.innerHTML = `<span style="color:var(--blue)">多智能体运行中 · 当前节点：<strong>${esc(nodeLabel(snap.current.node))}</strong> (${elapsed}s)…</span>`;
+            }
+          }
+        }
+        if (typeof isWatchDrawerOpen === "function" && isWatchDrawerOpen() && typeof refreshWatchDrawer === "function") {
+          refreshWatchDrawer(false);
+        }
+        if (!jobRes.ok) return;
+        const jData = await jobRes.json();
+        const job = jData && jData.job;
+        if (!job) return;
+        if (job.status === "done") {
+          stopWith(resolve, job.result || {});
+        } else if (job.status === "error") {
+          const errMsg = (job.result && job.result.error) || "深度模式后端执行失败";
+          stopWith(reject, new Error(errMsg));
+        }
+      } catch (e) {
+        if (e && e.name === "AbortError") stopWith(reject, e);
+      } finally {
+        busy = false;
+      }
+    };
+    studioState.deepPollTimer = setInterval(tick, 1500);
+    tick();
+  });
+}
+
 async function executeStudioSolve(externalSignal) {
+  clearDeepPollTimer();
   if (studioState.confirmAbortController) {
     studioState.confirmAbortController.abort();
   }
@@ -2607,18 +3239,22 @@ async function executeStudioSolve(externalSignal) {
     });
   }
 
-  if (st2) st2.innerHTML = `<span style="color:var(--blue)">⏳ 正在调用${studioState.runMode === "deep" ? "多智能体与" : ""}真实求解器，在物理门禁中严格验算…</span>`;
+  const isDeep = studioState.runMode === "deep";
+  const deepRounds = isDeep ? ([3, 5, 8].includes(Number(studioState.deepRounds)) ? Number(studioState.deepRounds) : 5) : 1;
+  if (st2) {
+    st2.innerHTML = `<span style="color:var(--blue)">正在调用${isDeep ? "多智能体与" : ""}确定性求解器并进行独立验算…</span>`;
+  }
   if ($("btnStudioConfirmSolve")) {
     $("btnStudioConfirmSolve").disabled = true;
-    $("btnStudioConfirmSolve").textContent = "⏳ 求解中…";
+    $("btnStudioConfirmSolve").textContent = "求解中…";
   }
-  setPipelineStage("solve", "真算中…", "执行确定性算子求解与验算");
+  setPipelineStage(isDeep ? "analyze" : "solve", isDeep ? "启动中" : "求解中", "执行确定性算子求解与验算");
 
   const savedKey = ($("studioApiKeyInput")?.value || localStorage.getItem("orpath_deepseek_key") || "").trim();
-  const savedModel = ($("studioModelSelect")?.value || localStorage.getItem("orpath_model_name") || "spark-x2.6").trim();
-  const isOffline = savedModel === "offline" || !savedKey;
+  const savedModel = ($("studioModelSelect")?.value || localStorage.getItem("orpath_model_name") || "deepseek-flash").trim();
+  const isOffline = savedModel === "offline" || (savedKey.length <= 5 && !studioState.serverEnvConfigured);
 
-  const confTimeout = setTimeout(() => confController.abort(), 130000);
+  const confTimeout = setTimeout(() => confController.abort(), isDeep ? Math.max(1800000, deepRounds * 450000) : 480000);
 
   const pinnedKnowledge = Array.from(document.querySelectorAll(".studio-pin-kb:checked")).map(el => ({
     id: el.getAttribute("data-kb-id") || "",
@@ -2637,16 +3273,21 @@ async function executeStudioSolve(externalSignal) {
         extra_prompt: extraPrompt,
         pinned_knowledge: pinnedKnowledge,
         run_mode: studioState.runMode,
-        skip_paper: studioState.runMode === "fast",
+        deep_rounds: deepRounds,
+        async_run: isDeep,
+        skip_paper: !isDeep,
         api_key: savedKey,
         model: savedModel,
-        timeout: isOffline ? 3.0 : 60.0,
+        timeout: isOffline ? 3.0 : (isDeep ? Math.max(1200.0, deepRounds * 450.0) : 180.0),
       }),
       signal: confController.signal,
     });
     if (confController.signal.aborted) return;
-    const confJson = await confRes.json();
-    if (!confJson.ok) throw new Error(confJson.error || "求解失败");
+    let confJson = await confRes.json();
+    if (confRes.status === 202 && confJson && confJson.async_started) {
+      confJson = await pollDeepJob(slug, confController.signal);
+    }
+    if (!confJson || !confJson.ok) throw new Error((confJson && confJson.error) || "求解失败");
 
     const confBlocked = (
       String(confJson.status || "").toUpperCase() === "BLOCKED" ||
@@ -2655,24 +3296,30 @@ async function executeStudioSolve(externalSignal) {
     );
     if (st2) {
       st2.innerHTML = confBlocked
-        ? '<span style="color:#b91c1c">⛔ 求解已诚实阻断（未通过数值条件）</span>'
-        : '<span style="color:#059669">✅ 求解与严格验算已完成</span>';
+        ? '<span style="color:#b91c1c">求解已诚实阻断（未通过数值条件）</span>'
+        : '<span style="color:#047857">求解与独立验算已完成</span>';
     }
     renderStudioResultCard(slug, confJson);
   } catch (err) {
+    clearDeepPollTimer();
     if (err.name === "AbortError" && externalSignal && externalSignal.aborted) return;
-    if (st2) st2.innerHTML = '<span style="color:#dc2626">❌ 求解受阻</span>';
+    const errMsg = err.name === "AbortError"
+      ? `求解等待超时 (${isDeep ? "680s" : "480s"})，可打开过程监视查看日志。`
+      : err.message;
+    setPipelineStage("error", "求解受阻", errMsg);
+    if (st2) st2.innerHTML = '<span style="color:#b91c1c">求解受阻</span>';
     if (errBox) {
       errBox.style.display = "block";
-      const errMsg = err.name === "AbortError" ? "求解等待超时 (130s)，请检查模型响应或降低求解规模。" : err.message;
-      errBox.innerHTML = `<strong>⚠️ 求解失败：</strong> ${esc(errMsg)} <br/><span style="font-size:11px;opacity:0.8">请检查题面参数或在高级选项中补充说明。</span>`;
+      errBox.innerHTML = `<strong>求解失败：</strong> ${esc(errMsg)} <br/><span style="font-size:11px;opacity:0.85">请检查题面参数或在上方补充说明。</span>`;
     }
+    throw err;
   } finally {
+    clearDeepPollTimer();
     clearTimeout(confTimeout);
     if (externalSignal) externalSignal.removeEventListener("abort", onExternalAbort);
     if ($("btnStudioConfirmSolve")) {
       $("btnStudioConfirmSolve").disabled = false;
-      $("btnStudioConfirmSolve").textContent = "🔄 应用参数微调并重算";
+      $("btnStudioConfirmSolve").textContent = "按新参数重算";
     }
   }
 }
@@ -2707,19 +3354,19 @@ function renderStudioResultCard(slug, res) {
   const banner = $("studioResultBanner");
   if (banner) {
     if (isBlocked) {
-      banner.style.background = "rgba(239,68,68,0.08)";
-      banner.style.borderColor = "rgba(239,68,68,0.35)";
+      banner.style.background = "#fef2f2";
+      banner.style.borderColor = "#fecaca";
     } else {
-      banner.style.background = "rgba(16,185,129,0.08)";
-      banner.style.borderColor = "rgba(16,185,129,0.25)";
+      banner.style.background = "#fafafa";
+      banner.style.borderColor = "var(--border)";
     }
   }
   if ($("studioStep3Sub")) {
     if (isBlocked) {
-      $("studioStep3Sub").textContent = "诚实阻断 · 未执行虚假数值求解";
+      $("studioStep3Sub").textContent = "已阻断 · 未输出虚假数值结果";
     } else {
-      const srcTag = dataSource ? ` · 数据来源: ${dataSource === "fixture" ? "fixture 回放" : "case 实算"}` : "";
-      $("studioStep3Sub").textContent = `纯真数字 · 数学验算合格${srcTag}`;
+      const srcTag = dataSource ? ` · 来源: ${dataSource === "fixture" ? "fixture 回放" : "实算"}` : "";
+      $("studioStep3Sub").textContent = `数值已独立验算${srcTag}`;
     }
   }
 
@@ -2734,7 +3381,7 @@ function renderStudioResultCard(slug, res) {
     if (isBlocked) {
       $("studioHeadline").textContent = "求解已诚实阻断";
     } else {
-      $("studioHeadline").textContent = summary.headline || (res.status === "COMPLETED" ? "运筹问题已成功求解" : "求解状态待确认");
+      $("studioHeadline").textContent = summary.headline || (res.status === "COMPLETED" ? "求解已完成" : "求解状态待确认");
     }
   }
 
@@ -2745,11 +3392,11 @@ function renderStudioResultCard(slug, res) {
   if ($("studioObjective")) {
     const objText = isBlocked ? fallbackObj : (summary.objective_str || fallbackObj);
     const optBadge = isBlocked
-      ? '<span style="font-size:11px;background:#fef2f2;color:#b91c1c;padding:3px 8px;border-radius:12px;font-weight:700;margin-left:10px;vertical-align:middle;border:1px solid #fecaca">⛔ 已诚实阻断</span>'
+      ? '<span style="font-size:11px;background:#fef2f2;color:#b91c1c;padding:2px 8px;border-radius:5px;font-weight:600;margin-left:10px;vertical-align:middle;border:1px solid #fecaca">已阻断</span>'
       : (isProvenOpt
-        ? '<span style="font-size:11px;background:#ecfdf5;color:#047857;padding:3px 8px;border-radius:12px;font-weight:700;margin-left:10px;vertical-align:middle;border:1px solid #a7f3d0">★ 严格全局最优</span>'
+        ? '<span style="font-size:11px;background:#ecfdf5;color:#047857;padding:2px 8px;border-radius:5px;font-weight:600;margin-left:10px;vertical-align:middle;border:1px solid #a7f3d0">全局最优</span>'
         : (res.solution && res.solution.objective != null
-          ? '<span style="font-size:11px;background:#fffbeb;color:#b45309;padding:3px 8px;border-radius:12px;font-weight:600;margin-left:10px;vertical-align:middle;border:1px solid #fde68a">⚡ 可行解 (未证最优)</span>'
+          ? '<span style="font-size:11px;background:#fffbeb;color:#b45309;padding:2px 8px;border-radius:5px;font-weight:500;margin-left:10px;vertical-align:middle;border:1px solid #fde68a">可行解（未证最优）</span>'
           : ''));
     $("studioObjective").innerHTML = `${esc(objText)} ${optBadge}`;
   }
@@ -2766,7 +3413,7 @@ function renderStudioResultCard(slug, res) {
         : "";
       $("studioSolutionDetail").textContent = `${blockedReason}${gaps}`;
     } else {
-      const srcLine = dataSource ? `[data_source=${dataSource}] ` : "";
+      const srcLine = dataSource ? `数据来源: ${dataSource === "fixture" ? "基准算例" : "实算求解"} · ` : "";
       $("studioSolutionDetail").textContent = `${srcLine}${summary.solution_detail || ""}`;
     }
   }
@@ -2789,20 +3436,20 @@ function renderStudioResultCard(slug, res) {
   if (btnGenPaper) {
     btnGenPaper.hidden = isBlocked || paperReady;
     btnGenPaper.disabled = false;
-    btnGenPaper.textContent = "📑 按需生成完整学术论文";
+    btnGenPaper.textContent = "生成学术论文";
   }
   if (paperStatus) {
     if (isBlocked) {
       paperStatus.textContent = "求解受阻，未生成学术论文";
     } else if (paperReady) {
-      paperStatus.textContent = "✅ 完整学术论文已生成";
+      paperStatus.textContent = "学术论文已生成";
     } else {
-      paperStatus.textContent = "快速模式已跳过写稿（数值已校验，可按需生成论文）";
+      paperStatus.textContent = "快速模式已跳过写稿（可按需生成论文）";
     }
   }
 
   const viewInsp = $("btnStudioViewInspector");
-  if (viewInsp) {
+  if (viewInsp && viewInsp.tagName === "A") {
     const q = encodeURIComponent(slug);
     viewInsp.href = `/?slug=${q}&thread=${q}`;
   }
@@ -2813,7 +3460,11 @@ function renderStudioResultCard(slug, res) {
 
 function initStudioResult() {
   const btnConfirm = $("btnStudioConfirmSolve");
-  if (btnConfirm) btnConfirm.addEventListener("click", () => executeStudioSolve(null));
+  if (btnConfirm) btnConfirm.addEventListener("click", () => executeStudioSolve(null).catch(() => {}));
+  const viewInsp = $("btnStudioViewInspector");
+  if (viewInsp && typeof openWatchDrawer === "function") {
+    viewInsp.addEventListener("click", () => openWatchDrawer());
+  }
   const btnGenPaper = $("btnStudioGeneratePaper");
   if (btnGenPaper) {
     btnGenPaper.addEventListener("click", async () => {
@@ -2821,12 +3472,12 @@ function initStudioResult() {
       const paperStatus = $("studioPaperStatus");
       const dlPaper = $("dlPaper");
       const savedKey = ($("studioApiKeyInput")?.value || localStorage.getItem("orpath_deepseek_key") || "").trim();
-      const savedModel = ($("studioModelSelect")?.value || localStorage.getItem("orpath_model_name") || "spark-x2.6").trim();
+      const savedModel = ($("studioModelSelect")?.value || localStorage.getItem("orpath_model_name") || "deepseek-flash").trim();
   
       btnGenPaper.disabled = true;
-      btnGenPaper.textContent = "⏳ 正在生成学术论文与审稿打包…";
-      if (paperStatus) paperStatus.textContent = "正在调用写稿与 R1/R2 数字校验…";
-  
+      btnGenPaper.textContent = "正在生成学术论文…";
+      if (paperStatus) paperStatus.textContent = "正在执行写稿与 R1/R2 数值校验…";
+
       try {
         const pr = await fetch("/api/studio/paper", {
           method: "POST",
@@ -2847,12 +3498,15 @@ function initStudioResult() {
         }
         btnGenPaper.hidden = true;
         if (paperStatus) {
-          paperStatus.textContent = `✅ 学术论文已生成 (${pj.paper_quality || "ready"})`;
+          paperStatus.textContent = `学术论文已生成 (${pj.paper_quality || "ready"})`;
+        }
+        if (typeof isWatchDrawerOpen === "function" && isWatchDrawerOpen() && typeof refreshWatchDrawer === "function") {
+          refreshWatchDrawer(true);
         }
       } catch (err) {
-        if (paperStatus) paperStatus.textContent = `❌ 论文生成受阻: ${err.message}`;
+        if (paperStatus) paperStatus.textContent = `论文生成受阻: ${err.message}`;
         btnGenPaper.disabled = false;
-        btnGenPaper.textContent = "📑 按需生成完整学术论文";
+        btnGenPaper.textContent = "生成学术论文";
       }
     });
   }
@@ -2861,6 +3515,24 @@ function initStudioResult() {
 
 // === src/js/studio/viz.js ===
 // --- Dynamic OR Visualization & Convergence Dashboard (Task 6.3 - Huashu 5D Standard) ---
+function selectVizTab(targetTab) {
+  document.querySelectorAll("#vizTabs [data-viz-tab]").forEach(b => {
+    b.classList.toggle("active", b.getAttribute("data-viz-tab") === targetTab);
+  });
+  const panels = {
+    gantt: $("vizPanelGantt"),
+    routes: $("vizPanelRoutes"),
+    microgrid: $("vizPanelMicrogrid"),
+    gap: $("vizPanelGap"),
+  };
+  for (const [k, p] of Object.entries(panels)) {
+    if (!p) continue;
+    const on = k === targetTab;
+    p.style.display = on ? "block" : "none";
+    p.classList.toggle("active", on);
+  }
+}
+
 function initVizTabsOnce() {
   if (studioState.vizTabsBound) return;
   const tabsContainer = $("vizTabs");
@@ -2869,25 +3541,7 @@ function initVizTabsOnce() {
   tabsContainer.addEventListener("click", (e) => {
     const tabBtn = e.target.closest("[data-viz-tab]");
     if (!tabBtn) return;
-    const targetTab = tabBtn.getAttribute("data-viz-tab");
-    document.querySelectorAll("#vizTabs [data-viz-tab]").forEach(b => {
-      b.classList.toggle("active", b === tabBtn);
-    });
-    const panels = {
-      gantt: $("vizPanelGantt"),
-      routes: $("vizPanelRoutes"),
-      gap: $("vizPanelGap"),
-    };
-    for (const [k, p] of Object.entries(panels)) {
-      if (!p) continue;
-      if (k === targetTab) {
-        p.style.display = "block";
-        p.classList.add("active");
-      } else {
-        p.style.display = "none";
-        p.classList.remove("active");
-      }
-    }
+    selectVizTab(tabBtn.getAttribute("data-viz-tab"));
   });
 }
 
@@ -2904,20 +3558,37 @@ function hideVizTooltip() {
   if (tipBox) tipBox.style.display = "none";
 }
 
+function bindVizTooltips(container, selector, attrName) {
+  container.querySelectorAll(selector).forEach(el => {
+    const desc = el.getAttribute(attrName) || "";
+    el.addEventListener("mouseenter", () => showVizTooltip(desc));
+    el.addEventListener("focus", () => showVizTooltip(desc));
+    el.addEventListener("click", () => showVizTooltip(desc));
+    el.addEventListener("mouseleave", hideVizTooltip);
+    el.addEventListener("blur", hideVizTooltip);
+  });
+}
+
+function vizEmptyCard(tag, title, detailHtml) {
+  return `
+    <div class="viz-empty-card" style="padding:36px 20px;text-align:center;background:#fafafa;border:1px dashed var(--border-strong);border-radius:8px;margin:8px 0">
+      <div style="font-family:var(--mono);font-size:11px;font-weight:600;color:var(--ink-48);margin-bottom:6px">${esc(tag)}</div>
+      <div style="font-weight:600;font-size:13px;color:var(--ink)">${esc(title)}</div>
+      ${detailHtml ? `<div style="font-size:11px;color:var(--ink-48);margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">${detailHtml}</div>` : ""}
+    </div>
+  `;
+}
+
 function renderGanttChart(container, solution) {
   if (!container) return;
   const colors = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ef4444", "#06b6d4", "#ec4899", "#84cc16"];
 
   if (!solution || !Array.isArray(solution.schedule) || solution.schedule.length === 0) {
-    container.innerHTML = `
-      <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
-        <div style="font-size:32px;margin-bottom:8px">🏭</div>
-        <div style="font-weight:600;font-size:13px;color:#334155">当前算例不含工序时序排程数据</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
-          甘特图专用于流水/作业车间调度（JSSP/FJSSP/RCPSP）工序可视化。<br/>根据 <strong>Numbers Truth</strong> 准则：当前输出无真实 schedule 数组，系统严禁虚构排产基准。
-        </div>
-      </div>
-    `;
+    container.innerHTML = vizEmptyCard(
+      "SCHEDULE UNAVAILABLE",
+      "当前算例不含工序时序排程数据",
+      "甘特图用于流水/作业车间调度（JSSP / FJSSP / RCPSP）工序可视化。<br/>遵循 Numbers Truth 准则：未返回真实 schedule 数组时不展示虚构排产图。"
+    );
     return;
   }
 
@@ -3003,21 +3674,17 @@ function renderGanttChart(container, solution) {
   svg += `</g></svg>`;
 
   container.innerHTML = `
-    <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:gap:8px">
+    <div style="margin-bottom:12px;font-size:12px;color:var(--ink-60);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <div style="display:flex;align-items:center;gap:8px">
-        <span>🏭 <strong>车间排产逐机甘特图</strong> · ${machines.length} 台设备工序时序</span>
-        <span style="font-size:10px;background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">✓ 真实排产数据 (${ops.length} 项工序)</span>
+        <span><strong>车间排产逐机甘特图</strong> · ${machines.length} 台设备工序时序</span>
+        <span style="font-size:10px;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:2px 7px;border-radius:5px;font-weight:600">真实排产 (${ops.length} 项工序)</span>
       </div>
-      <span style="font-family:var(--mono);color:#059669;font-weight:700">总完工时间 (Cmax): ${makespan}</span>
+      <span style="font-family:var(--mono);color:#047857;font-weight:600">Makespan (Cmax): ${makespan}</span>
     </div>
     ${svg}
   `;
 
-  // Attach hover listener for interactive tooltip
-  container.querySelectorAll(".gantt-bar").forEach(bar => {
-    bar.addEventListener("mouseenter", () => showVizTooltip(bar.getAttribute("data-op-desc") || ""));
-    bar.addEventListener("mouseleave", hideVizTooltip);
-  });
+  bindVizTooltips(container, ".gantt-bar", "data-op-desc");
 }
 
 function renderRouteMap(container, solution) {
@@ -3026,20 +3693,16 @@ function renderRouteMap(container, solution) {
   const hasTour = solution && Array.isArray(solution.tour) && solution.tour.length > 0;
 
   if (!hasRoutes && !hasTour) {
-    container.innerHTML = `
-      <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
-        <div style="font-size:32px;margin-bottom:8px">🗺️</div>
-        <div style="font-weight:600;font-size:13px;color:#334155">当前算例不含车辆或旅行商路径规划数据</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
-          路径图专用于车辆路径 (VRP/CVRP) 或旅行商回路 (TSP) 可视化。<br/>根据 <strong>Numbers Truth</strong> 准则：当前输出无 routes 或 tour 路径数据，系统严禁伪造路径拓扑。
-        </div>
-      </div>
-    `;
+    container.innerHTML = vizEmptyCard(
+      "ROUTES UNAVAILABLE",
+      "当前算例不含车辆或旅行商路径数据",
+      "路径图用于车辆路径（VRP / CVRP）或巡检回路（TSP）可视化。<br/>遵循 Numbers Truth 准则：当前输出无 routes 或 tour 字段时不生成路径拓扑。"
+    );
     return;
   }
 
-  const palette = ["#2563eb", "#059669", "#7c3aed", "#d97706", "#ec4899"];
-  const depot = { x: 410, y: 140, name: "场站/起点 0" };
+  const palette = ["#1d4ed8", "#059669", "#6d28d9", "#d97706", "#db2777"];
+  const pureTourMode = hasTour && !hasRoutes;
 
   let normalizedRoutes = [];
   if (hasRoutes) {
@@ -3065,21 +3728,28 @@ function renderRouteMap(container, solution) {
     const angle = (idx / Math.max(1, numNodes)) * 2 * Math.PI - Math.PI / 2;
     const px = 410 + radiusX * Math.cos(angle);
     const py = 140 + radiusY * Math.sin(angle);
-    customers.push({ id: nid, x: px, y: py, name: `站点 ${nid}` });
+    customers.push({ id: nid, idx, x: px, y: py, name: `站点 ${nid}` });
   });
 
   const nodeMap = new Map();
   customers.forEach(c => nodeMap.set(String(c.id), c));
 
+  const startId = nodeSeq[0] || "0";
+  const depot = { x: 410, y: 140, name: "场站 / 起点" };
   const routes = normalizedRoutes.slice(0, 6).map((r, idx) => {
     const cColor = palette[idx % palette.length];
     const routeArr = Array.isArray(r.route) ? r.route : (Array.isArray(r) ? r : []);
-    const routeStops = [depot];
+    const routeStops = [];
+    if (!pureTourMode) routeStops.push(depot);
     routeArr.forEach(nid => {
       const pt = nodeMap.get(String(nid));
       if (pt) routeStops.push(pt);
     });
-    routeStops.push(depot);
+    if (pureTourMode && routeStops.length > 1) {
+      routeStops.push(routeStops[0]);
+    } else if (!pureTourMode) {
+      routeStops.push(depot);
+    }
     return {
       id: hasRoutes ? `车队 ${idx + 1}` : "巡检回路",
       color: cColor,
@@ -3089,7 +3759,7 @@ function renderRouteMap(container, solution) {
   });
 
   let svg = `<svg class="viz-svg" viewBox="0 0 820 280" xmlns="http://www.w3.org/2000/svg">`;
-  svg += `<rect width="820" height="280" fill="#ffffff" rx="10"/>`;
+  svg += `<rect width="820" height="280" fill="#ffffff" rx="8"/>`;
 
   // Background concentric grid
   svg += `<circle cx="410" cy="140" r="110" fill="none" stroke="#f1f5f9" stroke-width="1.5" stroke-dasharray="4,4"/>`;
@@ -3099,51 +3769,59 @@ function renderRouteMap(container, solution) {
   routes.forEach(route => {
     let pathD = "";
     route.pts.forEach((pt, pIdx) => {
-      pathD += (pIdx === 0 ? "M " : " L ") + `${pt.x} ${pt.y}`;
+      pathD += (pIdx === 0 ? "M " : " L ") + `${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
     });
-    svg += `<path d="${pathD}" fill="none" stroke="${route.color}" stroke-width="2" stroke-opacity="0.85" stroke-dasharray="6,3"/>`;
+    svg += `<path d="${pathD}" fill="none" stroke="${route.color}" stroke-width="2" stroke-opacity="0.85" stroke-dasharray="5,3"/>`;
   });
 
   // Draw customer nodes
   customers.forEach(c => {
-    const desc = `${c.name} · 拓扑受访节点`;
+    const isStart = pureTourMode && c.id === startId;
+    const desc = isStart
+      ? `${c.name} · 回路起点与终点（第 1 站）`
+      : `${c.name} · 访问次序第 ${c.idx + 1} 站`;
+    const stroke = isStart ? "#059669" : "#1d4ed8";
+    const fill = isStart ? "#059669" : "#ffffff";
+    const r = isStart ? 8 : 6;
+    const label = isStart ? `${esc(c.id)} (起点)` : esc(c.id);
     svg += `
-      <g class="route-node" data-node-desc="${esc(desc)}" tabindex="0" style="cursor:pointer">
+      <g class="route-node" data-node-desc="${esc(desc)}" tabindex="0" role="button" aria-label="${esc(desc)}" style="cursor:pointer">
         <title>${esc(desc)}</title>
-        <circle cx="${c.x}" cy="${c.y}" r="6" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
-        <text x="${c.x}" y="${c.y + 15}" font-size="9" font-family="var(--mono)" font-weight="600" fill="#475569" text-anchor="middle">${esc(c.id)}</text>
-      </g>
-    `;
+        <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="20" fill="rgba(0,0,0,0.001)" pointer-events="all"/>
+        <circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="2.2"/>
+        <text x="${c.x.toFixed(1)}" y="${(c.y + 17).toFixed(1)}" font-size="9.5" font-family="var(--mono)" font-weight="${isStart ? 700 : 600}" fill="${isStart ? "#047857" : "#475569"}" text-anchor="middle">${label}</text>
+      </g>`;
   });
 
-  // Draw Depot
-  svg += `
-    <g style="cursor:pointer">
-      <rect x="396" y="126" width="28" height="28" rx="6" fill="#dc2626" stroke="#ffffff" stroke-width="2"/>
-      <text x="410" y="144" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle">★</text>
-      <text x="410" y="166" font-size="10" font-weight="700" fill="#dc2626" text-anchor="middle">起点</text>
-    </g>
-  `;
+  // Draw center depot only for multi-vehicle routes
+  if (!pureTourMode) {
+    const depotDesc = "配送中心 / 车队出发与回场场站";
+    svg += `
+      <g class="route-node" data-node-desc="${esc(depotDesc)}" tabindex="0" role="button" aria-label="${esc(depotDesc)}" style="cursor:pointer">
+        <title>${esc(depotDesc)}</title>
+        <rect x="392" y="122" width="36" height="48" fill="rgba(0,0,0,0.001)" pointer-events="all"/>
+        <rect x="396" y="126" width="28" height="28" rx="6" fill="#111827" stroke="#ffffff" stroke-width="2"/>
+        <text x="410" y="144" font-size="10.5" font-weight="700" font-family="var(--mono)" fill="#ffffff" text-anchor="middle">D0</text>
+        <text x="410" y="166" font-size="10" font-weight="600" fill="#374151" text-anchor="middle">场站</text>
+      </g>`;
+  }
 
   svg += `</svg>`;
 
   const objLabel = solution.objective != null ? `目标耗费/里程: ${solution.objective}` : "路径规划完成";
 
   container.innerHTML = `
-    <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <div style="margin-bottom:12px;font-size:12px;color:var(--ink-60);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
       <div style="display:flex;align-items:center;gap:8px">
-        <span>🗺️ <strong>车辆/巡检路径拓扑图</strong> · ${customers.length} 个受访站点 <span style="font-size:10px;color:#94a3b8">(拓扑序排布)</span></span>
-        <span style="font-size:10px;background:#ecfdf5;color:#059669;padding:2px 8px;border-radius:6px;font-weight:700">✓ 真实路径规划数据</span>
+        <span><strong>路径拓扑视图</strong> · ${customers.length} 个站点 <span style="font-size:10px;color:var(--ink-48)">(拓扑序)</span></span>
+        <span style="font-size:10px;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:2px 7px;border-radius:5px;font-weight:600">真实路径数据</span>
       </div>
-      <span style="font-family:var(--mono);color:#059669;font-weight:700">${esc(objLabel)}</span>
+      <span style="font-family:var(--mono);color:#047857;font-weight:600">${esc(objLabel)}</span>
     </div>
     ${svg}
   `;
 
-  container.querySelectorAll(".route-node").forEach(node => {
-    node.addEventListener("mouseenter", () => showVizTooltip(node.getAttribute("data-node-desc") || ""));
-    node.addEventListener("mouseleave", hideVizTooltip);
-  });
+  bindVizTooltips(container, ".route-node", "data-node-desc");
 }
 
 function renderConvergenceGapCurve(container, solution) {
@@ -3151,15 +3829,11 @@ function renderConvergenceGapCurve(container, solution) {
   const rawGap = solution?.gap_history || solution?.metrics?.gap_history || solution?.meta?.gap_history;
 
   if (!Array.isArray(rawGap) || rawGap.length < 2) {
-    container.innerHTML = `
-      <div class="viz-empty-card" style="padding:42px 20px;text-align:center;background:var(--surface-2);border:1px dashed var(--border);border-radius:12px;margin:10px 0">
-        <div style="font-size:32px;margin-bottom:8px">📈</div>
-        <div style="font-weight:600;font-size:13px;color:#334155">当前求解为单阶段直接交付，无多轮迭代收敛历程</div>
-        <div style="font-size:11px;color:#94a3b8;margin-top:6px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6">
-          根据 <strong>Numbers Truth</strong> 准则：系统绝不伪造虚假收敛曲线与 0.00% 严密闭合结论。<br/>仅当求解器输出真实迭代历程数据（如松弛下界与上界轨迹）时呈现收敛分析。
-        </div>
-      </div>
-    `;
+    container.innerHTML = vizEmptyCard(
+      "NO CONVERGENCE HISTORY",
+      "本次为单阶段直接求解，无迭代收敛轨迹",
+      "遵循 Numbers Truth 准则：仅当求解器返回真实迭代上下界轨迹（gap_history）时绘制收敛曲线。"
+    );
     return;
   }
 
@@ -3212,12 +3886,56 @@ function renderConvergenceGapCurve(container, solution) {
   svg += `</svg>`;
 
   container.innerHTML = `
-    <div style="margin-bottom:12px;font-size:12px;color:#475569;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <span>📈 <strong>数学下界与启发式上界真实收敛 Gap 曲线</strong></span>
-      <span style="font-family:var(--mono);color:#059669;font-weight:700">最终 Gap: ${gapStr}%</span>
+    <div style="margin-bottom:12px;font-size:12px;color:var(--ink-60);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span><strong>下界与启发式上界收敛曲线</strong></span>
+      <span style="font-family:var(--mono);color:#047857;font-weight:600">最终 Gap: ${gapStr}%</span>
     </div>
     ${svg}
   `;
+}
+
+function renderMicrogridChart(container, solution) {
+  if (!container) return;
+  const subs = solution?.subproblems || {};
+  const q1 = subs.q1 || {};
+  const grid = Array.isArray(q1.purchase_kwh) ? q1.purchase_kwh.map(Number) : [];
+  const soc = Array.isArray(q1.soc_kwh) ? q1.soc_kwh.map(Number) : [];
+  if (grid.length === 0 && soc.length === 0) {
+    container.innerHTML = vizEmptyCard(
+      "MICROGRID DATA UNAVAILABLE",
+      "当前问题未包含分时购电与储能 SoC 调度序列",
+      ""
+    );
+    return;
+  }
+  const N = Math.max(grid.length, soc.length, 24);
+  const maxGrid = Math.max(...grid, 10);
+  const maxSoc = Math.max(...soc, 10);
+  const startX = 56, plotW = 730, baseY = 205, plotH = 155;
+  const barW = Math.max(8, (plotW / N) * 0.58);
+  let bars = "", socPts = [];
+  for (let h = 0; h < N; h++) {
+    const x = startX + (h + 0.5) * (plotW / N);
+    const g = grid[h] || 0;
+    const bh = (g / maxGrid) * plotH;
+    bars += `<rect class="mg-bar" x="${(x - barW / 2).toFixed(1)}" y="${(baseY - bh).toFixed(1)}" width="${barW.toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="#3b82f6" opacity="0.78" data-mg="时段 ${h + 1}: 购电 ${g.toFixed(2)} kWh | SoC ${(soc[h] || 0).toFixed(2)} kWh" />`;
+    if (h < soc.length) {
+      const sy = baseY - (soc[h] / maxSoc) * plotH;
+      socPts.push(`${h === 0 ? "M" : "L"} ${x.toFixed(1)} ${sy.toFixed(1)}`);
+    }
+    if (h % 3 === 0) bars += `<text x="${x.toFixed(1)}" y="${baseY + 16}" font-size="9.5" fill="#64748b" text-anchor="middle">${h + 1}h</text>`;
+  }
+  const chips = [
+    ["Q1 基础运行成本", q1.total_cost],
+    ["Q2 有序充电", subs.q2?.total_cost],
+    ["Q3 屋顶光伏协同", subs.q3?.total_cost],
+    ["Q4 优化配置最优年成本", subs.q4_3?.total_cost ?? subs.q4_2?.total_cost],
+  ].filter(([, v]) => v != null).map(([k, v]) =>
+    `<span style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:4px 10px;font-size:11px;font-family:var(--mono)"><strong>${k}:</strong> ${Number(v).toLocaleString()}</span>`
+  ).join("");
+  const svg = `<svg class="viz-svg" viewBox="0 0 820 245" xmlns="http://www.w3.org/2000/svg"><rect width="820" height="245" fill="#ffffff" rx="10"/><line x1="${startX}" y1="${baseY}" x2="${startX + plotW}" y2="${baseY}" stroke="#cbd5e1"/>${bars}${socPts.length ? `<path d="${socPts.join(" ")}" fill="none" stroke="#10b981" stroke-width="2.6"/>` : ""}</svg>`;
+  container.innerHTML = `<div style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:12px"><span><strong>微电网 24h 网购电柱状与储能 SoC 曲线</strong></span><div style="display:flex;gap:6px;flex-wrap:wrap">${chips}</div></div>${svg}`;
+  bindVizTooltips(container, ".mg-bar", "data-mg");
 }
 
 function renderVisualizations(solution) {
@@ -3228,9 +3946,288 @@ function renderVisualizations(solution) {
 
   renderGanttChart($("vizPanelGantt"), solution);
   renderRouteMap($("vizPanelRoutes"), solution);
+  renderMicrogridChart($("vizPanelMicrogrid"), solution);
   renderConvergenceGapCurve($("vizPanelGap"), solution);
 
   initVizTabsOnce();
+  const hasMg = Boolean(solution?.subproblems?.q1?.purchase_kwh?.length);
+  const pc = String(solution?.problem_class || "").toLowerCase();
+  const hasRouteData = (Array.isArray(solution?.routes) && solution.routes.length > 0)
+    || (Array.isArray(solution?.tour) && solution.tour.length > 0);
+  if (hasMg || pc.includes("microgrid") || studioState.domainKey === "microgrid") {
+    selectVizTab("microgrid");
+  } else if (hasRouteData) {
+    selectVizTab("routes");
+  } else if (Array.isArray(solution?.schedule) && solution.schedule.length > 0) {
+    selectVizTab("gantt");
+  } else if (Array.isArray(solution?.gap_history) && solution.gap_history.length >= 2) {
+    selectVizTab("gap");
+  }
+}
+
+
+// === src/js/studio/drawer.js ===
+// Studio Process Watch Drawer (non-blocking side telemetry + sandbox repair status)
+let _wdPollTimer = null;
+let _wdActiveArtKind = "solution";
+let _wdLastArtifacts = null;
+let _wdLastSnapshotSlug = "";
+
+function getWatchDrawerSlug() {
+  return (
+    studioState.lastSolvedSlug ||
+    ($("studioSlugInput")?.value || "").trim() ||
+    "case-my-problem"
+  );
+}
+
+function isWatchDrawerOpen() {
+  const dr = $("watchDrawer");
+  return Boolean(dr && !dr.hidden);
+}
+
+function openWatchDrawer() {
+  const dr = $("watchDrawer");
+  const bd = $("watchDrawerBackdrop");
+  const btn = $("btnToggleWatchDrawer");
+  if (dr) dr.hidden = false;
+  if (bd) bd.hidden = false;
+  if (btn) btn.classList.add("on");
+  refreshWatchDrawer(true);
+  if (!_wdPollTimer) {
+    _wdPollTimer = setInterval(() => {
+      if (isWatchDrawerOpen()) refreshWatchDrawer(false);
+    }, 1500);
+  }
+}
+
+function closeWatchDrawer() {
+  const dr = $("watchDrawer");
+  const bd = $("watchDrawerBackdrop");
+  const btn = $("btnToggleWatchDrawer");
+  if (dr) dr.hidden = true;
+  if (bd) bd.hidden = true;
+  if (btn) btn.classList.remove("on");
+  if (_wdPollTimer) {
+    clearInterval(_wdPollTimer);
+    _wdPollTimer = null;
+  }
+}
+
+function toggleWatchDrawer() {
+  if (isWatchDrawerOpen()) closeWatchDrawer();
+  else openWatchDrawer();
+}
+
+async function loadDrawerArtifact(kind) {
+  _wdActiveArtKind = kind || "solution";
+  document.querySelectorAll("#wdArtTabs [data-wd-art]").forEach(btn => {
+    btn.classList.toggle("active", btn.getAttribute("data-wd-art") === _wdActiveArtKind);
+  });
+  const pre = $("wdArtPreview");
+  if (!pre) return;
+  const slug = getWatchDrawerSlug();
+  if (_wdLastArtifacts && _wdLastSnapshotSlug === slug && !_wdLastArtifacts[_wdActiveArtKind]) {
+    pre.textContent = `暂无 ${_wdActiveArtKind} 文件（任务 ${slug} 尚未生成该产物或未触发）。`;
+    return;
+  }
+  try {
+    const res = await fetch(`/api/artifact?slug=${encodeURIComponent(slug)}&kind=${encodeURIComponent(_wdActiveArtKind)}`);
+    const data = await res.json().catch(() => null);
+    if (res.ok && data && data.ok && data.content != null) {
+      pre.textContent = typeof data.content === "string"
+        ? data.content.slice(0, 12000)
+        : JSON.stringify(data.content, null, 2).slice(0, 12000);
+    } else if (!res.ok || (data && (data.exists === false || data.ok === false))) {
+      pre.textContent = `暂无 ${_wdActiveArtKind} 文件（任务 ${slug} 尚未生成该产物或未触发）。`;
+    } else {
+      pre.textContent = JSON.stringify(data, null, 2).slice(0, 8000);
+    }
+  } catch (err) {
+    pre.textContent = `读取产物失败: ${err.message}`;
+  }
+}
+
+function renderWatchDrawerSnapshot(snap) {
+  if (!snap || typeof snap !== "object") return;
+  const slug = snap.slug || getWatchDrawerSlug();
+  _wdLastSnapshotSlug = slug;
+  _wdLastArtifacts = (snap.artifacts && typeof snap.artifacts === "object") ? snap.artifacts : null;
+  if ($("wdSlugTag")) $("wdSlugTag").textContent = slug;
+
+  const cur = snap.current || {};
+  const st = String(snap.status || "idle").toLowerCase();
+  const errBox = $("wdErrorBox");
+  if (errBox) {
+    const ep = errorPayload(snap);
+    const overallOk = st === "ok" && !ep.human_required;
+    if (!overallOk && ep.has_error && ep.last_error) {
+      const ex = ep.explain || {};
+      if ($("wdErrorTitle")) $("wdErrorTitle").textContent = ex.headline || "运行出现异常";
+      if ($("wdErrorDesc")) {
+        $("wdErrorDesc").textContent = [ex.what, ex.do || "可点击右上角「重新求解」或调整输入后重试。"].filter(Boolean).join(" ");
+      }
+      errBox.hidden = false;
+    } else {
+      errBox.hidden = true;
+    }
+  }
+  const pill = $("wdStatusPill");
+  if (pill) {
+    pill.className = "wd-status-pill";
+    if (st === "running") {
+      pill.classList.add("running");
+      pill.textContent = "运行中";
+    } else if (st === "ok" || st === "completed") {
+      pill.classList.add("ok");
+      pill.textContent = "已完成";
+    } else if (st === "fail" || st === "blocked") {
+      pill.classList.add("warn");
+      pill.textContent = st === "blocked" ? "待补充数据" : "待自愈";
+    } else {
+      pill.textContent = statusLabel(st);
+    }
+  }
+
+  if ($("wdStageText")) {
+    const rawStage = cur.node || cur.stage || "idle";
+    $("wdStageText").textContent = rawStage === "idle" ? "空闲" : nodeLabel(rawStage);
+  }
+  const repCount = Number(cur.schema_repair || 0) + Number(cur.validate_repair || 0) + Number(cur.solver_tune || 0);
+  if ($("wdRepairCount")) $("wdRepairCount").textContent = `${repCount} 轮`;
+  if ($("wdEngineText")) $("wdEngineText").textContent = studioState.runMode === "deep" ? `Deep 4-Agent (${studioState.deepRounds || 5}轮)` : "Fast Single-Agent";
+
+  const evo = snap.evolution;
+  const evoSec = $("wdEvolutionSection");
+  const evoList = $("wdEvolutionList");
+  const evoInc = $("wdEvoIncumbent");
+  if (evoSec && evoList) {
+    const evoRounds = (evo && Array.isArray(evo.rounds)) ? evo.rounds : [];
+    if (!evoRounds.length) {
+      evoSec.hidden = true;
+      evoList.innerHTML = "";
+    } else {
+      evoSec.hidden = false;
+      const inc = evo.incumbent || {};
+      const incObj = inc.objective != null ? Number(inc.objective).toFixed(4) : "—";
+      const incRound = inc.round != null ? `R${inc.round}` : "—";
+      if (evoInc) {
+        evoInc.textContent = `最优基线: ${incObj} (${incRound}) · 目标 ${evo.target_rounds || 5}/${evo.max_rounds || 10} 轮`;
+      }
+      evoList.innerHTML = evoRounds.map(r => {
+        const isPromo = Boolean(r.promoted || r.improved);
+        const cls = !r.validation_ok ? "invalid" : (isPromo ? "improved" : "");
+        const tag = r.proven_optimal ? "⭐最优" : (!r.validation_ok ? "✗未过检" : (isPromo ? "↑刷新" : "•持平"));
+        const objStr = r.objective != null ? Number(r.objective).toFixed(4) : "—";
+        const wtStr = r.wall_time_s != null ? `${Number(r.wall_time_s).toFixed(1)}s` : "";
+        return `
+          <div class="wd-evo-row ${cls}">
+            <span><strong>R${esc(String(r.round || ""))}</strong> ${esc(r.strategy_stage || "")}</span>
+            <span style="font-family:var(--mono)">${esc(tag)} · obj=${esc(objStr)} · ${esc(wtStr)}</span>
+          </div>
+        `;
+      }).join("");
+    }
+  }
+
+  const stages = Array.isArray(snap.stages) ? snap.stages : [];
+  const sBox = $("wdStagesList");
+  if (sBox) {
+    if (!stages.length) {
+      sBox.innerHTML = `<div class="wd-empty">当前任务尚无过程阶段日志（可在工作台点击「分析并求解」）</div>`;
+    } else {
+      sBox.innerHTML = stages.slice(-16).map(stItem => {
+        const nm = nodeLabel(stItem.node || stItem.stage || "stage");
+        const stLbl = statusLabel(stItem.state || stItem.status || "ok");
+        const rawStage = String(stItem.stage || "").trim();
+        const stageHint = !rawStage
+          ? ""
+          : (/^\d+$/.test(rawStage) ? `#${rawStage}` : (rawStage === stItem.node ? "" : `→ ${nodeLabel(rawStage)}`));
+        const dur = stItem.duration_ms != null ? `${stItem.duration_ms}ms` : "";
+        return `
+          <div class="wd-stage-row">
+            <span><strong>${esc(nm)}</strong> <span style="color:var(--ink-48)">${esc(stageHint)}</span></span>
+            <span style="font-family:var(--mono);font-size:10.5px;color:var(--ink-60)">${esc(stLbl)} ${esc(dur)}</span>
+          </div>
+        `;
+      }).join("");
+    }
+  }
+
+  const events = Array.isArray(snap.events) ? snap.events : [];
+  const eBox = $("wdEventsList");
+  if (eBox) {
+    if (!events.length) {
+      eBox.innerHTML = `<div class="wd-empty">暂无沙箱执行事件</div>`;
+    } else {
+      eBox.innerHTML = events.slice(-18).reverse().map(ev => {
+        const actor = ev.agent || ev.node || ev.source || "system";
+        let msg = ev.text || ev.summary || ev.detail || ev.kind || JSON.stringify(ev).slice(0, 180);
+        const stageM = String(msg).match(/^(stage|agent_start|agent_end)\s+step=(\S+)\s+agent=(\S+)/i);
+        if (stageM) {
+          const verbMap = { stage: "节点推进", agent_start: "智能体启动", agent_end: "智能体完成" };
+          const verb = verbMap[stageM[1].toLowerCase()] || stageM[1];
+          msg = `${verb} · ${nodeLabel(stageM[3])} (#${stageM[2]})`;
+        }
+        const isWarn = /err|fail|retry|repair/i.test(String(ev.kind || "") + " " + msg);
+        return `<div class="wd-event-row ${isWarn ? "err" : ""}">[${esc(actor)}] ${esc(msg)}</div>`;
+      }).join("");
+    }
+  }
+}
+
+async function refreshWatchDrawer(reloadArtifact) {
+  const slug = getWatchDrawerSlug();
+  if ($("wdSlugTag")) $("wdSlugTag").textContent = slug;
+  try {
+    const res = await fetch(`/api/snapshot?slug=${encodeURIComponent(slug)}&thread=${encodeURIComponent(slug)}`);
+    const snap = await res.json();
+    renderWatchDrawerSnapshot(snap);
+  } catch (_) {}
+  if (reloadArtifact) {
+    loadDrawerArtifact(_wdActiveArtKind);
+  }
+}
+
+function initWatchDrawer() {
+  const btnHeader = $("btnToggleWatchDrawer");
+  const btnBottom = $("btnStudioViewInspector");
+  const btnClose = $("btnWdClose");
+  const bd = $("watchDrawerBackdrop");
+  const btnRefresh = $("btnWdRefresh");
+  if (btnHeader) btnHeader.addEventListener("click", toggleWatchDrawer);
+  if (btnBottom) {
+    btnBottom.addEventListener("click", (e) => {
+      e.preventDefault();
+      openWatchDrawer();
+    });
+  }
+  if (btnClose) btnClose.addEventListener("click", closeWatchDrawer);
+  if (bd) bd.addEventListener("click", closeWatchDrawer);
+  if (btnRefresh) btnRefresh.addEventListener("click", () => refreshWatchDrawer(true));
+  const btnRetry = $("btnWdRetry");
+  if (btnRetry) {
+    btnRetry.addEventListener("click", async () => {
+      if (typeof executeStudioSolve === "function") {
+        btnRetry.disabled = true;
+        btnRetry.textContent = "求解中…";
+        try {
+          await executeStudioSolve(null);
+          refreshWatchDrawer(true);
+        } catch (_) {
+        } finally {
+          btnRetry.disabled = false;
+          btnRetry.textContent = "重新求解";
+        }
+      }
+    });
+  }
+  document.querySelectorAll("#wdArtTabs [data-wd-art]").forEach(btn => {
+    btn.addEventListener("click", () => loadDrawerArtifact(btn.getAttribute("data-wd-art")));
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isWatchDrawerOpen()) closeWatchDrawer();
+  });
 }
 
 
@@ -3238,12 +4235,24 @@ function renderVisualizations(solution) {
 // Studio workbench entrypoint
 function boot() {
   syncHeaderNavState();
+  const slugInp = $("studioSlugInput");
+  const urlSlug = (new URLSearchParams(location.search).get("slug") || "").trim();
+  if (slugInp && urlSlug && urlSlug !== "test") {
+    slugInp.value = urlSlug;
+  }
   initStudioConfig();
+  fetchEnvStatus();
   initStudioFiles();
   initStudioAnalyze();
   initStudioResult();
   initVizTabsOnce();
-  setPipelineStage("probe", "待命");
+  if (typeof initWatchDrawer === "function") initWatchDrawer();
+  if (slugInp) {
+    slugInp.addEventListener("change", () => {
+      if (typeof resetStudioRunUI === "function") resetStudioRunUI(false);
+    });
+  }
+  setPipelineStage("idle", "待命");
 }
 
 
